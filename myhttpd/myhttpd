@@ -6,6 +6,8 @@ use Coro::Event;
 $PApp::SQL::DBH = PApp::SQL::connect_cached __FILE__, "DBI:mysql:myhttpd"
    or die "unable to connect to database";
 
+$VERSION = 0.01;
+
 $SIG{CHLD} = 'IGNORE';
 
 require "config.pl";
