@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.10  Tue Jul 24 01:47:53 CEST 2001
+0.1   Tue Jul 24 01:47:53 CEST 2001
 	- release candidate 3. A rather new internal structure :(
         - the great renaming: Damian Conway gave me a suitable replacement
           for yield.

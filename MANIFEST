@@ -14,7 +14,8 @@ Coro/Channel.pm
 Coro/Cont.pm
 Coro/Specific.pm
 Coro/Event.pm
-Coro/Event/IO.pm
+Coro/Handle.pm
+Coro/Socket.pm
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c
