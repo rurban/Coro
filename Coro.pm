@@ -40,7 +40,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.5;
+$VERSION = 0.51;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -118,7 +118,8 @@ our $idle = new Coro sub {
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 my @destroy;
-my $manager = new Coro sub {
+my $manager;
+$manager = new Coro sub {
    while() {
       # by overwriting the state object with the manager we destroy it
       # while still being able to schedule this coroutine (in case it has
