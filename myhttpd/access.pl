@@ -1,3 +1,65 @@
+package transferqueue;
+
+sub new {
+   my $class = shift;
+   bless {
+      conns => $_[0],
+   }, $class;
+}
+
+sub start_transfer {
+   my $self = shift;
+
+   my $trans = bless [ $self, $Coro::current ], transfer::;
+   print "$self $trans $trans->[0] <<\n";#d#
+   Scalar::Util::weaken($trans->[0]);
+
+   push @{$self->{wait}}, $trans;
+
+   if (--$self->{conns} >= 0) {
+      $self->wake_next;
+   }
+
+   $trans;
+}
+
+sub wake_next {
+   my $self = shift;
+
+   return unless $self->{conns} >= 0;
+
+   (pop @{$self->{wait}})->wake if @{$self->{wait}};
+}
+
+sub waiters {
+   map $_->[1], @{$_[0]{wait}};
+}
+
+package transfer;
+
+use Coro::Timer ();
+
+sub try {
+   my $self = shift;
+   my $timeout = Coro::Timer::timeout $_[0];
+
+   Coro::schedule;
+
+   return $self->[2];
+}
+
+sub wake {
+   my $self = shift;
+   $self->[2] = 1;
+   $self->[1]->ready;
+}
+
+sub DESTROY {
+   my $self = shift;
+   $self->[0]{conns}++;
+   $self->[0]->wake_next;
+}
+
 package conn;
 
 our %blockuri;
