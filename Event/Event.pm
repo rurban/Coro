@@ -49,9 +49,14 @@ use Event qw(unloop); # we are re-exporting this, cooool!
 
 use base 'Exporter';
 
-@EXPORT = qw(loop unloop sweep);
+@EXPORT = qw(loop unloop sweep reschedule);
 
-$VERSION = 0.13;
+BEGIN {
+   $VERSION = 0.45;
+
+   require XSLoader;
+   XSLoader::load Coro::Event, $VERSION;
+}
 
 =item $w = Coro::Event->flavour(args...)
 
@@ -78,22 +83,11 @@ next method often, but it does save typing sometimes.
 
 =cut
 
-sub std_cb {
-   my $w = $_[0]->w;
-   my $q = $w->private;
-   $q->[1] = $_[0];
-   if ($q->[0]) { # somebody waiting?
-      $q->[0]->ready;
-      Coro::schedule;
-   } else {
-      $w->stop;
-   }
-}
-
 for my $flavour (qw(idle var timer io signal)) {
    push @EXPORT, "do_$flavour";
    my $new = \&{"Event::$flavour"};
    my $class = "Coro::Event::$flavour";
+   my $type = $flavour eq "io" ? 1 : 0;
    @{"${class}::ISA"} = (Coro::Event::, "Event::$flavour");
    my $coronew = sub {
       # how does one do method-call-by-name?
@@ -106,33 +100,30 @@ for my $flavour (qw(idle var timer io signal)) {
       my $w = $new->(
             desc => $flavour,
             @_,
-            cb => \&std_cb,
+            parked => 1,
       );
-      $w->private($q); # using private as attribute is pretty useless...
+      _install_std_cb($w, $type);
       bless $w, $class; # reblessing due to broken Event
    };
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
       my $e = (&$coronew)->next;
-      $e->w->cancel;
+      $e->cancel; # $e = $e->w
       $e;
    };
 }
 
-sub next {
-   my $w = $_[0];
-   my $q = $w->private;
-   if ($q->[1]) { # event waiting?
-      $w->again unless $w->is_cancelled;
-   } elsif ($q->[0]) {
-      croak "only one coroutine can wait for an event";
-   } else {
-      local $q->[0] = $Coro::current;
-      Coro::schedule;
-   }
-   delete $q->[1];
+# double calls to avoid stack-cloning ;()
+# is about 10% slower, though.
+sub next($) {
+   &Coro::schedule if &_next; $_[0];
 }
+
+sub Coro::Event::w    { $_[0] }
+sub Coro::Event::prio { $_[0]{Coro::Event}[3] }
+sub Coro::Event::hits { $_[0]{Coro::Event}[4] }
+sub Coro::Event::got  { $_[0]{Coro::Event}[5] }
 
 =item sweep
 

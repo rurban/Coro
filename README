@@ -91,6 +91,34 @@ DESCRIPTION
     $process->ready
         Put the current process into the ready queue.
 
+    $process->cancel
+        Like "terminate", but terminates the specified process instead.
+
+    $oldprio = $process->prio($newprio)
+        Sets the priority of the process. Higher priority processes get run
+        before lower priority processes. Priorities are smalled signed
+        integer (currently -4 .. +3), that you can refer to using PRIO_xxx
+        constants (use the import tag :prio to get then):
+
+           PRIO_MAX > PRIO_HIGH > PRIO_NORMAL > PRIO_LOW > PRIO_IDLE > PRIO_MIN
+               3    >     1     >      0      >    -1    >    -3     >    -4
+
+           # set priority to HIGH
+           current->prio(PRIO_HIGH);
+
+        The idle coroutine ($Coro::idle) always has a lower priority than
+        any existing coroutine.
+
+        Changing the priority of the current process will take effect
+        immediately, but changing the priority of processes in the ready
+        queue (but not running) will only take effect after the next
+        schedule (of that process). This is a bug that will be fixed in some
+        future version.
+
+    $newprio = $process->nice($change)
+        Similar to "prio", but subtract the given value from the priority
+        (i.e. higher values mean lower priority, just as in unix).
+
 BUGS/LIMITATIONS
      - could be faster, especially when the core would introduce special
        support for coroutines (like it does for threads).

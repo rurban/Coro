@@ -4,23 +4,5 @@ Coro::State_or_hashref		T_STATE_OR_HASHREF
 INPUT
 
 T_STATE_OR_HASHREF
-	{
-           SV *arg = $arg;
-
-           if (SvROK(arg) && SvTYPE(SvRV(arg)) == SVt_PVHV)
-             {
-               HE *he = hv_fetch_ent((HV *)SvRV(arg), ucoro_state_sv, 0, ucoro_state_hash);
-
-               if (!he)
-                 croak (\"${Package}::$func_name() -- $var is a hashref but lacks the \" UCORO_STATE \" key\");
-
-               arg = HeVAL(he);
-             }
-              
-           /* must also be changed inside Coro::Cont::yield */
-           if (SvROK(arg) && SvSTASH(SvRV(arg)) == coro_state_stash)
-             $var = ($type) SvIV((SV*)SvRV(arg));
-           else
-             croak (\"${Package}::$func_name() -- $var is not (and contains not) a Coro::State object\");
-        }
+        $var = sv_to_coro ($arg, \"${Package}::$func_name()\", \"$var\");
 

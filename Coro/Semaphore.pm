@@ -16,7 +16,7 @@ Coro::Semaphore - non-binary semaphores
 
 =head1 DESCRIPTION
 
-This module implements counted semaphores. You can initialize a mutex
+This module implements counting semaphores. You can initialize a mutex
 with any level of parallel users, that is, you can intialize a sempahore
 that can be C<down>ed more than once until it blocks. There is no owner
 associated with semaphores, so one coroutine can C<down> it while another
@@ -35,9 +35,9 @@ package Coro::Semaphore;
 
 use Coro ();
 
-$VERSION = 0.13;
+$VERSION = 0.45;
 
-=item new [inital count, default one]
+=item new [inital count]
 
 Creates a new sempahore object with the given initial lock count. The
 default lock count is 1, which means it is unlocked by default. Zero (or
@@ -58,12 +58,11 @@ waits until the semaphore is available if the counter is zero.
 =cut
 
 sub down {
-   my $self = shift;
-   while ($self->[0] <= 0) {
-      push @{$self->[1]}, $Coro::current;
+   while ($_[0][0] <= 0) {
+      push @{$_[0][1]}, $Coro::current;
       Coro::schedule;
    }
-   --$self->[0];
+   --$_[0][0];
 }
 
 =item $sem->up
@@ -73,9 +72,8 @@ Unlock the semaphore again.
 =cut
 
 sub up {
-   my $self = shift;
-   if (++$self->[0] > 0) {
-      (shift @{$self->[1]})->ready if @{$self->[1]};
+   if (++$_[0][0] > 0) {
+      (shift @{$_[0][1]})->ready if @{$_[0][1]};
    }
 }
 
@@ -87,13 +85,23 @@ otherwise return false and leave the semaphore unchanged.
 =cut
 
 sub try {
-   my $self = shift;
-   if ($self->[0] > 0) {
-      --$self->[0];
+   if ($_[0][0] > 0) {
+      --$_[0][0];
       return 1;
    } else {
       return 0;
    }
+}
+
+=item $sem->waiters
+
+In scalar context, returns the number of coroutines waiting for this
+semaphore.
+
+=cut
+
+sub waiters {
+   @{$_[0][1]};
 }
 
 =item $guard = $sem->guard
@@ -104,14 +112,14 @@ object is destroyed it automatically calls C<up>.
 =cut
 
 sub guard {
-   $_[0]->down;
+   &down;
    # double indirection because bless works on the referenced
    # object, not (only) on the reference itself.
    bless \\$_[0], Coro::Semaphore::Guard::;
 }
 
 sub Coro::Semaphore::Guard::DESTROY {
-   ${${$_[0]}}->up;
+   &up(${${$_[0]}});
 }
 
 1;

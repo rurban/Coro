@@ -21,7 +21,7 @@ package Coro::Handle;
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 0.13;
+$VERSION = 0.45;
 
 @EXPORT = qw(unblock);
 
@@ -85,16 +85,57 @@ sub readline	{ tied(${+shift})->READLINE(@_) }
 =item $fh->autoflush([...])
 
 Always returns true, arguments are being ignored (exists for compatibility
-only).
+only). Might change in the future.
 
 =cut
 
 sub autoflush	{ !0 }
 
+=item $fh->fileno, $fh->close
+
+Work like their function equivalents.
+
+=cut
+
+sub fileno { tied(${$_[0]})->FILENO }
+sub close  { tied(${$_[0]})->CLOSE  }
+
+=item $fh->timeout([...])
+
+The optional agrument sets the new timeout (in seconds) for this
+handle. Returns the current (new) value.
+
+C<0> is a valid timeout, use C<undef> to disable the timeout.
+
+=cut
+
+sub timeout {
+   my $self = tied(${$_[0]});
+   if (@_) {
+      $self->{timeout} = $_[0];
+      $self->{rw}->timeout($_[0]) if $self->{rw};
+      $self->{ww}->timeout($_[0]) if $self->{ww};
+   }
+   $self->{timeout};
+}
+
+=item $fh->fh
+
+Returns the "real" (non-blocking) filehandle. Use this if you want to
+do operations on the file handle you cannot do using the Coro::Handle
+interface.
+
+=cut
+
+sub fh {
+   tied(${$_[0]})->{fh};
+}
+
 package Coro::Handle::FH;
 
 use Fcntl ();
 use Errno ();
+use Carp 'croak';
 
 use Coro::Event;
 use Event::Watcher qw(R W E);
@@ -111,7 +152,7 @@ sub TIEHANDLE {
    }, $class;
 
    fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
-      or die "fcntl(O_NONBLOCK): $!";
+      or croak "fcntl(O_NONBLOCK): $!";
 
    $self;
 }
@@ -123,7 +164,7 @@ sub OPEN {
                    : open $self->{fh}, $_[0], $_[1], $_[2];
    if ($r) {
       fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
-         or die "fcntl(O_NONBLOCK): $!";
+         or croak "fcntl(O_NONBLOCK): $!";
    }
    $r;
 }
@@ -132,9 +173,13 @@ sub CLOSE {
    my $self = shift;
    $self->{rb} =
    $self->{wb} = "";
-   (delete $self->{rw})->cancel if $self->{rw};
-   (delete $self->{ww})->cancel if $self->{ww};
+   (delete $self->{rw})->cancel if exists $self->{rw};
+   (delete $self->{ww})->cancel if exists $self->{ww};
    close $self->{fh};
+}
+
+sub FILENO {
+   fileno $_[0]->{fh};
 }
 
 sub writable {
@@ -143,7 +188,7 @@ sub writable {
       desc    => "$_[0]->{desc} WW",
       timeout => $_[0]->{timeout},
       poll    => W+E,
-   ))->next->got & W;
+   ))->next->{Coro::Event}[5] & W;
 }
 
 sub readable {
@@ -152,7 +197,7 @@ sub readable {
       desc    => "$_[0]->{desc} RW",
       timeout => $_[0]->{timeout},
       poll    => R+E,
-   ))->next->got & R;
+   ))->next->{Coro::Event}[5] & R;
 }
 
 sub WRITE {

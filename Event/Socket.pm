@@ -26,7 +26,7 @@ use Coro::Util ();
 
 use base 'Coro::Handle';
 
-$VERSION = 0.13;
+$VERSION = 0.45;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {
@@ -36,8 +36,14 @@ sub _proto($) {
 }
 
 sub _port($$) {
-   $_port{$_[0]} ||= do {
-      ((getservbyname $_[0], $_[1])[2] || (getservbyport $_[0], $_[1])[2])
+   $_port{$_[0],$_[1]} ||= do {
+      return $_[0] if $_[0] =~ /^\d+$/;
+
+      $_[0] =~ /([^(]+)\s*(?:\((\d+)\))?/x
+         or croak "unparsable port number: $_[0]";
+      ((getservbyname $1, $_[1])[2]
+        || (getservbyport $1, $_[1])[2]
+        || $2)
          or croak "unknown port: $_[0]";
    };
 }
@@ -60,7 +66,7 @@ sub _sa($$$) {
    }
 }
 
-=item $fh = new_inet Coro::Socket param => value, ...
+=item $fh = new Coro::Socket param => value, ...
 
 Create a new non-blocking tcp handle and connect to the given host
 and port. The parameter names and values are mostly the same as in
@@ -145,7 +151,7 @@ sub new {
    $fh;
 }
 
-=item connect, listen, bind, accept, getsockopt, setsockopt,
+=item connect, listen, bind, getsockopt, setsockopt,
 send, recv, getpeername, getsockname
 
 Do the same thing as the perl builtins (but return true on
@@ -160,16 +166,25 @@ sub getsockopt	{ getsockopt tied(${$_[0]})->{fh}, $_[1], $_[2] }
 sub setsockopt	{ setsockopt tied(${$_[0]})->{fh}, $_[1], $_[2], $_[3] }
 sub send	{ send tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub setsockname	{ getsockname tied(${$_[0]})->{fh} }
-sub setpeername	{ getpeername tied(${$_[0]})->{fh} }
+sub getsockname	{ getsockname tied(${$_[0]})->{fh} }
+sub getpeername	{ getpeername tied(${$_[0]})->{fh} }
+
+=item ($peername, $fh) = $listen_fh->accept
+
+In scalar context, returns the newly accepted socket (or undef) and in
+list context return the ($peername, $fh) pair (or nothing).
+
+=cut
 
 sub accept {
-   my $fh;
+   my ($peername, $fh);
    while () {
-      $_[0]->readable or return;
-      accept $fh, tied(${$_[0]})->{fh}
-         and return new_from_fh Coro::Handle $fh;
+      $peername = accept $fh, tied(${$_[0]})->{fh}
+         and return ($peername, $fh = new_from_fh Coro::Socket $fh);
+
       return unless $!{EAGAIN};
+
+      $_[0]->readable or return;
    }
 }
 

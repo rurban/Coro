@@ -1,5 +1,18 @@
 Revision history for Perl extension Coro.
 
+0.45  Sun Sep  2 02:54:01 CEST 2001
+	- new method Coro::Handle::timeout.
+        - corrected speling of set...name to get...name in Coro::Socket.
+        - Coro::Socket::accept now returns a Coro::Socket, not a Coro::Handle.
+        - Coro::Handle now supports fileno and FILENO.
+        - added eg/myhttpd, a web server.
+        - Coro::Socket now accepts numeric ports as well as "port(number)"
+          syntax.
+        - moved some scheduling primitives into xs code. more to come.
+        - new simple priority system.
+        - implemented Coro::Event using XS, almost four times faster!
+        - small memory corruption problem fixed (boy that was difficult).
+
 0.13  Wed Aug  8 16:53:07 CEST 2001
 	- new method Coro::Handle::readline.
         - added eg/lwp and Coro::Handle::autoflush, to make LWP work.

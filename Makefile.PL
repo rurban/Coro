@@ -17,6 +17,8 @@ if ($] < 5.006) {
 EOF
 }
 
+$EVENT = eval { require Event };
+
 WriteMakefile(
     dist         => {
        PREOP	=> 'pod2text Coro.pm | tee README >$(DISTVNAME)/README; chmod -R u=rwX,go=rX . ;',
@@ -25,10 +27,13 @@ WriteMakefile(
 	            },
     NAME         => "Coro",
     VERSION_FROM => "Coro.pm",
-    DIR          => ['Coro'],
+    DIR          => ['Coro', ($EVENT ? 'Event' : ())],
     PREREQ_PM    => {
-       Event	=> 0.84, # yes, 0.83 and below have serious bugs
+       Event	=> 0.83, # still, 0.83 and below have serious bugs(!)
     },
+    PM           => {
+    		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
+                    },
 );
 
 sub MY::postamble {

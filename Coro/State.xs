@@ -18,32 +18,21 @@
 # endif
 #endif
 
-#define MAY_FLUSH /* increases codesize */
-
-/* perl-related */
-#define TRANSFER_SAVE_DEFAV	0x00000001
-#define TRANSFER_SAVE_DEFSV	0x00000002
-#define TRANSFER_SAVE_ERRSV	0x00000004
-/* c-related */
-#define TRANSFER_SAVE_CCTXT	0x00000008
-#ifdef CORO_LAZY_STACK
-# define TRANSFER_LAZY_STACK	0x00000010
-#else
-# define TRANSFER_LAZY_STACK	0x00000000
-#endif
-
-#define TRANSFER_SAVE_ALL	(TRANSFER_SAVE_DEFAV|TRANSFER_SAVE_DEFSV \
-                                |TRANSFER_SAVE_ERRSV|TRANSFER_SAVE_CCTXT)
+#define MAY_FLUSH /* increases codesize and is rarely used */
 
 #define SUB_INIT    "Coro::State::initialize"
 #define UCORO_STATE "_coro_state"
 
-/* The next macro should delcare a variable stacklevel that contains and approximation
- * to the current C stack pointer. It's property is that it changes with each call
+/* The next macro should declare a variable stacklevel that contains and approximation
+ * to the current C stack pointer. Its property is that it changes with each call
  * and should be unique. */
 #define dSTACKLEVEL void *stacklevel = &stacklevel
 
 #define labs(l) ((l) >= 0 ? (l) : -(l))
+
+#include "CoroAPI.h"
+
+static struct CoroAPI coroapi;
 
 /* this is actually not only the c stack but also c registers etc... */
 typedef struct {
@@ -208,7 +197,7 @@ clone_padlist (AV *protopadlist)
 }
 
 #ifdef MAY_FLUSH
-STATIC AV *
+STATIC void
 free_padlist (AV *padlist)
 {
   /* may be during global destruction */
@@ -283,8 +272,8 @@ flush_padlist_cache ()
 #define SB do {
 #define SE } while (0)
 
-#define LOAD(state)       SB load_state(aTHX_ (state)); SPAGAIN;         SE
-#define SAVE(state,flags) SB PUTBACK; save_state(aTHX_ (state),(flags)); SE
+#define LOAD(state)       load_state(aTHX_ (state));
+#define SAVE(state,flags) save_state(aTHX_ (state),(flags));
 
 #define REPLACE_SV(sv,val) SB SvREFCNT_dec(sv); (sv) = (val); SE
 
@@ -368,7 +357,7 @@ save_state(pTHX_ Coro__State c, int flags)
     /* this loop was inspired by pp_caller */
     for (;;)
       {
-        do
+        while (cxix >= 0)
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
@@ -404,7 +393,6 @@ save_state(pTHX_ Coro__State c, int flags)
                 croak ("CXt_FORMAT not yet handled. Don't switch coroutines from within formats");
               }
           }
-        while (cxix >= 0);
 
         if (top_si->si_type == PERLSI_MAIN)
           break;
@@ -420,11 +408,6 @@ save_state(pTHX_ Coro__State c, int flags)
   c->defav = flags & TRANSFER_SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
   c->defsv = flags & TRANSFER_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
   c->errsv = flags & TRANSFER_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
-
-  /* I have not the slightest idea of why av_reify is necessary */
-  /* but if it's missing the defav contents magically get replaced sometimes */
-  if (c->defav)
-    av_reify (c->defav);
 
   c->dowarn = PL_dowarn;
   c->in_eval = PL_in_eval;
@@ -506,13 +489,18 @@ coro_init_stacks (pTHX)
 STATIC void
 destroy_stacks(pTHX)
 {
-  /* is this ugly, I ask? */
-  while (PL_scopestack_ix)
-    LEAVE;
+  int destruct = PL_main_cv != Nullcv;
 
-  /* sure it is, but more important: is it correct?? :/ */
-  while (PL_tmps_ix > PL_tmps_floor) /* should only ever be one iteration */
-    FREETMPS;
+  if (destruct)
+    {
+      /* is this ugly, I ask? */
+      while (PL_scopestack_ix)
+        LEAVE;
+
+      /* sure it is, but more important: is it correct?? :/ */
+      while (PL_tmps_ix > PL_tmps_floor) /* should only ever be one iteration */
+        FREETMPS;
+    }
 
   while (PL_curstackinfo->si_next)
     PL_curstackinfo = PL_curstackinfo->si_next;
@@ -527,9 +515,12 @@ destroy_stacks(pTHX)
         PUTBACK; /* possibly superfluous */
       }
 
-      dounwind(-1);
+      if (destruct)
+        {
+          dounwind(-1);
+          SvREFCNT_dec(PL_curstackinfo->si_stack);
+        }
 
-      SvREFCNT_dec(PL_curstackinfo->si_stack);
       Safefree(PL_curstackinfo->si_cxstack);
       Safefree(PL_curstackinfo);
       PL_curstackinfo = p;
@@ -661,8 +652,14 @@ continue_coro (void *arg)
    * this is a _very_ stripped down perl interpreter ;)
    */
   Coro__State ctx = (Coro__State)arg;
+  JMPENV coro_start_env;
 
-  /*FIXME*//* must set up top_env here */
+  /* same as JMPENV_BOOTSTRAP */
+  Zero(&coro_start_env, 1, JMPENV);
+  coro_start_env.je_ret = -1;
+  coro_start_env.je_mustcatch = TRUE;
+  PL_top_env = &coro_start_env;
+
   ctx->cursp = 0;
   PL_op = PL_op->op_next;
   CALLRUNOPS(aTHX);
@@ -673,11 +670,13 @@ continue_coro (void *arg)
 STATIC void
 transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
 {
-  dSP;
   dSTACKLEVEL;
+  static struct coro *xnext;
 
   if (prev != next)
     {
+      xnext = next;
+
       if (next->mainstack)
         {
           SAVE (prev, flags);
@@ -710,6 +709,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                 }
 
               coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
+              /* don't add any code here */
             }
 
         }
@@ -740,6 +740,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                                setup_coro, (void *)next,
                                next->stack->sptr, labs (next->stack->ssize));
                   coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
+                  /* don't add any code here */
                 }
             }
           else
@@ -747,7 +748,131 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
         }
     }
 
-  next->cursp = stacklevel;
+  /*
+   * xnext is now either prev or next, depending on wether
+   * we switched the c stack or not. that's why i use a global
+   * variable, that should become thread-specific at one point.
+   */
+  xnext->cursp = stacklevel;
+}
+
+static struct coro *
+sv_to_coro (SV *arg, const char *funcname, const char *varname)
+{
+  if (SvROK(arg) && SvTYPE(SvRV(arg)) == SVt_PVHV)
+    {
+      HE *he = hv_fetch_ent((HV *)SvRV(arg), ucoro_state_sv, 0, ucoro_state_hash);
+
+      if (!he)
+        croak ("%s() -- %s is a hashref but lacks the " UCORO_STATE " key", funcname, varname);
+
+      arg = HeVAL(he);
+    }
+     
+  /* must also be changed inside Coro::Cont::yield */
+  if (SvROK(arg) && SvOBJECT(SvRV(arg))
+      && SvSTASH(SvRV(arg)) == coro_state_stash)
+    return (struct coro *) SvIV((SV*)SvRV(arg));
+
+  croak ("%s() -- %s is not (and contains not) a Coro::State object", funcname, varname);
+  /*NORETURN*/
+}
+
+static void
+api_transfer(pTHX_ SV *prev, SV *next, int flags)
+{
+  transfer(aTHX_
+           sv_to_coro (prev, "Coro::transfer", "prev"),
+           sv_to_coro (next, "Coro::transfer", "next"),
+           flags);
+}
+
+/** Coro ********************************************************************/
+
+#define PRIO_MAX     3
+#define PRIO_HIGH    1
+#define PRIO_NORMAL  0
+#define PRIO_LOW    -1
+#define PRIO_IDLE   -3
+#define PRIO_MIN    -4
+
+/* for Coro.pm */
+static GV *coro_current, *coro_idle;
+static AV *coro_ready[PRIO_MAX-PRIO_MIN+1];
+static int coro_nready;
+
+static void
+coro_enq (SV *sv)
+{
+  if (SvROK (sv))
+    {
+      SV *hv = SvRV (sv);
+      if (SvTYPE (hv) == SVt_PVHV)
+        {
+          SV **xprio = hv_fetch ((HV *)hv, "prio", 4, 0);
+          int prio = xprio ? SvIV (*xprio) : PRIO_NORMAL;
+
+          prio = prio > PRIO_MAX ? PRIO_MAX
+               : prio < PRIO_MIN ? PRIO_MIN
+               : prio;
+
+          av_push (coro_ready [prio - PRIO_MIN], sv);
+          coro_nready++;
+
+          return;
+        }
+    }
+
+  croak ("Coro::ready tried to enqueue something that is not a coroutine");
+}
+
+static SV *
+coro_deq (int min_prio)
+{
+  int prio = PRIO_MAX - PRIO_MIN;
+
+  min_prio -= PRIO_MIN;
+  if (min_prio < 0)
+    min_prio = 0;
+
+  for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= min_prio; )
+    if (av_len (coro_ready[prio]) >= 0)
+      {
+        coro_nready--;
+        return av_shift (coro_ready[prio]);
+      }
+
+  return 0;
+}
+
+static void
+api_ready (SV *coro)
+{
+  coro_enq (SvREFCNT_inc (coro));
+}
+
+static void
+api_schedule (int cede)
+{
+  SV *prev, *next;
+
+  prev = GvSV (coro_current);
+
+  if (cede)
+    coro_enq (SvREFCNT_inc (prev));
+
+  next = coro_deq (PRIO_MIN);
+
+  if (!next)
+    next = SvREFCNT_inc (GvSV (coro_idle));
+
+  GvSV (coro_current) = SvREFCNT_inc (next);
+  transfer (aTHX_
+            sv_to_coro (prev, "Coro::schedule", "current coroutine"),
+            sv_to_coro (next, "Coro::schedule", "next coroutine"),
+            TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
+  SvREFCNT_dec (next);
+  SvREFCNT_dec (prev);
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State
@@ -769,6 +894,9 @@ BOOT:
 	  padlist_cache = newHV ();
 
         main_mainstack = PL_mainstack;
+
+        coroapi.ver      = CORO_API_VERSION;
+        coroapi.transfer = api_transfer;
 }
 
 Coro::State
@@ -792,7 +920,7 @@ _newprocess(args)
         RETVAL
 
 void
-transfer(prev, next, flags = TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK)
+transfer(prev, next, flags)
         Coro::State_or_hashref	prev
         Coro::State_or_hashref	next
         int			flags
@@ -811,12 +939,15 @@ DESTROY(coro)
           {
             struct coro temp;
 
+            PUTBACK;
             SAVE(aTHX_ (&temp), TRANSFER_SAVE_ALL);
             LOAD(aTHX_ coro);
+            SPAGAIN;
 
             destroy_stacks (aTHX);
 
             LOAD((&temp)); /* this will get rid of defsv etc.. */
+            SPAGAIN;
 
             coro->mainstack = 0;
           }
@@ -847,7 +978,7 @@ _exit(code)
 
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
-# this is slightly dirty
+# this is slightly dirty (should expose a c-level api)
 
 void
 yield(...)
@@ -874,4 +1005,62 @@ yield(...)
         SvREFCNT_dec (sv);
 
         transfer(aTHX_ prev, next, 0);
+
+MODULE = Coro::State                PACKAGE = Coro
+
+# this is slightly dirty (should expose a c-level api)
+
+BOOT:
+{
+	int i;
+	HV *stash = gv_stashpv ("Coro", TRUE);
+
+        newCONSTSUB (stash, "PRIO_MAX",    newSViv (PRIO_MAX));
+        newCONSTSUB (stash, "PRIO_HIGH",   newSViv (PRIO_HIGH));
+        newCONSTSUB (stash, "PRIO_NORMAL", newSViv (PRIO_NORMAL));
+        newCONSTSUB (stash, "PRIO_LOW",    newSViv (PRIO_LOW));
+        newCONSTSUB (stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
+        newCONSTSUB (stash, "PRIO_MIN",    newSViv (PRIO_MIN));
+
+        coro_current = gv_fetchpv ("Coro::current", TRUE, SVt_PV);
+        coro_idle    = gv_fetchpv ("Coro::idle"   , TRUE, SVt_PV);
+
+        for (i = PRIO_MAX - PRIO_MIN + 1; i--; )
+          coro_ready[i] = newAV ();
+
+        {
+          SV *sv = perl_get_sv("Coro::API", 1);
+
+          coroapi.schedule = api_schedule;
+          coroapi.ready    = api_ready;
+          coroapi.nready   = &coro_nready;
+          coroapi.current  = coro_current;
+
+          GCoroAPI = &coroapi;
+          sv_setiv(sv, (IV)&coroapi);
+          SvREADONLY_on(sv);
+        }
+}
+
+void
+ready(self)
+	SV *	self
+	CODE:
+        api_ready (self);
+
+int
+nready(...)
+	PROTOTYPE:
+        CODE:
+        RETVAL = coro_nready;
+	OUTPUT:
+        RETVAL
+
+void
+schedule(...)
+	PROTOTYPE:
+  	ALIAS:
+           cede = 1
+	CODE:
+        api_schedule (ix);
 

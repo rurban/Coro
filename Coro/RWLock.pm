@@ -28,7 +28,7 @@ package Coro::RWLock;
 
 use Coro ();
 
-$VERSION = 0.13;
+$VERSION = 0.45;
 
 =item $l = new Coro::RWLock;
 

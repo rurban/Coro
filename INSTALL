@@ -10,7 +10,7 @@ Event-0.84 cannot be found / Event programs do not work.
 
 There is a serious bug in Event's poll implementation (if your os uses
 select for io multiplexing then this bug doesn't affect you), in that
-errors never get reported and result in endless loop.s
+errors never get reported and result in endless loops.
 
 The fix is easy. Unpack Event and edit the file c/unix.c and look for the
 following line (at or around line 141 in the file):

@@ -48,7 +48,7 @@ per coroutine, 5k when the experimental context sharing is enabled.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.13;
+   $VERSION = 0.45;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
@@ -106,7 +106,8 @@ following constants together:
    SAVE_ERRSV  save/restore $@
    SAVE_CCTXT  save/restore C-stack (you usually want this)
 
-These constants are not exported by default.
+These constants are not exported by default. If you don't need any extra
+additional state saved use C<0> as the flags value.
 
 If you feel that something important is missing then tell me.  Also
 remember that every function call that might call C<transfer> (such
