@@ -6,6 +6,8 @@ Revision history for Perl extension Coro.
         - Coro::Socket::accept now returns a Coro::Socket, not a Coro::Handle.
         - Coro::Handle now supports fileno and FILENO.
         - added eg/myhttpd, a web server.
+        - Coro::Socket now accepts numeric ports as well as "port(number)"
+          syntax.
 
 0.13  Wed Aug  8 16:53:07 CEST 2001
 	- new method Coro::Handle::readline.

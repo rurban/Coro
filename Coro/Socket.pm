@@ -36,8 +36,14 @@ sub _proto($) {
 }
 
 sub _port($$) {
-   $_port{$_[0]} ||= do {
-      ((getservbyname $_[0], $_[1])[2] || (getservbyport $_[0], $_[1])[2])
+   $_port{$_[0],$_[1]} ||= do {
+      return $_[0] if $_[0] =~ /^\d+$/;
+
+      $_[0] =~ /([^(]+)\s*(?:\((\d+)\))?/x
+         or croak "unparsable port number: $_[0]";
+      ((getservbyname $1, $_[1])[2]
+        || (getservbyport $1, $_[1])[2]
+        || $2)
          or croak "unknown port: $_[0]";
    };
 }
