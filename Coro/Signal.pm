@@ -22,7 +22,7 @@ Coro::Signal - coroutine signals (binary semaphores)
 
 package Coro::Signal;
 
-use Coro::Process ();
+use Coro ();
 
 $VERSION = 0.01;
 
@@ -47,8 +47,8 @@ sub wait {
    if ($_[0][0]) {
       $_[0][0] = 0;
    } else {
-      push @{$_[0][1]}, $Coro::Process::current;
-      Coro::Process::schedule;
+      push @{$_[0][1]}, $Coro::current;
+      Coro::schedule;
    }
 }
 

@@ -2,13 +2,14 @@
 #include "perl.h"
 #include "XSUB.h"
 
-typedef struct coro {
+struct coro {
   U8 dowarn;
   
   PERL_SI *curstackinfo;
   AV *curstack;
   AV *mainstack;
   SV **stack_sp;
+  OP *op;
   SV **curpad;
   SV **stack_base;
   SV **stack_max;
@@ -28,9 +29,13 @@ typedef struct coro {
   OP **retstack;
   I32 retstack_ix;
   I32 retstack_max;
+  COP *curcop;
 
   SV *proc;
-} *Coro;
+};
+
+typedef struct coro *Coro__State;
+typedef struct coro *Coro__State_or_hashref;
 
 #define SAVE(c)	\
   c->dowarn = PL_dowarn;		\
@@ -38,6 +43,7 @@ typedef struct coro {
   c->curstack = PL_curstack;		\
   c->mainstack = PL_mainstack;		\
   c->stack_sp = PL_stack_sp;		\
+  c->op = PL_op;			\
   c->curpad = PL_curpad;		\
   c->stack_base = PL_stack_base;	\
   c->stack_max = PL_stack_max;		\
@@ -56,7 +62,8 @@ typedef struct coro {
   c->savestack_max = PL_savestack_max;	\
   c->retstack = PL_retstack;		\
   c->retstack_ix = PL_retstack_ix;	\
-  c->retstack_max = PL_retstack_max;
+  c->retstack_max = PL_retstack_max;	\
+  c->curcop = PL_curcop;
 
 #define LOAD(c)	\
   PL_dowarn = c->dowarn;		\
@@ -64,6 +71,7 @@ typedef struct coro {
   PL_curstack = c->curstack;		\
   PL_mainstack = c->mainstack;		\
   PL_stack_sp = c->stack_sp;		\
+  PL_op = c->op;			\
   PL_curpad = c->curpad;		\
   PL_stack_base = c->stack_base;	\
   PL_stack_max = c->stack_max;		\
@@ -82,7 +90,8 @@ typedef struct coro {
   PL_savestack_max = c->savestack_max;	\
   PL_retstack = c->retstack;		\
   PL_retstack_ix = c->retstack_ix;	\
-  PL_retstack_max = c->retstack_max;
+  PL_retstack_max = c->retstack_max;	\
+  PL_curcop = c->curcop;
 
 /* this is an EXACT copy of S_nuke_stacks in perl.c, which is unfortunately static */
 STATIC void
@@ -104,20 +113,20 @@ S_nuke_stacks(pTHX)
     Safefree(PL_retstack);
 }
 
-MODULE = Coro		PACKAGE = Coro
+MODULE = Coro::State		PACKAGE = Coro::State
 
 PROTOTYPES: ENABLE
 
-Coro
-_newprocess(proc)
+Coro::State
+newprocess(proc)
 	SV *	proc
         PROTOTYPE: &
         CODE:
-        Coro coro;
+        Coro__State coro;
         
         New (0, coro, 1, struct coro);
 
-        coro->mainstack = 0; /* actual work is done inside _transfer */
+        coro->mainstack = 0; /* actual work is done inside transfer */
         coro->proc = SvREFCNT_inc (proc);
 
         RETVAL = coro;
@@ -125,43 +134,61 @@ _newprocess(proc)
         RETVAL
 
 void
-_transfer(prev,next)
-	Coro	prev
-	Coro	next
+transfer(prev,next)
+	Coro::State_or_hashref	prev
+	Coro::State_or_hashref	next
         CODE:
 
         PUTBACK;
         SAVE (prev);
 
-        if (next->mainstack) /* this is, in theory, unnecessary overhead */
+        /*
+         * this could be done in newprocess which would to
+         * extremely elegant and fast (just PUTBACK/SAVE/LOAD/SPAGAIN)
+         * code here, but lazy allocation of stacks has also
+         * some virtues and the overhead of the if() is nil.
+         */
+        if (next->mainstack)
           {
             LOAD (next);
+            next->mainstack = 0; /* unnecessary but much cleaner */
             SPAGAIN;
           }
         else
           {
-            init_stacks ();
+            /*
+             * emulate part of the perl startup here.
+             */
+            UNOP myop;
 
-            ERRSV = newSVsv(&PL_sv_undef);
-            DEFSV = newSVsv(&PL_sv_undef);
+            init_stacks ();
+            PL_op = (OP *)&myop;
+            /*PL_curcop = 0;*/
 
             SPAGAIN;
-            PUSHMARK(SP);
+            Zero(&myop, 1, UNOP);
+            myop.op_next = Nullop;
+            myop.op_flags = OPf_WANT_VOID;
+
+            EXTEND (SP,1);
+            PUSHs (next->proc);
+            
             PUTBACK;
-            call_sv (next->proc, G_VOID | G_DISCARD | G_EVAL);
+            /*
+             * the next line is slightly wrong, as PL_op->op_next
+             * is actually being executed so we skip the first op
+             * that doens't matter, though, since it is only
+             * pp_nextstate and we never return...
+             */
+            PL_op = Perl_pp_entersub(aTHX);
+            SPAGAIN;
 
-            exit (0);
-
-            /*SPAGAIN;
-            SAVE (next);
-
-            LOAD (prev);
-            SPAGAIN;*/
+            ENTER;
           }
 
 void
 DESTROY(coro)
-	Coro	coro
+	Coro::State	coro
         CODE:
 
         if (coro->mainstack)
@@ -173,8 +200,6 @@ DESTROY(coro)
             LOAD(coro);
 
             S_nuke_stacks ();
-            SvREFCNT_dec (ERRSV);
-            SvREFCNT_dec (DEFSV);
 
             LOAD((&temp));
             SPAGAIN;

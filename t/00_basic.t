@@ -1,11 +1,11 @@
 BEGIN { $| = 1; print "1..6\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use Coro;
+use Coro::State;
 $loaded = 1;
 print "ok 1\n";
 
-my $main = new Coro;
-my $proc = new Coro \&a;
+my $main = new Coro::State;
+my $proc = new Coro::State \&a;
 
 sub a {
    print "ok 3\n";

@@ -2,7 +2,6 @@ $|=1;
 print "1..19\n";
 
 use Coro;
-use Coro::Process;
 use Coro::Channel;
 
 my $q = new Coro::Channel 0;

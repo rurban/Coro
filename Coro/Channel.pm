@@ -21,7 +21,7 @@ Coro::Channel - message queues
 
 package Coro::Channel;
 
-use Coro::Process ();
+use Coro ();
 
 $VERSION = 0.01;
 
@@ -47,7 +47,7 @@ Put the given scalar into the queue.
 sub put {
    push @{$_[0][0]}, $_[1];
    (pop @{$_[0][1]})->ready if @{$_[0][1]};
-   &Coro::Process::yield if defined $_[0][2] && @{$_[0][0]} > $_[0][2];
+   &Coro::yield if defined $_[0][2] && @{$_[0][0]} > $_[0][2];
 }
 
 =item $q->get
@@ -58,8 +58,8 @@ Return the next element from the queue, waiting if necessary.
 
 sub get {
    while (!@{$_[0][0]}) {
-      push @{$_[0][1]}, $Coro::Process::current;
-      &Coro::Process::schedule;
+      push @{$_[0][1]}, $Coro::current;
+      &Coro::schedule;
    }
    shift @{$_[0][0]};
 }

@@ -22,7 +22,7 @@ Coro::Semaphore - non-binary semaphores
 
 package Coro::Semaphore;
 
-use Coro::Process ();
+use Coro ();
 
 $VERSION = 0.01;
 
@@ -47,8 +47,8 @@ waits until the semaphore is available if the counter is zero.
 sub down {
    my $self = shift;
    while ($self->[0] <= 0) {
-      push @{$self->[1]}, $Coro::Process::current;
-      Coro::Process::schedule;
+      push @{$self->[1]}, $Coro::current;
+      Coro::schedule;
    }
    --$self->[0];
 }
