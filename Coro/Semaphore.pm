@@ -6,7 +6,7 @@ Coro::Semaphore - non-binary semaphores
 
  use Coro::Semaphore;
 
- $sig = new Coro::Semaphore [init];
+ $sig = new Coro::Semaphore [initial value];
 
  $sig->down; # wait for signal
 
@@ -26,9 +26,23 @@ use Coro::Process ();
 
 $VERSION = 0.01;
 
+=item new [inital count, default zero]
+
+Creates a new sempahore object with the given initial lock count. The
+default lock count is 1, which means it is unlocked by default.
+
+=cut
+
 sub new {
    bless [defined $_[1] ? $_[1] : 1], $_[0];
 }
+
+=item $sem->down
+
+Decrement the counter, therefore "locking" the semaphore. This method
+waits until the semaphore is available if the counter is zero.
+
+=cut
 
 sub down {
    my $self = shift;
@@ -39,12 +53,25 @@ sub down {
    --$self->[0];
 }
 
+=item $sem->up
+
+Unlock the semaphore again.
+
+=cut
+
 sub up {
    my $self = shift;
    if (++$self->[0] > 0) {
       (shift @{$self->[1]})->ready if @{$self->[1]};
    }
 }
+
+=item $sem->try
+
+Try to C<down> the semaphore. Returns true when this was possible,
+otherwise return false and leave the semaphore unchanged.
+
+=cut
 
 sub try {
    my $self = shift;

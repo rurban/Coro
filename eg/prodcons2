@@ -9,7 +9,7 @@ use Coro;
 use Coro::Process;
 use Coro::Semaphore;
 
-my $produced = new Coro::Semaphore;
+my $produced = new Coro::Semaphore 0;
 my $finished = new Coro::Semaphore 0;
 
 async {
