@@ -318,8 +318,8 @@ our %WHOIS;
 
 #$WHOIS{ARIN}   = new Whois::ARIN ARIN  => "whois.arin.net",    port =>   43, maxjobs => 12;
 $WHOIS{ARIN}   = new Whois::RWHOIS ARIN  => "rwhois.arin.net", port => 4321, maxjobs => 12;
-$WHOIS{RIPE}   = new Whois::RIPE RIPE  => "whois.ripe.net",    port =>   43, rflags => "-FSTin ", maxjobs => 20;
-$WHOIS{APNIC}  = new Whois::RIPE APNIC => "whois.apnic.net",   port =>   43, rflags => "-FSTin ", maxjobs => 20;
+$WHOIS{RIPE}   = new Whois::RIPE RIPE  => "whois.ripe.net",    port =>   43, rflags => "-FTin ", maxjobs => 20;
+$WHOIS{APNIC}  = new Whois::RIPE APNIC => "whois.apnic.net",   port =>   43, rflags => "-FTin ", maxjobs => 20;
 $WHOIS{LACNIC} = new Whois::RIPE LACNIC => "whois.lacnic.net",   port =>   43, maxjobs => 20;
 
 $whoislock = new Coro::SemaphoreSet;
@@ -345,7 +345,7 @@ sub ip_request {
    $whois = $WHOIS{RIPE}->ip_request($ip)
          || $WHOIS{APNIC} ->ip_request($ip)
          || $WHOIS{ARIN} ->ip_request($ip)
-         || $WHOIS{LACNIC}->ip_request($ip)
+#         || $WHOIS{LACNIC}->ip_request($ip)
          ;
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
@@ -379,8 +379,8 @@ if (0) {
    #print "\n\n";
    #print ip_request "133.11.128.254"; # jp
    #print "\n\n";
-   #print ip_request "151.197.52.251";
-   #print "\n\n";
+   print ip_request "80.131.153.93";
+   print "\n\n";
 }
 
 1;
