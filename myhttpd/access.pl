@@ -8,11 +8,17 @@ my @reserve = (
 
 sub new {
    my $class = shift;
-   bless {
+   my $self = bless {
       slots   => $_[0],
       lastspb => 0,
       avgspb  => 0,
    }, $class;
+   $self->{reschedule} = Event->timer(
+         after => 10,
+         interval => 3,
+         cb => sub { $self->wake_next },
+   );
+   $self;
 }
 
 sub start_transfer {
@@ -70,6 +76,12 @@ sub wake_next {
 sub waiters {
    $_[0]->sort;
    @{$_[0]{wait}};
+}
+
+sub DESTROY {
+   my $self = shift;
+
+   $self->{reschedule}->cancel;
 }
 
 package transfer;
