@@ -520,7 +520,6 @@ coro_init_stacks (pTHX)
 
 /*
  * destroy the stacks, the callchain etc...
- * still there is a memleak of 128 bytes...
  */
 STATIC void
 destroy_stacks(pTHX)
