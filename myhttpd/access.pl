@@ -46,11 +46,11 @@ sub wake_next {
 }
 
 sub sort {
-   $_[0]{wait} = [
-      sort { $b->{spb} <=> $a->{spb} }
-         grep { $_ && ($_->{spb} = ($::NOW-$_->{time})/($_->{size}||1)), $_ }
-            @{$_[0]{wait}}
-   ];
+   my @queue = grep $_, @{$_[0]{wait}};
+
+   $_->{spb} = ($::NOW-$_->{time}) / ($_->{size} || 1) for @queue;
+   
+   $_[0]{wait} = [sort { $b->{spb} <=> $a->{spb} } @queue];
 }
 
 sub waiters {

@@ -1,6 +1,9 @@
 Revision history for Perl extension Coro.
 
-0.53
+0.531
+	- Fixed a bug in SemaphoreSet::timed_down.
+
+0.53 Tue Nov 27 21:11:13 CET 2001
 	- some tests for Event.
         - slightly different internal architecture to get refcnt into the object
           and not the reference. might fix a few bugs, certainly did introduce
