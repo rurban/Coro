@@ -70,8 +70,8 @@ sub access_check {
    $self->err_block_referer
       if $self->{h}{referer} =~ $blockref;
 
-   my $whois = $whois_cache{$self->{remote_addr}}
-               ||= netgeo::ip_request($self->{remote_addr});
+   my $ra = $self->{remote_addr};
+   my $whois = $whois_cache{$ra} ||= netgeo::ip_request($ra);
 
    my $country = "XX";
 
