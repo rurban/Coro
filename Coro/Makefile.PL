@@ -101,7 +101,7 @@ retry:
       goto retry;
    }
 } else {
-   print "\nUsing microsoft coroutine implementation\n\n";
+   print "\nUsing microsoft compatible coroutines\n\n";
 }
 
 WriteMakefile(
