@@ -652,8 +652,14 @@ continue_coro (void *arg)
    * this is a _very_ stripped down perl interpreter ;)
    */
   Coro__State ctx = (Coro__State)arg;
+  JMPENV coro_start_env;
 
-  /*FIXME*//* must set up top_env here */
+  /* same as JMPENV_BOOTSTRAP */
+  Zero(&coro_start_env, 1, JMPENV);
+  coro_start_env.je_ret = -1;
+  coro_start_env.je_mustcatch = TRUE;
+  PL_top_env = &coro_start_env;
+
   ctx->cursp = 0;
   PL_op = PL_op->op_next;
   CALLRUNOPS(aTHX);
