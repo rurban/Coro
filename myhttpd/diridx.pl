@@ -227,7 +227,8 @@ EOF
 
    for (
          ["download queue", $queue_file],
-         ["other queue",    $queue_index],
+         $verbose ? (["other queue",    $queue_index])
+                  : (),
    ) {
       my ($name, $queue) = @$_;
       my @waiters = $queue->waiters;
@@ -238,9 +239,10 @@ EOF
          
          $content .= "<p>Waiting time until download starts, estimated:<ul>";
          for (
-               ["by most recently started transfer", $queue->{lastspb}],
                ["by queue average", $queue->{avgspb}],
-               ["by next client in queue", $waiters[0]{spb}],
+               $verbose ? (["by most recently started transfer", $queue->{lastspb}],
+                           ["by next client in queue", $waiters[0]{spb}])
+                        : (),
          ) {
             my ($by, $spb) = @$_;
             $content .= "<li>$by<br />";
