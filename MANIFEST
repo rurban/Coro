@@ -31,3 +31,5 @@ t/00_basic.t
 t/01_process.t
 t/02_channel.t
 t/03_cont.t
+t/04_rwlock.t
+
