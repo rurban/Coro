@@ -37,8 +37,8 @@ our $httpevent   = new Coro::Signal;
 our $wait_factor = 0.95;
 
 our @transfers = (
-  [(new Coro::Semaphore $MAX_TRANSFERS_SMALL || 50), 1],
-  [(new Coro::Semaphore $MAX_TRANSFERS_LARGE || 50), 1],
+  [(new Coro::Semaphore $MAX_TRANSFERS_SMALL), 1],
+  [(new Coro::Semaphore $MAX_TRANSFERS_LARGE), 1],
 );
 
 my @newcons;
@@ -526,16 +526,6 @@ ignore:
       $fudge = $fudge ? ($fudge+1)/$fudge : 1;
 
       $queue->[1] *= $fudge;
-      my $transfer = $queue->[0]->guard;
-
-      if ($fudge != 1) {
-         $queue->[1] /= $fudge;
-         $queue->[1] = $queue->[1] * $::wait_factor
-                     + ($::NOW - $self->{time}) * (1 - $::wait_factor);
-      }
-      $self->{time} = $::NOW;
-
-      $self->{fh}->writable or return;
 
       my ($fh, $buf, $r);
       my $current = $Coro::current;
@@ -549,13 +539,28 @@ ignore:
             sysseek $fh, $l, 0;
          }
       }
+      
+      my $transfer; # transfer guard
+      my $bufsize = $::WAIT_BUFSIZE; # initial buffer size
 
       while ($h > 0) {
+         unless ($transfer) {
+            if ($transfer ||= $queue->[0]->timed_guard($::WAIT_INTERVAL)) {
+               if ($fudge != 1) {
+                  $queue->[1] /= $fudge;
+                  $queue->[1] = $queue->[1] * $::wait_factor
+                              + ($::NOW - $self->{time}) * (1 - $::wait_factor);
+               }
+               $bufsize = $::BUFSIZE;
+               $self->{time} = $::NOW;
+            }
+         }
+
          if (0) {
-            sysread $fh, $buf, $h > $::BUFSIZE ? $::BUFSIZE : $h
+            sysread $fh, $buf, $h > $bufsize ? $bufsize : $h
                or last;
          } else {
-            aio_read($fh, $l, ($h > $::BUFSIZE ? $::BUFSIZE : $h),
+            aio_read($fh, $l, ($h > $bufsize ? $bufsize : $h),
                      $buf, 0, sub {
                         $r = $_[0];
                         Coro::ready($current);
