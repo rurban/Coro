@@ -55,11 +55,12 @@ sub conn::gen_statdata {
       for (sort readdir DIR) {
          next if /$ignore/;
          stat "$self->{path}$_";
-         next unless -r _;
          if (-d _) {
+            next unless 0555 == ((stat _)[2] & 0555);
             $dlen = length $_ if length $_ > $dlen;
             push @{$data->{d}}, $_;
          } else {
+            next unless 0444 == ((stat _)[2] & 0444);
             my $s = -s _;
             $flen = length $_ if length $_ > $dlen;
             $slen = length $s if length $s > $dlen;

@@ -89,14 +89,16 @@ my $http_port = new Coro::Socket
 
 listen_on $http_port;
 
-my $http_port = new Coro::Socket
-        LocalAddr => $SERVER_HOST,
-        LocalPort => $SERVER_PORT2,
-        ReuseAddr => 1,
-        Listen => 50,
-   or die "unable to start server";
+if ($SERVER_PORT2) {
+   my $http_port = new Coro::Socket
+           LocalAddr => $SERVER_HOST,
+           LocalPort => $SERVER_PORT2,
+           ReuseAddr => 1,
+           Listen => 50,
+      or die "unable to start server";
 
-listen_on $http_port;
+   listen_on $http_port;
+}
 
 our $NOW;
 our $HTTP_NOW;
