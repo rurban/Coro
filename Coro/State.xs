@@ -71,7 +71,7 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash;
 static SV *ucoro_state_sv;
 static U32 ucoro_state_hash;
-static __thread SV *coro_mortal; /* will be freed after next transfer */
+static SV *coro_mortal; /* will be freed after next transfer */
 
 /* this is actually not only the c stack but also c registers etc... */
 typedef struct {
