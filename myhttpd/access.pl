@@ -16,9 +16,8 @@ sub start_transfer {
    push @{$self->{wait}}, $trans;
    Scalar::Util::weaken($self->{wait}[-1]);
 
-   if (--$self->{conns} >= 0) {
-      $self->wake_next;
-   }
+   --$self->{conns};
+   $self->wake_next;
 
    $trans;
 }
@@ -45,22 +44,25 @@ package transfer;
 
 use Coro::Timer ();
 
-sub try {
-   my $self = shift;
-   my $timeout = Coro::Timer::timeout $_[0];
-
-   unless ($self->[2]) {
-      local $self->[1] = $Coro::current;
-      Coro::schedule;
-   }
-
-   return $self->[2];
-}
-
 sub wake {
    my $self = shift;
    $self->[2] = 1;
    ref $self->[1] and $self->[1]->ready;
+}
+
+sub try {
+   my $self = shift;
+
+   unless ($self->[2]) {
+      my $timeout = Coro::Timer::timeout $_[0];
+      $self->[1] = $Coro::current;
+
+      Coro::schedule;
+
+      undef $self->[1];
+   }
+
+   return $self->[2];
 }
 
 sub DESTROY {

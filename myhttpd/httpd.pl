@@ -158,6 +158,7 @@ sub new {
    weaken ($Coro::current->{conn} = $self);
 
    $::conns++;
+   $::maxconns = $::conns if $::conns > $::maxconns;
 
    $self;
 }
