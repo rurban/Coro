@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Specific - manage coroutone-specific variables.
+Coro::Specific - manage coroutine-specific variables.
 
 =head1 SYNOPSIS
 

@@ -34,7 +34,6 @@ BEGIN { eval { require warnings } && warnings->unimport }
 use Carp qw(croak);
 
 use Coro::State;
-use Coro::Specific;
 
 use vars qw($return);
 
