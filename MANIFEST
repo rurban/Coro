@@ -25,13 +25,6 @@ Coro/libcoro/coro.h
 Coro/libcoro/coro.c
 Coro/libcoro/conftest.c
 
-Event/Makefile.PL
-Event/Event.pm
-Event/Event.xs
-Event/Util.pm
-Event/Handle.pm
-Event/Socket.pm
-
 t/00_basic.t
 t/01_process.t
 t/02_channel.t
@@ -41,6 +34,16 @@ t/05_specific.t
 t/06_prio.t
 t/07_eval.t
 t/08_join.t
+
+Event/Makefile.PL
+Event/Event.pm
+Event/Event.xs
+Event/Util.pm
+Event/Handle.pm
+Event/Socket.pm
+
+Event/t/00_basic.t
+Event/t/01_unblock.t
 
 eg/bench
 eg/prodcons1

@@ -1,5 +1,8 @@
 Revision history for Perl extension Coro.
 
+0.53
+	- some tests for Event.
+
 0.52 Tue Nov  6 21:36:18 CET 2001
 	- ported to cygwin (trivial).
           patch by Gerrit P. Haase <gp@familiehaase.de>.
