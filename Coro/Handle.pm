@@ -19,8 +19,11 @@ does NOT inherit from IO::Handle but uses tied objects.
 package Coro::Handle;
 
 use Errno ();
+use base 'Exporter';
 
-$VERSION = 0.12;
+$VERSION = 0.13;
+
+@EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle
 
@@ -38,6 +41,22 @@ sub new_from_fh {
 
    my $_fh = select bless \$self, $class; $| = 1; select $_fh;
 }
+
+=item $fh = unblock $fh
+
+This is a convinience function that just calls C<new_from_fh> on the given
+filehandle. Use it to replace a normal perl filehandle by a non-blocking
+equivalent.
+
+=cut
+
+sub unblock($) {
+   new_from_fh Coro::Handle $_[0];
+}
+
+sub read	{ read     $_[0], $_[1], $_[2], $_[3] }
+sub sysread	{ sysread  $_[0], $_[1], $_[2], $_[3] }
+sub syswrite	{ syswrite $_[0], $_[1], $_[2], $_[3] }
 
 =item $fh->writable, $fh->readable
 
@@ -108,9 +127,8 @@ sub CLOSE {
    my $self = shift;
    $self->{rb} =
    $self->{wb} = "";
-   delete $self->{w};
-   delete $self->{rw};
-   delete $self->{ww};
+   (delete $self->{rw})->cancel if $self->{rw};
+   (delete $self->{ww})->cancel if $self->{rw};
    close $self->{fh};
 }
 

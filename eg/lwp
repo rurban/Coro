@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 
-# this hack shows how one can overwrite
-# IO::Socket::INET to provide non-blocking sockets by default.
-# this makes lwp magically non-blocking. I hope.
+# this hack shows how one can overwrite IO::Socket::INET to provide
+# non-blocking sockets by default. This makes lwp magically
+# non-blocking. I hope.
 
 {
    # this is all the required magic: we replace the constructor.

@@ -39,7 +39,7 @@ C<transfer> will perl stacks (a few k) and optionally C stack (4-16k) be
 allocated. On systems supporting mmap a 128k stack is allocated, on the
 assumption that the OS has on-demand virtual memory. All this is very
 system-dependent. On my i686-pc-linux-gnu system this amounts to about 10k
-per coroutine.
+per coroutine, 5k when the experimental context sharing is enabled.
 
 =over 4
 
@@ -48,7 +48,7 @@ per coroutine.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.12;
+   $VERSION = 0.13;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;

@@ -22,9 +22,11 @@ use Errno ();
 use Carp qw(croak);
 use Socket;
 
+use Coro::Util ();
+
 use base 'Coro::Handle';
 
-$VERSION = 0.12;
+$VERSION = 0.13;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {
@@ -45,10 +47,17 @@ sub _sa($$$) {
    my $_proto = _proto($proto);
    my $_port = _port($port, $proto);
 
-   my (undef, undef, undef, undef, @host) = gethostbyname $host
-      or croak "unknown host: $host";
-
-   map pack_sockaddr_in($_port,$_), @host;
+   # optimize this a bit for a common case
+   if ($host =~ /^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)$/) {
+      return pack_sockaddr_in($_port, inet_aton $host);
+   } else {
+      my (undef, undef, undef, undef, @host) = Coro::Util::gethostbyname $host
+         or croak "unknown host: $host";
+      map pack_sockaddr_in($_port,$_), @host;
+   }
 }
 
 =item $fh = new_inet Coro::Socket param => value, ...
@@ -86,8 +95,8 @@ sub _prepare_socket {
          or croak "setsockopt(SO_REUSEPORT): $!";
    }
 
-   if ($arg->{LocalHost}) {
-      my @sa = _sa($arg->{LocalHost}, $arg->{LocalPort}, $arg->{Proto});
+   if ($arg->{LocalPort}) {
+      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort}, $arg->{Proto});
       $fh->bind($sa[0])
          or croak "bind($arg->{LocalHost}:$arg->{LocalPort}): $!";
    }
