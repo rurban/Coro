@@ -74,14 +74,30 @@ sub new {
 
 =item $prev->transfer($next)
 
-Save the state of the current subroutine in $prev and switch to the
-coroutine saved in $next.
+Save the state of the current subroutine in C<$prev> and switch to the
+coroutine saved in C<$next>.
+
+The "state" of a subroutine only ever includes scope, i.e. lexical
+variables and the current execution state. It does not save/restore any
+global variables such as C<$_> or C<$@> or any other special or non
+special variables. So remember that every function call that might call
+C<transfer> (such as C<Coro::Channel::put>) might clobber any global
+and/or special variables. Yes, this is by design ;) You cna always create
+your own process abstraction model that saves these variables.
+
+The easiest way to do this is to create your own scheduling primitive like this:
+
+  sub schedule {
+     local ($_, $@, ...);
+     $old->transfer($new);
+  }
 
 =cut
 
 # I call the _transfer function from a perl function
 # because that way perl saves all important things on
-# the stack.
+# the stack. Actually, I'd do it from within XS, but
+# I couldn't get it to work.
 sub transfer {
    _transfer($_[0], $_[1]);
 }

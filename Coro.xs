@@ -29,9 +29,6 @@ typedef struct coro {
   I32 retstack_ix;
   I32 retstack_max;
 
-  SV *errsv;
-  SV *defsv;
-
   SV *proc;
 } *Coro;
 
@@ -59,9 +56,7 @@ typedef struct coro {
   c->savestack_max = PL_savestack_max;	\
   c->retstack = PL_retstack;		\
   c->retstack_ix = PL_retstack_ix;	\
-  c->retstack_max = PL_retstack_max;	\
-  c->errsv = ERRSV;			\
-  c->defsv = DEFSV;
+  c->retstack_max = PL_retstack_max;
 
 #define LOAD(c)	\
   PL_dowarn = c->dowarn;		\
@@ -87,9 +82,7 @@ typedef struct coro {
   PL_savestack_max = c->savestack_max;	\
   PL_retstack = c->retstack;		\
   PL_retstack_ix = c->retstack_ix;	\
-  PL_retstack_max = c->retstack_max;	\
-  ERRSV = c->errsv;			\
-  DEFSV = c->defsv;
+  PL_retstack_max = c->retstack_max;
 
 /* this is an EXACT copy of S_nuke_stacks in perl.c, which is unfortunately static */
 STATIC void
