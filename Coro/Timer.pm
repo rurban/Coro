@@ -41,7 +41,7 @@ $VERSION = 0.7;
 =item $flag = timeout $seconds;
 
 This function will wake up the current coroutine after $seconds
-seconds and sets $flag to true (it is false intiially).  If $flag goes
+seconds and sets $flag to true (it is false initially).  If $flag goes
 out of scope earlier nothing happens. This is used to implement the
 C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
 

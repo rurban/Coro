@@ -338,8 +338,8 @@ sub desc {
 =head1 SEE ALSO
 
 L<Coro::Channel>, L<Coro::Cont>, L<Coro::Specific>, L<Coro::Semaphore>,
-L<Coro::Signal>, L<Coro::State>, L<Coro::Event>, L<Coro::RWLock>,
-L<Coro::Handle>, L<Coro::Socket>.
+L<Coro::Signal>, L<Coro::State>, L<Coro::Timer>, L<Coro::Event>,
+L<Coro::L<Coro::RWLock>, Handle>, L<Coro::Socket>.
 
 =head1 AUTHOR
 
