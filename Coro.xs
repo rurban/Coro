@@ -3,11 +3,14 @@
 #include "XSUB.h"
 
 typedef struct coro {
+  U8 dowarn;
+  
   PERL_SI *curstackinfo;
   AV *curstack;
   AV *mainstack;
-  SV **stack_base;
   SV **stack_sp;
+  SV **curpad;
+  SV **stack_base;
   SV **stack_max;
   SV **tmps_stack;
   I32 tmps_floor;
@@ -26,15 +29,20 @@ typedef struct coro {
   I32 retstack_ix;
   I32 retstack_max;
 
+  SV *errsv;
+  SV *defsv;
+
   SV *proc;
 } *Coro;
 
 #define SAVE(c)	\
+  c->dowarn = PL_dowarn;		\
   c->curstackinfo = PL_curstackinfo;	\
   c->curstack = PL_curstack;		\
   c->mainstack = PL_mainstack;		\
-  c->stack_base = PL_stack_base;	\
   c->stack_sp = PL_stack_sp;		\
+  c->curpad = PL_curpad;		\
+  c->stack_base = PL_stack_base;	\
   c->stack_max = PL_stack_max;		\
   c->tmps_stack = PL_tmps_stack;	\
   c->tmps_floor = PL_tmps_floor;	\
@@ -45,20 +53,24 @@ typedef struct coro {
   c->markstack_max = PL_markstack_max;	\
   c->scopestack = PL_scopestack;	\
   c->scopestack_ix = PL_scopestack_ix;	\
-  c->scopestack_max = PL_scopestack_max;	\
+  c->scopestack_max = PL_scopestack_max;\
   c->savestack = PL_savestack;		\
   c->savestack_ix = PL_savestack_ix;	\
   c->savestack_max = PL_savestack_max;	\
   c->retstack = PL_retstack;		\
   c->retstack_ix = PL_retstack_ix;	\
-  c->retstack_max = PL_retstack_max;
+  c->retstack_max = PL_retstack_max;	\
+  c->errsv = ERRSV;			\
+  c->defsv = DEFSV;
 
 #define LOAD(c)	\
+  PL_dowarn = c->dowarn;		\
   PL_curstackinfo = c->curstackinfo;	\
   PL_curstack = c->curstack;		\
   PL_mainstack = c->mainstack;		\
-  PL_stack_base = c->stack_base;	\
   PL_stack_sp = c->stack_sp;		\
+  PL_curpad = c->curpad;		\
+  PL_stack_base = c->stack_base;	\
   PL_stack_max = c->stack_max;		\
   PL_tmps_stack = c->tmps_stack;	\
   PL_tmps_floor = c->tmps_floor;	\
@@ -69,13 +81,15 @@ typedef struct coro {
   PL_markstack_max = c->markstack_max;	\
   PL_scopestack = c->scopestack;	\
   PL_scopestack_ix = c->scopestack_ix;	\
-  PL_scopestack_max = c->scopestack_max;	\
+  PL_scopestack_max = c->scopestack_max;\
   PL_savestack = c->savestack;		\
   PL_savestack_ix = c->savestack_ix;	\
   PL_savestack_max = c->savestack_max;	\
   PL_retstack = c->retstack;		\
   PL_retstack_ix = c->retstack_ix;	\
-  PL_retstack_max = c->retstack_max;
+  PL_retstack_max = c->retstack_max;	\
+  ERRSV = c->errsv;			\
+  DEFSV = c->defsv;
 
 /* this is an EXACT copy of S_nuke_stacks in perl.c, which is unfortunately static */
 STATIC void
@@ -135,6 +149,9 @@ _transfer(old,new)
           {
             init_stacks ();
 
+            ERRSV = newSVsv(&PL_sv_undef);
+            DEFSV = newSVsv(&PL_sv_undef);
+
             SPAGAIN;
             PUSHMARK(SP);
             PUTBACK;
@@ -142,11 +159,11 @@ _transfer(old,new)
 
             exit (0);
 
-            SPAGAIN;
+            /*SPAGAIN;
             SAVE (new);
 
             LOAD (old);
-            SPAGAIN;
+            SPAGAIN;*/
           }
 
 void
@@ -161,7 +178,11 @@ DESTROY(coro)
             PUTBACK;
             SAVE((&temp));
             LOAD(coro);
+
             S_nuke_stacks ();
+            SvREFCNT_dec (ERRSV);
+            SvREFCNT_dec (DEFSV);
+
             LOAD((&temp));
             SPAGAIN;
           }

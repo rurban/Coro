@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+
+# ->resume is not exactly cheap (it saves/restores a LOT
+# of global variables), but shouldn't be slow. just to show
+# how fast it is, this little proggie compares a normal subroutine
+# call with two calls of transfer in a loop.
+
+use Coro;
+use Benchmark;
+
+$a = bless {}, main::;
+
+# do something similar, switch two global vars and return something
+
+sub a {
+   $old = $current;
+   $current = $_[0];
+}
+
+$b = new Coro sub {
+   # do a little unrolling...
+   while() {
+      $Coro::main->resume; $Coro::main->resume; $Coro::main->resume;
+   }
+};
+
+$b->resume; # the first resume is slow because it allocates all the memory
+
+$main = $Coro::main;
+
+#*transfer = \&Coro::_transfer;
+sub transfer { Coro::_transfer($_[0], $_[1]) }
+
+$c = Coro::_newprocess {
+   while() {
+      transfer($c, $main); transfer($c, $main); transfer($c, $main);
+   }
+};
+
+transfer($main, $c);
+
+timethese 100000, {
+   method   => '$a->a; $a->a; $a->a; $a->a',
+   resume   => '$b->resume; $b->resume',
+   transfer => 'transfer($main, $c); transfer($main, $c)',
+};

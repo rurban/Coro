@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro - create an manage coroutines
+Coro - create and manage coroutines
 
 =head1 SYNOPSIS
 
@@ -37,7 +37,7 @@ more useful process abstraction including scheduling.
 package Coro;
 
 BEGIN {
-   $VERSION = 0.01;
+   $VERSION = 0.02;
 
    require XSLoader;
    XSLoader::load Coro, $VERSION;
@@ -92,7 +92,7 @@ sub new {
             ($error_msg, $error_coro) = ($@, $current);
             $error->resume;
          }
-      } while ();
+      } while (1);
    }, $class;
 }
 

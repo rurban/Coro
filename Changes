@@ -1,5 +1,11 @@
 Revision history for Perl extension Coro.
 
+0.02
+	- implemented "async" attribute.
+        - $_ and $@ are now localized.
+        - added Coro::Channel.
+        - more testcases, still no docs.
+
 0.01  Tue Jul  3 02:18:41 CEST 2001
 	- original version; copied from Convert::Scalar.
 

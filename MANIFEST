@@ -7,7 +7,13 @@ Coro.pm
 Coro.xs
 Coro/Process.pm
 Coro/Signal.pm
+Coro/Channel.pm
 typemap
-t/00_basic.t
-eg/prodcons
+eg/bench
+eg/prodcons1
 eg/prodcons2
+eg/prodcons3
+eg/attributes
+t/00_basic.t
+t/01_process.t
+t/02_channel.t
