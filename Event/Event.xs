@@ -11,13 +11,17 @@ confess (const char *msg)
   dSP;
 
   PUSHMARK(SP);
-  XPUSHs (sv_2mortal(newSVpv("only one coroutine can wait for an event",0)));
+  XPUSHs (sv_2mortal(newSVpv("only one coroutine can wait for an event at any given time",0)));
   PUTBACK;
   call_pv ("Carp::confess", G_VOID);
 }
 
 #include "EventAPI.h"
 #include "../Coro/CoroAPI.h"
+
+#ifndef PE_PERLCB
+# define PE_PERLCB 0x020 /* not public, but we need it :( */
+#endif
 
 #define CD_CORO	0
 #define CD_TYPE	1
@@ -80,7 +84,7 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {
-        I_EVENT_API("Coro::Event");
+        I_EVENT_API ("Coro::Event");
 	I_CORO_API ("Coro::Event");
 
         /* create a fake idle handler (we only ever call now) */
@@ -98,26 +102,31 @@ _install_std_cb(self,type)
         int	type
         CODE:
         pe_watcher *w = GEventAPI->sv_2watcher (self);
-        AV *priv = newAV ();
-        SV *rv = newRV_noinc ((SV *)priv);
 
-        av_extend (priv, CD_MAX);
-        av_store (priv, CD_CORO, &PL_sv_undef);
-        av_store (priv, CD_TYPE, newSViv (type));
-        av_store (priv, CD_OK  , &PL_sv_no);
-        av_store (priv, CD_PRIO, newSViv (0));
-        av_store (priv, CD_HITS, newSViv (0));
-        av_store (priv, CD_GOT , type ? newSViv (0) : &PL_sv_undef);
-        SvREADONLY_on (priv);
+        if (WaFLAGS (w) & PE_PERLCB)
+          croak ("Coro::Event watchers must not have a perl callback (see Coro::Event), caught");
+        {
+          AV *priv = newAV ();
+          SV *rv = newRV_noinc ((SV *)priv);
 
-        w->callback = coro_std_cb;
-        w->ext_data = priv;
+          av_extend (priv, CD_MAX);
+          av_store (priv, CD_CORO, &PL_sv_undef);
+          av_store (priv, CD_TYPE, newSViv (type));
+          av_store (priv, CD_OK  , &PL_sv_no);
+          av_store (priv, CD_PRIO, newSViv (0));
+          av_store (priv, CD_HITS, newSViv (0));
+          av_store (priv, CD_GOT , type ? newSViv (0) : &PL_sv_undef);
+          SvREADONLY_on (priv);
 
-        hv_store ((HV *)SvRV (self),
-                  EV_CLASS, strlen (EV_CLASS),
-                  rv, 0);
+          w->callback = coro_std_cb;
+          w->ext_data = priv;
 
-        GEventAPI->start (w, 0);
+          hv_store ((HV *)SvRV (self),
+                    EV_CLASS, strlen (EV_CLASS),
+                    rv, 0);
+
+          GEventAPI->start (w, 0);
+        }
 
 void
 _next(self)

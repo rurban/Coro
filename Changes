@@ -1,5 +1,10 @@
 Revision history for Perl extension Coro.
 
+	- added a README.linux-glibc.
+        - new module Coro::Select.
+        - also save/restore PL_comppad, fixes segfaults with 5.8.1.
+          (I never claimed that I know what I am doing ;).
+
 0.6   Thu Nov 21 11:09:06 CET 2002
         - made lazy context switching the default.
 	- fixed the bug where SemaphoreSet::guard

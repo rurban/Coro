@@ -198,6 +198,8 @@ sub accept {
 
 1;
 
+=back
+
 =head1 AUTHOR
 
  Marc Lehmann <pcg@goof.com>

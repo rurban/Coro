@@ -54,7 +54,7 @@ use base 'Exporter';
 BEGIN {
    $VERSION = 0.6;
 
-   local $^W = 0; # avoid redefine warning for Coro::ready
+   local $^W = 0; # avoid redefine warning for Coro::ready;
    require XSLoader;
    XSLoader::load Coro::Event, $VERSION;
 }

@@ -109,23 +109,6 @@ WriteMakefile(
   VERSION_FROM => "State.pm",
   DEFINE       => $DEFINE,
   DIR          => [],
-  PM           => {
-    		    'State.pm'		=> '$(INST_LIBDIR)/State.pm',
-
-    		    'MakeMaker.pm'	=> '$(INST_LIBDIR)/MakeMaker.pm',
-    		    'CoroAPI.h'		=> '$(INST_LIBDIR)/CoroAPI.h',
-
-    		    'Cont.pm'		=> '$(INST_LIBDIR)/Cont.pm',
-
-    		    'Specific.pm'	=> '$(INST_LIBDIR)/Specific.pm',
-
-    		    'Timer.pm'		=> '$(INST_LIBDIR)/Timer.pm',
-    		    'Signal.pm'		=> '$(INST_LIBDIR)/Signal.pm',
-    		    'Channel.pm'	=> '$(INST_LIBDIR)/Channel.pm',
-    		    'Semaphore.pm'	=> '$(INST_LIBDIR)/Semaphore.pm',
-    		    'SemaphoreSet.pm'	=> '$(INST_LIBDIR)/SemaphoreSet.pm',
-    		    'RWLock.pm'		=> '$(INST_LIBDIR)/RWLock.pm',
-                  },
 );
 
 sub conftest {
