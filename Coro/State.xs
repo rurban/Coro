@@ -875,19 +875,8 @@ BOOT:
 
         main_mainstack = PL_mainstack;
 
-        {
-          SV *sv = perl_get_sv("Coro::API", 1);
-
-          coroapi.ver      = CORO_API_VERSION - 1;
-          coroapi.transfer = api_transfer;
-          coroapi.schedule = api_schedule;
-          coroapi.ready    = api_ready;
-          coroapi.nready   = &coro_nready;
-
-          GCoroAPI = &coroapi;
-          sv_setiv(sv, (IV)&coroapi);
-          SvREADONLY_on(sv);
-        }
+        coroapi.ver      = CORO_API_VERSION;
+        coroapi.transfer = api_transfer;
 }
 
 Coro::State
@@ -1015,6 +1004,19 @@ BOOT:
 
         for (i = PRIO_MAX - PRIO_MIN + 1; i--; )
           coro_ready[i] = newAV ();
+
+        {
+          SV *sv = perl_get_sv("Coro::API", 1);
+
+          coroapi.schedule = api_schedule;
+          coroapi.ready    = api_ready;
+          coroapi.nready   = &coro_nready;
+          coroapi.current  = coro_current;
+
+          GCoroAPI = &coroapi;
+          sv_setiv(sv, (IV)&coroapi);
+          SvREADONLY_on(sv);
+        }
 }
 
 void

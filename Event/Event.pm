@@ -51,7 +51,12 @@ use base 'Exporter';
 
 @EXPORT = qw(loop unloop sweep);
 
-$VERSION = 0.45;
+BEGIN {
+   $VERSION = 0.45;
+
+   require XSLoader;
+   XSLoader::load Coro::Event, $VERSION;
+}
 
 =item $w = Coro::Event->flavour(args...)
 
@@ -78,27 +83,23 @@ next method often, but it does save typing sometimes.
 
 =cut
 
-#Event->add_hooks(prepare => sub {
-#   &Coro::cede while &Coro::nready;
-#   1e6;
-#});
-
-sub std_cb {
-   my $w = $_[0]->w;
-   my $q = $w->private;
-   $q->[1] = $_[0];
-   if ($q->[0]) { # somebody waiting?
-      $q->[0]->ready;
-      &Coro::schedule;
-   } else {
-      $w->stop;
-   }
-}
+#sub std_cb {
+#   my $w = $_[0]->w;
+#   my $q = $w->private;
+#   $q->[1] = $_[0];
+#   if ($q->[0]) { # somebody waiting?
+#      $q->[0]->ready;
+#      &Coro::schedule;
+#   } else {
+#      $w->stop;
+#   }
+#}
 
 for my $flavour (qw(idle var timer io signal)) {
    push @EXPORT, "do_$flavour";
    my $new = \&{"Event::$flavour"};
    my $class = "Coro::Event::$flavour";
+   my $type = $flavour eq "io" ? 1 : 0;
    @{"${class}::ISA"} = (Coro::Event::, "Event::$flavour");
    my $coronew = sub {
       # how does one do method-call-by-name?
@@ -111,9 +112,9 @@ for my $flavour (qw(idle var timer io signal)) {
       my $w = $new->(
             desc => $flavour,
             @_,
-            cb => \&std_cb,
+            parked => 1,
       );
-      $w->private($q); # using private as attribute is pretty useless...
+      _install_std_cb($w, $type);
       bless $w, $class; # reblessing due to broken Event
    };
    *{    $flavour } = $coronew;
@@ -125,19 +126,32 @@ for my $flavour (qw(idle var timer io signal)) {
    };
 }
 
-sub next {
-   my $w = $_[0];
-   my $q = $w->private;
-   if ($q->[1]) { # event waiting?
-      $w->again unless $w->is_cancelled;
-   } elsif ($q->[0]) {
-      croak "only one coroutine can wait for an event";
-   } else {
-      local $q->[0] = $Coro::current;
-      &Coro::schedule;
-   }
-   pop @$q;
+# double calls to avoid stack-cloning ;()
+# is about 20% slower, though.
+sub next($) {
+   &_next0;
+   &Coro::schedule;
+   &_next1;
 }
+
+#sub next {
+#   my $w = $_[0];
+#   my $q = $w->private;
+#   if ($q->[1]) { # event waiting?
+#      $w->again unless $w->is_cancelled;
+#   } elsif ($q->[0]) {
+#      croak "only one coroutine can wait for an event";
+#   } else {
+#      local $q->[0] = $Coro::current;
+#      &Coro::schedule;
+#   }
+#   pop @$q;
+#}
+
+sub Coro::Event::Ev::w    { $_[0][2] }
+sub Coro::Event::Ev::got  { $_[0][3] }
+sub Coro::Event::Ev::prio { croak "prio not supported yet, please mail to pcg\@goof.com" }
+sub Coro::Event::Ev::hits { croak "prio not supported yet, please mail to pcg\@goof.com" }
 
 =item sweep
 
