@@ -143,8 +143,8 @@ read_mimetypes;
 
 sub new {
    my $class = shift;
-   my $peername = shift;
    my $fh = shift;
+   my $peername = shift;
    my $self = bless { fh => $fh }, $class;
    my (undef, $iaddr) = unpack_sockaddr_in $peername
       or $self->err(500, "unable to decode peername");
@@ -181,7 +181,7 @@ sub response {
    my ($self, $code, $msg, $hdr, $content) = @_;
    my $res = "HTTP/1.1 $code $msg\015\012";
 
-   $self->{h}{connection} ||= $hdr->{Connection};
+   $self->{h}{connection} = "close" if $hdr->{Connection} =~ /close/;
 
    $res .= "Date: $HTTP_NOW\015\012";
 

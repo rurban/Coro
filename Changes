@@ -8,6 +8,7 @@ Revision history for Perl extension Coro.
         - IRIX mystery solved: it's SGI's NT, after all: "standard, huh?".
           sjlj and ucontext should now work.
         - IRIX-specific port for libcoro.
+        - swapped order of accept results to match IO::Socket.
 
 0.45  Sun Sep  2 02:54:01 CEST 2001
 	- new method Coro::Handle::timeout.

@@ -172,7 +172,7 @@ sub getpeername	{ getpeername tied(${$_[0]})->[0] }
 =item ($peername, $fh) = $listen_fh->accept
 
 In scalar context, returns the newly accepted socket (or undef) and in
-list context return the ($peername, $fh) pair (or nothing).
+list context return the ($fh, $peername) pair (or nothing).
 
 =cut
 
@@ -180,7 +180,9 @@ sub accept {
    my ($peername, $fh);
    while () {
       $peername = accept $fh, tied(${$_[0]})->[0]
-         and return ($peername, $fh = new_from_fh Coro::Socket $fh);
+         and return wantarray 
+                    ? ((new_from_fh Coro::Socket $fh), $peername),
+                    : (new_from_fh Coro::Socket $fh);
 
       return unless $!{EAGAIN};
 
