@@ -5,6 +5,7 @@ sub new {
    bless {
       slots   => $_[0],
       lastspb => 0,
+      avgspb  => 0,
    }, $class;
 }
 
@@ -12,14 +13,14 @@ sub start_transfer {
    my $self = shift;
    my $size = $_[0];
 
-   my $trans = bless {
+   my $transfer = bless {
       queue => $self,
       time  => $::NOW,
       size  => $size,
       coro  => $Coro::current,
    }, transfer::;
 
-   push @{$self->{wait}}, $trans;
+   push @{$self->{wait}}, $transfer;
    Scalar::Util::weaken($self->{wait}[-1]);
 
    $self->wake_next;
@@ -36,6 +37,8 @@ sub wake_next {
       my $transfer = shift @{$self->{wait}};
       if ($transfer) {
          $self->{lastspb} = $transfer->{spb};
+         $self->{avgspb} ||= $transfer->{spb};
+         $self->{avgspb} = $self->{avgspb} * 0.95 + $transfer->{spb} * 0.05;
          $transfer->wake;
          last;
       }

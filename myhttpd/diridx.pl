@@ -135,11 +135,20 @@ EOF
 }
 
 sub format_time {
-   sprintf "%02dd&#160;%02d:%02d:%02d",
-           int ($_[0] / (60 * 60 * 24)),
-           int ($_[0] / (60 * 60)) % 24,
-           int ($_[0] / 60) % 60,
-           int ($_[0]) % 60;
+   if ($_[0] < 0) {
+      "--:--:--";
+   } elsif ($_[0] >= 60*60*24) {
+      sprintf "%02dd&#160;%02d:%02d:%02d",
+              int ($_[0] / (60 * 60 * 24)),
+              int ($_[0] / (60 * 60)) % 24,
+              int ($_[0] / 60) % 60,
+              int ($_[0]) % 60;
+   } else {
+      sprintf "%02d:%02d:%02d",
+              int ($_[0] / (60 * 60)) % 24,
+              int ($_[0] / 60) % 60,
+              int ($_[0]) % 60;
+   }
 }
 
 sub conn::diridx {
@@ -228,6 +237,7 @@ EOF
          $content .= "<p>Waiting time until download starts, estimated:<ul>";
          for (
                ["by most recently started transfer", $queue->{lastspb}],
+               ["by queue average", $queue->{avgspb}],
                ["by next client in queue", $waiters[0]{spb}],
          ) {
             my ($by, $spb) = @$_;
@@ -244,17 +254,19 @@ EOF
          }
          $content .= "</ul></p>";
 
-         if ($verbose) {
-            $content .= "<table border='1' width='100%'><tr><th>Remote ID</th><th>CN</th><th>Size</th><th>Waiting</th><th>SPB</th><th>URI</th></tr>";
+         @waiters = grep { $verbose || $_->{coro}{conn}{remote_id} eq $self->{remote_id} } @waiters;
+         if (@waiters) {
+            $content .= "<table border='1' width='100%'><tr><th>Remote ID</th><th>CN</th><th>Size</th><th>Waiting</th><th>ETA</th><th>URI</th></tr>";
             for (@waiters) {
                my $conn = $_->{coro}{conn};
                my $time = format_time ($::NOW - $_->{time});
+               my $eta  = format_time ($queue->{avgspb} * $_->{size} - ($::NOW - $_->{time}));
                $content .= "<tr>".
                            "<td>$conn->{remote_id}</td>".
                            "<td>$conn->{country}</td>".
                            "<td>$_->{size}</td>".
                            "<td>$time</td>".
-                           "<td>$_->{spb}</td>".
+                           "<td>$eta</td>".
                            "<td>".escape_html($conn->{name})."</td>".
                            "</tr>";
             }

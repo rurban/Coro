@@ -452,7 +452,7 @@ sub respond {
 
          if (%{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
             my $timeout = $::NOW + 10;
-            while (%{$conn{$self->{remote_id}}} >= $::MAX_TRANSFERS_IP) {
+            while (%{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
                if ($timeout < $::NOW) {
                   $self->block($::BLOCKTIME, "too many connections");
                } else {
