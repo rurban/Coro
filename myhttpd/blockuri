@@ -8,16 +8,17 @@ GROUP fra FR LU
 !./neon genesis				usa de IT fra
 !./pokemon				fra eur usa de
 !/eps/.*creamy mami			eur usa
-!/eps/3x3 eyes				usa
-!/eps/Ah! My Goddess			usa
-!/eps/Alian 9				usa
+!/eps/Angel Sanctuary			usa de
+!/eps/3x3 eyes				usa de
+!/eps/Ah! My Goddess			usa de
+!/eps/Alien 9				usa
 !/eps/Aquarian Age			usa
 !/eps/Argento Soma			usa
 !/eps/Azumanga Daioh			usa
 !/eps/Brainpowered			usa
-!/eps/Chobits				usa
+!/eps/Chobits				usa de
 !/eps/Comic Party			usa
-!/eps/Cowboy Bebop			usa
+!/eps/Cowboy Bebop			usa de
 !/eps/DNA²				usa de
 !/eps/Digi Charat			usa
 !/eps/Figure 17				usa
@@ -33,7 +34,7 @@ GROUP fra FR LU
 !/eps/Initial D				usa
 !/eps/Iria				usa
 !/eps/K O Century Beast			usa
-!/eps/Kodomo no Omocha			usa
+!/eps/Kodomo no Omocha			usa de
 !/eps/Love Hina				usa
 !/eps/Mahoromatic			usa
 !/eps/Marmalade Boy			usa
@@ -49,8 +50,7 @@ GROUP fra FR LU
 !/eps/Super Gals Kotobuki Ran		usa
 !/eps/Tales of Eternia			usa
 !/eps/Trouble Chocolate			usa
-!/eps/Vampire Princess Miyu 		usa
-!/eps/Vampire Princess Miyu OAV		usa
+!/eps/Vampire Princess Miyu.* 		usa
 !/eps/Wedding Peach			usa
 !/eps/Wild Arms				usa
 !/eps/X					usa de
@@ -62,7 +62,6 @@ GROUP fra FR LU
 !/eps/arc the lad			usa
 !/eps/armitage				usa
 !/eps/bastard				usa
-!/eps/berserk				usa
 !/eps/berserk				usa
 !/eps/biohunter				usa
 !/eps/blue seed				usa
@@ -81,7 +80,7 @@ GROUP fra FR LU
 !/eps/ellcia				usa
 !/eps/escaflowne			IT usa
 !/eps/excel saga			IT usa
-!/eps/flcl				usa
+!/eps/flcl				usa de
 !/eps/fruits basket			usa
 !/eps/full metal panic			usa
 !/eps/fushigi yuugi			usa de
@@ -97,16 +96,14 @@ GROUP fra FR LU
 !/eps/himiko-den			usa
 !/eps/i my me				usa
 !/eps/i will become an angel		usa
-!/eps/inu yasha				usa
+!/eps/inu yasha				usa de
 !/eps/jubei chan			usa
 !/eps/kareshi kanojo no jijou		usa IT
 !/eps/kasemakase tsukikage ran		usa
 !/eps/lost universe			usa
 !/eps/love hina				IT
 !/eps/macross				fra usa
-!/eps/magic knight			usa IT
-!/eps/magic knight rayearth		usa
-!/eps/mahou senshi riui			usa
+!/eps/magic knight rayearth		usa IT
 !/eps/mahou senshi riui			usa
 !/eps/maison ikkoku			usa de
 !/eps/martian successor nadesico	usa
