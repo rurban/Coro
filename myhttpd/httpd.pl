@@ -52,8 +52,8 @@ sub slog {
 our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
 our $httpevent   = new Coro::Signal;
 
-our $queue_file  = new transferqueue $MAX_TRANSFERS;
-our $queue_index = new transferqueue 10;
+our $queue_file  = new transferqueue slots => $MAX_TRANSFERS, maxsize => 256*1024*1024;
+our $queue_index = new transferqueue slots => 10;
 
 my @newcons;
 my @pool;

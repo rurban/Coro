@@ -9,9 +9,11 @@ my @reserve = (
 sub new {
    my $class = shift;
    my $self = bless {
-      slots   => $_[0],
+      slots   => 1,
+      maxsize => 0,
       lastspb => 0,
       avgspb  => 0,
+      @_,
    }, $class;
    $self->{reschedule} = Event->timer(
          after => 10,
@@ -24,6 +26,10 @@ sub new {
 sub start_transfer {
    my $self = shift;
    my $size = $_[0];
+
+   if ($self->{maxsize} && $self->{maxsize} < $size) {
+      $size = $self->{maxsize};
+   }
 
    my $transfer = bless {
       queue   => $self,
