@@ -207,6 +207,7 @@ sub response {
 
    if ($self->{method} ne "HEAD"
        && $self->{h}{"accept-encoding"} =~ /\bgzip\b/
+       && 400 < length $content
        && $hdr->{"Content-Length"} == length $content
        && !exists $hdr->{"Content-Encoding"}
    ) {
