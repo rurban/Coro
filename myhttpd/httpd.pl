@@ -316,7 +316,7 @@ sub handle {
          $self->{server_port} = $host =~ s/:([0-9]+)$// ? $1 : 80;
       } else {
          ($self->{server_port}, $host)
-            = unpack_sockaddr_in $self->{fh}->getsockname
+            = unpack_sockaddr_in $self->{fh}->sockname
                or $self->err(500, "unable to get socket name");
          $host = inet_ntoa $host;
       }
