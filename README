@@ -24,6 +24,10 @@ DESCRIPTION
     The current coroutine (the last coroutine switched to). The initial
     value is "$main" (of course).
 
+    $idle
+    The coroutine to switch to when no other coroutine is running. The
+    default implementation prints "FATAL: deadlock detected" and exits.
+
   STATIC METHODS
 
     Static methods are actually functions that operate on the current
@@ -53,11 +57,17 @@ DESCRIPTION
     These are the methods you can call on process objects.
 
     new Coro \&sub;
-        Create a new process, put it into the ready queue and return it.
-        When the sub returns the process automatically terminates.
+        Create a new process and return it. When the sub returns the process
+        automatically terminates. To start the process you must first put it
+        into the ready queue by calling the ready method.
 
     $process->ready
         Put the current process into the ready queue.
+
+SEE ALSO
+    the Coro::Channel manpage, the Coro::Cont manpage, the Coro::Specific
+    manpage, the Coro::Semaphore manpage, the Coro::Signal manpage, the
+    Coro::State manpage, the Coro::Event manpage.
 
 AUTHOR
      Marc Lehmann <pcg@goof.com>

@@ -6,7 +6,6 @@
 # consumed the item.
 
 use Coro;
-use Coro::Process;
 use Coro::Channel;
 use Coro::Signal;
 

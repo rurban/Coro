@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+use Coro;
+use Coro::Event;
+
+my $stdin = Coro::Event->io(fd => \*STDIN, poll => 'r');
+
+sub kbdline {
+   $stdin->next;
+   my $x = <STDIN>; chomp $x; $x;
+}
+
+sub keyboard : Coro {
+   $|=1;
+   while() {
+      print "cmd> ";  my $cmd  = kbdline;
+      print "data> "; my $data = kbdline;
+      print "cmd<$cmd> data<$data>\n";
+      print "working...";
+      do_timer(after => 1);
+      print "done\n";
+   }
+}
+
+sub idle : Coro {
+   my $w = Coro::Event->idle(min => 1, max => 2);
+   while () {
+      $w->next;
+      print ".";
+   };
+}
+
+Coro::Event->main;
+

@@ -1,1 +1,22 @@
 Coro::State			T_PTROBJ
+Coro::State_or_hashref		T_STATE_OR_HASHREF
+
+INPUT
+
+T_STATE_OR_HASHREF
+	{
+           SV *arg = $arg;
+           if (SvROK (arg) && SvTYPE(SvRV(arg)) == SVt_PVHV)
+             {
+               SV **state = hv_fetch((HV *)SvRV(arg), \"_coro_state\", 11, 0);
+               if (!state)
+                 croak (\"${Package}::$func_name() -- $var is a hashref but lacks the _coro_state key\");
+               arg = *state;
+             }
+              
+           if (sv_derived_from (arg, \"Coro::State\"))
+             $var = ($type) SvIV((SV*)SvRV(arg));
+           else
+             croak (\"${Package}::$func_name() -- $var is not (and contains not) a Coro::State object\");
+        }
+

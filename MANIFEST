@@ -11,6 +11,7 @@ Coro/Signal.pm
 Coro/Semaphore.pm
 Coro/Channel.pm
 Coro/Cont.pm
+Coro/Specific.pm
 Coro/typemap
 eg/bench
 eg/prodcons1
@@ -18,6 +19,8 @@ eg/prodcons2
 eg/prodcons3
 eg/attributes
 eg/cont
+eg/event
 t/00_basic.t
 t/01_process.t
 t/02_channel.t
+t/03_cont.t

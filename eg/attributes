@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Coro::Process;
+use Coro;
 
 $p = 2;
 
