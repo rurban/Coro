@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
-# this is a relatively small web-server, using coroutines
-# for connections. play around with it but do not use
-# it in production. ask myhttpd@plan9.de for a better
-# version that's more usable and bugfixed.
+# this is a relatively small web-server, using coroutines for connections.
+# play around with it but do not use it in production without checking it
+# works for you. ask myhttpd@plan9.de in case of problems, or if you are
+# interested in a newer version (more useless features).
 
 use Coro;
 use Coro::Semaphore;
@@ -153,7 +153,7 @@ sub handle {
                 \015\012/gx
          or $self->err(403, "method not allowed", { Allow => "GET,HEAD" });
 
-      $2 >= 2
+      $2 < 2
          or $self->err(506, "http protocol version not supported");
 
       $self->{method} = $1;
@@ -166,8 +166,8 @@ sub handle {
          $hdr{lc $1} .= ",$2"
             while $req =~ /\G
                   ([^:\000-\040]+):
-                  [\008\040]*
-                  ((?: [^\015\012]+ | \015\012[\008\040] )*)
+                  [\010\040]*
+                  ((?: [^\015\012]+ | \015\012[\010\040] )*)
                   \015\012
                /gxc;
 
@@ -319,7 +319,7 @@ sub handle_file {
             ($l, $h) = (0, $length - 1);
             goto ignore;
          }
-         goto satisfiable if $l >= 0 && $l < $length && $h >= 0 && $h > $l;
+         goto satisfiable if $l >= 0 && $l < $length && $h >= 0 && $h >= $l;
       }
       $hdr->{"Content-Range"} = "bytes */$length";
       $self->err(416, "not satisfiable", $hdr);
@@ -346,7 +346,7 @@ ignore:
 
    if ($self->{method} eq "GET") {
       my ($fh, $buf);
-      cpen $fh, "<", $self->{path}
+      open $fh, "<", $self->{path}
          or die "$self->{path}: late open failure ($!)";
 
       if ($l) {

@@ -1,5 +1,10 @@
 Revision history for Perl extension Coro.
 
+0.533 Mon Feb 18 18:49:40 CET 2002
+	- adapt to finally working Event-0.85.
+        - fixed buggy event initialization (trapped under windows, but how
+          could it possibly have worked anywhere?)
+
 0.532 Wed Jan 16 02:45:32 CET 2002
 	- removed the reference to pp_entersub, might work on
           (some) win32 perls now (testsuite works under cygwin,
