@@ -134,10 +134,10 @@ interface.
 
 =item $fh->rbuf
 
-Returns the current contents of the raed buffer (this is an lvalue, so you
+Returns the current contents of the read buffer (this is an lvalue, so you
 can change the read buffer if you like).
 
-You can use this fucntion to implement your own optimized reader when neither
+You can use this function to implement your own optimized reader when neither
 readline nor sysread are viable candidates, like this:
 
   # first get the _real_ non-blocking filehandle
