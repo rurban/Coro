@@ -20,18 +20,17 @@ sub slog {
 
 my $connections = new Coro::Semaphore $MAX_CONNECTS;
 
-my @fh;
+my @newcons;
 my @pool;
 
 # one "execution thread"
 sub handler {
    while () {
-      my $fh = pop @fh;
-      if ($fh) {
+      my $new = pop @newcons;
+      if ($new) {
          eval {
-            conn->new($fh)->handle;
+            conn->new(@$new)->handle;
          };
-         close $fh;
          slog 1, "$@" if $@ && !ref $@;
          $connections->up;
       } else {
@@ -56,7 +55,7 @@ async {
    slog 1, "accepting connections";
    while () {
       $connections->down;
-      push @fh, $http_port->accept;
+      push @newcons, [$http_port->accept];
       #slog 3, "accepted @$connections ".scalar(@pool);
       $::NOW = time;
       if (@pool) {
@@ -79,10 +78,11 @@ our %blocked;
 
 sub new {
    my $class = shift;
+   my $peername = shift;
    my $fh = shift;
    my $self = bless { fh => $fh }, $class;
-   my (undef, $iaddr) = unpack_sockaddr_in $fh->getpeername
-      or $self->err(500, "unable to get peername");
+   my (undef, $iaddr) = unpack_sockaddr_in $peername
+      or $self->err(500, "unable to decode peername");
    $self->{remote_addr} = inet_ntoa $iaddr;
 
    # enter ourselves into various lists

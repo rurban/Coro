@@ -192,10 +192,9 @@ Future versions of this function will allow result arguments.
 =cut
 
 sub terminate {
-   push @destroy, $current;
-   $manager->ready;
+   $current->cancel;
    &schedule;
-   # NORETURN
+   die; # NORETURN
 }
 
 =back
@@ -238,6 +237,17 @@ Put the current process into the ready queue.
 
 sub ready {
    push @ready, $_[0];
+}
+
+=item $process->cancel
+
+Like C<terminate>, but terminates the specified process instead.
+
+=cut
+
+sub cancel {
+   push @destroy, $_[0];
+   $manager->ready;
 }
 
 =back

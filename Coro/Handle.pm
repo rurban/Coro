@@ -91,15 +91,14 @@ only). Might change in the future.
 
 sub autoflush	{ !0 }
 
-=item $fh->fileno
+=item $fh->fileno, $fh->close
 
-Returns the file number of the handle.
+Work like their function equivalents.
 
 =cut
 
-sub fileno {
-   tied(${+shift})->FILENO;
-}
+sub fileno { tied(${+shift})->FILENO }
+sub close  { tied(${+shift})->CLOSE  }
 
 =item $fh->timeout([...])
 
@@ -124,6 +123,7 @@ package Coro::Handle::FH;
 
 use Fcntl ();
 use Errno ();
+use Carp 'croak';
 
 use Coro::Event;
 use Event::Watcher qw(R W E);
@@ -140,7 +140,7 @@ sub TIEHANDLE {
    }, $class;
 
    fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
-      or die "fcntl(O_NONBLOCK): $!";
+      or croak "fcntl(O_NONBLOCK): $!";
 
    $self;
 }
@@ -152,7 +152,7 @@ sub OPEN {
                    : open $self->{fh}, $_[0], $_[1], $_[2];
    if ($r) {
       fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
-         or die "fcntl(O_NONBLOCK): $!";
+         or croak "fcntl(O_NONBLOCK): $!";
    }
    $r;
 }

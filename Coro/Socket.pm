@@ -151,7 +151,7 @@ sub new {
    $fh;
 }
 
-=item connect, listen, bind, accept, getsockopt, setsockopt,
+=item connect, listen, bind, getsockopt, setsockopt,
 send, recv, getpeername, getsockname
 
 Do the same thing as the perl builtins (but return true on
@@ -169,12 +169,21 @@ sub recv	{ recv tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub getsockname	{ getsockname tied(${$_[0]})->{fh} }
 sub getpeername	{ getpeername tied(${$_[0]})->{fh} }
 
+=item ($peername, $fh) = $listen_fh->accept
+
+In scalar context, returns the newly accepted socket (or undef) and in
+list context return the ($peername, $fh) pair (or nothing).
+
+=cut
+
 sub accept {
-   my $fh;
+   my ($peername, $fh);
    while () {
       $_[0]->readable or return;
-      accept $fh, tied(${$_[0]})->{fh}
-         and return new_from_fh Coro::Socket $fh;
+
+      $peername = accept $fh, tied(${$_[0]})->{fh}
+         and return ($peername, $fh = new_from_fh Coro::Socket $fh);
+
       return unless $!{EAGAIN};
    }
 }
