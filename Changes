@@ -8,6 +8,7 @@ Revision history for Perl extension Coro.
           observing that even myhttpd never had more than a kilobyte
           of stack in use (stack is still only physically allocated in
           pagesize increments for systems suporting mmap).
+        - fix for a "cygwin-64" architecture added, proposed by Stefan Traby.
 
 0.9  Sun Nov 23 04:32:39 CET 2003
 	- fix a few very hard to track down but (of course) stupid
