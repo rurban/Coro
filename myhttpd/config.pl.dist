@@ -17,3 +17,5 @@ $SERVER_HOST  = "0.0.0.0";		# host to bind on
 $SERVER_PORT  = 84;			# port to listen on
 
 $CMDSHELL_PORT = 7262;			# open a command shell on this port
+
+$BUFSIZE       = 64*024;		# buffer size

@@ -14,14 +14,15 @@ sub shell {
       if (/^q/) {
          Event::unloop;
       } elsif (/^i/) {
-         my @conn;
-         push @conn, values %$_ for values %conn::conn;
+         my @data;
          for (values %conn::conn) {
             for (values %$_) {
                next unless $_;
-               print $fh "$_: $_->{remote_addr} $_->{uri}\n";
+               push @data, "$_: $_->{remote_addr} $_->{uri}\n";
             }
          }
+         print $fh sort @data;
+         print $fh scalar@data, " connections\n";#d#
       } elsif (/^r/) {
          $::RESTART = 1;
          unloop;

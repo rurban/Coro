@@ -223,9 +223,6 @@ sub handle {
       weaken ($uri{$self->{uri}}{$self*1} = $self);
 
       $self->map_uri;
-
-      Coro::Event::do_timer(after => 5);
-      
       $self->respond;
    #}
 }
@@ -408,10 +405,9 @@ ignore:
       $h -= $l - 1;
 
       while ($h > 0) {
-         $h -= sysread $fh, $buf, $h > 16384 ? 16384 : $h;
-         print {$self->{fh}} $buf
+         $h -= sysread $fh, $buf, $h > $::BUFSIZE ? $::BUFSIZE : $h;
+         $self->{fh}->syswrite($buf)
             or last;
-         cede;
       }
    }
 
