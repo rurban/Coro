@@ -15,9 +15,6 @@ Coro/Semaphore.pm
 Coro/Channel.pm
 Coro/Cont.pm
 Coro/Specific.pm
-Coro/Event.pm
-Coro/Handle.pm
-Coro/Socket.pm
 Coro/RWLock.pm
 Coro/Util.pm
 Coro/MakeMaker.pm
@@ -26,6 +23,12 @@ Coro/CoroAPI.h
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c
+
+Event/Makefile.PL
+Event/Event.pm
+Event/Event.xs
+Event/Handle.pm
+Event/Socket.pm
 
 t/00_basic.t
 t/01_process.t

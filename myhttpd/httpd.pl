@@ -178,12 +178,14 @@ sub err_blocked {
    my $ip = $self->{remote_addr};
    my $time = time2str $blocked{$ip} = $::NOW + $::BLOCKTIME;
 
-   Coro::Event::do_timer(after => 15);
+   Coro::Event::do_timer(after => 20*rand);
 
    $self->err(401, "too many connections",
               {
                  "Content-Type" => "text/html",
-                 "Retry-After" => $::BLOCKTIME
+                 "Retry-After" => $::BLOCKTIME,
+                 "Warning" => "Please do NOT retry, you have been blocked",
+                 "WWW-Authenticate" => "Basic realm=\"Please do NOT retry, you have been blocked\"",
               },
               <<EOF);
 <html><p>
@@ -245,7 +247,7 @@ sub handle {
       $self->{uri} = $2;
       $self->{version} = $3;
 
-      $3 eq "1.0" or $3 eq "1.1"
+      $3 =~ /^1\./
          or $self->err(506, "http protocol version $3 not supported");
 
       # parse headers
@@ -429,6 +431,7 @@ sub handle_file {
          goto satisfiable if $l >= 0 && $l < $length && $h >= 0 && $h > $l;
       }
       $hdr->{"Content-Range"} = "bytes */$length";
+      $self->slog(9, "not satisfiable($self->{h}{range}|".$self->{h}{"user-agent"}.")");
       $self->err(416, "not satisfiable", $hdr);
 
 satisfiable:
