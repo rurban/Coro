@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.04
+0.04  Sun Jul 15 05:24:59 CEST 2001
 	- @_ is now properly localized.
 	- Coro::State is now easier subclassable.
         - Coro::Cont now coroutine-aware.

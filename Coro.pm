@@ -115,7 +115,9 @@ terminated.
 =cut
 
 sub async(&) {
-   (new Coro $_[0])->ready;
+   my $pid = new Coro $_[0];
+   $pid->ready;
+   $pid;
 }
 
 =item schedule
