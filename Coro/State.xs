@@ -579,8 +579,8 @@ allocate_stack (Coro__State ctx, int alloc)
 #endif
         {
           /*FIXME*//*D*//* reasonable stack size! */
-          stack->ssize = - (16384 * sizeof (long));
-          New (0, stack->sptr, 16384, long);
+          stack->ssize = -4096 * sizeof (long);
+          New (0, stack->sptr, 4096, long);
         }
     }
   else
