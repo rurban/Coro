@@ -68,12 +68,7 @@ unless ($override) {
                   $NOW = time;
                }
             };
-            print "hihohihoh ($timer, $timer->{_coro_state})\n";
-            print "hihohihoy $Coro::current\n";
-            use Devel::Peek;
-            #Dump($timer);
             undef $timer;
-            print "hihohihox $Coro::current\n";
          };
          $timer->prio(Coro::PRIO_MIN);
          $timer->ready;

@@ -58,7 +58,7 @@ BEGIN {
 
 use base 'Exporter';
 
-@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CCTXT);
+@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);
 
 =item $coro = new [$coderef] [, @args...]
 
@@ -106,6 +106,7 @@ following constants together:
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
+   SAVE_CURPM  save/restore regex contetx ($1, $2 ...)
    SAVE_CCTXT  save/restore C-stack (you usually want this)
 
 These constants are not exported by default. If you don't need any extra

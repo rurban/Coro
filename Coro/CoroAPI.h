@@ -6,19 +6,21 @@
 #include "XSUB.h"
 
 /* perl-related */
-#define TRANSFER_SAVE_DEFAV	0x00000001
-#define TRANSFER_SAVE_DEFSV	0x00000002
-#define TRANSFER_SAVE_ERRSV	0x00000004
+#define TRANSFER_SAVE_DEFAV	0x00000001 /* @_ */
+#define TRANSFER_SAVE_DEFSV	0x00000002 /* $_ */
+#define TRANSFER_SAVE_ERRSV	0x00000004 /* $@ */
+#define TRANSFER_SAVE_CURPM	0x00000008 /* regex results */
 /* c-related */
-#define TRANSFER_SAVE_CCTXT	0x00000008
+#define TRANSFER_SAVE_CCTXT	0x00000100
 #ifdef CORO_LAZY_STACK
-# define TRANSFER_LAZY_STACK	0x00000010
+# define TRANSFER_LAZY_STACK	0x00000200
 #else
 # define TRANSFER_LAZY_STACK	0x00000000
 #endif
 
 #define TRANSFER_SAVE_ALL	(TRANSFER_SAVE_DEFAV|TRANSFER_SAVE_DEFSV \
-                                |TRANSFER_SAVE_ERRSV|TRANSFER_SAVE_CCTXT)
+                                |TRANSFER_SAVE_ERRSV|TRANSFER_SAVE_CURPM \
+                                |TRANSFER_SAVE_CCTXT)
 
 struct coro; /* opaque */
 

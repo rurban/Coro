@@ -58,7 +58,6 @@ struct coro {
   AV *defav;
   SV *defsv;
   SV *errsv;
-  /* TODO: PL_pmop might be nice && effortless to save. */
   
   /* saved global state not related to stacks */
   U8 dowarn;
@@ -90,6 +89,7 @@ struct coro {
   I32 retstack_ix;
   I32 retstack_max;
   COP *curcop;
+  PMOP *curpm;
   JMPENV *top_env;
 
   /* data associated with this coroutine (initial args) */
@@ -600,6 +600,7 @@ setup_coro (void *arg)
   SV *sub_init = (SV*)get_cv(SUB_INIT, FALSE);
 
   coro_init_stacks (aTHX);
+  PL_curpm = 0; /* segfault on first access */
   /*PL_curcop = 0;*/
   /*PL_in_eval = PL_in_eval;*/ /* inherit */
   SvREFCNT_dec (GvAV (PL_defgv));
@@ -870,6 +871,7 @@ api_schedule (void)
   if (!next)
     next = SvREFCNT_inc (SvRV (GvSV (coro_idle)));
 
+  /* free this only after the transfer */
   coro_mortal = prev;
   SV_CORO (prev, "Coro::schedule");
 
@@ -902,6 +904,7 @@ BOOT:
         newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
         newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
         newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
+        newCONSTSUB (coro_state_stash, "SAVE_CURPM", newSViv (TRANSFER_SAVE_CURPM));
         newCONSTSUB (coro_state_stash, "SAVE_CCTXT", newSViv (TRANSFER_SAVE_CCTXT));
 
 	if (!padlist_cache)
