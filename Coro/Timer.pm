@@ -4,7 +4,10 @@ Coro::Timer - simple timer package, independent of used event loops
 
 =head1 SYNOPSIS
 
- use Coro::Timer;
+ use Coro::Timer qw(sleep timeout);
+ # nothing exported by default
+
+ sleep 10;
 
 =head1 DESCRIPTION
 
@@ -32,7 +35,7 @@ BEGIN {
    eval "use Time::HiRes 'time'";
 }
 
-$VERSION = 0.533;
+$VERSION = 0.534;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;

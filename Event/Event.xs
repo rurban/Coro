@@ -117,6 +117,8 @@ _install_std_cb(self,type)
                   EV_CLASS, strlen (EV_CLASS),
                   rv, 0);
 
+        GEventAPI->start (w, 0);
+
 void
 _next(self)
 	SV *	self

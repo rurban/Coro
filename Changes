@@ -1,5 +1,13 @@
 Revision history for Perl extension Coro.
 
+0.534 Sun Apr 14 03:05:12 CEST 2002
+	- fixed backspace => tab in header parsing (myhttpd).
+        - added eg/readline, for elmex.
+        - Coro::Event now calls ->start on first call instead of
+          ->again, which created wrong timeouts for the first ->next.
+        - fixed a bug where Coro::Socket returned a closed socket instead
+          of nothing on ECONNREFUSED and similar error conditions.
+
 0.533 Mon Feb 18 18:49:40 CET 2002
 	- adapt to finally working Event-0.85.
         - fixed buggy event initialization (trapped under windows, but how
