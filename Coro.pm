@@ -33,7 +33,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.06;
+$VERSION = 0.07;
 
 @EXPORT = qw(async yield schedule terminate);
 @EXPORT_OK = qw($current);
@@ -101,8 +101,7 @@ our $idle = new Coro sub {
 };
 
 # we really need priorities...
-## my @ready; #d#
-our @ready = (); # the ready queue. hehe, rather broken ;)
+my @ready; # the ready queue. hehe, rather broken ;)
 
 # static methods. not really.
 
