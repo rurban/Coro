@@ -152,7 +152,8 @@ sub new {
    my (undef, $iaddr) = unpack_sockaddr_in $peername
       or $self->err(500, "unable to decode peername");
 
-   $self->{remote_addr} = inet_ntoa $iaddr;
+   $self->{remote_addr} =
+      $self->{remote_id} = inet_ntoa $iaddr;
    $self->{time} = $::NOW;
 
    weaken ($Coro::current->{conn} = $self);
@@ -181,7 +182,7 @@ sub eoconn {
 
 sub slog {
    my $self = shift;
-   main::slog($_[0], ($self->{remote_id} || $self->{remote_addr}) ."> $_[1]");
+   main::slog($_[0], "$self->{remote_id}> $_[1]");
 }
 
 sub response {
@@ -212,7 +213,8 @@ sub response {
    $res .= $content if defined $content and $self->{method} ne "HEAD";
 
    my $log = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $NOW).
-             " $self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";
+             " $self->{remote_id} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}.
+             " \"$self->{h}{referer}\"\n";
 
    print $accesslog $log if $accesslog;
    print STDERR $log;
@@ -470,7 +472,8 @@ sub handle_dir {
          {
             "Content-Type"   => "text/html",
             "Content-Length" => length $idx,
-            "Last-Modified"  => time2str ((stat _)[9]),
+            #d# directories change all the time, so X-
+            "X-Last-Modified"  => time2str ((stat _)[9]),
          },
          $idx);
 }

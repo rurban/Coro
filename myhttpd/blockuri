@@ -55,7 +55,7 @@ GROUP de DE AT CH
 !/eps/kasemakase tsukikage ran		usa
 !/eps/lost universe			usa
 !/eps/love hina				IT
-!/eps/macross				FR
+!/eps/macross				FR usa
 !/eps/magic knight			usa IT
 !/eps/magic knight rayearth		usa
 !/eps/mahou senshi riui			usa
@@ -76,7 +76,7 @@ GROUP de DE AT CH
 !/eps/orphen				usa
 !/eps/outlaw star			usa
 !/eps/ranma				usa FR IT
-!/eps/rev.*utena			IT
+!/eps/rev.*utena			usa IT
 !/eps/robotech				usa
 !/eps/robotech				usa
 !/eps/rurouni kenshin			usa
@@ -102,6 +102,7 @@ GROUP de DE AT CH
 !/eps/vandread				usa
 !/eps/wedding peach			IT de
 !/eps/yu yu hakusho			usa
+!/eps/record of the lodoss war		usa
 !/manga/angelic layer			de
 !/manga/ayashi no ceres			usa
 !/manga/battle angel			de

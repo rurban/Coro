@@ -101,17 +101,52 @@ sub conn::get_statdata {
    $$statdata;
 }
 
+sub handle_redirect { # unused
+   if (-f ".redirect") {
+      if (open R, "<.redirect") {
+         while (<R>) {
+            if (/^(?:$host$port)$uri([^ \tr\n]*)[ \t\r\n]+(.*)$/) {
+               my $rem = $1;
+               my $url = $2;
+               print $nph ? "HTTP/1.0 302 Moved\n" : "Status: 302 Moved\n";
+               print <<EOF;
+Location: $url
+Content-Type: text/html
+
+<html>
+<head><title>Page Redirection to $url</title></head>
+<meta http-equiv="refresh" content="0;URL=$url">
+</head>
+<body text="black" link="#1010C0" vlink="#101080" alink="red" bgcolor="white">
+<large>
+This page has moved to $url.<br />
+<a href="$url">
+The automatic redirection has failed. Please try a <i>slightly</i>
+newer browser next time, and in the meantime <i>please</i> follow this link ;)
+</a>
+</large>
+</body>
+</html>
+EOF
+            }
+         }
+      }
+   }
+}
+
+sub format_time {
+   sprintf "%02dd %02d:%02d:%02d",
+           int ($_[0] / (60 * 60 * 24)),
+           int ($_[0] / (60 * 60)) % 24,
+           int ($_[0] / 60) % 60,
+           int ($_[0]) % 60;
+}
+
 sub conn::diridx {
    my $self = shift;
 
    my $data = $self->get_statdata;
 
-   my $uptime = int (time - $::starttime);
-   $uptime = sprintf "%02dd %02d:%02d",
-                     int ($uptime / (60 * 60 * 24)),
-                     int ($uptime / (60 * 60)) % 24,
-                     int ($uptime / 60) % 60;
-   
    my $stat;
    if ($data->{dlen}) {
       $stat .= "<table><tr><th>Directories</th></tr>";
@@ -148,21 +183,14 @@ sub conn::diridx {
       $stat .= "</table>";
    }
 
-   my $waiters = sprintf "%d/%d", $::transfers[0][0]->waiters+0, $::transfers[1][0]->waiters+0;
-   my $avgtime = sprintf "%d/%d second(s)", $::transfers[0][1], $::transfers[1][1];
-
    <<EOF;
 <html>
 <head><title>$self->{uri}</title></head>
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 <h1>$data->{path}</h1>
 $data->{top}
-<small><div align="right">
-         <tt>$self->{remote_id}/$self->{country} - $::conns connection(s) - uptime $uptime - myhttpd/$VERSION
-</tt></div></small>
 <hr />
-clients waiting for data transfer: $waiters<br />
-average waiting time until transfer starts: $avgtime <small>(adjust your timeout values)</small><br />
+<a href="/internal/status">Server Status Page &amp; Queueing Info</a>
 <hr />
 $stat
 $data->{bot}
@@ -171,37 +199,56 @@ $data->{bot}
 EOF
 }
 
-sub handle_redirect { # unused
-   if (-f ".redirect") {
-      if (open R, "<.redirect") {
-         while (<R>) {
-            if (/^(?:$host$port)$uri([^ \tr\n]*)[ \t\r\n]+(.*)$/) {
-               my $rem = $1;
-               my $url = $2;
-               print $nph ? "HTTP/1.0 302 Moved\n" : "Status: 302 Moved\n";
-               print <<EOF;
-Location: $url
-Content-Type: text/html
+$::internal{status} = sub {
+   my $self = shift;
 
+   my $uptime = format_time ($::NOW - $::starttime);
+   
+   my $content = <<EOF;
 <html>
-<head><title>Page Redirection to $url</title></head>
-<meta http-equiv="refresh" content="0;URL=$url">
-</head>
-<body text="black" link="#1010C0" vlink="#101080" alink="red" bgcolor="white">
-<large>
-This page has moved to $url.<br />
-<a href="$url">
-The automatic redirection has failed. Please try a <i>slightly</i>
-newer browser next time, and in the meantime <i>please</i> follow this link ;)
-</a>
-</large>
+<head><title>Server Status Page</title></head>
+<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
+<h1>Server Status Page</h1>
+<h2>Myhttpd</h2>
+version <b>$VERSION</b>; current connections count: <b>$::conns</b>; uptime: <b>$uptime</b>;<br />
+client-iD <b>$self->{remote_id}</b>, client country <b>$self->{country}</b>;<br />
+<h2>Queue Statistics</h2>
+<ul>
+EOF
+
+   my @queuename = ("Small Queue", "Large Queue");
+   for (@::transfers) {
+      my $name = shift @queuename;
+      if ($_->waiters) {
+         $content .= "<li>$name<table border='1'><tr><th>Remote ID</th><th>CN</th><th>Waiting</th><th>URI</th></tr>";
+         for ($_->waiters) {
+            my $conn = $_->{conn};
+            my $time = format_time ($::NOW - $conn->{time});
+            $content .= "<tr>".
+                        "<td>$conn->{remote_id}</td>".
+                        "<td>$conn->{country}</td>".
+                        "<td>$time</td>".
+                        "<td>".escape_html($conn->{name})."</td>".
+                        "</tr>";
+         }
+         $content .= "</table></li>";
+      } else {
+         $content .= "<li>$name<br />(empty)</li>";
+      }
+   }
+
+   $content .= <<EOF;
+</ul>
 </body>
 </html>
 EOF
-            }
-         }
-      }
-   }
-}
+
+   $self->response(200, "ok",
+         {
+            "Content-Type"   => "text/html",
+            "Content-Length" => length $content,
+         },
+         $content);
+};
 
 1;

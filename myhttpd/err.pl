@@ -93,7 +93,7 @@ EOF
 
 sub conn::err_blocked {
    my $self = shift;
-   my $ip = $self->{remote_addr};
+   my $ip = $self->{remote_id};
    my $ctime = $HTTP_NOW;
    my $etime = time2str $conn::blocked{$ip} = $::NOW + $::BLOCKTIME;
 
@@ -119,9 +119,9 @@ may retry at</p>
 
    <p><blockquote>$etime.</blockquote></p>
 
-<p>For your reference, the current time is:</p>
+<p>For your reference, the current time and your identifier is:</p>
    
-   <p><blockquote>$ctime.</blockquote></p>
+   <p><blockquote>$ctime | $id</blockquote></p>
    
 <p>Until then, each new access will renew the block. You might want to have a
 look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#blocked">FAQ</a>.</p>

@@ -11,7 +11,7 @@ use Text::Abbrev;
 my $last_ts = time;
 
 my %complete;
-my @commands = qw(quit squit refresh country restart block info print);
+my @commands = qw(quit squit refresh country restart block info print clrdiridx);
 
 abbrev \%complete, @commands;
 
@@ -56,6 +56,9 @@ sub shell {
             %statdata_cache = ();
             conn::read_blockuri;
             conn::read_blockref;
+         } elsif ($cmd eq "clrdiridx") {
+            %statdata_cache = ();
+            %diridx = ();
          } elsif ($cmd eq "restart") {
             $::RESTART = 1;
             unloop;
