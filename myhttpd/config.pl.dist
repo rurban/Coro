@@ -26,6 +26,8 @@ $WAIT_BUFSIZE  = 512;			# send this much data while waiting
 
 $BUFSIZE       = 32*1024;		# buffer size
 
+$TBF_RATE      = 100000000;
+
 $AIO_PARALLEL  = 1;			# how many reader threads for i/o?
 
 $ACCESS_LOG    = "logs/accesslog";	# access log

@@ -57,7 +57,7 @@ our $httpevent   = new Coro::Signal;
 our $queue_file  = new transferqueue $MAX_TRANSFERS;
 our $queue_index = new transferqueue 10;
 
-our $tbf_top     = new tbf rate => 100000;
+our $tbf_top     = new tbf rate => $TBF_RATE || 100000;
 
 my $unused_bytes = 0;
 my $unused_last  = time;
@@ -112,7 +112,6 @@ sub listen_on {
          } else {
             async \&handler;
          }
-
       }
    };
 }
