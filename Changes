@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+	- included libcoro.c earlier in State.xs, might improve portability.
+
 1.11 Thu Mar  3 18:00:52 CET 2005
 	- change of contact address.
 

@@ -1,5 +1,7 @@
 #define PERL_NO_GET_CONTEXT
 
+#include "libcoro/coro.c"
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -26,8 +28,6 @@
 #  define IS_PADCONST(v) 0
 # endif
 #endif
-
-#include "libcoro/coro.c"
 
 #include <signal.h>
 
