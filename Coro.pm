@@ -40,7 +40,7 @@ use vars qw($idle $main $current);
 
 use base Exporter;
 
-$VERSION = '1.0';
+$VERSION = 1.1;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -346,7 +346,7 @@ L<Coro::Handle>, L<Coro::RWLock>, L<Coro::Socket>.
 =head1 AUTHOR
 
  Marc Lehmann <pcg@goof.com>
- http://www.goof.com/pcg/marc/
+ http://home.schmorp.de/
 
 =cut
 

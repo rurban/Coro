@@ -29,7 +29,7 @@ package Coro::Channel;
 use Coro ();
 BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
-$VERSION = 1.0;
+$VERSION = 1.1;
 
 =item $q = new Coro:Channel $maxsize
 
@@ -101,7 +101,7 @@ sub size {
 =head1 AUTHOR
 
  Marc Lehmann <pcg@goof.com>
- http://www.goof.com/pcg/marc/
+ http://home.schmorp.de/
 
 =cut
 

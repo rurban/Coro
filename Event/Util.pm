@@ -30,7 +30,7 @@ use base 'Exporter';
    gethostbyname gethostbyaddr
 );
 
-$VERSION = 1.0;
+$VERSION = 1.1;
 
 $MAXPARALLEL = 16; # max. number of parallel jobs
 
@@ -86,7 +86,7 @@ sub gethostbyaddr($$) {
 =head1 AUTHOR
 
  Marc Lehmann <pcg@goof.com>
- http://www.goof.com/pcg/marc/
+ http://home.schmorp.de/
 
 =cut
 

@@ -111,6 +111,7 @@ struct coro {
   OP *op;
   SV **curpad;
   AV *comppad;
+  CV *compcv;
   SV **stack_base;
   SV **stack_max;
   SV **tmps_stack;
@@ -329,6 +330,7 @@ load_state(pTHX_ Coro__State c)
   PL_op = c->op;
   PL_curpad = c->curpad;
   PL_comppad = c->comppad;
+  PL_compcv = c->compcv;
   PL_stack_base = c->stack_base;
   PL_stack_max = c->stack_max;
   PL_tmps_stack = c->tmps_stack;
@@ -453,6 +455,7 @@ save_state(pTHX_ Coro__State c, int flags)
   c->op = PL_op;
   c->curpad = PL_curpad;
   c->comppad = PL_comppad;
+  c->compcv = PL_compcv;
   c->stack_base = PL_stack_base;
   c->stack_max = PL_stack_max;
   c->tmps_stack = PL_tmps_stack;
@@ -1019,13 +1022,13 @@ DESTROY(coro)
             struct coro temp;
 
             PUTBACK;
-            SAVE(aTHX_ (&temp), TRANSFER_SAVE_ALL);
-            LOAD(aTHX_ coro);
+            SAVE (aTHX_ (&temp), TRANSFER_SAVE_ALL);
+            LOAD (aTHX_ coro);
             SPAGAIN;
 
             destroy_stacks (aTHX);
 
-            LOAD((&temp)); /* this will get rid of defsv etc.. */
+            LOAD ((&temp)); /* this will get rid of defsv etc.. */
             SPAGAIN;
 
             coro->mainstack = 0;
@@ -1064,13 +1067,13 @@ yield(...)
         while (items--)
           av_store (defav, items, SvREFCNT_inc (ST(items)));
 
-        mg_get (returnstk); /* isn't documentation wrong for mg_get? */
+        SvGETMAGIC (returnstk); /* isn't documentation wrong for mg_get? */
         sv = av_pop ((AV *)SvRV (returnstk));
         prev = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
         next = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
         SvREFCNT_dec (sv);
 
-        transfer(aTHX_ prev, next, 0);
+        transfer (aTHX_ prev, next, 0);
 
 MODULE = Coro::State                PACKAGE = Coro
 

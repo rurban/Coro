@@ -16,7 +16,7 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/) {
    $iface = "i";
 } elsif ($^O =~ /linux/) {
    # default to setjmp/longjmp on non-x86...
-   $iface = $Config{archname} =~ /^i[3456]86-/ ? "l" : "s";
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64)-/ ? "l" : "s";
 } elsif ($^O =~ /(free|net|open)bsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al (see BUGS section of
    # man context). Assume the same problem for all other BSDs.

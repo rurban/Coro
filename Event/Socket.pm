@@ -28,7 +28,7 @@ use Coro::Util ();
 
 use base 'Coro::Handle';
 
-$VERSION = 1.0;
+$VERSION = 1.1;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {
@@ -203,7 +203,7 @@ sub accept {
 =head1 AUTHOR
 
  Marc Lehmann <pcg@goof.com>
- http://www.goof.com/pcg/marc/
+ http://home.schmorp.de/
 
 =cut
 
