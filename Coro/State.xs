@@ -1045,6 +1045,7 @@ BOOT:
 void
 ready(self)
 	SV *	self
+        PROTOTYPE: $
 	CODE:
         api_ready (self);
 

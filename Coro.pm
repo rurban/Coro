@@ -34,11 +34,13 @@ important global variables.
 
 package Coro;
 
+no warnings qw(uninitialized);
+
 use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.49;
+$VERSION = 0.5;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -118,7 +120,12 @@ our $idle = new Coro sub {
 my @destroy;
 my $manager = new Coro sub {
    while() {
-      delete ((pop @destroy)->{_coro_state}) while @destroy;
+      # by overwriting the state object with the manager we destroy it
+      # while still being able to schedule this coroutine (in case it has
+      # been readied multiple times. this is harmless since the manager
+      # can be called as many times as neccessary and will always
+      # remove itself from the runqueue
+      (pop @destroy)->{_coro_state} = $manager->{_coro_state} while @destroy;
       &schedule;
    }
 };
@@ -231,6 +238,7 @@ Like C<terminate>, but terminates the specified process instead.
 sub cancel {
    push @destroy, $_[0];
    $manager->ready;
+   &schedule if $current == $_[0];
 }
 
 =item $oldprio = $process->prio($newprio)

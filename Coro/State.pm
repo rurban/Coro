@@ -47,8 +47,10 @@ per coroutine, 5k when the experimental context sharing is enabled.
 
 package Coro::State;
 
+no warnings qw(uninitialized);
+
 BEGIN {
-   $VERSION = 0.49;
+   $VERSION = 0.5;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;

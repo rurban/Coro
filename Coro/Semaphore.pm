@@ -33,9 +33,11 @@ and decrement the count when resources are removed.
 
 package Coro::Semaphore;
 
+no warnings qw(uninitialized);
+
 use Coro ();
 
-$VERSION = 0.49;
+$VERSION = 0.5;
 
 =item new [inital count]
 

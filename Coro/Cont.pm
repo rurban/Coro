@@ -29,6 +29,8 @@ Coro::Cont - schmorp's faked continuations
 
 package Coro::Cont;
 
+no warnings qw(uninitialized);
+
 use Carp qw(croak);
 
 use Coro::State;
@@ -36,7 +38,7 @@ use Coro::Specific;
 
 use base 'Exporter';
 
-$VERSION = 0.49;
+$VERSION = 0.5;
 @EXPORT = qw(csub yield);
 
 {

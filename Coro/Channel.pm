@@ -27,8 +27,9 @@ read/written from as many coroutines as you want.
 package Coro::Channel;
 
 use Coro ();
+no warnings qw(uninitialized);
 
-$VERSION = 0.49;
+$VERSION = 0.5;
 
 =item $q = new Coro:Channel $maxsize
 

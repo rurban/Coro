@@ -30,9 +30,11 @@ identifier.
 
 package Coro::SemaphoreSet;
 
+no warnings qw(uninitialized);
+
 use Coro ();
 
-$VERSION = 0.49;
+$VERSION = 0.5;
 
 =item new [inital count]
 

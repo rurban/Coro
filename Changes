@@ -1,5 +1,12 @@
 Revision history for Perl extension Coro.
 
+0.5  Fri Sep 28 16:15:35 CEST 2001
+	- fixed "print" on a Coro::Handle. The print method worked.
+	- small tweaks (seem to reduce memory consumption a lot)
+          in various modules.
+        - splendid use of "no warnings" scattered throughout.
+        - added Coro::Handle::rbuf, fixed Coro::Handle::fh.
+
 0.49  Sun Sep 16 02:42:45 CEST 2001
 	- changed some method calls to function calls for speed
           inside Coro::Handle.

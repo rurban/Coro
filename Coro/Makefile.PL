@@ -85,9 +85,11 @@ retry:
    if ($iface eq "u") {
       $DEFINE .= " -DCORO_UCONTEXT";
       print "\nUsing ucontext implementation\n\n";
+      conftest("TEST_makecontext");
    } elsif ($iface eq "s") {
       $DEFINE .= " -DCORO_SJLJ";
       print "\nUsing setjmp/longjmp/sigaltstack implementation\n\n";
+      conftest("TEST_sigaltstack");
    } elsif ($iface eq "l") {
       $DEFINE .= " -DCORO_LINUX";
       print "\nUsing linux-specific implementation\n\n";
@@ -99,7 +101,7 @@ retry:
       goto retry;
    }
 } else {
-   print "\nUsing microsoft coroutine implementation\n\n";
+   print "\nUsing microsoft compatible coroutines\n\n";
 }
 
 WriteMakefile(
@@ -125,5 +127,25 @@ WriteMakefile(
                   },
 );
 
+sub conftest {
+   my $type = shift;
+
+   print "\nTrying to detect stack growth direction (for $type)\n";
+   print "You might see some warnings, this should not concern you.\n\n";
+   system "$Config{cc} $Config{ccflags} -D$type libcoro/conftest.c";
+
+   my $res = qx<./a.out>;
+   $res =~ s/\s+$//;
+   my ($sp, $ss) = split /,/, $res;
+
+   print "\n\n*****************************************************************************\n";
+   print "If the testsuite fails PLEASE provide the following information\n";
+   print "to Marc Lehmann <pcg\@goof.com>: operating system name, version,\n";
+   print "architecture name and this string '$sp|$ss'. Thanks a lot!\n";#d#
+   print "*****************************************************************************\n\n";
+
+   unlink "a.out";
+   unlink "conftestval";
+}
 
 

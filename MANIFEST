@@ -23,6 +23,7 @@ Coro/CoroAPI.h
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c
+Coro/libcoro/conftest.c
 
 Event/Makefile.PL
 Event/Event.pm

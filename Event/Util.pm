@@ -17,6 +17,8 @@ functions by non-blocking counterparts.
 
 package Coro::Util;
 
+no warnings qw(uninitialized);
+
 #use Carp qw(croak);
 
 use Coro::Handle;
@@ -46,7 +48,7 @@ sub _do_asy(&;@) {
    }
    my $buf;
    $fh = unblock $fh;
-   $fh->read($buf, 16384);
+   $fh->sysread($buf, 16384);
    close $fh;
    $jobs->up;
    my @r = map { pack "H*", $_ } split /\0/, $buf;

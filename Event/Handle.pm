@@ -18,6 +18,8 @@ does NOT inherit from IO::Handle but uses tied objects.
 
 package Coro::Handle;
 
+no warnings qw(uninitialized);
+
 use Errno ();
 use base 'Exporter';
 
@@ -58,10 +60,6 @@ sub unblock($) {
    new_from_fh Coro::Handle $_[0];
 }
 
-sub read	{ read     $_[0], $_[1], $_[2], $_[3] }
-sub sysread	{ sysread  $_[0], $_[1], $_[2], $_[3] }
-sub syswrite	{ syswrite $_[0], $_[1], $_[2], $_[3] }
-
 =item $fh->writable, $fh->readable
 
 Wait until the filehandle is readable or writable (and return true) or
@@ -91,14 +89,23 @@ only). Might change in the future.
 
 sub autoflush	{ !0 }
 
-=item $fh->fileno, $fh->close
+=item $fh->fileno, $fh->close,
+$fh->read, $fh->sysread, $fh->syswrite,
+$fh->print, $fh->printf
 
-Work like their function equivalents.
+Work like their function equivalents (except read, which works like
+sysread. You should not use the read function with Coro::Handles, it will
+work but it's not efficient).
 
 =cut
 
-sub fileno { tied(${$_[0]})->FILENO }
-sub close  { tied(${$_[0]})->CLOSE  }
+sub read	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub sysread	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub syswrite	{ Coro::Handle::FH::WRITE (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub print	{ Coro::Handle::FH::WRITE (tied ${+shift}, join "", @_) }
+sub printf	{ Coro::Handle::FH::PRINTF(tied ${+shift}, @_) }
+sub fileno	{ Coro::Handle::FH::FILENO(tied ${$_[0]}) }
+sub close	{ Coro::Handle::FH::CLOSE (tied ${$_[0]}) }
 
 =item $fh->timeout([...])
 
@@ -125,13 +132,46 @@ Returns the "real" (non-blocking) filehandle. Use this if you want to
 do operations on the file handle you cannot do using the Coro::Handle
 interface.
 
+=item $fh->rbuf
+
+Returns the current contents of the raed buffer (this is an lvalue, so you
+can change the read buffer if you like).
+
+You can use this fucntion to implement your own optimized reader when neither
+readline nor sysread are viable candidates, like this:
+
+  # first get the _real_ non-blocking filehandle
+  # and fetch the current contents of the read buffer
+  my $nb_fh = $fh->fh;
+  my $buf = $fh->rbuf;
+
+  for(;;) {
+     # now use buffer contents, modifying
+     # if necessary to reflect the removed data
+
+     last if $buf ne ""; # we have leftover data
+
+     # read another buffer full of data
+     $fh->readable or die "end of file";
+     sysread $nb_fh, $buf, 8192;
+  }
+
+  # put the read buffer back
+  $fh->rbuf = $buf;
+
 =cut
 
 sub fh {
-   tied(${$_[0]})->{fh};
+   (tied ${$_[0]})->[0];
+}
+
+sub rbuf : lvalue {
+   tied(${$_[0]})->[3];
 }
 
 package Coro::Handle::FH;
+
+no warnings qw(uninitialized);
 
 use Fcntl ();
 use Errno ();
@@ -140,8 +180,6 @@ use Carp 'croak';
 use Coro::Event;
 use Event::Watcher qw(R W E);
 
-use base 'Tie::Handle';
-
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
 #
@@ -149,7 +187,7 @@ use base 'Tie::Handle';
 # 1 desc
 # 2 timeout
 # 3 rb
-# 4 wb
+# 4 wb # unused
 # 5 rw
 # 6 ww
 
@@ -190,6 +228,36 @@ sub OPEN {
    $r;
 }
 
+sub PRINT {
+   WRITE(shift, join "", @_);
+}
+
+sub PRINTF {
+   WRITE(shift, sprintf(shift,@_));
+}
+
+sub GETC {
+   my $buf;
+   READ($_[0], $buf, 1);
+   $buf;
+}
+
+sub BINMODE {
+   binmode $_[0][0];
+}
+
+sub TELL {
+   use Carp (); Carp::croak("Coro::Handle's don't support tell()");
+}
+
+sub SEEK {
+   use Carp (); Carp::croak("Coro::Handle's don't support seek()");
+}
+
+sub EOF {
+   use Carp (); Carp::croak("Coro::Handle's don't support eof()");
+}
+
 sub CLOSE {
    &cleanup;
    close $_[0][0];
@@ -201,6 +269,12 @@ sub DESTROY {
 
 sub FILENO {
    fileno $_[0][0];
+}
+
+# seems to be called for stringification (how weird), at least
+# when DumpValue::dumpValue is used to print this.
+sub FETCH {
+   "$_[0]<$_[0][1]>";
 }
 
 sub readable {
