@@ -489,13 +489,18 @@ coro_init_stacks (pTHX)
 STATIC void
 destroy_stacks(pTHX)
 {
-  /* is this ugly, I ask? */
-  while (PL_scopestack_ix)
-    LEAVE;
+  int destruct = PL_main_cv != Nullcv;
 
-  /* sure it is, but more important: is it correct?? :/ */
-  while (PL_tmps_ix > PL_tmps_floor) /* should only ever be one iteration */
-    FREETMPS;
+  if (destruct)
+    {
+      /* is this ugly, I ask? */
+      while (PL_scopestack_ix)
+        LEAVE;
+
+      /* sure it is, but more important: is it correct?? :/ */
+      while (PL_tmps_ix > PL_tmps_floor) /* should only ever be one iteration */
+        FREETMPS;
+    }
 
   while (PL_curstackinfo->si_next)
     PL_curstackinfo = PL_curstackinfo->si_next;
@@ -510,10 +515,12 @@ destroy_stacks(pTHX)
         PUTBACK; /* possibly superfluous */
       }
 
-      if (PL_main_cv != Nullcv) /* don't during destruction. hack? */
-        dounwind(-1);
+      if (destruct)
+        {
+          dounwind(-1);
+          SvREFCNT_dec(PL_curstackinfo->si_stack);
+        }
 
-      SvREFCNT_dec(PL_curstackinfo->si_stack);
       Safefree(PL_curstackinfo->si_cxstack);
       Safefree(PL_curstackinfo);
       PL_curstackinfo = p;
