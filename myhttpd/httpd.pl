@@ -52,8 +52,10 @@ sub slog {
 our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
 our $httpevent   = new Coro::Signal;
 
-our $queue_file  = new transferqueue slots => $MAX_TRANSFERS, maxsize => 256*1024*1024;
+our $queue_file  = new transferqueue slots => $MAX_TRANSFERS, maxsize => 250_000_000;
 our $queue_index = new transferqueue slots => 10;
+
+our $requests;
 
 my @newcons;
 my @pool;
@@ -295,6 +297,8 @@ sub handle {
          $self->{h}{$h} = substr $v, 1
             while ($h, $v) = each %hdr;
       }
+
+      $requests++;
 
       # remote id should be unique per user
       my $id = $self->{remote_addr};
