@@ -87,7 +87,7 @@ so it put's itself into the ready queue and calls the scheduler.
       -----==-                                             |
       ----==-- _                                           |
       ---==---(_)__  __ ____  __       Marc Lehmann      +--
-      --==---/ / _ \/ // /\ \/ /       pcg@goof.com      |e|
+      --==---/ / _ \/ // /\ \/ /       schmorp@schmorp.de      |e|
       -=====/_/_//_/\_,_/ /_/\_\       XX11-RIPE         --+
     The choice of a GNU generation                       |
                                                          |

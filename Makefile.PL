@@ -10,7 +10,7 @@ if ($] < 5.006) {
 *** compiles and passes the testsuite, it should work.  Otherwise you
 *** should either upgrade or fix it ;)
 ***
-*** Marc Lehmann <pcg\@goof.com>
+*** Marc Lehmann <schmorp\@schmorp.de>
 ***
 
 EOF

@@ -1,8 +1,11 @@
 Revision history for Perl extension Coro.
 
+1.11 Thu Mar  3 18:00:52 CET 2005
+	- change of contact address.
+
 1.1 Tue Feb 22 20:51:16 CET 2005
 	- support [l]inux method on amd64.
-        - make some contetx switches while compiling work.
+        - make some context switches while compiling/eval'ing work.
 
 1.0  Tue Aug 10 03:47:27 CEST 2004
 	- Event 0.89 fixes the bug again.

@@ -52,7 +52,7 @@ use base 'Exporter';
 @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = 1.1;
+   $VERSION = 1.11;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
 
@@ -195,7 +195,7 @@ unless ($override) {
 
 =head1 AUTHOR
 
- Marc Lehmann <pcg@goof.com>
+ Marc Lehmann <schmorp@schmorp.de>
  http://home.schmorp.de/
 
 =cut

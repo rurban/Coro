@@ -35,7 +35,7 @@ BEGIN {
    eval "use Time::HiRes 'time'";
 }
 
-$VERSION = 1.1;
+$VERSION = 1.11;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
@@ -164,7 +164,7 @@ freed!
 
 =head1 AUTHOR
 
- Marc Lehmann <pcg@goof.com>
+ Marc Lehmann <schmorp@schmorp.de>
  http://home.schmorp.de/
 
 =cut
