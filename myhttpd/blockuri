@@ -6,40 +6,68 @@ GROUP de DE AT CH
 !.					far
 !./neon genesis				usa de IT FR
 !./pokemon				FR eur usa de
+!/eps/.*creamy mami			eur usa
+!/eps/amazing nurse nanako		usa
+!/eps/angel sanctuary			usa
+!/eps/arc the lad			usa
+!/eps/bastard				usa
 !/eps/berserk				usa
+!/eps/biohunter				usa
+!/eps/blue sabmarine			usa
+!/eps/blue seed				usa
 !/eps/blue submarine			IT
+!/eps/bubblegum crisis			usa
 !/eps/bubblegum crisis			usa
 !/eps/card captor sakura		FR IT usa de
 !/eps/cowboy be				IT
-!/eps/.*creamy mami			eur usa
 !/eps/digimon				FR de
 !/eps/dilbert				usa de
+!/eps/dual				usa
 !/eps/el hazard				FR IT
-!/eps/escaflowne			IT
+!/eps/escaflowne			IT usa
 !/eps/excel saga			IT
+!/eps/gasaraki				usa
 !/eps/gatekeepers			usa
 !/eps/golden boy			usa IT
+!/eps/gundam wing			usa
 !/eps/hand maid may			usa IT
 !/eps/i my me				usa
 !/eps/inu yasha				usa
+!/eps/jubei chan			usa
 !/eps/kareshi kanojo no jijou		IT
+!/eps/lost universe			usa
 !/eps/love hina				IT
 !/eps/macross				FR
 !/eps/magic knight			usa IT
 !/eps/mahou senshi riui			usa
 !/eps/maison ikkoku			usa
+!/eps/martian successor nadesico	usa
 !/eps/mini goddess			usa
 !/eps/miracle girls			IT
 !/eps/miyuki-chan in wonderland		AU
+!/eps/nadia				usa
+!/eps/niea 7				usa
+!/eps/nightwalker			usa
 !/eps/now and then			usa
+!/eps/orphen				usa
 !/eps/ranma				usa FR IT
-!/eps/tenchi muyo			usa FR IT
 !/eps/rev.*utena			IT
 !/eps/robotech				usa
+!/eps/robotech				usa
+!/eps/rurouni kenshin			usa
 !/eps/saiyuki				usa
+!/eps/sakura diaries			usa
 !/eps/serial experiment			usa IT FR
+!/eps/silent service			usa
 !/eps/slayers				usa
+!/eps/sol bianca			usa
+!/eps/sorcerer hunters			usa
+!/eps/tenchi muyo			usa FR IT
+!/eps/the irresponsible captain tylor	usa
+!/eps/trigun				usa
+!/eps/urusei yatsura			usa
 !/eps/wedding peach			IT de
+!/eps/yu yu hakusho			usa
 !/manga/angelic layer			de
 !/manga/battle angel			de
 !/manga/one piece			de
@@ -51,6 +79,7 @@ GROUP de DE AT CH
 !/manga/video girl ai			de
 !/movies/akira				eur usa
 !/movies/armitage iii			FR
+!/movies/blood				usa
 !/movies/blood the last vamp		usa
 !/movies/final fantasy			usa eur
 !/movies/ghost in the shell		eur usa
@@ -59,6 +88,8 @@ GROUP de DE AT CH
 !/movies/perfect blue			FR de
 !/movies/princess mononoke		eur usa
 !hentai//urotsukidoji			eur usa
+!hentai/Tokyo Private Police		usa
+!hentai/advanturekid			usa
 !hentai/cool devices			eur usa
 !hentai/la blue girl			AU
 
