@@ -139,7 +139,7 @@ sub conn::diridx {
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 <h1>$data->{path}</h1>
 $data->{top}
-<small><div align="right"><tt>$self->{remote_addr}/$self->{country} - myhttpd/$VERSION</tt></div></small>
+<small><div align="right"><tt>$self->{remote_addr}/$self->{country} - $::conns connection(s) - myhttpd/$VERSION</tt></div></small>
 <hr>
 $data->{stat}
 $data->{bot}

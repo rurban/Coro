@@ -45,7 +45,7 @@ my $http_port = new Coro::Socket
         LocalAddr => $SERVER_HOST,
         LocalPort => $SERVER_PORT,
         ReuseAddr => 1,
-        Listen => 1,
+        Listen => 50,
    or die "unable to start server";
 
 push @listen_sockets, $http_port;
@@ -106,13 +106,18 @@ sub new {
    # enter ourselves into various lists
    weaken ($conn{$self->{remote_addr}}{$self*1} = $self);
 
+   $::conns++;
+
    $self;
 }
 
 sub DESTROY {
    my $self = shift;
+
+   $::conns--;
+
    delete $conn{$self->{remote_addr}}{$self*1};
-   delete $uri{$self->{uri}}{$self*1};
+   delete $uri{$self->{remote_addr}}{$self->{uri}}{$self*1};
 }
 
 sub slog {
@@ -132,7 +137,7 @@ sub response {
    }
    $res .= "\015\012";
 
-   $res .= $content if defined $content and $self->{method} eq "GET";
+   $res .= $content if defined $content and $self->{method} ne "HEAD";
 
    print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
 
@@ -160,8 +165,6 @@ sub err_blocked {
    my $ip = $self->{remote_addr};
    my $time = time2str $blocked{$ip} = $::NOW + $::BLOCKTIME;
 
-   Coro::Event::do_timer(after => 5);
-   
    $self->err(403, "too many connections",
               {
                  "Content-Type" => "text/html",
@@ -243,7 +246,7 @@ sub handle {
 
       $self->{server_port} = $self->{h}{host} =~ s/:([0-9]+)$// ? $1 : 80;
 
-      weaken ($uri{$self->{uri}}{$self*1} = $self);
+      weaken ($uri{$self->{remote_addr}}{$self->{uri}}{$self*1} = $self);
 
       $self->map_uri;
       $self->respond;
@@ -401,7 +404,7 @@ sub handle_file {
 satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
-         if (%{$uri{$self->{uri}}} > 1) {
+         if (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
             $self->err(400, "segmented downloads are not allowed");
          }
       }

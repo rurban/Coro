@@ -27,7 +27,7 @@ sub shell {
             }
          }
          print $fh sort @data;
-         print $fh scalar@data, " connections\n";#d#
+         print $fh scalar@data, " ($::conns) connections\n";#d#
          print $fh "$::written bytes written in the last ",$::NOW - $last_ts, " seconds\n";
          printf $fh "(%.1f bytes/s)\n", $::written / ($::NOW - $last_ts);
          ($last_ts, $::written) = ($::NOW, 0);

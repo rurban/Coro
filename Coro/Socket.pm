@@ -179,12 +179,12 @@ list context return the ($peername, $fh) pair (or nothing).
 sub accept {
    my ($peername, $fh);
    while () {
-      $_[0]->readable or return;
-
       $peername = accept $fh, tied(${$_[0]})->{fh}
          and return ($peername, $fh = new_from_fh Coro::Socket $fh);
 
       return unless $!{EAGAIN};
+
+      $_[0]->readable or return;
    }
 }
 
