@@ -15,12 +15,11 @@ Coro::Cont - schmorp's faked continuations
 
  # dasselbe in grün (as we germans say)
  sub mul2 : Cont {
-    result $_*2;
-    result $_;
+    result $_[0]*2;
+    result $_[0];
  }
 
- my %hash2 = map mul2, &hash1;
-
+ my %hash2 = map mul2($_), &hash1;
 
 =head1 DESCRIPTION
 
@@ -29,6 +28,8 @@ Coro::Cont - schmorp's faked continuations
 =cut
 
 package Coro::Cont;
+
+use Carp qw(croak);
 
 use Coro::State;
 use Coro::Specific;
@@ -53,7 +54,7 @@ $VERSION = 0.08;
          my @attrs;
          for (@_) {
             if ($_ eq "Cont") {
-               push @csub, $ref;
+               push @csub, [$package, $ref];
             } else {
                push @attrs, $_;
             }
@@ -62,9 +63,23 @@ $VERSION = 0.08;
       };
    }
 
+   sub findsym {
+      no warnings;
+      my ($pkg, $ref) = @_;
+      my $type = ref $ref;
+      for my $sym (values %{$pkg."::"}) {
+         return \$sym if *{$sym}{$type} == $ref;
+      }
+      ();
+   }
+
    sub INIT {
+      # prototypes are currently being ignored
       for (@csub) {
-         $$_ = csub $$_;
+         no warnings;
+         my $ref = findsym(@$_)
+            or croak "package $package: cannot declare non-global subs as 'Cont'";
+         *$ref = csub $_->[1];
       }
       @csub = ();
    }
@@ -77,31 +92,44 @@ terminated).
 
 =cut
 
-our $curr = new Coro::Specific;
-our @result;
+our $return = new Coro::Specific;
 
 sub csub(&) {
    my $code = $_[0];
-   my $coro = new Coro::State sub { &$code while 1 };
    my $prev = new Coro::State;
+
+   # the fol
+   my $coro = new Coro::State sub {
+      # we do this superfluous switch just to
+      # avoid the parameter passing problem
+      # on the first call
+      &result;
+      &$code while 1;
+   };
+
+   # call it once
+   push @$$return, [$coro, $prev];
+   &Coro::State::transfer($prev, $coro, 0);
+
    sub {
-      push @$$curr, [$coro, $prev];
+      push @$$return, [$coro, $prev];
       &Coro::State::transfer($prev, $coro, 0);
-      wantarray ? @{pop @result} : ${pop @result}[0];
+      wantarray ? @_ : $_[0];
    };
 }
 
-=item result [list]
+=item @_ = result [list]
 
-Return the given list/scalar as result of the continuation.
+Return the given list/scalar as result of the continuation. Also returns
+the new arguments given to the subroutine on the next call.
 
 =cut
 
-sub result {
-   push @result, [@_];
-   &Coro::State::transfer(@{pop @$$curr}, 0);
-   @_;
-}
+# implemented in Coro/State.xs
+#sub result {
+#   &Coro::State::transfer(@{pop @$$return}, 0);
+#   wantarray ? @_ : $_[0];
+#}
 
 1;
 

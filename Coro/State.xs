@@ -10,6 +10,8 @@
 
 #define MAY_FLUSH /* increases codesize */
 
+#define SUB_INIT "Coro::State::_newcoro"
+
 #define SAVE_DEFAV	0x00000001
 #define SAVE_DEFSV	0x00000002
 #define SAVE_ERRSV	0x00000004
@@ -439,7 +441,69 @@ destroy_stacks(pTHX)
   Safefree(PL_retstack);
 }
 
-#define SUB_INIT "Coro::State::_newcoro"
+STATIC void
+transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
+{
+  dSP;
+
+  if (prev != next)
+    {
+      /*
+       * this could be done in newprocess which would lead to
+       * extremely elegant and fast (just SAVE/LOAD)
+       * code here, but lazy allocation of stacks has also
+       * some virtues and the overhead of the if() is nil.
+       */
+      if (next->mainstack)
+        {
+          SAVE (prev, flags);
+          LOAD (next);
+          /* mark this state as in-use */
+          next->mainstack = 0;
+          next->tmps_ix = -2;
+        }
+      else if (next->tmps_ix == -2)
+        {
+          croak ("tried to transfer to running coroutine");
+        }
+      else
+        {
+          /*
+           * emulate part of the perl startup here.
+           */
+          UNOP myop;
+
+          SAVE (prev, -1); /* first get rid of the old state */
+
+          init_stacks (); /* from perl.c */
+          SPAGAIN;
+
+          PL_op = (OP *)&myop;
+          /*PL_curcop = 0;*/
+          SvREFCNT_dec (GvAV (PL_defgv));
+          GvAV (PL_defgv) = next->args;
+
+          Zero(&myop, 1, UNOP);
+          myop.op_next = Nullop;
+          myop.op_flags = OPf_WANT_VOID;
+
+          PUSHMARK(SP);
+          XPUSHs ((SV*)get_cv(SUB_INIT, TRUE));
+          /*
+           * the next line is slightly wrong, as PL_op->op_next
+           * is actually being executed so we skip the first op.
+           * that doesn't matter, though, since it is only
+           * pp_nextstate and we never return...
+           * ah yes, and I don't care anyways ;)
+           */
+          PUTBACK;
+          PL_op = pp_entersub(aTHX);
+          SPAGAIN;
+
+          ENTER; /* necessary e.g. for dounwind */
+        }
+    }
+}
 
 MODULE = Coro::State                PACKAGE = Coro::State
 
@@ -479,65 +543,10 @@ transfer(prev, next, flags = SAVE_DEFAV)
         Coro::State_or_hashref	prev
         Coro::State_or_hashref	next
         int			flags
+        PROTOTYPE: @
         CODE:
 
-        if (prev != next)
-          {
-            /*
-             * this could be done in newprocess which would lead to
-             * extremely elegant and fast (just SAVE/LOAD)
-             * code here, but lazy allocation of stacks has also
-             * some virtues and the overhead of the if() is nil.
-             */
-            if (next->mainstack)
-              {
-                SAVE (prev, flags);
-                LOAD (next);
-                /* mark this state as in-use */
-                next->mainstack = 0;
-                next->tmps_ix = -2;
-              }
-            else if (next->tmps_ix == -2)
-              {
-                croak ("tried to transfer to running coroutine");
-              }
-            else
-              {
-                /*
-                 * emulate part of the perl startup here.
-                 */
-                UNOP myop;
-
-                SAVE (prev, -1); /* first get rid of the old state */
-
-                init_stacks (); /* from perl.c */
-                SPAGAIN;
-
-                PL_op = (OP *)&myop;
-                /*PL_curcop = 0;*/
-                SvREFCNT_dec (GvAV (PL_defgv));
-                GvAV (PL_defgv) = next->args;
-
-                Zero(&myop, 1, UNOP);
-                myop.op_next = Nullop;
-                myop.op_flags = OPf_WANT_VOID;
-
-                PUSHMARK(SP);
-                XPUSHs ((SV*)get_cv(SUB_INIT, TRUE));
-                /*
-                 * the next line is slightly wrong, as PL_op->op_next
-                 * is actually being executed so we skip the first op.
-                 * that doesn't matter, though, since it is only
-                 * pp_nextstate and we never return...
-                 * ah yes, and I don't care anyways ;)
-                 */
-                PUTBACK;
-                PL_op = pp_entersub(aTHX);
-                SPAGAIN;
-
-                ENTER; /* necessary e.g. for dounwind */
-              }
-          }
+        transfer (aTHX_ prev, next, flags);
 
 void
 DESTROY(coro)
@@ -565,4 +574,32 @@ flush()
         flush_padlist_cache ();
 #endif
 
+MODULE = Coro::State                PACKAGE = Coro::Cont
+
+# this is dirty and should be in it's own .xs
+
+void
+result(...)
+	PROTOTYPE: @
+        CODE:
+        static SV *returnstk;
+        SV *sv;
+        AV *defav = GvAV (PL_defgv);
+        struct coro *prev, *next;
+
+        if (!returnstk)
+          returnstk = SvRV (get_sv ("Coro::Cont::return", FALSE));
+
+        /* set up @_ */
+        av_clear (defav);
+        av_fill (defav, items - 1);
+        while (items--)
+          av_store (defav, items, SvREFCNT_inc (ST(items)));
+
+        mg_get (returnstk); /* isn't documentation wrong for mg_get? */
+        sv = av_pop ((AV *)SvRV (returnstk));
+        prev = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
+        next = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
+        SvREFCNT_dec (sv);
+        transfer(prev, next, 0);
 

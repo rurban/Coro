@@ -44,7 +44,7 @@ sub new {
 }
 
 sub TIESCALAR {
-   my $idx = @idx ? pop @idx : $idx++;
+   my $idx = pop @idx || $idx++;
    bless \$idx, $_[0];
 }
 

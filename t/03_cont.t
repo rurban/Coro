@@ -1,5 +1,5 @@
 $|=1;
-print "1..13\n";
+print "1..18\n";
 
 use Coro;
 use Coro::Cont;
@@ -41,4 +41,18 @@ print "ok ", $test++, "\n";
 $done = 0;
 
 yield while $done < 2;
+
+sub cont : Cont {
+   result 2*shift;
+   result 3*shift;
+}
+
+print cont(3) ==  6 ? "ok " : "not ok ", $test++, "\n";
+print cont(4) == 12 ? "ok " : "not ok ", $test++, "\n";
+print cont(5) == 10 ? "ok " : "not ok ", $test++, "\n";
+print cont(6) == 18 ? "ok " : "not ok ", $test++, "\n";
+print cont(7) == 14 ? "ok " : "not ok ", $test++, "\n";
+
+
+
 

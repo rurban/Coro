@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.08
+0.08  Thu Jul 19 06:13:25 CEST 2001
 	- release candidate 2 (new functionality).
 	- add Coro::State::flush function.
         - transfer now supports a flags value (mostly for speed ATM).
