@@ -5,6 +5,7 @@ use Coro::Socket;
 use Coro::Signal;
 
 use HTTP::Date;
+use POSIX ();
 
 no utf8;
 use bytes;
@@ -208,7 +209,8 @@ sub response {
 
    $res .= $content if defined $content and $self->{method} ne "HEAD";
 
-   my $log = "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";
+   my $log = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $NOW).
+             " $self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";
 
    print $accesslog $log if $accesslog;
    print STDERR $log;
@@ -457,6 +459,7 @@ sub handle_dir {
          {
             "Content-Type"   => "text/html",
             "Content-Length" => length $idx,
+            "Last-Modified"  => time2str ((stat _)[9]),
          },
          $idx);
 }
