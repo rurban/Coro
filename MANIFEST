@@ -16,6 +16,7 @@ Coro/Specific.pm
 Coro/Event.pm
 Coro/Handle.pm
 Coro/Socket.pm
+Coro/RWLock.pm
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c

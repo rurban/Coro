@@ -1,6 +1,6 @@
 use ExtUtils::MakeMaker;
 
-use 5.006;
+use 5.005;
 
 use Config;
 

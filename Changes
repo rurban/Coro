@@ -4,6 +4,7 @@ Revision history for Perl extension Coro.
 	- do not use mmap if neither MAP_ANON nor MAP_ANONYMOUS is defined.
 	- very experimental stack sharing algorithm. not 100% safe ut
           should work well in practise ;)
+        - added Coro::RWLock.
 
 0.11  Tue Jul 24 22:49:21 CEST 2001
 	- added specialized hack for newer and older linux versions (fast).
