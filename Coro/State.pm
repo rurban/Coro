@@ -38,11 +38,15 @@ modules for a more useful process abstraction including scheduling.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.07;
+   $VERSION = 0.08;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
 }
+
+use base 'Exporter';
+
+@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV);
 
 =item $coro = new [$coderef] [, @args...]
 
@@ -78,18 +82,27 @@ sub new {
    bless _newprocess [$proc, @_], $class;
 }
 
-=item $prev->transfer($next)
+=item $prev->transfer($next,[$flags])
 
 Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
 
-The "state" of a subroutine includes the scope, i.e. lexical variables
-and the current execution state as well as the following global
-variables:
+The "state" of a subroutine includes the scope, i.e. lexical variables and
+the current execution state. The C<$flags> value can be used to specify
+that additional state be saved/restored, by C<||>-ing the following
+constants together:
 
-  @_
+   Constant            Effect
+   SAVE_DEFAV          save/restore @_
+   SAVE_DEFSV          save/restore $_
+   SAVE_ERRSV          save/restore $@
 
-If you feel that something important is missing tell me.  Also
+These constants are not exported by default. The default is subject to
+change (because we are still at an early development stage) but will
+stabilize. You have to make sure that the destination state is valid with
+respect to the flags, segfaults or worse will result otherwise.
+
+If you feel that something important is missing then tell me.  Also
 remember that every function call that might call C<transfer> (such
 as C<Coro::Channel::put>) might clobber any global and/or special
 variables. Yes, this is by design ;) You can always create your own
@@ -126,6 +139,17 @@ $error = sub {
    Carp::confess("FATAL: $_[1]\n");
 };
 
+=item Coro::State::flush
+
+To be efficient (actually, to not be abysmaly slow), this module does
+some fair amount of caching (a possibly complex structure for every
+subroutine in use). If you don't use coroutines anymore or you want to
+reclaim some memory then you can call this function which will flush all
+internal caches. The caches will be rebuilt when needed so this is a safe
+operation.
+
+=cut
+
 1;
 
 =back
@@ -134,6 +158,9 @@ $error = sub {
 
 This module has not yet been extensively tested. Expect segfaults and
 specially memleaks.
+
+This module is not thread-safe. You must only ever use this module from
+the same thread (this requirenmnt might be loosened in the future).
 
 =head1 SEE ALSO
 

@@ -7,12 +7,19 @@ Coro::Cont - schmorp's faked continuations
  use Coro::Cont;
 
  # multiply all hash keys by 2
- my $cont = cont {
+ my $cont = csub {
     result $_*2;
     result $_;
  };
- my %hash2 = map &$cont, &hash1;
+ my %hash2 = map &$csub, &hash1;
 
+ # dasselbe in grün (as we germans say)
+ sub mul2 : Cont {
+    result $_[0]*2;
+    result $_[0];
+ }
+
+ my %hash2 = map mul2($_), &hash1;
 
 =head1 DESCRIPTION
 
@@ -22,44 +29,107 @@ Coro::Cont - schmorp's faked continuations
 
 package Coro::Cont;
 
+use Carp qw(croak);
+
 use Coro::State;
 use Coro::Specific;
 
 use base 'Exporter';
 
-$VERSION = 0.07;
-@EXPORT = qw(cont result);
+$VERSION = 0.08;
+@EXPORT = qw(csub result);
 
-=item cont { ... }
+{
+   use subs 'csub';
 
-Create a new "continuation" (well, almost, you cannot return from it).
+   my @csub;
+
+   # this way of handling attributes simply is NOT scalable ;()
+   sub import {
+      Coro::Cont->export_to_level(1, @_);
+      my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
+      no warnings;
+      *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
+         my ($package, $ref) = (shift, shift);
+         my @attrs;
+         for (@_) {
+            if ($_ eq "Cont") {
+               push @csub, [$package, $ref];
+            } else {
+               push @attrs, $_;
+            }
+         }
+         return $old ? $old->($package, $ref, @attrs) : @attrs;
+      };
+   }
+
+   sub findsym {
+      no warnings;
+      my ($pkg, $ref) = @_;
+      my $type = ref $ref;
+      for my $sym (values %{$pkg."::"}) {
+         return \$sym if *{$sym}{$type} == $ref;
+      }
+      ();
+   }
+
+   sub INIT {
+      # prototypes are currently being ignored
+      for (@csub) {
+         no warnings;
+         my $ref = findsym(@$_)
+            or croak "package $package: cannot declare non-global subs as 'Cont'";
+         *$ref = csub $_->[1];
+      }
+      @csub = ();
+   }
+}
+
+=item csub { ... }
+
+Create a new "continuation" (when the sub falls of the end it is being
+terminated).
 
 =cut
 
-our $curr = new Coro::Specific;
-our @result;
+our $return = new Coro::Specific;
 
-sub cont(&) {
+sub csub(&) {
    my $code = $_[0];
-   my $coro = new Coro::State sub { &$code while 1 };
    my $prev = new Coro::State;
+
+   # the fol
+   my $coro = new Coro::State sub {
+      # we do this superfluous switch just to
+      # avoid the parameter passing problem
+      # on the first call
+      &result;
+      &$code while 1;
+   };
+
+   # call it once
+   push @$$return, [$coro, $prev];
+   &Coro::State::transfer($prev, $coro, 0);
+
    sub {
-      push @$$curr, [$coro, $prev];
-      $prev->transfer($coro);
-      wantarray ? @{pop @result} : ${pop @result}[0];
+      push @$$return, [$coro, $prev];
+      &Coro::State::transfer($prev, $coro, 0);
+      wantarray ? @_ : $_[0];
    };
 }
 
-=item result [list]
+=item @_ = result [list]
 
-Return the given list/scalar as result of the continuation.
+Return the given list/scalar as result of the continuation. Also returns
+the new arguments given to the subroutine on the next call.
 
 =cut
 
-sub result {
-   push @result, [@_];
-   &Coro::State::transfer(@{pop @$$curr});
-}
+# implemented in Coro/State.xs
+#sub result {
+#   &Coro::State::transfer(@{pop @$$return}, 0);
+#   wantarray ? @_ : $_[0];
+#}
 
 1;
 

@@ -33,7 +33,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.07;
+$VERSION = 0.08;
 
 @EXPORT = qw(async yield schedule terminate);
 @EXPORT_OK = qw($current);
@@ -54,10 +54,10 @@ $VERSION = 0.07;
             if ($_ eq "Coro") {
                push @async, $ref;
             } else {
-               push @attrs, @_;
+               push @attrs, $_;
             }
          }
-         return $old ? $old->($package, $name, @attrs) : @attrs;
+         return $old ? $old->($package, $ref, @attrs) : @attrs;
       };
    }
 
@@ -222,13 +222,19 @@ sub ready {
 
 1;
 
-=head1 BUGS
+=head1 BUGS/LIMITATIONS
 
  - could be faster, especially when the core would introduce special
    support for coroutines (like it does for threads).
  - there is still a memleak on coroutine termination that I could not
    identify. Could be as small as a single SV.
  - this module is not well-tested.
+ - if variables or arguments "disappear" (become undef) or become
+   corrupted please contact the author so he cen iron out the
+   remaining bugs.
+ - this module is not thread-safe. You must only ever use this module from
+   the same thread (this requirement might be loosened in the future to
+   allow per-thread schedulers, but Coro::Satte does not yet allow this).
 
 =head1 SEE ALSO
 

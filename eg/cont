@@ -1,15 +1,16 @@
 #!/usr/bin/perl
 
+use Coro;
 use Coro::Cont;
 
-my $cont = cont {
-   result $_*2;
-   result $_*3;
-};
+sub mul23 : Cont {
+   result 2*shift;
+   result 3*shift;
+}
 
-my %hash = (1,1,2,2,3,3);
+my %hash = (1,10,2,20,3,30);
 
-%hash = map &$cont, %hash;
+%hash = map mul23($_), %hash;
 
 print join(",", %hash), "\n";
 

@@ -84,12 +84,18 @@ DESCRIPTION
     $process->ready
         Put the current process into the ready queue.
 
-BUGS
+BUGS/LIMITATIONS
      - could be faster, especially when the core would introduce special
        support for coroutines (like it does for threads).
      - there is still a memleak on coroutine termination that I could not
        identify. Could be as small as a single SV.
      - this module is not well-tested.
+     - if variables or arguments "disappear" (become undef) or become
+       corrupted please contact the author so he cen iron out the
+       remaining bugs.
+     - this module is not thread-safe. You must only ever use this module from
+       the same thread (this requirement might be loosened in the future to
+       allow per-thread schedulers, but Coro::Satte does not yet allow this).
 
 SEE ALSO
     the Coro::Channel manpage, the Coro::Cont manpage, the Coro::Specific

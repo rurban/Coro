@@ -1,5 +1,5 @@
 $|=1;
-print "1..13\n";
+print "1..18\n";
 
 use Coro;
 use Coro::Cont;
@@ -7,7 +7,7 @@ use Coro::Cont;
 $test = 1;
 
 sub a1 : Coro {
-   my $cont = cont {
+   my $cont = csub {
       { local $_; yield };
       result $_*2;
       { local $_; yield };
@@ -22,7 +22,7 @@ sub a1 : Coro {
 }
 
 sub a2 : Coro {
-   my $cont = cont {
+   my $cont = csub {
       { local $_; yield };
       result $_*20;
       { local $_; yield };
@@ -41,3 +41,18 @@ print "ok ", $test++, "\n";
 $done = 0;
 
 yield while $done < 2;
+
+sub cont : Cont {
+   result 2*shift;
+   result 3*shift;
+}
+
+print cont(3) ==  6 ? "ok " : "not ok ", $test++, "\n";
+print cont(4) == 12 ? "ok " : "not ok ", $test++, "\n";
+print cont(5) == 10 ? "ok " : "not ok ", $test++, "\n";
+print cont(6) == 18 ? "ok " : "not ok ", $test++, "\n";
+print cont(7) == 14 ? "ok " : "not ok ", $test++, "\n";
+
+
+
+
