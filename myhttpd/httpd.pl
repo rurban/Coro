@@ -202,7 +202,6 @@ sub handle {
 
       my $ip = $self->{remote_addr};
 
-         $self->err_blocked($blocked{$ip});
       if ($blocked{$ip}) {
          $self->err_blocked($blocked{$ip})
             if $blocked{$ip} > $::NOW;

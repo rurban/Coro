@@ -2,11 +2,14 @@
 
 use PApp::SQL;
 use Coro::Event;
+use Time::HiRes 'time';
+
+$starttime = time;
 
 $PApp::SQL::DBH = PApp::SQL::connect_cached __FILE__, "DBI:mysql:myhttpd"
    or die "unable to connect to database";
 
-$VERSION = 0.003;
+$VERSION = 0.004;
 
 $SIG{CHLD} = 'IGNORE';
 

@@ -132,6 +132,12 @@ sub conn::diridx {
    my $self = shift;
 
    my $data = $self->get_statdata;
+
+   my $uptime = int (time - $::starttime);
+   $uptime = sprintf "%02dd %02d:%02d",
+                     int ($uptime / (60 * 60 * 24)),
+                     int ($uptime / (60 * 60)) % 24,
+                     int ($uptime / 60) % 60;
    
    <<EOF;
 <html>
@@ -139,7 +145,7 @@ sub conn::diridx {
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 <h1>$data->{path}</h1>
 $data->{top}
-<small><div align="right"><tt>$self->{remote_addr}/$self->{country} - $::conns connection(s) - myhttpd/$VERSION</tt></div></small>
+<small><div align="right"><tt>$self->{remote_addr}/$self->{country} - $::conns connection(s) - uptime $uptime - myhttpd/$VERSION</tt></div></small>
 <hr>
 $data->{stat}
 $data->{bot}
