@@ -214,7 +214,7 @@ sub prune_caches {
    prune_cache \%uri;
 
    for (keys %blocked) {
-      delete $blocked{$_} if $blocked{$_}[0] > $::NOW;
+      delete $blocked{$_} unless $blocked{$_}[0] > $::NOW;
    }
 }
 

@@ -13,3 +13,26 @@ this myself once i have time, and the cdurrent file structure likely won't
 survive.
 
 pcg@goof.com
+
+------------------------------------------------------------------------------
+Random snippets that might be helpful:
+
+Yeah, and security problems. With no firewall, "telnet anime.plan9.de 
+7262" would give you a very simple server shell where you can change
+things (and execute any command you like), so watch out for this ;)
+
+I often use:
+
+ current rate
+   cmd> p $tbf_top->{rate}
+   RES = 118000
+
+ set new tbf rate
+   cmd> p $tbf_top->{rate} = 118000
+   RES = 118000
+
+ set the current estimated queue to 5hrs/100MB
+   cmd> p $queue_file->{avgspb} = 0.0002
+   RES = 0.0002
+
+
