@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+	- honor LocalAddr even without LocalPort in Coro::Socket.
+
 0.7   Tue May 27 03:12:38 CEST 2003
         - the version jump indicates some level of testing, not gobs
           of new features.

@@ -104,8 +104,8 @@ sub _prepare_socket {
          or croak "setsockopt(SO_REUSEPORT): $!";
    }
 
-   if ($arg->{LocalPort}) {
-      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort}, $arg->{Proto});
+   if ($arg->{LocalPort} || $arg->{LocalHost}) {
+      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort} || 0, $arg->{Proto});
       $fh->bind($sa[0])
          or croak "bind($arg->{LocalHost}:$arg->{LocalPort}): $!";
    }

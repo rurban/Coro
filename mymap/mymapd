@@ -9,7 +9,7 @@ BEGIN { require "mymap.pl" };
 $/ = $CRLF;
 
 my $port = new Coro::Socket
-        LocalPort => "imap2",
+        LocalPort => "imap",
         ReuseAddr => 1,
         Listen => 1,
    or die;
@@ -57,7 +57,7 @@ sub split_pgrp {
 }
 
 sub literal {
-   "{".length($_[0])."}\015\012$_[0]";
+   "{" . (length $_[0]) . "}\015\012$_[0]";
 }
 
 sub handle_connection {
@@ -95,7 +95,7 @@ sub handle_connection {
       };
 
       #resp $fh, "*", "OK IMAP4 service ready.";
-      resp $fh, "*", "PREAUTH IMAP4 service ready."; $uid = 1;
+      resp $fh, "*", "PREAUTH IMAP4 service ready."; #$uid = 1;
       CMD:
       while (<$fh>) {
          /^(\S+)(?: (\S+)([^\015\012]*))?$CRLF$/os or last;
@@ -104,7 +104,8 @@ sub handle_connection {
          $cmd = lc $cmd;
          while () {
             if ($arg =~ /\G "((?:[^"\\]*|\\.))"/gc
-                || $arg =~ /\G ([^"(){ \x00-\x1f*%\\]+)/gc
+                #|| $arg =~ /\G ([^"(){ \x00-\x1f*%\\]+)/gc # ] is allowed...
+                || $arg =~ /\G ([^"(){ \x00-\x1f%\\]+)/gc # evolution-fix
                 || $arg =~ /\G \(($RE_pgrp)\)/gc) {
                push @arg, $1;
             } elsif ($arg =~ /\G {(\d+)}$/gc) {
@@ -122,7 +123,7 @@ sub handle_connection {
             }
          }
 
-         slog 9,"<<< $tag|$cmd|@arg";#d#
+         slog 9, "<<< $tag|$cmd|@arg";#d#
          if ($cmd eq "capability") {
             resp $fh, $tag, "CAPABILITY IMAP4", "OK";
          } elsif ($cmd eq "noop") {
@@ -268,6 +269,9 @@ sub handle_connection {
                      } elsif ($s eq "rfc822") {
                         $sql_body = "body"; $sql_head = "header";
                         $s = sub { "RFC822 ".literal($head.$CRLF.$body) };
+                     } elsif ($s eq "body.peek[0]") {#d# evolution-bug
+                        $sql_head = "header";
+                        $s = sub { "BODY[0] ".literal($head) };
                      } elsif ($s eq "rfc822.header.lines") {
                         $sql_head = "header";
                         my $re;
@@ -355,16 +359,16 @@ sub handle_connection {
                   }
 
                } else {
-                  resp $fh, $tag, "BAD command not understood";
+                  resp $fh, $tag, "BAD command not understood (nocommand)";
                }
 
             # well...
             } else {
-               resp $fh, $tag, "BAD command not understood";
+               resp $fh, $tag, "BAD command not understood (notmailbox)";
             }
          
          } else {
-            resp $fh, $tag, "BAD command not understood";
+            resp $fh, $tag, "BAD command not understood (notauth)";
          }
       }
    };

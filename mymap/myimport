@@ -27,8 +27,11 @@ my $f = new Mail::Folder "AUTODETECT", $path, NotMUA => 1
 
 my $id = $f->first_message;
 
+$|=1;
+
 do {
    import_mailmsg($bid, $f->get_message($id));
+   print ".";
 } while ($id = $f->next_message($id));
 
 
