@@ -51,7 +51,7 @@ use base 'Exporter';
 
 @EXPORT = qw(loop unloop);
 
-$VERSION = 0.06;
+$VERSION = 0.07;
 
 =item $w = Coro::Event->flavour(args...)
 
@@ -93,7 +93,7 @@ for my $flavour (qw(idle var timer io signal)) {
             $q->[1] = $_[0];
             if ($q->[0]) { # somebody waiting?
                $q->[0]->ready;
-               Coro::yield;
+               Coro::schedule;
             } else {
                $w->stop;
             }

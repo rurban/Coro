@@ -27,7 +27,7 @@ use Coro::Specific;
 
 use base 'Exporter';
 
-$VERSION = 0.01;
+$VERSION = 0.07;
 @EXPORT = qw(cont result);
 
 =item cont { ... }

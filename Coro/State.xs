@@ -186,7 +186,7 @@ put_padlist (CV *cv)
 }
 
 static void
-SAVE(pTHX_ Coro__State c)
+save_state(pTHX_ Coro__State c)
 {
   {
     dSP;
@@ -279,8 +279,11 @@ SAVE(pTHX_ Coro__State c)
   c->curcop = PL_curcop;
 }
 
+#define LOAD(state) do { load_state(aTHX_ state); SPAGAIN; } while (0)
+#define SAVE(state) do { PUTBACK; save_state(aTHX_ state); } while (0)
+
 static void
-LOAD(pTHX_ Coro__State c)
+load_state(pTHX_ Coro__State c)
 {
   PL_dowarn = c->dowarn;
   GvAV (PL_defgv) = c->defav;
@@ -338,6 +341,7 @@ STATIC void
 destroy_stacks(pTHX)
 {
   /* die does this while calling POPSTACK, but I just don't see why. */
+  /* OTOH, die does not have a memleak, but we do... */
   dounwind(-1);
 
   /* is this ugly, I ask? */
@@ -414,23 +418,28 @@ transfer(prev,next)
 
         if (prev != next)
           {
-            PUTBACK;
-            SAVE (aTHX_ prev);
-
             /*
              * this could be done in newprocess which would lead to
-             * extremely elegant and fast (just PUTBACK/SAVE/LOAD/SPAGAIN)
+             * extremely elegant and fast (just SAVE/LOAD)
              * code here, but lazy allocation of stacks has also
              * some virtues and the overhead of the if() is nil.
              */
             if (next->mainstack)
               {
-                LOAD (aTHX_ next);
-                next->mainstack = 0; /* unnecessary but much cleaner */
-                SPAGAIN;
+                SAVE (prev);
+                LOAD (next);
+                /* mark this state as in-use */
+                next->mainstack = 0;
+                next->tmps_ix = -2;
+              }
+            else if (next->tmps_ix == -2)
+              {
+                croak ("tried to transfer to running coroutine");
               }
             else
               {
+                SAVE (prev);
+
                 /*
                  * emulate part of the perl startup here.
                  */
@@ -471,7 +480,6 @@ DESTROY(coro)
           {
             struct coro temp;
 
-            PUTBACK;
             SAVE(aTHX_ (&temp));
             LOAD(aTHX_ coro);
 
@@ -479,7 +487,6 @@ DESTROY(coro)
             SvREFCNT_dec ((SV *)GvAV (PL_defgv));
 
             LOAD((&temp));
-            SPAGAIN;
           }
 
         SvREFCNT_dec (coro->args);

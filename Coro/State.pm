@@ -38,7 +38,7 @@ modules for a more useful process abstraction including scheduling.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.06;
+   $VERSION = 0.07;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
@@ -74,7 +74,7 @@ sub _newcoro {
 
 sub new {
    my $class = shift;
-   my $proc = shift || sub { die "FATAL: tried to transfer to an empty coroutine" };
+   my $proc = shift || sub { die "tried to transfer to an empty coroutine" };
    bless _newprocess [$proc, @_], $class;
 }
 
