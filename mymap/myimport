@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+# Usage: myimport oldfolder mailboxname
+
+BEGIN { require "mymap.pl" };
+
+use Mail::Folder;
+use Mail::Folder::Mbox;
+use Mail::Field;
+use Mail::Field::Received;
+use Mail::Address;
+use Date::Parse;
+
+my $path = shift;
+
+my $user = "schmorp";
+my $mbox = shift;
+
+my $uid = find_uid $user or die "$user: no such user\n";
+
+eval { sql_exec "insert into box (uid, name) values (?,?)", $uid, $mbox };
+
+my $bid = find_bid $uid, $mbox or die "$mbox: no such mailbox\n";
+
+my $f = new Mail::Folder "AUTODETECT", $path, NotMUA => 1 
+   or die "$path: unable to open mailfolder";
+
+my $id = $f->first_message;
+
+do {
+   import_mailmsg($bid, $f->get_message($id));
+} while ($id = $f->next_message($id));
+
+

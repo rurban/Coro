@@ -160,15 +160,15 @@ sub getsockopt	{ getsockopt tied(${$_[0]})->{fh}, $_[1], $_[2] }
 sub setsockopt	{ setsockopt tied(${$_[0]})->{fh}, $_[1], $_[2], $_[3] }
 sub send	{ send tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub setsockname	{ getsockname tied(${$_[0]})->{fh} }
-sub setpeername	{ getpeername tied(${$_[0]})->{fh} }
+sub getsockname	{ getsockname tied(${$_[0]})->{fh} }
+sub getpeername	{ getpeername tied(${$_[0]})->{fh} }
 
 sub accept {
    my $fh;
    while () {
       $_[0]->readable or return;
       accept $fh, tied(${$_[0]})->{fh}
-         and return new_from_fh Coro::Handle $fh;
+         and return new_from_fh Coro::Socket $fh;
       return unless $!{EAGAIN};
    }
 }

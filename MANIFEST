@@ -31,6 +31,7 @@ eg/cont
 eg/event
 eg/lwp
 eg/dns
+eg/myhttpd
 t/00_basic.t
 t/01_process.t
 t/02_channel.t

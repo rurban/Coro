@@ -1,0 +1,9 @@
+$MAX_CONNECTS = 500;			# maximum simult. connects
+$REQ_TIMEOUT  =  60;			# request timeout
+$RES_TIMEOUT  = 180;			# response timeout
+$MAX_POOL     =  20;			# max. number of idle workers
+$DOCROOT      = "/usr/www/htdocs";	# document root
+$INDEXPROG    = "/usr/www/bin/dols";	# indexing program (nph-cgi script)
+$SERVER_HOST  = "0.0.0.0";		# host to bind on
+$SERVER_PORT  = 80;			# port to listen on
+

@@ -85,11 +85,40 @@ sub readline	{ tied(${+shift})->READLINE(@_) }
 =item $fh->autoflush([...])
 
 Always returns true, arguments are being ignored (exists for compatibility
-only).
+only). Might change in the future.
 
 =cut
 
 sub autoflush	{ !0 }
+
+=item $fh->fileno
+
+Returns the file number of the handle.
+
+=cut
+
+sub fileno {
+   tied(${+shift})->FILENO;
+}
+
+=item $fh->timeout([...])
+
+The optional agrument sets the new timeout (in seconds) for this
+handle. Returns the current (new) value.
+
+C<0> is a valid timeout, use C<undef> to disable the timeout.
+
+=cut
+
+sub timeout {
+   my $self = tied(${+shift});
+   if (@_) {
+      $self->{timeout} = $_[0];
+      $self->{rw}->timeout($_[0]) if $self->{rw};
+      $self->{ww}->timeout($_[0]) if $self->{ww};
+   }
+   $self->{timeout};
+}
 
 package Coro::Handle::FH;
 
@@ -135,6 +164,10 @@ sub CLOSE {
    (delete $self->{rw})->cancel if $self->{rw};
    (delete $self->{ww})->cancel if $self->{ww};
    close $self->{fh};
+}
+
+sub FILENO {
+   fileno $_[0]->{fh};
 }
 
 sub writable {

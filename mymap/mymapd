@@ -1,0 +1,389 @@
+#!/usr/bin/perl
+
+use Coro;
+use Coro::Event;
+use Coro::Socket;
+
+BEGIN { require "mymap.pl" };
+
+$/ = $CRLF;
+
+my $port = new Coro::Socket
+        LocalPort => "imap2",
+        ReuseAddr => 1,
+        Listen => 1,
+   or die;
+
+sub slog {
+   my $level = shift;
+   my $format = shift;
+   printf "---: $format\n", @_;
+}
+
+sub resp {
+   slog 9, ">>> @_";
+   my $r;
+   $r .= "* $_[$_]$CRLF" for 2 .. $#_-1;
+   $r .= "$_[1] $_[$#_]$CRLF";
+   print {$_[0]} $r;
+}
+
+$RE_pgrp = qr{
+ (?:
+      [^()]*
+    | \( (??{ $RE_pgrp }) \)
+ )*
+}x;
+
+sub expand_list {
+   my @r;
+   $_[0] =~ s/\*/$_[1]/g;
+   for (split /,/, $_[0]) {
+      if (/(\d+):(\d+)/) {
+         push @r, $_ for $1 .. $2;
+      } else {
+         push @r, $_;
+      }
+   }
+   \@r;
+}
+
+sub split_pgrp {
+   my @r;
+   while ($_[0] =~ /\G(?:([^( ]+)|\(($RE_pgrp)\)) ?/mg) {
+      push @r, defined $1 ? $1 : $2;
+   }
+   \@r;
+}
+
+sub literal {
+   "{".length($_[0])."}\015\012$_[0]";
+}
+
+sub handle_connection {
+   my $fh = shift;
+
+   eval {
+
+      my $uid;      # user-id
+      my $bid;      # mailbox-id
+      my $readonly; # mailbox read-only?
+      my @mid;      # message numbers
+
+      my $expunge = sub {
+         my $st = sql_exec \my($id),
+                           "select id from msg
+                            where flags & ($F_D|$F_deleted) = ($F_deleted)
+                                  and bid = ?",
+                           $bid;
+         while ($st->fetch) {
+            my %rev;
+            @rev{@mid} = (1..@mid);
+            my $idx = $rev{$id}
+               or next;
+            print $fh "* $idx EXPUNGE\015\012";
+            splice @mid, $idx-1, 1;
+            sql_exec "update msg set flags = flags | $F_D where id = ?", $id;
+         }
+      };
+
+      my $close = sub {
+         return unless $bid;
+         sql_exec "update box set ctime = ? where id = ?", time, $bid;
+         $bid = 0;
+         @mid = ();
+      };
+
+      #resp $fh, "*", "OK IMAP4 service ready.";
+      resp $fh, "*", "PREAUTH IMAP4 service ready."; $uid = 1;
+      CMD:
+      while (<$fh>) {
+         /^(\S+)(?: (\S+)([^\015\012]*))?$CRLF$/os or last;
+         my ($tag, $cmd, $arg) = ($1, $2, $3);
+         my @arg;
+         $cmd = lc $cmd;
+         while () {
+            if ($arg =~ /\G "((?:[^"\\]*|\\.))"/gc
+                || $arg =~ /\G ([^"(){ \x00-\x1f*%\\]+)/gc
+                || $arg =~ /\G \(($RE_pgrp)\)/gc) {
+               push @arg, $1;
+            } elsif ($arg =~ /\G {(\d+)}$/gc) {
+               resp $fh, $tag, "literals not yet implemented";
+               next CMD;
+            } elsif ($arg =~ /\G$/gc) {
+               last;
+            } elsif ($arg =~ /\G(.*)$/gc) {
+               $arg = $1;
+               $arg =~ y/\015\012//d;
+               resp $fh, $tag, "BAD parse error at '$arg' (@arg)";
+               next CMD;
+            } else {
+               die;
+            }
+         }
+
+         slog 9,"<<< $tag|$cmd|@arg";#d#
+         if ($cmd eq "capability") {
+            resp $fh, $tag, "CAPABILITY IMAP4", "OK";
+         } elsif ($cmd eq "noop") {
+            resp $fh, $tag, "OK";
+            # bah!
+         } elsif ($cmd eq "login" && !$uid) {
+            my $st = sql_exec \$uid, "select id from user where name = ? and pass = ?", $arg[0], $arg[1];
+            if ($st->fetch) {
+               resp $fh, $tag, "OK";
+            } else {
+               resp $fh, $tag, "NO user unknown or authenticitation failure";
+            }
+         } elsif ($cmd eq "authenticitate" && !$uid) {
+            resp $fh, "NO";
+         } elsif ($cmd eq "logout") {
+            resp $fh, $tag, "BYE", "OK";
+            last CMD;
+         } elsif ($uid) {
+            my $U;
+
+            if ($cmd eq "uid") {
+               $cmd = lc shift @arg;
+               $U = 1;
+            }
+
+            if ($cmd eq "select" || $cmd eq "examine") {
+               &$close;
+
+               $arg[0] = "INBOX" if lc $arg[0] eq "inbox";
+               
+               my $st = sql_exec \$bid, \my($ctime, $uidv),
+                                 "select id, unix_timestamp(ctime), unix_timestamp(uidvalidity)
+                                  from box where uid = ? and name = ?",
+                                 $uid, $arg[0];
+               if ($st->fetch) {
+                  my $r = 0;
+                  $st = sql_exec \my($mid, $ntime),
+                                 "select id, ntime
+                                  from msg
+                                  where bid = ? and flags & $F_D = 0",
+                                 $bid;
+                  while ($st->fetch) {
+                     $r++ if $ntime >= $ctime;
+                     push @mid, $mid;
+                  }
+                  $readonly = $cmd eq "examine";
+                  resp $fh, $tag,
+                       (scalar@mid) . " EXISTS",
+                       "$r RECENT",
+                       "FLAGS (\\D \\Answered \\Flagged \\Deleted \\Seen \\Draft)",
+                       "PERMANENTFLAGS (\\D \\Answered \\Flagged \\Deleted \\Seen \\Draft)",
+                       "OK [UID-VALIDITY $uidv]",
+                       "OK [READ-".($readonly ? "ONLY]" : "WRITE]");
+               } else {
+                  resp $fh, $tag, "NO mailbox does not exist";
+               }
+
+            # mailbox management
+            } elsif ($cmd eq "create") {
+               $arg[0] =~ s/\///;
+               eval {
+                  sql_exec "insert into box (uid, name) values (?, ?)", $uid, $arg[0];
+               };
+               if ($@) {
+                  $@ =~ y/\015\012//d;
+                  resp $fh, $tag, "NO $@";
+               } else {
+                  resp $fh, $tag, "OK";
+               }
+            } elsif ($cmd eq "delete") {
+               if (lc $arg[0] ne "inbox" and sql_exec "delete from box where uid = ? and name = ?", $uid, $arg[0]) {
+                  resp $fh, $tag, "OK";
+               } else {
+                  resp $fh, $tag, "NO";
+               }
+            } elsif ($cmd eq "rename") {
+               eval {
+                  sql_exec "update box set name = ? where uid = ? and name = ?", $arg[1], $uid, $arg[0];
+               };
+               if ($@) {
+                  $@ =~ y/\015\012//d;
+                  resp $fh, $tag, "NO $@";
+               } else {
+                  resp $fh, $tag, "OK";
+               }
+            } elsif ($cmd eq "subscribe" || $cmd eq "unsubscribe" || $cmd eq "lsub") {
+               resp $fh, $tag, "NO not supported";
+            } elsif ($cmd eq "list") {
+               if ($arg[0] != "") {
+                  resp $fh, $tag, "NO reference not supported";
+               } else {
+                  #$arg[1] =~ y/%/%/; #% not supported yet
+                  $arg[1] =~ y/*/%/;
+                  my $st = sql_exec \my($name), 
+                                    "select name from box
+                                     where uid = ? and name like ?",
+                                    $uid, $arg[1];
+                  my @r;
+                  while ($st->fetch) {
+                     push @r, "LIST () \"/\" $name";
+                  }
+                  resp $fh, $tag, @r, "OK";
+               }
+            } elsif ($cmd eq "append") {
+               resp $fh, $tag, "BAD not supported yet!";
+
+            # message handling
+            } elsif ($bid) {
+               if ($cmd eq "close") {
+                  &$expunge;
+                  &$close;
+                  resp $fh, $tag, "OK";
+               } elsif ($cmd eq "expunge") {
+                  die if $U;
+                  &$expunge;
+                  resp $fh, $tag, "OK";
+               } elsif ($cmd eq "fetch") {
+                  my $list = expand_list($arg[0], scalar @mid);
+                  my ($mid, $flags, $date, $head, $body);
+                  my @exec;
+                  my ($sql_body, $sql_head) = (0, 0);
+                  my $sel = split_pgrp lc $arg[1];
+
+                  while (my $s = shift @$sel) {
+                     if ($s eq "all") {
+                        push @$sel, qw(flags internaldate rfc822.size); next;
+                     } elsif ($s eq "full") {
+                        push @$sel, qw(flags internaldate rfc822.size envelope body); next;
+                     } elsif ($s eq "uid") {
+                        $s = sub { "UID $mid" };
+                     } elsif ($s eq "flags") {
+                        $s = sub { 
+                           "FLAGS (" . (join " ", map "\\" . ucfirst $_, split /,/, $flags) . ")";
+                        };
+                     } elsif ($s eq "internaldate") {
+                        $s = sub { "INTERNALDATE \"$date\"" };
+                     } elsif ($s eq "rfc822.size") {
+                        $sql_body = "body";
+                        $s = sub { "RFC822.SIZE ".length $body };
+                     } elsif ($s eq "rfc822.header") {
+                        $sql_head = "header";
+                        $s = sub { "RFC822.HEADER ".literal($head) };
+                     } elsif ($s eq "rfc822") {
+                        $sql_body = "body"; $sql_head = "header";
+                        $s = sub { "RFC822 ".literal($head.$CRLF.$body) };
+                     } elsif ($s eq "rfc822.header.lines") {
+                        $sql_head = "header";
+                        my $re;
+                        $re = '(?i:^((?:'
+                            . (join "|", @{split_pgrp shift @$sel})
+                            . '):[^\012\015]*))';
+                        $re = qr($re);
+                        
+                        $s = sub {
+                           "RFC822.HEADER.LINES ".literal (join $CRLF, $head =~ /$re/mg);
+                        };
+                     } else {
+                        $s = sub { '""' };
+                     }
+                     push @exec, $s;
+                  }
+
+                  my %rev;
+                  unless ($U) {
+                     for (@$list) {
+                        $mid = $mid[$_ - 1];
+                        $rev{$mid} = $_;
+                        $_ = $mid;
+                     }
+                  }
+
+                  my $st = sql_exec \($mid, $flags, $date, $head, $body),
+                                    "select id, flags, date_format(ntime, '%d-%m-%Y %h:%i:%s +0000'), $sql_head, $sql_body
+                                     from msg
+                                     where id in (".(join ",", @$list).")";
+                                    
+                  my $r;
+                  while ($st->fetch) {
+                     my $id = $U ? $mid : $rev{$mid};
+                     $r .= "* $id FETCH (".(join " ", map &$_, @exec).")\015\12";
+                     if (length $r > 32768) {
+                        print $fh $r;
+                        $r = "";
+                     }
+                  }
+                  print $fh "$r$tag OK\015\012";
+                  #resp $fh, $tag, "OK";
+                  
+               } elsif ($cmd eq "store") {
+                  my $list = expand_list($arg[0], scalar @mid);
+                  my $cmd = lc $arg[1];
+                  my $flags = flags2bitmask(@{split_pgrp $arg[2]});
+
+                  my %rev;
+                  unless ($U) {
+                     for (@$list) {
+                        $mid = $mid[$_ - 1];
+                        $rev{$mid} = $_;
+                        $_ = $mid;
+                     }
+                  }
+
+                  my $ids = join ",", @$list;
+
+                  my $silent = $cmd =~ s/\.silent$//;
+
+                  if ($cmd eq "flags") {
+                     sql_exec "update msg set flags = ? where id in ($ids)", $flags;
+                  } elsif ($cmd eq "+flags") {
+                     sql_exec "update msg set flags = flags | ? where id in ($ids)", $flags;
+                  } elsif ($cmd eq "-flags") {
+                     sql_exec "update msg set flags = flags & ~? where id in ($ids)", $flags;
+                  }
+                  
+                  if ($silent) {
+                     resp $fh, $tag, "OK";
+                  } else {
+                     my $st = sql_exec \($mid, $flags),
+                                       "select id, flags
+                                        from msg
+                                        where id in ($ids)";
+                                       
+                     my $r;
+                     while ($st->fetch) {
+                        my $id = $U ? $mid : $rev{$mid};
+                        $r .= "* $id FLAGS (" . (join " ", map "\\" . ucfirst $_, split /,/, $flags) . ")\015\012";
+                     }
+                     print $fh "$r$tag OK\015\012";
+                     #resp $fh, $tag, "OK";
+                  }
+
+               } else {
+                  resp $fh, $tag, "BAD command not understood";
+               }
+
+            # well...
+            } else {
+               resp $fh, $tag, "BAD command not understood";
+            }
+         
+         } else {
+            resp $fh, $tag, "BAD command not understood";
+         }
+      }
+   };
+   if ($@) {
+      resp $fh, "*", "BYE";
+      slog 0, "$@";
+   }
+   slog 3, "$fh: closed connection\n";#d#
+}
+
+async {
+   slog 1, "accepting connections";
+   while () {
+      my $fh = $port->accept;
+      slog 3, "accepted $fh on $port";
+      async \&handle_connection, $fh;
+      undef $fh;
+   }
+};
+
+loop;
+
