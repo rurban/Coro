@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+	- support [l]inux method on amd64.
+
 1.0  Tue Aug 10 03:47:27 CEST 2004
 	- Event 0.89 fixes the bug again.
         - fix the remaining(??) memleak. I didn't free the cache-AV for
