@@ -2,6 +2,8 @@ Revision history for Perl extension Coro.
 
 0.10
 	- release candidate 3. A rather new internal structure :(
+        - the great renaming: Damian Conway gave me a suitable replacement
+          for yield.
 	- added Coro/libcoro, a portable coroutine implementation for C
           (not even perl-dependent!!!), which can be used by Coro::State.
 	- renamed SAVE_DEFSV (on xs-level only) to avoid symbol clash in
