@@ -19,6 +19,18 @@ EOF
 if (eval { require Event }) {
    if ($Event::VERSION < 0.86) {
       print "*** Please read the INSTALL file, you need a patched Event.\n";
+   } elsif ($Event::VERSION == 0.88) {
+      print <<EOF
+
+*** 
+*** WARNING: Event version $Event::VERSION found, NOT building Event support.
+*** 
+*** This version of Event is broken. The only currently known non-broken
+*** version of Event is 0.87. Please install this version, or try with a
+*** newer version that hopefully has the bug fixed.
+*** 
+
+EOF
    } else {
       $EVENT = 1;
       $DEFINE .= " -DHAVE_EVENT=1";
