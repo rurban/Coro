@@ -472,8 +472,7 @@ sub handle_dir {
          {
             "Content-Type"   => "text/html",
             "Content-Length" => length $idx,
-            #d# directories change all the time, so X-
-            "X-Last-Modified"  => time2str ((stat _)[9]),
+            "Last-Modified"  => time2str ((stat _)[9]),
          },
          $idx);
 }

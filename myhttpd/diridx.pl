@@ -243,7 +243,7 @@ EOF
          } else {
             my @waiters = grep defined $_, $queue->waiters;
             $content .= "<li>$name<br />(".(scalar @waiters).
-                        " client(s), waiting since "
+                        " client(s), waiting for "
                         .(format_time $::NOW - ($waiters[0]{conn}{time} || $::NOW)).
                         ")</li>";
          }
