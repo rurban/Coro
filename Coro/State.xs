@@ -55,8 +55,6 @@ typedef struct {
   long ssize; /* positive == mmap, otherwise malloc */
 } coro_stack;
 
-static coro_stack main_stack = { 1, 0, 0 };
-
 struct coro {
   /* the optional C context */
   coro_stack *stack;

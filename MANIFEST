@@ -2,6 +2,7 @@ README
 Changes
 MANIFEST
 COPYING
+INSTALL
 Makefile.PL
 Coro.pm
 Coro/Makefile.PL

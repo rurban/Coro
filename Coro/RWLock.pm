@@ -30,8 +30,6 @@ use Coro ();
 
 $VERSION = 0.12;
 
-die "NYI";
-
 =item $l = new Coro::RWLock;
 
 Create a new reader/writer lock.
@@ -39,8 +37,8 @@ Create a new reader/writer lock.
 =cut
 
 sub new {
-   # [wrcount, rdcount, [readqueue], [waitqueue]]
-   bless [0, 0, [], []], $_[0];
+   # [rdcount, [readqueue], wrcount, [writequeue]]
+   bless [0, [], 0, []], $_[0];
 }
 
 =item $l->rdlock
@@ -54,6 +52,60 @@ Try to acquire a read lock.
 =cut
 
 sub rdlock {
+   while ($_[0][0]) {
+      push @{$_[0][3]}, $Coro::current;
+      Coro::schedule;
+   }
+   ++$_[0][2];
+}
+
+sub tryrdlock {
+   return if $_[0][0];
+   ++$_[0][2];
+}
+
+=item $l->wrlock
+
+Acquire a write lock.
+
+=item $l->trywrlock
+
+Try to acquire a write lock.
+
+=cut
+
+sub wrlock {
+   while ($_[0][0] || $_[0][2]) {
+      push @{$_[0][1]}, $Coro::current;
+      Coro::schedule;
+   }
+   ++$_[0][0];
+}
+
+sub trywrlock {
+   return if $_[0][0] || $_[0][2];
+   ++$_[0][0];
+}
+
+=item $l->unlock
+
+Give up the rwlock.
+
+=cut
+
+sub unlock {
+   # either we are a reader or a writer. decrement accordingly.
+   if ($_[0][2]) {
+      return if --$_[0][2];
+   } else {
+      $_[0][0]--;
+   }
+   # now we have the choice between waking up a reader or a writer. we choose the writer.
+   if (@{$_[0][1]}) {
+      (shift @{$_[0][1]})->ready;
+   } elsif (@{$_[0][3]}) {
+      (shift @{$_[0][3]})->ready;
+   }
 }
 
 1;

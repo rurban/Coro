@@ -14,6 +14,8 @@ if ($^O =~ /windows/) {
    $DEFINE = " -DCORO_LOOSE";
 } elsif ($^O =~ /linux/) {
    $iface = "l";
+} elsif ($^O =~ /solaris/) {
+   $iface = "s";
 } elsif (-e "/usr/include/ucontext.h") {
    $iface = "u";
 } else {
