@@ -28,7 +28,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.04;
+$VERSION = 0.05;
 
 @EXPORT = qw(async yield schedule);
 @EXPORT_OK = qw($current);
@@ -131,6 +131,7 @@ never be called again.
 my $prev;
 
 sub schedule {
+   local @_;
    # should be done using priorities :(
    ($prev, $current) = ($current, shift @ready || $idle);
    Coro::State::transfer($prev, $current);

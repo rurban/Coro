@@ -75,7 +75,8 @@ for my $flavour (qw(idle var timer io signal)) {
       # my $w = $class->SUPER::$flavour(@_);
 
       my $q = new Coro::Channel 0;
-      my $w = $new->(@_, cb => sub { $q->put($_[0]) });
+      my $w;
+      $w = $new->(@_, parked => 1, cb => sub { $w->stop; $q->put($_[0]) });
       $w->private($q); # using private as attribute is pretty useless...
       bless $w, $class; # reblessing due to broken Event
    };
@@ -93,6 +94,7 @@ Return the next event of the event queue of the watcher.
 =cut
 
 sub next {
+   $_[0]->start;
    $_[0]->private->get;
 }
 
@@ -102,10 +104,7 @@ sub next {
 
 sub main {
    local $Coro::idle = new Coro sub {
-      while () {
-      Event::loop(5);
-      print "in idle loop\n";#d#
-      }
+      Event::loop;
    };
    Coro::schedule;
 }
