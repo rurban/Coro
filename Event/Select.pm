@@ -30,7 +30,7 @@ use base Exporter;
 use Coro;
 use Event;
 
-$VERSION = "0.9";
+$VERSION = 0.95;
 
 BEGIN {
    @EXPORT_OK = qw(select);

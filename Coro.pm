@@ -40,7 +40,7 @@ use vars qw($idle $main $current);
 
 use base Exporter;
 
-$VERSION = "0.9";
+$VERSION = 0.95;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -122,7 +122,7 @@ $idle = new Coro sub {
 my @destroy;
 my $manager;
 $manager = new Coro sub {
-   while() {
+   while () {
       # by overwriting the state object with the manager we destroy it
       # while still being able to schedule this coroutine (in case it has
       # been readied multiple times. this is harmless since the manager
@@ -158,9 +158,6 @@ terminated.
    async {
       print "@_\n";
    } 1,2,3,4;
-
-The coderef you submit MUST NOT be a closure that refers to variables
-in an outer scope. This does NOT work. Pass arguments into it instead.
 
 =cut
 

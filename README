@@ -50,10 +50,6 @@ DESCRIPTION
               print "@_\n";
            } 1,2,3,4;
 
-        The coderef you submit MUST NOT be a closure that refers to
-        variables in an outer scope. This does NOT work. Pass arguments into
-        it instead.
-
     schedule
         Calls the scheduler. Please note that the current process will not
         be put into the ready queue, so calling this function usually means

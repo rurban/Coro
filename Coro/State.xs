@@ -41,8 +41,6 @@
 # endif
 #endif
 
-#define MAY_FLUSH /* increases codesize and is rarely used */
-
 #define SUB_INIT    "Coro::State::initialize"
 #define UCORO_STATE "_coro_state"
 
@@ -228,35 +226,53 @@ clone_padlist (AV *protopadlist)
   return newpadlist;
 }
 
-#ifdef MAY_FLUSH
 STATIC void
 free_padlist (AV *padlist)
 {
   /* may be during global destruction */
-  if (SvREFCNT(padlist))
+  if (SvREFCNT (padlist))
     {
-      I32 i = AvFILLp(padlist);
+      I32 i = AvFILLp (padlist);
       while (i >= 0)
         {
-          SV **svp = av_fetch(padlist, i--, FALSE);
-          SV *sv = svp ? *svp : Nullsv;
-          if (sv)
-            SvREFCNT_dec(sv);
+          SV **svp = av_fetch (padlist, i--, FALSE);
+          if (svp)
+            {
+              SV *sv;
+              while (&PL_sv_undef != (sv = av_pop ((AV *)*svp)))
+                SvREFCNT_dec (sv);
+
+              SvREFCNT_dec (*svp);
+            }
         }
 
-      SvREFCNT_dec((SV*)padlist);
-  }
+      SvREFCNT_dec ((SV*)padlist);
+    }
 }
-#endif
+
+STATIC int
+coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
+{
+  AV *padlist;
+  AV *av = (AV *)mg->mg_obj;
+
+  /* casting is fun. */
+  while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
+    free_padlist (padlist);
+}
+
+#define PERL_MAGIC_coro PERL_MAGIC_ext
+
+static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
 
 /* the next two functions merely cache the padlists */
 STATIC void
 get_padlist (CV *cv)
 {
-  SV **he = hv_fetch (padlist_cache, (void *)&cv, sizeof (CV *), 0);
+  MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
 
-  if (he && AvFILLp ((AV *)*he) >= 0)
-    CvPADLIST (cv) = (AV *)av_pop ((AV *)*he);
+  if (mg && AvFILLp ((AV *)mg->mg_obj) >= 0)
+    CvPADLIST (cv) = (AV *)av_pop ((AV *)mg->mg_obj);
   else
     CvPADLIST (cv) = clone_padlist (CvPADLIST (cv));
 }
@@ -264,42 +280,18 @@ get_padlist (CV *cv)
 STATIC void
 put_padlist (CV *cv)
 {
-  SV **he = hv_fetch (padlist_cache, (void *)&cv, sizeof (CV *), 1);
+  MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
 
-  if (SvTYPE (*he) != SVt_PVAV)
+  if (!mg)
     {
-      SvREFCNT_dec (*he);
-      *he = (SV *)newAV ();
+      sv_magic ((SV *)cv, 0, PERL_MAGIC_coro, 0, 0);
+      mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
+      mg->mg_virtual = &vtbl_coro;
+      mg->mg_obj = (SV *)newAV ();
     }
 
-  av_push ((AV *)*he, (SV *)CvPADLIST (cv));
+  av_push ((AV *)mg->mg_obj, (SV *)CvPADLIST (cv));
 }
-
-#ifdef MAY_FLUSH
-STATIC void
-flush_padlist_cache ()
-{
-  HV *hv = padlist_cache;
-  padlist_cache = newHV ();
-
-  if (hv_iterinit (hv))
-    {
-      HE *he;
-      AV *padlist;
-
-      while (!!(he = hv_iternext (hv)))
-        {
-          AV *av = (AV *)HeVAL(he);
-
-          /* casting is fun. */
-          while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-            free_padlist (padlist);
-        }
-    }
-
-  SvREFCNT_dec (hv);
-}
-#endif
 
 #define SB do {
 #define SE } while (0)
@@ -479,8 +471,8 @@ save_state(pTHX_ Coro__State c, int flags)
 /*
  * allocate various perl stacks. This is an exact copy
  * of perl.c:init_stacks, except that it uses less memory
- * on the assumption that coroutines do not usually need
- * a lot of stackspace.
+ * on the (sometimes correct) assumption that coroutines do
+ * not usually need a lot of stackspace.
  */
 STATIC void
 coro_init_stacks (pTHX)
@@ -529,12 +521,10 @@ destroy_stacks(pTHX)
   if (!IN_DESTRUCT)
     {
       /* is this ugly, I ask? */
-      while (PL_scopestack_ix)
-        LEAVE;
+      LEAVE_SCOPE (0);
 
       /* sure it is, but more important: is it correct?? :/ */
-      while (PL_tmps_ix > PL_tmps_floor) /* should only ever be one iteration */
-        FREETMPS;
+      FREETMPS;
     }
 
   while (PL_curstackinfo->si_next)
@@ -581,14 +571,14 @@ allocate_stack (Coro__State ctx, int alloc)
   if (alloc)
     {
 #if HAVE_MMAP
-      stack->ssize = 128 * 1024 * sizeof (long); /* mmap should do allocate-on-write for us */
+      stack->ssize = 16384 * sizeof (long); /* mmap should do allocate-on-write for us */
       stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
       if (stack->sptr == (void *)-1)
 #endif
         {
           /*FIXME*//*D*//* reasonable stack size! */
-          stack->ssize = -4096 * sizeof (long);
-          New (0, stack->sptr, 4096, long);
+          stack->ssize = - (8192 * sizeof (long));
+          New (0, stack->sptr, 8192, long);
         }
     }
   else
@@ -630,7 +620,7 @@ setup_coro (void *arg)
    */
   dSP;
   Coro__State ctx = (Coro__State)arg;
-  SV *sub_init = (SV*)get_cv(SUB_INIT, FALSE);
+  SV *sub_init = (SV *)get_cv (SUB_INIT, FALSE);
 
   coro_init_stacks (aTHX);
   /*PL_curcop = 0;*/
@@ -1012,24 +1002,11 @@ DESTROY(coro)
         Safefree (coro);
 
 void
-flush()
-	CODE:
-#ifdef MAY_FLUSH
-        flush_padlist_cache ();
-#endif
-
-void
 _exit(code)
 	int	code
         PROTOTYPE: $
 	CODE:
-#if defined(__GLIBC__) || _POSIX_C_SOURCE
 	_exit (code);
-#else
-        signal (SIGTERM, SIG_DFL);
-        raise (SIGTERM);
-        exit (code);
-#endif
 
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
@@ -1098,12 +1075,16 @@ BOOT:
         }
 }
 
+#if !PERL_MICRO
+
 void
 ready(self)
 	SV *	self
         PROTOTYPE: $
 	CODE:
         api_ready (self);
+
+#endif
 
 int
 nready(...)

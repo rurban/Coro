@@ -1,5 +1,16 @@
 Revision history for Perl extension Coro.
 
+0.95 Sun Feb 15 03:20:28 CET 2004
+	- removed Coro::State::flush, implemented a new and much
+          faster caching mechanism by attaching magic to the CV.
+        - a memleak with (real) closures remains.
+        - dramatically reduced size of stacks to 65536 (linux/x86), after
+          observing that even myhttpd never had more than a kilobyte
+          of stack in use (stack is still only physically allocated in
+          pagesize increments for systems suporting mmap).
+        - fix for a "cygwin-64" architecture added, proposed by Stefan Traby.
+        - fix for threaded perl.
+
 0.9  Sun Nov 23 04:32:39 CET 2003
 	- fix a few very hard to track down but (of course) stupid
           memory leaks.
