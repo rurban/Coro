@@ -12,6 +12,8 @@ $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq
 
 if ($^O =~ /win32/i) {
    $DEFINE = " -DCORO_LOOSE";
+} elsif ($^O =~ /irix/) {
+   $iface = "i";
 } elsif ($^O =~ /linux/) {
    $iface = "l";
 } elsif ($^O =~ /solaris/) {
@@ -64,13 +66,19 @@ s  If the ucontext functions are not working or you don't want
    below don't even feature a working sigaltstack.
 
 l  Older GNU/Linux systems (glibc-2.1 and below) need this hack. Since it is
-   very linux-specific it is also quite fast for newer versions; when it works,
-   that is...
+   very linux-specific it is also quite fast for newer versions; when it
+   works, that is...
+
+i  IRIX. For some reason, SGI really does not like to follow the unix
+   standard (does that surprise you?), so this techniquee should be fast
+   and safe (althogh s and u should also work now).
 
 EOF
 
 retry:
-   print "Use which implementation (s, u, l) [$iface]? ";
+   print "Use which implementation,\n",
+         "<s>etjmp/longjump, <u>context, <i>rix or <l>inux [$iface]? ";
+
    my $r = <>;
    $iface = lc $1 if $r =~ /(\S)/;
 
@@ -83,6 +91,9 @@ retry:
    } elsif ($iface eq "l") {
       $DEFINE .= " -DCORO_LINUX";
       print "\nUsing linux-specific implementation\n\n";
+   } elsif ($iface eq "i") {
+      $DEFINE .= " -DCORO_IRIX";
+      print "\nUsing irix-specific implementation\n\n";
    } else {
       print "\nUnknown implementation \"$iface\"\n";
       goto retry;

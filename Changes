@@ -3,6 +3,11 @@ Revision history for Perl extension Coro.
 0.49
 	- changed some method calls to function calls for speed
           inside Coro::Handle.
+        - make Coro::Handle use an array instead of a hash for
+          speed reasons.
+        - IRIX mystery solved: it's SGI's NT, after all: "standard, huh?".
+          sjlj and ucontext should now work.
+        - IRIX-specific port for libcoro.
 
 0.45  Sun Sep  2 02:54:01 CEST 2001
 	- new method Coro::Handle::timeout.
