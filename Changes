@@ -1,5 +1,14 @@
 Revision history for Perl extension Coro.
 
+0.96 Thu May 13 18:09:29 CEST 2004
+	- tell people if they have yet anothe rbroken Event variant.
+	- made Coro to work _better_ with threads (it seems that, as long
+          as you use Coros in one thread only everything will work fine.
+          Looking at the perl source the problem might be missing locking
+          between Coro and some perl internal routines. That's not easily
+          fixable).
+        - (hopefully) got rid of the static xnext inside transfer.
+
 0.95 Sun Feb 15 03:20:28 CET 2004
 	- removed Coro::State::flush, implemented a new and much
           faster caching mechanism by attaching magic to the CV.

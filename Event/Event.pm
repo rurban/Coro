@@ -8,7 +8,7 @@ Coro::Event - do events the coro-way
  use Coro::Event;
 
  sub keyboard : Coro {
-    my $w = Coro::Event->io(fd => *STDIN, poll => 'r');
+    my $w = Coro::Event->io(fd => \*STDIN, poll => 'r');
     while() {
        print "cmd> ";
        my $ev = $w->next; my $cmd = <STDIN>;
@@ -52,7 +52,7 @@ use base 'Exporter';
 @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = 0.95;
+   $VERSION = 0.96;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
 

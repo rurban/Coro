@@ -62,9 +62,8 @@ DESCRIPTION
         higher priority.
 
     terminate [arg...]
-        Terminates the current process.
-
-        Future versions of this function will allow result arguments.
+        Terminates the current process with the given status values (see
+        cancel).
 
     # dynamic methods
 
@@ -80,13 +79,14 @@ DESCRIPTION
     $process->ready
         Put the given process into the ready queue.
 
-    $process->cancel
-        Like "terminate", but terminates the specified process instead.
+    $process->cancel (arg...)
+        Temrinates the given process and makes it return the given arguments
+        as status (default: the empty list).
 
     $process->join
         Wait until the coroutine terminates and return any values given to
-        the "terminate" function. "join" can be called multiple times from
-        multiple processes.
+        the "terminate" or "cancel" functions. "join" can be called multiple
+        times from multiple processes.
 
     $oldprio = $process->prio($newprio)
         Sets (or gets, if the argument is missing) the priority of the

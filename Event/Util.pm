@@ -30,7 +30,7 @@ use base 'Exporter';
    gethostbyname gethostbyaddr
 );
 
-$VERSION = 0.95;
+$VERSION = 0.96;
 
 $MAXPARALLEL = 16; # max. number of parallel jobs
 

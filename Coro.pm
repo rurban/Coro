@@ -40,7 +40,7 @@ use vars qw($idle $main $current);
 
 use base Exporter;
 
-$VERSION = 0.95;
+$VERSION = 0.96;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -132,6 +132,11 @@ $manager = new Coro sub {
          my $coro = pop @destroy;
          $coro->{status} ||= [];
          $_->ready for @{delete $coro->{join} || []};
+
+         # the next line destroys the _coro_state, but keeps the
+         # process itself intact (we basically make it a zombie
+         # process that always runs the manager thread, so it's possible
+         # to transfer() to this process).
          $coro->{_coro_state} = $manager->{_coro_state};
       }
       &schedule;
@@ -186,17 +191,12 @@ current "timeslice" to other coroutines of the same or higher priority.
 
 =item terminate [arg...]
 
-Terminates the current process.
-
-Future versions of this function will allow result arguments.
+Terminates the current process with the given status values (see L<cancel>).
 
 =cut
 
 sub terminate {
-   $current->{status} = [@_];
-   $current->cancel;
-   &schedule;
-   die; # NORETURN
+   $current->cancel (@_);
 }
 
 =back
@@ -235,23 +235,26 @@ Put the given process into the ready queue.
 
 =cut
 
-=item $process->cancel
+=item $process->cancel (arg...)
 
-Like C<terminate>, but terminates the specified process instead.
+Temrinates the given process and makes it return the given arguments as
+status (default: the empty list).
 
 =cut
 
 sub cancel {
-   push @destroy, $_[0];
+   my $self = shift;
+   $self->{status} = [@_];
+   push @destroy, $self;
    $manager->ready;
-   &schedule if $current == $_[0];
+   &schedule if $current == $self;
 }
 
 =item $process->join
 
 Wait until the coroutine terminates and return any values given to the
-C<terminate> function. C<join> can be called multiple times from multiple
-processes.
+C<terminate> or C<cancel> functions. C<join> can be called multiple times
+from multiple processes.
 
 =cut
 
