@@ -1,6 +1,7 @@
 Revision history for Perl extension Coro.
 
 0.5
+	- fixed "print" on a Coro::Handle. The print method worked.
 	- small tweaks (seem to reduce memory consumption a lot)
           in various modules.
         - splendid use of "no warnings" scattered throughout.

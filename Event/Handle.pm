@@ -229,7 +229,7 @@ sub OPEN {
 }
 
 sub PRINT {
-   WRITE($_[0], $_[1]);
+   WRITE(shift, join "", @_);
 }
 
 sub PRINTF {
