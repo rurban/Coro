@@ -15,9 +15,9 @@ sub start_transfer {
    push @{$self->{wait}}, $trans;
    Scalar::Util::weaken($self->{wait}[-1]);
 
-   print "ALLOC $Coro::current\n";#d#
-   --$self->{conns};
-   $self->wake_next;
+   if (--$self->{conns} >= 0) {
+      $self->wake_next;
+   }
 
    $trans;
 }
@@ -25,15 +25,11 @@ sub start_transfer {
 sub wake_next {
    my $self = shift;
 
-   while ($self->{conns} >= 0 && @{$self->{wait}}) {
-            print "WAKING some\n";#d#
-      while(@{$self->{wait}}) {
-         my $transfer = shift @{$self->{wait}};
-         if ($transfer) {
-            print "WAKING $transfer\n";#d#
-            $transfer->wake;
-            last;
-         }
+   while(@{$self->{wait}}) {
+      my $transfer = shift @{$self->{wait}};
+      if ($transfer) {
+         $transfer->wake;
+         last;
       }
    }
 }
@@ -60,7 +56,6 @@ sub try {
       local $self->[1] = $Coro::current;
 
       Coro::schedule;
-      print "WOKE $Coro::current\n" if $self->[2];
    }
 
    return $self->[2];
@@ -68,11 +63,8 @@ sub try {
 
 sub DESTROY {
    my $self = shift;
-   eval {
    $self->[0]{conns}++;
-   $self->[0]->wake_next;
-   };
-   print "DESTROY $Coro::current $@\n";#d#
+   $self->[0]->wake_next if $self->[2];
 }
 
 package conn;
