@@ -12,6 +12,7 @@ Coro/Semaphore.pm
 Coro/Channel.pm
 Coro/Cont.pm
 Coro/Specific.pm
+Coro/Event.pm
 Coro/typemap
 eg/bench
 eg/prodcons1

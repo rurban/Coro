@@ -1,5 +1,9 @@
 Revision history for Perl extension Coro.
 
+0.05  Sun Jul 15 17:32:20 CEST 2001
+	- fixed a few issues in Coro::Event.
+        - I forgot to include Coro::Event in 0.04 :(:(:(
+
 0.04  Sun Jul 15 05:24:59 CEST 2001
 	- @_ is now properly localized.
 	- Coro::State is now easier subclassable.

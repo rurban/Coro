@@ -30,5 +30,19 @@ sub idle : Coro {
    };
 }
 
+sub finger : Coro {
+   use IO::Socket::INET;
+   # is there ANY way to do non-blocking connects with IO::Socket::INET?
+   # I don't see how...
+   my $io = new IO::Socket::INET PeerAddr => "noc.dfn.de:finger";
+   print "connected, sending\n";
+   syswrite $io, "trouble\n";
+   my $r = Coro::Event->io(fd => $io, poll => 'r');
+   my $buf;
+   $r->next while 0 != sysread $io, $buf, 8192, length $buf;
+   print $buf;
+   do_timer(after => 60);
+}
+
 Coro::Event->main;
 
