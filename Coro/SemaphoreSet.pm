@@ -32,7 +32,7 @@ package Coro::SemaphoreSet;
 
 use Coro ();
 
-$VERSION = 0.49;
+$VERSION = 0.5;
 
 =item new [inital count]
 
