@@ -48,9 +48,7 @@ now, without any problem reports so far.
 
 EOF
 
-print "Do you want to enable C context sharing (y/n) [y]? ";
-
-if (<> !~ /^\s*n/i) {
+if (prompt ("Do you want to enable C context sharing (y/n)", "y") !~ /^\s*n/i) {
    print "\nExperimental context sharing enabled.\n\n";
    $DEFINE .= " -DCORO_LAZY_STACK";
 }
@@ -83,10 +81,10 @@ i  IRIX. For some reason, SGI really does not like to follow the unix
 EOF
 
 retry:
-   print "Use which implementation,\n",
-         "<s>etjmp/longjump, <u>context, <i>rix or <l>inux [$iface]? ";
 
-   my $r = <>;
+   my $r = prompt "Use which implementation,\n" .
+                  "<s>etjmp/longjump, <u>context, <i>rix or <l>inux?",
+                  $iface;
    $iface = lc $1 if $r =~ /(\S)/;
 
    if ($iface eq "u") {
