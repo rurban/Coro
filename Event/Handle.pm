@@ -322,10 +322,10 @@ sub READ {
    my $res = 0;
 
    # first deplete the read buffer
-   if (defined $_[0][3]) {
+   if (length $_[0][3]) {
       my $l = length $_[0][3];
       if ($l <= $len) {
-         substr($_[1], $ofs) = $_[0][3]; undef $_[0][3];
+         substr($_[1], $ofs) = $_[0][3]; $_[0][3] = "";
          $len -= $l;
          $res += $l;
          return $res unless $len;
