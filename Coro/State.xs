@@ -565,7 +565,6 @@ deallocate_stack (Coro__State ctx)
 
   if (stack)
     {
-      printf ("deallocating stack %p %d\n", stack, stack->refcnt);/*D*/
       if (!--stack->refcnt)
         {
 #ifdef HAVE_MMAP
@@ -662,7 +661,6 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
   dSTACKLEVEL;
   static struct coro *xnext;
 
-  printf ("%p => %p\n", prev, next);/*D*/
   if (prev != next)
     {
       xnext = next;
@@ -738,6 +736,11 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
         }
     }
 
+  /*
+   * xnext is now either prev or next, depending on wether
+   * we switched the c stack or not. that's why i use a global
+   * variable, that should become thread-specific at one point.
+   */
   xnext->cursp = stacklevel;
 }
 
