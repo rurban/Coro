@@ -77,9 +77,9 @@ sub wake_next {
 sub force_wake_next {
    my $self = shift;
 
-   $self->{slots} += 1;
+   $self->{slots} += $::MAX_TRANSFERS;
    $self->wake_next;
-   $self->{slots} -= 1;
+   $self->{slots} -= $::MAX_TRANSFERS;
 }
 
 sub waiters {

@@ -77,7 +77,7 @@ EOF
 
    $content .= <<EOF;
 </ul>
-<h2>Active Downloads</h2>
+<h2>Active Connections</h2>
 <ul>
 EOF
 

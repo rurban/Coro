@@ -2,7 +2,7 @@ package tbf;
 
 # kind of token-bucket-filter
 
-my $max_per_client = 1e5;
+my $max_per_client = 64000;
 
 sub new {
    my $class = shift;
@@ -49,14 +49,13 @@ sub inject {
             }
          }
 
-      } else {
-         if ($self->{maxbucket} < $self->{bucket}) {
-            ::unused_bandwidth ($self->{bucket} - $self->{maxbucket});
-            $self->{bucket} = $self->{maxbucket};
-         }
       }
-
       last;
+   }
+
+   if ($self->{maxbucket} < $self->{bucket}) {
+      ::unused_bandwidth ($self->{bucket} - $self->{maxbucket});
+      $self->{bucket} = $self->{maxbucket};
    }
 }
 
