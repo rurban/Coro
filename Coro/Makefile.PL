@@ -119,6 +119,7 @@ WriteMakefile(
 
     		    'Specific.pm'	=> '$(INST_LIBDIR)/Specific.pm',
 
+    		    'Timer.pm'		=> '$(INST_LIBDIR)/Timer.pm',
     		    'Signal.pm'		=> '$(INST_LIBDIR)/Signal.pm',
     		    'Channel.pm'	=> '$(INST_LIBDIR)/Channel.pm',
     		    'Semaphore.pm'	=> '$(INST_LIBDIR)/Semaphore.pm',

@@ -129,16 +129,25 @@ sub waiters {
 This method calls C<down> and then creates a guard object. When the guard
 object is destroyed it automatically calls C<up>.
 
+=item $guard = $sem->timed_guard($id, $timeout)
+
+Like C<guard>, but returns undef if semaphore couldn't be acquired within
+$timeout seconds, otherwise the guard object.
+
 =cut
 
 sub guard {
    &down;
-   # double indirection because bless works on the referenced
-   # object, not (only) on the reference itself.
-   bless [@_], Coro::SemaphoreSet::Guard::;
+   bless [@_], Coro::SemaphoreSet::guard;
 }
 
-sub Coro::SemaphoreSet::Guard::DESTROY {
+sub guard {
+   &timed_down
+      ? bless [$_[0], $_[1]], Coro::SemaphoreSet::guard
+      : ();
+}
+
+sub Coro::SemaphoreSet::guard::DESTROY {
    &up(@{$_[0]});
 }
 
