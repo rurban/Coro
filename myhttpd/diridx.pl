@@ -106,7 +106,6 @@ sub conn::get_statdata {
    my $self = shift;
 
    my $mtime = $self->{stat}[9];
-   print "mtime is $mtime\n";#d#
 
    my $st = sql_exec \my($statdata),
                      "select statdata from diridx where mtime = ? and path = ?",

@@ -48,8 +48,9 @@ if ($CMDSHELL_PORT) {
    push @listen_sockets, $port;
 
    async {
-      async \&shell, $port->accept
-         while 1;
+      while () {
+         async \&shell, scalar $port->accept;
+      }
    };
 }
 
