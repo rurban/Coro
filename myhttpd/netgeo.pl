@@ -8,6 +8,7 @@ use Fcntl;
 use Coro;
 use Coro::Event;
 use Coro::Semaphore;
+use Coro::SemaphoreSet;
 use Coro::Socket;
 
 $Event::DIED = sub {
@@ -220,8 +221,12 @@ $WHOIS{ARIN}  = new Whois::ARIN ARIN  => "whois.arin.net",  maxjobs => 12;
 $WHOIS{RIPE}  = new Whois::RIPE RIPE  => "whois.ripe.net",  maxjobs => 20;
 $WHOIS{APNIC} = new Whois::RIPE APNIC => "whois.apnic.net", maxjobs => 20;
 
+$whoislock = new Coro::SemaphoreSet;
+
 sub ip_request {
    my $ip = $_[0];
+
+   my $guard = $whoislock->guard($ip);
 
    my $c = $iprange->db_cursor;
    my $v;

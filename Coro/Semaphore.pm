@@ -58,12 +58,11 @@ waits until the semaphore is available if the counter is zero.
 =cut
 
 sub down {
-   my $self = shift;
-   while ($self->[0] <= 0) {
-      push @{$self->[1]}, $Coro::current;
+   while ($_[0][0] <= 0) {
+      push @{$_[0][1]}, $Coro::current;
       Coro::schedule;
    }
-   --$self->[0];
+   --$_[0][0];
 }
 
 =item $sem->up
@@ -73,9 +72,8 @@ Unlock the semaphore again.
 =cut
 
 sub up {
-   my $self = shift;
-   if (++$self->[0] > 0) {
-      (shift @{$self->[1]})->ready if @{$self->[1]};
+   if (++$_[0][0] > 0) {
+      (shift @{$_[0][1]})->ready if @{$_[0][1]};
    }
 }
 
@@ -87,9 +85,8 @@ otherwise return false and leave the semaphore unchanged.
 =cut
 
 sub try {
-   my $self = shift;
-   if ($self->[0] > 0) {
-      --$self->[0];
+   if ($_[0][0] > 0) {
+      --$_[0][0];
       return 1;
    } else {
       return 0;
