@@ -4,6 +4,8 @@
 
 #include "libcoro/coro.c"
 
+#include <signal.h>
+
 #ifdef HAVE_MMAP
 # include <unistd.h>
 # include <sys/mman.h>
@@ -796,7 +798,9 @@ transfer(prev, next, flags = TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK)
         int			flags
         PROTOTYPE: @
         CODE:
+        PUTBACK;
         transfer (aTHX_ prev, next, flags);
+        SPAGAIN;
 
 void
 DESTROY(coro)
@@ -826,6 +830,19 @@ flush()
 	CODE:
 #ifdef MAY_FLUSH
         flush_padlist_cache ();
+#endif
+
+void
+_exit(code)
+	int	code
+        PROTOTYPE: $
+	CODE:
+#if defined(__GLIBC__) || _POSIX_C_SOURCE
+	_exit (code);
+#else
+        signal (SIGTERM, SIG_DFL);
+        raise (SIGTERM);
+        exit (code);
 #endif
 
 MODULE = Coro::State                PACKAGE = Coro::Cont

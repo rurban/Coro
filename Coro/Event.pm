@@ -103,14 +103,20 @@ for my $flavour (qw(idle var timer io signal)) {
          or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
 
       my $q = []; # [$coro, $event]
-      my $w = $new->(@_, cb => \&std_cb);
+      my $w = $new->(
+            desc => $flavour,
+            @_,
+            cb => \&std_cb,
+      );
       $w->private($q); # using private as attribute is pretty useless...
       bless $w, $class; # reblessing due to broken Event
    };
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
-      (&$coronew)->next;
+      my $e = (&$coronew)->next;
+      $e->w->cancel;
+      $e;
    };
 }
 
@@ -125,10 +131,7 @@ sub next {
       local $q->[0] = $Coro::current;
       Coro::schedule;
    }
-   #FIXME why doesn't delete work?
-   my $e = $q->[1];
-   $q->[1] = undef;
-   return $e;
+   delete $q->[1];
 }
 
 =item sweep

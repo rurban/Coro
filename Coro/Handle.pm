@@ -25,10 +25,11 @@ $VERSION = 0.13;
 
 @EXPORT = qw(unblock);
 
-=item $fh = new_from_fh Coro::Handle $fhandle
+=item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
 
 Create a new non-blocking io-handle using the given
-perl-filehandle. Returns undef if no fhandle is given.
+perl-filehandle. Returns undef if no fhandle is given. The only other
+supported argument is "timeout", which sets a timeout for each operation.
 
 =cut
 
@@ -37,7 +38,10 @@ sub new_from_fh {
    my $fh = shift or return;
    my $self = do { local *Coro::Handle };
 
-   tie $self, Coro::Handle::FH, $fh;
+   my ($package, $filename, $line) = caller;
+   $filename =~ s/^.*[\/\\]//;
+
+   tie $self, Coro::Handle::FH, fh => $fh, desc => "$filename:$line", @_;
 
    my $_fh = select bless \$self, $class; $| = 1; select $_fh;
 }
@@ -98,17 +102,18 @@ use Event::Watcher qw(R W E);
 use base 'Tie::Handle';
 
 sub TIEHANDLE {
-   my ($class, $fh) = @_;
+   my $class = shift;
 
-   fcntl $fh, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
-      or die "fcntl(O_NONBLOCK): $!";
-
-   bless {
-      fh => $fh,
+   my $self = bless {
       rb => "",
       wb => "",
-   }, $_[0];
+      @_,
+   }, $class;
 
+   fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
+      or die "fcntl(O_NONBLOCK): $!";
+
+   $self;
 }
 
 sub OPEN {
@@ -128,16 +133,26 @@ sub CLOSE {
    $self->{rb} =
    $self->{wb} = "";
    (delete $self->{rw})->cancel if $self->{rw};
-   (delete $self->{ww})->cancel if $self->{rw};
+   (delete $self->{ww})->cancel if $self->{ww};
    close $self->{fh};
 }
 
 sub writable {
-   ($_[0]->{ww} ||= Coro::Event->io(fd => $_[0]->{fh}, poll => W+E))->next->got & W;
+   ($_[0]->{ww} ||= Coro::Event->io(
+      fd      => $_[0]->{fh},
+      desc    => "$_[0]->{desc} WW",
+      timeout => $_[0]->{timeout},
+      poll    => W+E,
+   ))->next->got & W;
 }
 
 sub readable {
-   ($_[0]->{rw} ||= Coro::Event->io(fd => $_[0]->{fh}, poll => R+E))->next->got & R;
+   ($_[0]->{rw} ||= Coro::Event->io(
+      fd      => $_[0]->{fh},
+      desc    => "$_[0]->{desc} RW",
+      timeout => $_[0]->{timeout},
+      poll    => R+E,
+   ))->next->got & R;
 }
 
 sub WRITE {
@@ -203,6 +218,10 @@ sub READLINE {
          return undef;
       }
    }
+}
+
+sub DESTROY {
+   &CLOSE;
 }
 
 1;

@@ -82,7 +82,7 @@ sub _prepare_socket {
    socket $fh, PF_INET, $arg->{Type}, _proto($arg->{Proto})
       or return;
 
-   $fh = bless Coro::Handle->new_from_fh($fh), $class
+   $fh = bless Coro::Handle->new_from_fh($fh, timeout => $arg{Timeout}), $class
       or return;
 
    if ($arg->{ReuseAddr}) {
@@ -136,14 +136,17 @@ sub new {
    } else {
       $fh = $class->_prepare_socket(\%arg)
          or return;
-
+      if (exists $arg{Listen}) {
+         $fh->listen($arg{Listen})
+            or return;
+      }
    }
 
    $fh;
 }
 
 =item connect, listen, bind, accept, getsockopt, setsockopt,
-send , recv, getpeername, getsockname
+send, recv, getpeername, getsockname
 
 Do the same thing as the perl builtins (but return true on
 EINPROGRESS). Remember that these must be method calls.
@@ -162,7 +165,12 @@ sub setpeername	{ getpeername tied(${$_[0]})->{fh} }
 
 sub accept {
    my $fh;
-   accept $fh, tied(${$_[0]})->{fh} and new_from_fh Coro::Handle $fh;
+   while () {
+      $_[0]->readable or return;
+      accept $fh, tied(${$_[0]})->{fh}
+         and return new_from_fh Coro::Handle $fh;
+      return unless $!{EAGAIN};
+   }
 }
 
 1;

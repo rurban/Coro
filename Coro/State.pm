@@ -75,7 +75,13 @@ to save the current coroutine in.
 # anything that changes the stacklevel (like eval).
 sub initialize {
    my $proc = shift;
-   &$proc while 1;
+   eval {
+      &$proc while 1;
+   };
+   if ($@) {
+      print STDERR "FATAL: uncaught exception\n$@";
+   }
+   _exit 255;
 }
 
 sub new {

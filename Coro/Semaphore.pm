@@ -105,11 +105,13 @@ object is destroyed it automatically calls C<up>.
 
 sub guard {
    $_[0]->down;
-   bless \$_[0], Coro::Semaphore::Guard::;
+   # double indirection because bless works on the referenced
+   # object, not (only) on the reference itself.
+   bless \\$_[0], Coro::Semaphore::Guard::;
 }
 
 sub Coro::Semaphore::Guard::DESTROY {
-   ${$_[0]}->up;
+   ${${$_[0]}}->up;
 }
 
 1;
