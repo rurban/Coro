@@ -20,6 +20,8 @@ Coro/Handle.pm
 Coro/Socket.pm
 Coro/RWLock.pm
 Coro/Util.pm
+Coro/MakeMaker.pm
+Coro/CoroAPI.h
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
