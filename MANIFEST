@@ -34,6 +34,7 @@ t/03_cont.t
 t/04_rwlock.t
 t/05_specific.t
 t/06_prio.t
+t/07_eval.t
 
 eg/bench
 eg/prodcons1

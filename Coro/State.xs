@@ -516,7 +516,8 @@ destroy_stacks(pTHX)
         PUTBACK; /* possibly superfluous */
       }
 
-      dounwind(-1);
+      if (PL_main_cv != Nullcv) /* don't during destruction. hack? */
+        dounwind(-1);
 
       SvREFCNT_dec(PL_curstackinfo->si_stack);
       Safefree(PL_curstackinfo->si_cxstack);

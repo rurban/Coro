@@ -11,7 +11,7 @@ use Text::Abbrev;
 my $last_ts = time;
 
 my %complete;
-my @commands = qw(quit squit refresh country restart block info);
+my @commands = qw(quit squit refresh country restart block info eval);
 
 abbrev \%complete, @commands;
 
@@ -26,6 +26,11 @@ sub shell {
             last;
          } elsif ($cmd eq "squit") {
             Event::unloop;
+            last;
+         } elsif ($cmd eq "eval") {
+            my @res = eval $_;
+            print $fh "eval: $@\n" if $@;
+            print $fh "RES = ", (join " : ", @res), "\n";
          } elsif ($cmd eq "block") {
             print "blocked '$_'\n";#d#
             $conn::blocked{$_} = time + $::BLOCKTIME;
@@ -45,6 +50,8 @@ sub shell {
             printf $fh "(%.1f bytes/s)\n", $::written / ($::NOW - $last_ts);
             ($last_ts, $::written) = ($::NOW, 0);
          } elsif ($cmd eq "refresh") {
+            do "config.pl";
+            print $fh "config.pl: $@\n" if $@;
             read_blocklist;
          } elsif ($cmd eq "restart") {
             $::RESTART = 1;
