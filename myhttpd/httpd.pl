@@ -234,6 +234,7 @@ sub response {
    }
 
    $res .= "Date: $HTTP_NOW\015\012";
+   $res .= "Server: $::NAME\015\012";
 
    while (my ($h, $v) = each %$hdr) {
       $res .= "$h: $v\015\012"
@@ -570,6 +571,7 @@ ignore:
 
    if ($self->{method} eq "GET") {
       $self->{time} = $::NOW;
+      $self->{written} = 0;
 
       my $current = $Coro::current;
 
@@ -595,6 +597,7 @@ ignore:
             if ($locked ||= $transfer->try($::WAIT_INTERVAL)) {
                $bufsize = $::BUFSIZE;
                $self->{time} = $::NOW;
+               $self->{written} = 0;
             }
          }
 

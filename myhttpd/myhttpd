@@ -5,7 +5,9 @@ use Time::HiRes 'time';
 
 $starttime = time;
 
-$VERSION = 0.09;
+$VERSION = 0.10;
+$NAME = "myhttpd/$VERSION";
+$NAME = "Apache/1.3.19 (Unix)  (SuSE/Linux) PHP/4.0.4pl1 mod_ssl/2.8.1 OpenSSL/0.9.6";
 
 $SIG{CHLD} = 'IGNORE';
 

@@ -8,7 +8,7 @@ sub statuspage {
 <head><title>Server Status Page</title></head>
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 <h1>Server Status Page</h1>
-<h2>Myhttpd</h2>
+<h2>$::NAME</h2>
 version <b>$VERSION</b>; current:max connection count: <b>$::conns</b>:<b>$::maxconns</b>; uptime: <b>$uptime</b>;<br />
 client-id <b>$self->{remote_id}</b>; client country <b>$self->{country}</b>;<br />
 <h2>Queue Statistics</h2>
