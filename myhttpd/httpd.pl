@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use Coro;
 use Coro::Semaphore;
 use Coro::Event;
@@ -32,6 +30,7 @@ my $connections = new Coro::Semaphore $MAX_CONNECTS;
 my @fh;
 my @pool;
 
+# one "execution thread"
 sub handler {
    while () {
       my $fh = pop @fh;
@@ -50,6 +49,7 @@ sub handler {
    }
 }
 
+# the "main thread"
 async {
    slog 1, "accepting connections";
    while () {
@@ -72,14 +72,27 @@ package conn;
 
 use Socket;
 use HTTP::Date;
+use Convert::Scalar 'weaken';
+
+my %conn; # $conn{ip}{fh} => connobj
 
 sub new {
    my $class = shift;
    my $fh = shift;
+   my $self = bless { fh => $fh }, $class;
    my (undef, $iaddr) = unpack_sockaddr_in $fh->getpeername
       or $self->err(500, "unable to get peername");
    $self->{remote_address} = inet_ntoa $iaddr;
-   bless { fh => $fh }, $class;
+
+   # enter ourselves into various lists
+   weaken ($conn{$self->{remote_address}}{$self*1} = $self);
+   print $self->{remote_address}.": ".($self*1)." > ".%{$conn{$self->{remote_address}}},"\n";
+   $self;
+}
+
+sub DESTROY {
+   my $self = shift;
+   delete $conn{$self->{remote_address}}{$self*1};
 }
 
 sub slog {
@@ -96,6 +109,8 @@ sub print_response {
       $res .= "$h: $v\015\012"
    }
    $res .= "\015\012$content" if defined $content;
+
+   print STDERR "$self->{remote_address} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
 
    print {$self->{fh}} $res;
 }
@@ -167,6 +182,9 @@ sub handle {
       $self->{server_port} = $self->{h}{host} =~ s/:([0-9]+)$// ? $1 : 80;
 
       $self->map_uri;
+
+      Coro::Event::do_timer(after => 5);
+      
       $self->respond;
    #}
 }
@@ -349,3 +367,5 @@ ignore:
 
    close $fh;
 }
+
+1;

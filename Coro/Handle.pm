@@ -161,8 +161,8 @@ sub CLOSE {
    my $self = shift;
    $self->{rb} =
    $self->{wb} = "";
-   (delete $self->{rw})->cancel if $self->{rw};
-   (delete $self->{ww})->cancel if $self->{ww};
+   (delete $self->{rw})->cancel if exists $self->{rw};
+   (delete $self->{ww})->cancel if exists $self->{ww};
    close $self->{fh};
 }
 

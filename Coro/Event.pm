@@ -131,7 +131,7 @@ sub next {
       local $q->[0] = $Coro::current;
       Coro::schedule;
    }
-   delete $q->[1];
+   pop @$q;
 }
 
 =item sweep
