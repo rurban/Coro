@@ -4,9 +4,9 @@ use 5.006;
 
 use Config;
 
-$DEFINE = "";
+$|=1;
 
-$DEFINE .= " -DCORO_LAZY_STACK"; # experimental
+$DEFINE = "";
 
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
@@ -18,6 +18,29 @@ if ($^O =~ /windows/) {
    $iface = "u";
 } else {
    $iface = "s";
+}
+
+print <<EOF;
+
+Version 0.12 introduced experimental C context sharing. This makes it
+possible to share the C stack and context between many coroutines,
+resulting in memory savings and slight speed gains, at the cost of
+potential segfaults. On my Linux/x86 machine this decreased the size of
+a new coroutine from 9k to 5k, the savings are much more apparent on
+machines without mmap or good memory management. This algorithm relies
+on the non-fact that the same machine stack pointer indicates the same
+function call nesting level, which usually works good enough but might
+fail...
+
+Disabling this option is save, as it only increases memory consumption.
+
+EOF
+
+print "Do you want to enable experimental context sharing (y/n) [n]? ";
+
+if (<> =~ /^\s*y/i) {
+   print "\nExperimental context sharing enabled.\n\n";
+   $DEFINE .= " -DCORO_LAZY_STACK";
 }
 
 if ($iface) {
@@ -39,12 +62,12 @@ s  If the ucontext functions are not working or you don't want
    below don't even feature a working sigaltstack.
 
 l  Older GNU/Linux systems (glibc-2.1 and below) need this hack. Since it is
-   very linux-specific it is also quite fast; when it works, that is.
+   very linux-specific it is also quite fast for newer versions; when it works,
+   that is...
 
 EOF
 
 retry:
-   $|=1;
    print "Use which implementation (s, u, l) [$iface]? ";
    my $r = <>;
    $iface = lc $1 if $r =~ /(\S)/;
