@@ -1,5 +1,8 @@
 Revision history for Perl extension Coro.
 
+	- removed the reference to pp_entersub, might compile on
+          (some) win32 perls now.
+
 0.531 Mon Dec 10 22:18:44 CET 2001
 	- Fixed a bug in SemaphoreSet::timed_down.
 
