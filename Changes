@@ -1,5 +1,8 @@
 Revision history for Perl extension Coro.
 
+0.97 Fri May 14 15:23:32 CEST 2004
+	- remove stupid gcc extension that was an experiment only anyway.
+
 0.96 Thu May 13 18:09:29 CEST 2004
 	- tell people if they have yet anothe rbroken Event variant.
 	- made Coro to work _better_ with threads (it seems that, as long
