@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+use Coro;
+use Coro::Event;
+use Coro::Util;
+
+use Socket;
+
+# do some asynchroneous hostname resolution
+
+async {
+   for my $x (1..255) {
+      use Data::Dumper;
+      async {
+         my $addr = "129.13.162.$x";
+         print "$addr => ",(scalar gethostbyaddr inet_aton($addr), AF_INET),"\n";
+      };
+   }
+
+};
+
+loop;

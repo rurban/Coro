@@ -1,8 +1,19 @@
 Revision history for Perl extension Coro.
 
+0.13  Wed Aug  8 16:53:07 CEST 2001
+	- new method Coro::Handle::readline.
+        - added eg/lwp and Coro::Handle::autoflush, to make LWP work.
+          (see eg/lwp on how to make LWP non-blocking).
+        - renamed Coro::Socket::new_inet to new.
+        - added Coro::Util, some utility functions.
+        - die/eval now works better (still get annoying (but true ;)
+          "Callback called exit" messages).
+        - Coro::Handle now supports timeout, and Coro::Socket Timeout.
+        - much better Coro::Socket support.
+
 0.12  Fri Jul 27 04:19:01 CEST 2001
 	- do not use mmap if neither MAP_ANON nor MAP_ANONYMOUS is defined.
-	- very experimental stack sharing algorithm. not 100% safe ut
+	- very experimental stack sharing algorithm. not 100% safe but
           should work well in practise ;)
         - added Coro::RWLock.
         - Coro::Specific now works.

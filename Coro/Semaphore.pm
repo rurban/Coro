@@ -35,7 +35,7 @@ package Coro::Semaphore;
 
 use Coro ();
 
-$VERSION = 0.12;
+$VERSION = 0.13;
 
 =item new [inital count, default one]
 
@@ -94,6 +94,24 @@ sub try {
    } else {
       return 0;
    }
+}
+
+=item $guard = $sem->guard
+
+This method calls C<down> and then creates a guard object. When the guard
+object is destroyed it automatically calls C<up>.
+
+=cut
+
+sub guard {
+   $_[0]->down;
+   # double indirection because bless works on the referenced
+   # object, not (only) on the reference itself.
+   bless \\$_[0], Coro::Semaphore::Guard::;
+}
+
+sub Coro::Semaphore::Guard::DESTROY {
+   ${${$_[0]}}->up;
 }
 
 1;

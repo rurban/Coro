@@ -18,6 +18,7 @@ Coro/Event.pm
 Coro/Handle.pm
 Coro/Socket.pm
 Coro/RWLock.pm
+Coro/Util.pm
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c
@@ -28,6 +29,8 @@ eg/prodcons3
 eg/attributes
 eg/cont
 eg/event
+eg/lwp
+eg/dns
 t/00_basic.t
 t/01_process.t
 t/02_channel.t

@@ -27,14 +27,14 @@ print <<EOF;
 Version 0.12 introduced experimental C context sharing. This makes it
 possible to share the C stack and context between many coroutines,
 resulting in memory savings and slight speed gains, at the cost of
-potential segfaults. On my Linux/x86 machine this decreased the size of
-a new coroutine from 9k to 5k, the savings are much more apparent on
-machines without mmap or good memory management. This algorithm relies
-on the non-fact that the same machine stack pointer indicates the same
-function call nesting level, which usually works good enough but might
-fail...
+potential segfaults (especially with exception handling). On my Linux/x86
+machine this decreased the size of a new coroutine from 9k to 5k, the
+savings are much more apparent on machines without mmap or good memory
+management. This algorithm relies on the non-fact that the same machine
+stack pointer indicates the same function call nesting level, which
+usually works good enough but might fail...
 
-Disabling this option is safe, as it only increases memory consumption.
+The default (disabled) is safe, as it only increases memory consumption.
 
 EOF
 

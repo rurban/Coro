@@ -22,9 +22,11 @@ use Errno ();
 use Carp qw(croak);
 use Socket;
 
+use Coro::Util ();
+
 use base 'Coro::Handle';
 
-$VERSION = 0.12;
+$VERSION = 0.13;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {
@@ -45,10 +47,17 @@ sub _sa($$$) {
    my $_proto = _proto($proto);
    my $_port = _port($port, $proto);
 
-   my (undef, undef, undef, undef, @host) = gethostbyname $host
-      or croak "unknown host: $host";
-
-   map pack_sockaddr_in($_port,$_), @host;
+   # optimize this a bit for a common case
+   if ($host =~ /^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)$/) {
+      return pack_sockaddr_in($_port, inet_aton $host);
+   } else {
+      my (undef, undef, undef, undef, @host) = Coro::Util::gethostbyname $host
+         or croak "unknown host: $host";
+      map pack_sockaddr_in($_port,$_), @host;
+   }
 }
 
 =item $fh = new_inet Coro::Socket param => value, ...
@@ -73,7 +82,7 @@ sub _prepare_socket {
    socket $fh, PF_INET, $arg->{Type}, _proto($arg->{Proto})
       or return;
 
-   $fh = bless Coro::Handle->new_from_fh($fh), $class
+   $fh = bless Coro::Handle->new_from_fh($fh, timeout => $arg{Timeout}), $class
       or return;
 
    if ($arg->{ReuseAddr}) {
@@ -86,8 +95,8 @@ sub _prepare_socket {
          or croak "setsockopt(SO_REUSEPORT): $!";
    }
 
-   if ($arg->{LocalHost}) {
-      my @sa = _sa($arg->{LocalHost}, $arg->{LocalPort}, $arg->{Proto});
+   if ($arg->{LocalPort}) {
+      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort}, $arg->{Proto});
       $fh->bind($sa[0])
          or croak "bind($arg->{LocalHost}:$arg->{LocalPort}): $!";
    }
@@ -95,7 +104,7 @@ sub _prepare_socket {
    $fh;
 }
    
-sub new_inet {
+sub new {
    my $class = shift;
    my %arg = @_;
    my $fh;
@@ -127,14 +136,17 @@ sub new_inet {
    } else {
       $fh = $class->_prepare_socket(\%arg)
          or return;
-
+      if (exists $arg{Listen}) {
+         $fh->listen($arg{Listen})
+            or return;
+      }
    }
 
    $fh;
 }
 
 =item connect, listen, bind, accept, getsockopt, setsockopt,
-send , recv, getpeername, getsockname
+send, recv, getpeername, getsockname
 
 Do the same thing as the perl builtins (but return true on
 EINPROGRESS). Remember that these must be method calls.
@@ -153,7 +165,12 @@ sub setpeername	{ getpeername tied(${$_[0]})->{fh} }
 
 sub accept {
    my $fh;
-   accept $fh, tied(${$_[0]})->{fh} and new_from_fh Coro::Handle $fh;
+   while () {
+      $_[0]->readable or return;
+      accept $fh, tied(${$_[0]})->{fh}
+         and return new_from_fh Coro::Handle $fh;
+      return unless $!{EAGAIN};
+   }
 }
 
 1;

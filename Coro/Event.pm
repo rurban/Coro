@@ -51,7 +51,7 @@ use base 'Exporter';
 
 @EXPORT = qw(loop unloop sweep);
 
-$VERSION = 0.12;
+$VERSION = 0.13;
 
 =item $w = Coro::Event->flavour(args...)
 
@@ -103,14 +103,20 @@ for my $flavour (qw(idle var timer io signal)) {
          or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
 
       my $q = []; # [$coro, $event]
-      my $w = $new->(@_, cb => \&std_cb);
+      my $w = $new->(
+            desc => $flavour,
+            @_,
+            cb => \&std_cb,
+      );
       $w->private($q); # using private as attribute is pretty useless...
       bless $w, $class; # reblessing due to broken Event
    };
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
-      (&$coronew)->next;
+      my $e = (&$coronew)->next;
+      $e->w->cancel;
+      $e;
    };
 }
 
@@ -125,10 +131,7 @@ sub next {
       local $q->[0] = $Coro::current;
       Coro::schedule;
    }
-   #FIXME why doesn't delete work?
-   my $e = $q->[1];
-   $q->[1] = undef;
-   return $e;
+   delete $q->[1];
 }
 
 =item sweep
@@ -145,9 +148,7 @@ into the Event dispatcher.
 =cut
 
 sub sweep {
-   die "sweep NYI";#d#
-   $Coro::idle->ready;
-   Coro::cede;
+   one_event(0); # for now
 }
 
 =item $result = loop([$timeout])
@@ -155,6 +156,13 @@ sub sweep {
 This is the version of C<loop> you should use instead of C<Event::loop>
 when using this module - it will ensure correct scheduling in the presence
 of events.
+
+=begin comment
+
+Unlike loop's counterpart it is not an error when no watchers are active -
+loop silently returns in this case, as if unloop(undef) were called.
+
+=end comment
 
 =cut
 

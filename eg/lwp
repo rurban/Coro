@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+# this hack shows how one can overwrite IO::Socket::INET to provide
+# non-blocking sockets by default. This makes lwp magically
+# non-blocking. I hope.
+
+{
+   # this is all the required magic: we replace the constructor.
+   use Coro::Socket;
+   use IO::Socket::INET;
+   sub IO::Socket::INET::new {
+      shift; new Coro::Socket @_;
+   };
+}
+
+use Coro;
+use Coro::Event;
+use LWP::Simple;
+
+async {
+   print "hi\n";
+   get "http://localhost/";
+   print "ho\n";
+
+};
+
+async {
+   print "hi2\n";
+   get "http://localhost/";
+   print "ho2\n";
+};
+
+loop;
