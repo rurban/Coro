@@ -37,7 +37,7 @@ no warnings qw(uninitialized);
 
 use Coro ();
 
-$VERSION = 0.51;
+$VERSION = 0.52;
 
 =item new [inital count]
 

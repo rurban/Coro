@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.52
+0.52 Tue Nov  6 21:36:18 CET 2001
 	- ported to cygwin (trivial).
           patch by Gerrit P. Haase <gp@familiehaase.de>.
         - small setjmp code fix by Sullivan.DanielJ@epamail.epa.gov.
