@@ -12,7 +12,12 @@ $a = bless {}, main::;
 
 
 sub a {
-   $n++; # do something to taint the benchmark results ;)
+}
+
+sub b {
+   my ($self) = shift;
+   my $num = shift;
+   return $num+1;
 }
 
 $b = async {
@@ -28,20 +33,25 @@ $main = $Coro::main;
 
 *transfer = \&Coro::State::transfer;
 
-$c = Coro::State::_newprocess [sub {
+sub doit {
    while() {
       # some unrolling here as well..
       transfer($c, $main); transfer($c, $main);
       transfer($c, $main); transfer($c, $main);
       transfer($c, $main); transfer($c, $main);
    }
+}
+
+$c = Coro::State::_newprocess [sub {
+   doit(1,2,3,4,5,6,7,8,9);
 }];
 
 transfer($main, $c);
 
 timethese 100000, {
-   method   => '$a->a; $a->a',
-   resume   => 'yield',
+   empty    => '&a; &a',
+   method   => '$a->b(5); $a->b(6)',
+   yield    => 'yield',
    transfer => 'transfer($main, $c)',
 };
 

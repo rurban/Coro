@@ -36,12 +36,10 @@ use Coro::Specific;
 
 use base 'Exporter';
 
-$VERSION = 0.09;
+$VERSION = 0.10;
 @EXPORT = qw(csub result);
 
 {
-   use subs 'csub';
-
    my @csub;
 
    # this way of handling attributes simply is NOT scalable ;()
@@ -79,7 +77,7 @@ $VERSION = 0.09;
          no warnings;
          my $ref = findsym(@$_)
             or croak "package $package: cannot declare non-global subs as 'Cont'";
-         *$ref = csub $_->[1];
+         *$ref = &csub($_->[1]);
       }
       @csub = ();
    }

@@ -10,7 +10,7 @@
 
 #define MAY_FLUSH /* increases codesize */
 
-#define SUB_INIT "Coro::State::coroutine_initialization"
+#define SUB_INIT "Coro::State::initialize"
 
 #define SAVE_DEFAV	0x00000001
 #define SAVE_DEFSV	0x00000002
@@ -304,8 +304,8 @@ save_state(pTHX_ Coro__State c, int flags)
   {
     dSP;
     I32 cxix = cxstack_ix;
-    PERL_SI *top_si = PL_curstackinfo;
     PERL_CONTEXT *ccstk = cxstack;
+    PERL_SI *top_si = PL_curstackinfo;
 
     /*
      * the worst thing you can imagine happens first - we have to save
@@ -316,7 +316,7 @@ save_state(pTHX_ Coro__State c, int flags)
     /* this loop was inspired by pp_caller */
     for (;;)
       {
-       do
+        do
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
@@ -368,6 +368,11 @@ save_state(pTHX_ Coro__State c, int flags)
   c->defav = flags & SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
   c->defsv = flags & SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
   c->errsv = flags & SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
+
+  /* I have not the slightest idea of why av_reify is necessary */
+  /* but if it's missing the defav contents magically get replaced sometimes */
+  if (c->defav)
+    av_reify (c->defav);
 
   c->dowarn = PL_dowarn;
 
@@ -510,7 +515,7 @@ MODULE = Coro::State                PACKAGE = Coro::State
 PROTOTYPES: ENABLE
 
 BOOT:
-{ /* {} necessary for stoopid perl-5.6.x */
+{       /* {} necessary for stoopid perl-5.6.x */
 	HV * stash = gv_stashpvn("Coro::State", 10, TRUE);
 
         newCONSTSUB (stash, "SAVE_DEFAV", newSViv (SAVE_DEFAV));
@@ -541,7 +546,7 @@ _newprocess(args)
         RETVAL
 
 void
-transfer(prev, next, flags = SAVE_DEFAV)
+transfer(prev, next, flags = SAVE_ALL)
         Coro::State_or_hashref	prev
         Coro::State_or_hashref	next
         int			flags
@@ -578,7 +583,7 @@ flush()
 
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
-# this is dirty and should be in it's own .xs
+# this is dirty (do you hear me?) and should be in it's own .xs
 
 void
 result(...)
@@ -592,7 +597,7 @@ result(...)
         if (!returnstk)
           returnstk = SvRV (get_sv ("Coro::Cont::return", FALSE));
 
-        /* set up @_ */
+        /* set up @_ -- ugly */
         av_clear (defav);
         av_fill (defav, items - 1);
         while (items--)

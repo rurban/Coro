@@ -8,9 +8,9 @@ $test = 1;
 
 sub a1 : Coro {
    my $cont = csub {
-      { local $_; yield };
+      yield;
       result $_*2;
-      { local $_; yield };
+      yield;
       result $_*3;
    };
    my @arr = map &$cont, 1,2,3,4,5,6;
@@ -23,9 +23,9 @@ sub a1 : Coro {
 
 sub a2 : Coro {
    my $cont = csub {
-      { local $_; yield };
+      yield;
       result $_*20;
-      { local $_; yield };
+      yield;
       result $_*30;
    };
    my @arr = map &$cont, 1,2,3,4,5,6;

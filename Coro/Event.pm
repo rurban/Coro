@@ -49,9 +49,9 @@ use Event qw(unloop); # we are re-exporting this, cooool!
 use base 'Event';
 use base 'Exporter';
 
-@EXPORT = qw(loop unloop idle);
+@EXPORT = qw(loop unloop sweep);
 
-$VERSION = 0.09;
+$VERSION = 0.10;
 
 =item $w = Coro::Event->flavour(args...)
 
@@ -87,6 +87,9 @@ for my $flavour (qw(idle var timer io signal)) {
       # how does one do method-call-by-name?
       # my $w = $class->SUPER::$flavour(@_);
 
+      $_[0] eq Coro::Event::
+         or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
+
       my $w;
       my $q = []; # [$coro, $event]
       $w = $new->(@_, cb => sub {
@@ -120,7 +123,7 @@ sub next {
    delete $q->[1];
 }
 
-=item idle
+=item sweep
 
 Similar to Event::one_event and Event::sweep: The idle task is called once
 (this has the effect of jumping back into the Event loop once to serve new
@@ -128,7 +131,7 @@ events).
 
 =cut
 
-sub idle {
+sub sweep {
    $Coro::idle->ready;
    Coro::yield;
 }

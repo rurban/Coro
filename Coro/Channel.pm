@@ -15,6 +15,11 @@ Coro::Channel - message queues
 
 =head1 DESCRIPTION
 
+A Coro::Channel is the equivalent of a pipe: you can put things into it on
+one end end read things out of it from the other hand. If the capacity of
+the Channel is maxed out writers will block. Both ends of a Channel can be
+read/written from as many coroutines as you want.
+
 =over 4
 
 =cut
@@ -23,19 +28,19 @@ package Coro::Channel;
 
 use Coro ();
 
-$VERSION = 0.09;
+$VERSION = 0.10;
 
 =item $q = new Coro:Channel $maxsize
 
 Create a new channel with the given maximum size (unlimited if C<maxsize>
-is omitted). Stating a size of zero gives you a traditional channel, i.e.
-a queue that can store only a single element.
+is omitted). Giving a size of one gives you a traditional channel, i.e. a
+queue that can store only a single element.
 
 =cut
 
 sub new {
    # [\@contents, [$getwait], $maxsize, [$putwait]];
-   bless [[], [], $_[1]], $_[0];
+   bless [[], [], $_[1] || (1e30),[]], $_[0];
 }
 
 =item $q->put($scalar)
@@ -49,8 +54,9 @@ sub put {
 
    (pop @{$_[0][1]})->ready if @{$_[0][1]};
 
-   while (defined $_[0][2] && @{$_[0][0]} >= $_[0][2]) {
-      push @{$_[0][3]}, $Coro::current; &Coro::schedule;
+   while (@{$_[0][0]} >= $_[0][2]) {
+      push @{$_[0][3]}, $Coro::current;
+      &Coro::schedule;
    }
 }
 
@@ -61,12 +67,12 @@ Return the next element from the queue, waiting if necessary.
 =cut
 
 sub get {
+   (pop @{$_[0][3]})->ready if @{$_[0][3]};
+
    while (!@{$_[0][0]}) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
    }
-
-   (pop @{$_[0][3]})->ready if @{$_[0][3]};
 
    shift @{$_[0][0]};
 }

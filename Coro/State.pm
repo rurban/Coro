@@ -38,7 +38,7 @@ modules for a more useful process abstraction including scheduling.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.09;
+   $VERSION = 0.10;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
@@ -63,7 +63,7 @@ to save the current coroutine in.
 
 =cut
 
-sub coroutine_initialization {
+sub initialize {
    my $proc = shift;
    do {
       eval { &$proc };
@@ -89,8 +89,8 @@ coroutine saved in C<$next>.
 
 The "state" of a subroutine includes the scope, i.e. lexical variables and
 the current execution state. The C<$flags> value can be used to specify
-that additional state be saved/restored, by C<||>-ing the following
-constants together:
+that additional state be saved (and later restored), by C<||>-ing the
+following constants together:
 
    Constant            Effect
    SAVE_DEFAV          save/restore @_
@@ -99,8 +99,7 @@ constants together:
 
 These constants are not exported by default. The default is subject to
 change (because we are still at an early development stage) but will
-stabilize. You have to make sure that the destination state is valid with
-respect to the flags, segfaults or worse will result otherwise.
+stabilize.
 
 If you feel that something important is missing then tell me.  Also
 remember that every function call that might call C<transfer> (such
@@ -135,8 +134,8 @@ C<$error_coro> return the error message and the error-causing coroutine
 =cut
 
 $error = sub {
-   require Carp;
-   Carp::confess("FATAL: $_[1]\n");
+   print STDERR "FATAL: $_[1]\n";
+   exit 51;
 };
 
 =item Coro::State::flush

@@ -25,6 +25,11 @@ Threads but don't run in parallel.
 
 This module is still experimental, see the BUGS section below.
 
+In this module, coroutines are defined as "callchain + lexical variables
++ @_ + $_ + $@ + $^W), that is, a coroutine has it's own callchain, it's
+own set of lexicals and it's own set of perl's most important global
+variables.
+
 =cut
 
 package Coro;
@@ -33,14 +38,12 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.09;
+$VERSION = 0.10;
 
 @EXPORT = qw(async yield schedule terminate current);
 @EXPORT_OK = qw($current);
 
 {
-   use subs 'async';
-
    my @async;
 
    # this way of handling attributes simply is NOT scalable ;()
@@ -62,7 +65,7 @@ $VERSION = 0.09;
    }
 
    sub INIT {
-      async pop @async while @async;
+      &async(pop @async) while @async;
    }
 }
 
@@ -236,7 +239,7 @@ sub ready {
    remaining bugs.
  - this module is not thread-safe. You must only ever use this module from
    the same thread (this requirement might be loosened in the future to
-   allow per-thread schedulers, but Coro::Satte does not yet allow this).
+   allow per-thread schedulers, but Coro::State does not yet allow this).
 
 =head1 SEE ALSO
 

@@ -1,10 +1,13 @@
 Revision history for Perl extension Coro.
 
+0.10
 	- new function Coro::Event::idle.
         - the idle process is now overriden
           by default in Coro::Event.
         - Coro::Channel now enforces the size.
         - canceling events now works in all cases.
+        - Coro state now include $_ and $@.
+        - yet another bug workaround that I do not really understand :(
 
 0.08  Thu Jul 19 06:13:25 CEST 2001
 	- release candidate 2 (new functionality).
@@ -12,7 +15,7 @@ Revision history for Perl extension Coro.
         - transfer now supports a flags value (mostly for speed ATM).
         - might compile and work in the presence of threads now.
         - continuations have a saner syntax.
-        - memleaks down to 129 bytes / coroutine ):.
+        - no more memleaks.
 
 0.07  Tue Jul 17 17:40:18 CEST 2001
 	- release candidate 1 ;)
