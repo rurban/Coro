@@ -357,7 +357,7 @@ save_state(pTHX_ Coro__State c, int flags)
     /* this loop was inspired by pp_caller */
     for (;;)
       {
-        do
+        while (cxix >= 0)
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
@@ -393,7 +393,6 @@ save_state(pTHX_ Coro__State c, int flags)
                 croak ("CXt_FORMAT not yet handled. Don't switch coroutines from within formats");
               }
           }
-        while (cxix >= 0);
 
         if (top_si->si_type == PERLSI_MAIN)
           break;
