@@ -2,7 +2,7 @@ Revision history for Perl extension Coro.
 
 0.652
 	- Applied patch by Slaven Rezic to set default to "s" on FreeBSD,
-          'cause they forgot to implement some standard unix functions...
+          cause version 4 doesn't have ucontext.
 	- Benjamin Reed reported that setjmp works fine on darwin,
           so preselect it.
 
