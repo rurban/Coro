@@ -79,7 +79,16 @@ sub timed_down {
    while ($_[0][0] <= 0) {
       push @{$_[0][1]}, $Coro::current;
       Coro::schedule;
-      $timeout and return;
+      if ($timeout) {
+         # ugly as hell. slow, too!
+         for (0..$#{$_[0][1]}) {
+            if ($_[0][1][$_] == $Coro::current) {
+               splice @{$_[0][1]}, $_, 1;
+               return;
+            }
+         }
+         die;
+      }
    }
 
    --$_[0][0];
@@ -141,12 +150,12 @@ sub guard {
    &down;
    # double indirection because bless works on the referenced
    # object, not (only) on the reference itself.
-   bless \\$_[0], Coro::Semaphore::guard;
+   bless \\$_[0], Coro::Semaphore::guard::;
 }
 
 sub timed_guard {
    &timed_down
-      ? bless \\$_[0], Coro::Semaphore::guard
+      ? bless \\$_[0], Coro::Semaphore::guard::
       : ();
 }
 

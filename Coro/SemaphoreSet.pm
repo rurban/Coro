@@ -76,7 +76,16 @@ sub timed_down {
    while ($sem->[0] <= 0) {
       push @{$sem->[1]}, $Coro::current;
       Coro::schedule;
-      $timeout and return;
+      if ($timeout) {
+         # ugly as hell. splice would be faster
+         for (0..$#{$_[0][1]}) {
+            if ($_[0][1][$_] == $Coro::current) {
+               splice @{$_[0][1]}, $_, 1;
+               return;
+            }
+         }
+         die;
+      }
    }
    --$sem->[0];
    return 1;
@@ -138,12 +147,12 @@ $timeout seconds, otherwise the guard object.
 
 sub guard {
    &down;
-   bless [@_], Coro::SemaphoreSet::guard;
+   bless [@_], Coro::SemaphoreSet::guard::;
 }
 
 sub guard {
    &timed_down
-      ? bless [$_[0], $_[1]], Coro::SemaphoreSet::guard
+      ? bless [$_[0], $_[1]], Coro::SemaphoreSet::guard::
       : ();
 }
 
