@@ -92,7 +92,7 @@ sub new {
             ($error_msg, $error_coro) = ($@, $current);
             $error->resume;
          }
-      } while ();
+      } while (1);
    }, $class;
 }
 

@@ -142,11 +142,11 @@ _transfer(old,new)
 
             exit (0);
 
-            SPAGAIN;
+            /*SPAGAIN;
             SAVE (new);
 
             LOAD (old);
-            SPAGAIN;
+            SPAGAIN;*/
           }
 
 void

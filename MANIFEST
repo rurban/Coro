@@ -11,3 +11,4 @@ typemap
 t/00_basic.t
 eg/prodcons
 eg/prodcons2
+eg/bench
