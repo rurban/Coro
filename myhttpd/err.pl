@@ -94,7 +94,8 @@ EOF
 sub conn::err_blocked {
    my $self = shift;
    my $ip = $self->{remote_addr};
-   my $time = time2str $conn::blocked{$ip} = $::NOW + $::BLOCKTIME;
+   my $ctime = $HTTP_NOW;
+   my $etime = time2str $conn::blocked{$ip} = $::NOW + $::BLOCKTIME;
 
    Coro::Event::do_timer(after => 20*rand);
 
@@ -102,8 +103,8 @@ sub conn::err_blocked {
               {
                  "Content-Type" => "text/html",
                  "Retry-After" => $::BLOCKTIME,
-                 "Warning" => "Please do NOT retry, you have been blocked",
-                 "WWW-Authenticate" => "Basic realm=\"Please do NOT retry, you have been blocked\"",
+                 "Warning" => "Please do NOT retry, you have been blocked. Press Cancel instead.",
+                 "WWW-Authenticate" => "Basic realm=\"Please do NOT retry, you have been blocked. Press Cancel instead.\"",
                  "Connection" => "close",
               },
               <<EOF);
@@ -116,10 +117,14 @@ sub conn::err_blocked {
 <p>You have been blocked because you opened too many connections. You
 may retry at</p>
 
-   <p><blockquote>$time.</blockquote></p>
+   <p><blockquote>$etime.</blockquote></p>
+
+<p>For your reference, the current time is:</p>
+   
+   <p><blockquote>$ctime.</blockquote></p>
    
 <p>Until then, each new access will renew the block. You might want to have a
-look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#connectionlimit">FAQ</a>.</p>
+look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#blocked">FAQ</a>.</p>
 
 </body></html>
 EOF

@@ -44,10 +44,9 @@ my @pool;
 # one "execution thread"
 sub handler {
    while () {
-      my $new = pop @newcons;
-      if ($new) {
+      if (@newcons) {
          eval {
-            conn->new(@$new)->handle;
+            conn->new(@{pop @newcons})->handle;
          };
          slog 1, "$@" if $@ && !ref $@;
          $connections->up;
