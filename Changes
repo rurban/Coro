@@ -1,7 +1,9 @@
 Revision history for Perl extension Coro.
 
+0.95 Fri Dec 12 20:50:57 CET 2003
 	- removed Coro::State::flush, implemented a new and much
           faster caching mechanism by attaching magic to the CV.
+        - a memleak with (real) closures remains.
 
 0.9  Sun Nov 23 04:32:39 CET 2003
 	- fix a few very hard to track down but (of course) stupid

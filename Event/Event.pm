@@ -52,7 +52,7 @@ use base 'Exporter';
 @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = "0.9";
+   $VERSION = 0.95;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
 
@@ -111,7 +111,7 @@ for my $flavour (qw(idle var timer io signal)) {
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
       my $e = (&$coronew)->next;
-      $e->cancel; # $e = $e->w->cancel ($e == $e->w!)
+      $e->cancel; # $e === $e->w
       $e;
    };
 }
