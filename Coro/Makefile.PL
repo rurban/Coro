@@ -23,6 +23,8 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/) {
    $iface = "s";
 } elsif ($^O =~ /solaris/) {
    $iface = "s";
+} elsif ($^O =~ /darwin/) {
+   $iface = "s";
 } elsif (-e "/usr/include/ucontext.h") {
    $iface = "u";
 } else {
