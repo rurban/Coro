@@ -13,3 +13,14 @@ WriteMakefile(
     DIR  => ['Coro'],
 );
 
+sub MY::postamble {
+   <<EOF;
+
+# set \$VERSION in all modules
+setver:
+	\$(PERL) -pi -e 's/^(\\s*\\\$\$VERSION\\s*=\\s*).*\$\$/\$\${1}\$(VERSION);/' *.pm Coro/*.pm
+
+EOF
+}
+
+

@@ -7,7 +7,7 @@ use Coro::Cont;
 $test = 1;
 
 sub a1 : Coro {
-   my $cont = cont {
+   my $cont = csub {
       { local $_; yield };
       result $_*2;
       { local $_; yield };
@@ -22,7 +22,7 @@ sub a1 : Coro {
 }
 
 sub a2 : Coro {
-   my $cont = cont {
+   my $cont = csub {
       { local $_; yield };
       result $_*20;
       { local $_; yield };
@@ -41,3 +41,4 @@ print "ok ", $test++, "\n";
 $done = 0;
 
 yield while $done < 2;
+

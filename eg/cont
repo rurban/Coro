@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 
+use Coro;
 use Coro::Cont;
 
-my $cont = cont {
-   result $_*2;
-   result $_*3;
-};
+sub mul23 : Cont {
+   result shift*2;
+   result shift*3;
+}
 
 my %hash = (1,1,2,2,3,3);
 
