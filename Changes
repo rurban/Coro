@@ -1,7 +1,8 @@
 Revision history for Perl extension Coro.
 
 0.10
-        - added Coro/libcoro, a portable coroutine implementation for C
+	- release candidate 3. A rather new internal structure :(
+	- added Coro/libcoro, a portable coroutine implementation for C
           (not even perl-dependent!!!), which can be used by Coro::State.
 	- renamed SAVE_DEFSV (on xs-level only) to avoid symbol clash in
           perl-5.6.
