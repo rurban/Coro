@@ -1,5 +1,13 @@
 Revision history for Perl extension Coro.
 
+0.06  Tue Jul 17 04:23:24 CEST 2001
+        - ok, I found the showstopper - the same sub must not be
+          re-entered in two different coroutines, otherwise => crash. I
+          see no easy solution to this problem, except by walking the call
+          chaing and saving/restoring the cv's, which is what I do now.
+        - memory leaks still latent, especially at thread termination.
+        - Coro::Event now works (haha).
+
 0.05  Sun Jul 15 17:32:20 CEST 2001
 	- fixed a few issues in Coro::Event.
         - I forgot to include Coro::Event in 0.04 :(:(:(

@@ -12,10 +12,13 @@ Coro::Event - do events the coro-way
     while() {
        print "cmd> ";
        my $ev = $w->next; my $cmd = <STDIN>;
+       unloop unless $cmd ne "";
        print "data> ";
        my $ev = $w->next; my $data = <STDIN>;
     }
  }
+
+ &loop;
 
 =head1 DESCRIPTION
 
@@ -39,14 +42,18 @@ package Coro::Event;
 
 no warnings;
 
-use Coro::Channel;
+use Carp;
+
+use Event qw(unloop); # we are re-exporting this, cooool!
 
 use base 'Event';
 use base 'Exporter';
 
-$VERSION = 0.01;
+@EXPORT = qw(loop unloop);
 
-=item Coro::Event->flavour(args...)
+$VERSION = 0.06;
+
+=item $w = Coro::Event->flavour(args...)
 
 Create and return a watcher of the given type.
 
@@ -54,6 +61,12 @@ Examples:
 
   my $reader = Coro::Event->io(fd => $filehandle, poll => 'r');
   $reader->next;
+
+=cut
+
+=item $w->next
+
+Return the next event of the event queue of the watcher.
 
 =cut
 
@@ -74,9 +87,17 @@ for my $flavour (qw(idle var timer io signal)) {
       # how does one do method-call-by-name?
       # my $w = $class->SUPER::$flavour(@_);
 
-      my $q = new Coro::Channel 0;
       my $w;
-      $w = $new->(@_, parked => 1, cb => sub { $w->stop; $q->put($_[0]) });
+      my $q = []; # [$coro, $event]
+      $w = $new->(@_, cb => sub {
+            $q->[1] = $_[0];
+            if ($q->[0]) { # somebody waiting?
+               $q->[0]->ready;
+               Coro::yield;
+            } else {
+               $w->stop;
+            }
+      });
       $w->private($q); # using private as attribute is pretty useless...
       bless $w, $class; # reblessing due to broken Event
    };
@@ -87,27 +108,37 @@ for my $flavour (qw(idle var timer io signal)) {
    };
 }
 
-=item $w->next
-
-Return the next event of the event queue of the watcher.
-
-=cut
-
 sub next {
-   $_[0]->start;
-   $_[0]->private->get;
+   my $q = $_[0]->private;
+   croak "only one coroutine can wait for an event" if $q->[0];
+   if (!$q->[1]) { # no event waiting?
+      local $q->[0] = $Coro::current;
+      Coro::schedule;
+   } else {
+      $_[0]->again;
+   }
+   delete $q->[1];
 }
 
-=item Coro::Event->main
+=item $result = loop([$timeout])
+
+This is the version of C<loop> you should use instead of C<Event::loop>
+when using this module - it will ensure correct scheduling in the presence
+of events.
 
 =cut
 
-sub main {
-   local $Coro::idle = new Coro sub {
-      Event::loop;
-   };
-   Coro::schedule;
+sub loop(;$) {
+   local $Coro::idle = $Coro::current;
+   Coro::schedule; # become idle task, which is implicitly ready
+   &Event::loop;
 }
+
+=item unloop([$result])
+
+Same as Event::unloop (provided here for your convinience only).
+
+=cut
 
 1;
 

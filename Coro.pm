@@ -20,6 +20,11 @@ Coro - coroutine process abstraction
 
 =head1 DESCRIPTION
 
+This module collection manages coroutines. Coroutines are similar to
+Threads but don't run in parallel.
+
+This module is still experimental, see the BUGS section below.
+
 =cut
 
 package Coro;
@@ -28,9 +33,9 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.05;
+$VERSION = 0.06;
 
-@EXPORT = qw(async yield schedule);
+@EXPORT = qw(async yield schedule terminate);
 @EXPORT_OK = qw($current);
 
 {
@@ -96,7 +101,8 @@ our $idle = new Coro sub {
 };
 
 # we really need priorities...
-my @ready = (); # the ready queue. hehe, rather broken ;)
+## my @ready; #d#
+our @ready = (); # the ready queue. hehe, rather broken ;)
 
 # static methods. not really.
 
@@ -106,16 +112,24 @@ Static methods are actually functions that operate on the current process only.
 
 =over 4
 
-=item async { ... };
+=item async { ... } [@args...]
 
 Create a new asynchronous process and return it's process object
 (usually unused). When the sub returns the new process is automatically
 terminated.
 
+   # create a new coroutine that just prints its arguments
+   async {
+      print "@_\n";
+   } 1,2,3,4;
+
+The coderef you submit MUST NOT be a closure that refers to variables
+in an outer scope. This does NOT work. Pass arguments into it instead.
+
 =cut
 
-sub async(&) {
-   my $pid = new Coro $_[0];
+sub async(&@) {
+   my $pid = new Coro @_;
    $pid->ready;
    $pid;
 }
@@ -131,7 +145,6 @@ never be called again.
 my $prev;
 
 sub schedule {
-   local @_;
    # should be done using priorities :(
    ($prev, $current) = ($current, shift @ready || $idle);
    Coro::State::transfer($prev, $current);
@@ -153,9 +166,12 @@ sub yield {
 
 Terminates the current process.
 
+Future versions of this function will allow result arguments.
+
 =cut
 
 sub terminate {
+   $current->{_results} = [@_];
    &schedule;
 }
 
@@ -169,19 +185,25 @@ These are the methods you can call on process objects.
 
 =over 4
 
-=item new Coro \&sub;
+=item new Coro \&sub [, @args...]
 
 Create a new process and return it. When the sub returns the process
 automatically terminates. To start the process you must first put it into
 the ready queue by calling the ready method.
 
+The coderef you submit MUST NOT be a closure that refers to variables
+in an outer scope. This does NOT work. Pass arguments into it instead.
+
 =cut
+
+sub _newcoro {
+   terminate &{+shift};
+}
 
 sub new {
    my $class = shift;
-   my $proc = $_[0];
    bless {
-      _coro_state => new Coro::State ($proc ? sub { &$proc; &terminate } : $proc),
+      _coro_state => (new Coro::State $_[0] && \&_newcoro, @_),
    }, $class;
 }
 
@@ -200,6 +222,14 @@ sub ready {
 =cut
 
 1;
+
+=head1 BUGS
+
+ - could be faster, especially when the core would introduce special
+   support for coroutines (like it does for threads).
+ - there is still a memleak on coroutine termination that I could not
+   identify. Could be as small as a single SV.
+ - this module is not well-tested.
 
 =head1 SEE ALSO
 

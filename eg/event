@@ -1,48 +1,62 @@
 #!/usr/bin/perl
 
+# useless stuff
+
 use Coro;
 use Coro::Event;
 
 my $stdin = Coro::Event->io(fd => \*STDIN, poll => 'r');
 
+# this gets started everytime a user enters a finger command
+sub finger {
+   my $user = shift;
+   my $host = shift;
+   use IO::Socket::INET;
+   # is there ANY way to do non-blocking connects with IO::Socket::INET?
+   # I don't see how...
+   my $io = new IO::Socket::INET PeerAddr => "$host:finger";
+   $io or die;
+   syswrite $io, "$user\n";
+   my $r = Coro::Event->io(fd => $io, poll => 'r');
+   my $buf;
+   $r->next while 0 != sysread $io, $buf, 8192, length $buf;
+   #do_timer(after => 5);
+   print $buf;
+}
+
+# this reads one line from the keyboard
 sub kbdline {
    $stdin->next;
    my $x = <STDIN>; chomp $x; $x;
 }
 
+# this is the main task
 sub keyboard : Coro {
    $|=1;
    while() {
       print "cmd> ";  my $cmd  = kbdline;
-      print "data> "; my $data = kbdline;
-      print "cmd<$cmd> data<$data>\n";
-      print "working...";
-      do_timer(after => 1);
-      print "done\n";
+      if ($cmd eq "finger") {
+         print "user> "; my $user = kbdline;
+         print "host> "; my $host = kbdline;
+         async { finger(@_) } $user, $host;
+      } elsif ($cmd eq "quit") {
+         unloop(777);
+         terminate;
+      } else {
+         print "enter command, either 'finger' or 'quit'\n";
+      }
    }
 }
 
-sub idle : Coro {
-   my $w = Coro::Event->idle(min => 1, max => 2);
+# display the time or garble the display, YMMV.
+sub timer : Coro {
+   my $w = Coro::Event->timer(interval => 0.001, hard => 1);
+   use Time::HiRes qw(time);
    while () {
       $w->next;
-      print ".";
+      print "\e7\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C   <time ",time,">   \e8";
    };
 }
 
-sub finger : Coro {
-   use IO::Socket::INET;
-   # is there ANY way to do non-blocking connects with IO::Socket::INET?
-   # I don't see how...
-   my $io = new IO::Socket::INET PeerAddr => "noc.dfn.de:finger";
-   print "connected, sending\n";
-   syswrite $io, "trouble\n";
-   my $r = Coro::Event->io(fd => $io, poll => 'r');
-   my $buf;
-   $r->next while 0 != sysread $io, $buf, 8192, length $buf;
-   print $buf;
-   do_timer(after => 60);
-}
-
-Coro::Event->main;
+print "unlooped with value: ",loop(),"\n";
 

@@ -17,12 +17,17 @@ SYNOPSIS
      yield;
 
 DESCRIPTION
+    This module collection manages coroutines. Coroutines are similar to
+    Threads but don't run in parallel.
+
+    This module is still experimental, see the BUGS section below.
+
     $main
     This coroutine represents the main program.
 
     $current
     The current coroutine (the last coroutine switched to). The initial
-    value is "$main" (of course).
+    value is $main (of course).
 
     $idle
     The coroutine to switch to when no other coroutine is running. The
@@ -33,10 +38,19 @@ DESCRIPTION
     Static methods are actually functions that operate on the current
     process only.
 
-    async { ... };
+    async { ... } [@args...]
         Create a new asynchronous process and return it's process object
         (usually unused). When the sub returns the new process is
         automatically terminated.
+
+           # create a new coroutine that just prints its arguments
+           async {
+              print "@_\n";
+           } 1,2,3,4;
+
+        The coderef you submit MUST NOT be a closure that refers to
+        variables in an outer scope. This does NOT work. Pass arguments into
+        it instead.
 
     schedule
         Calls the scheduler. Please note that the current process will not
@@ -50,19 +64,32 @@ DESCRIPTION
     terminate
         Terminates the current process.
 
+        Future versions of this function will allow result arguments.
+
     # dynamic methods
 
   PROCESS METHODS
 
     These are the methods you can call on process objects.
 
-    new Coro \&sub;
+    new Coro \&sub [, @args...]
         Create a new process and return it. When the sub returns the process
         automatically terminates. To start the process you must first put it
         into the ready queue by calling the ready method.
 
+        The coderef you submit MUST NOT be a closure that refers to
+        variables in an outer scope. This does NOT work. Pass arguments into
+        it instead.
+
     $process->ready
         Put the current process into the ready queue.
+
+BUGS
+     - could be faster, especially when the core would introduce special
+       support for coroutines (like it does for threads).
+     - there is still a memleak on coroutine termination that I could not
+       identify. Could be as small as a single SV.
+     - this module is not well-tested.
 
 SEE ALSO
     the Coro::Channel manpage, the Coro::Cont manpage, the Coro::Specific

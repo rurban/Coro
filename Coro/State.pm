@@ -7,11 +7,11 @@ Coro::State - create and manage simple coroutines
  use Coro::State;
 
  $new = new Coro::State sub {
-    print "in coroutine, switching back\n";
+    print "in coroutine (called with @_), switching back\n";
     $new->transfer($main);
     print "in coroutine again, switching back\n";
     $new->transfer($main);
- };
+ }, 5;
 
  $main = new Coro::State;
 
@@ -38,17 +38,20 @@ modules for a more useful process abstraction including scheduling.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.03;
+   $VERSION = 0.06;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
 }
 
-=item $coro = new [$coderef [, @args]]
+=item $coro = new [$coderef] [, @args...]
 
 Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If, the subroutine
 returns it will be executed again.
+
+The coderef you submit MUST NOT be a closure that refers to variables
+in an outer scope. This does NOT work.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
@@ -56,19 +59,23 @@ to save the current coroutine in.
 
 =cut
 
+sub _newcoro {
+   my $proc = shift;
+   do {
+      eval { &$proc };
+      if ($@) {
+         my $err = $@;
+         $error->(undef, $err);
+         print STDERR "FATAL: error function returned\n";
+         exit(50);
+      }
+   } while (1);
+}
+
 sub new {
-   my $class = $_[0];
-   my $proc = $_[1] || sub { die "tried to transfer to an empty coroutine" };
-   bless newprocess {
-      do {
-         eval { &$proc };
-         if ($@) {
-            $error->(undef, $@);
-            print STDERR "FATAL: error function returned\n";
-            exit(50);
-         }
-      } while (1);
-   }, $class;
+   my $class = shift;
+   my $proc = shift || sub { die "FATAL: tried to transfer to an empty coroutine" };
+   bless _newprocess [$proc, @_], $class;
 }
 
 =item $prev->transfer($next)
@@ -116,7 +123,7 @@ C<$error_coro> return the error message and the error-causing coroutine
 
 $error = sub {
    require Carp;
-   Carp::confess("FATAL: $_[1]\nprogram aborted\n");
+   Carp::confess("FATAL: $_[1]\n");
 };
 
 1;
