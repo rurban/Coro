@@ -23,7 +23,7 @@ no warnings qw(uninitialized);
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 0.65;
+$VERSION = 0.651;
 
 @EXPORT = qw(unblock);
 
