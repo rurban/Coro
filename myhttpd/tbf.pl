@@ -2,7 +2,7 @@ package tbf;
 
 # kind of token-bucket-filter
 
-my $max_per_client = 64000;
+my $max_per_client = 24000;
 
 sub new {
    my $class = shift;

@@ -195,6 +195,31 @@ sub DESTROY {
    $::conns--;
 }
 
+sub prune_cache {
+   my $hash = $_[0];
+
+   for (keys %$hash) {
+      if (ref $hash->{$_} eq HASH::) {
+         prune_cache($hash->{$_});
+         unless (scalar keys %{$hash->{$_}}) {
+            delete $hash->{$_};
+            $d2++;
+         }
+      }
+   }
+}
+
+sub prune_caches {
+   prune_cache \%conn;
+   prune_cache \%uri;
+
+   for (keys %blocked) {
+      delete $blocked{$_} if $blocked{$_}[0] > $::NOW;
+   }
+}
+
+Event->timer(interval => 60, cb => \&prune_caches);
+
 sub slog {
    my $self = shift;
    main::slog($_[0], "$self->{remote_id}> $_[1]");

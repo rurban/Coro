@@ -10,6 +10,7 @@ use Coro::Event;
 use Coro::Semaphore;
 use Coro::SemaphoreSet;
 use Coro::Socket;
+use Coro::Timer;
 
 use BerkeleyDB;
 
@@ -85,6 +86,10 @@ sub whois_request {
             } else {
                last;
             }
+         } else {
+            # only retry once a minute
+            print STDERR "unable to connect to $self->{ip} ($self->{name}), retrying...\n";
+            Coro::Timer::sleep 60;
          }
       }
 
@@ -338,9 +343,9 @@ sub ip_request {
    my ($arin, $ripe, $apnic);
 
    $whois = $WHOIS{RIPE}->ip_request($ip)
-         || $WHOIS{LACNIC}->ip_request($ip)
          || $WHOIS{APNIC} ->ip_request($ip)
          || $WHOIS{ARIN} ->ip_request($ip)
+         || $WHOIS{LACNIC}->ip_request($ip)
          ;
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
