@@ -80,7 +80,8 @@ Event->io(fd => Linux::AIO::poll_fileno,
           poll => 'r', async => 1,
           cb => \&Linux::AIO::poll_cb);
 
-our %conn; # $conn{ip}{fh} => connobj
+our %conn; # $conn{ip}{self} => connobj
+our %uri;  # $uri{ip}{uri}{self}
 our %blocked;
 our %mimetype;
 
@@ -129,6 +130,7 @@ sub DESTROY {
 
 # end of connection
 sub eoconn {
+   my $self = shift;
    delete $uri{$self->{remote_addr}}{$self->{uri}}{$self*1};
 }
 
@@ -278,9 +280,9 @@ sub handle {
          $self->respond;
       };
 
-      die if $@ && !ref $@;
-
       $self->eoconn;
+
+      die if $@ && !ref $@;
 
       last if $self->{h}{connection} =~ /close/ || $self->{version} lt "1.1";
 
@@ -430,7 +432,7 @@ sub handle_file {
             ($l, $h) = (0, $length - 1);
             goto ignore;
          }
-         goto satisfiable if $l >= 0 && $l < $length && $h >= 0 && $h > $l;
+         goto satisfiable if $l >= 0 && $l < $length && $h >= 0 && $h >= $l;
       }
       $hdr->{"Content-Range"} = "bytes */$length";
       $hdr->{"Content-Length"} = $length;
@@ -441,8 +443,6 @@ satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
          if (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
-            Coro::Event::do_timer(after => 15);
-
             $self->err(400, "segmented downloads are not allowed");
          }
       }
