@@ -1,5 +1,9 @@
 Revision history for Perl extension Coro.
 
+0.651 Sat Mar 29 15:00:23 CET 2003
+	- fix a bug in Coro::Handle where some bytes could get lost
+          on reading, reported by jason@nichego.net.
+
 0.65  Sun Mar 23 00:08:26 CET 2003
 	- added a README.linux-glibc.
         - new module Coro::Select.
