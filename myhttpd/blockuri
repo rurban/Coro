@@ -8,6 +8,7 @@ GROUP fra FR LU
 !./neon genesis				usa de IT fra
 !./pokemon				fra eur usa de
 !/eps/.*creamy mami			eur usa
+!/eps/X					usa de
 !/eps/amazing nurse nanako		usa
 !/eps/ancient books of ys		usa
 !/eps/angel sanctuary			usa
@@ -35,10 +36,9 @@ GROUP fra FR LU
 !/eps/escaflowne			IT usa
 !/eps/excel saga			IT usa
 !/eps/flcl				usa
-!/eps/fushigi yuugi			usa
 !/eps/fruits basket			usa
+!/eps/fushigi yuugi			usa
 !/eps/gasaraki				usa
-!/eps/hellsing				usa
 !/eps/gatekeepers			usa
 !/eps/gestalt				usa
 !/eps/golden boy			usa
@@ -46,6 +46,7 @@ GROUP fra FR LU
 !/eps/gundam wing			usa
 !/eps/hand maid may			usa IT
 !/eps/haunted junction			usa
+!/eps/hellsing				usa
 !/eps/himiko-den			usa
 !/eps/i my me				usa
 !/eps/i my me				usa
@@ -78,6 +79,8 @@ GROUP fra FR LU
 !/eps/orphen				usa
 !/eps/outlaw star			usa
 !/eps/ranma				usa fra IT
+!/eps/record of the lodoss war		usa
+!/eps/record of the lodoss war		usa
 !/eps/rev.*utena			usa IT
 !/eps/robotech				usa
 !/eps/robotech				usa
@@ -104,8 +107,6 @@ GROUP fra FR LU
 !/eps/vandread				usa
 !/eps/wedding peach			IT de
 !/eps/yu yu hakusho			usa
-!/eps/record of the lodoss war		usa
-!/eps/X					usa de
 !/manga/angelic layer			de
 !/manga/ayashi no ceres			usa
 !/manga/battle angel			de
@@ -140,7 +141,7 @@ GROUP fra FR LU
 !/movies/vampire hunter d		usa
 !/movies/whisper of the heart		usa
 !/movies/zone of enders			usa
-!hentai//urotsukidoji			eur usa
+!hentai/urotsukidoji			eur usa
 !hentai/Tokyo Private Police		usa
 !hentai/advanturekid			usa
 !hentai/area 88				usa

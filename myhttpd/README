@@ -1,0 +1,15 @@
+This is a mess. There is not much structure to this code, and it is not
+ready for release ;)
+
+1. read MANIFEST
+2. copy config.pl.dist to config.pl
+3. mkdir db && mkdir logs
+4. make sure port 7262 (shell!) is firewalled
+5. perl myhttpd
+
+if you find any bugs => complain. if you don't understand the code,
+meditate, then complain. if you want to restructure it, go on, i'll do
+this myself once i have time, and the cdurrent file structure likely won't
+survive.
+
+pcg@goof.com

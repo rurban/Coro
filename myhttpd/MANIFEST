@@ -1,0 +1,20 @@
+MANIFEST
+
+README			known root-exploits
+
+blockreferer		the referers I block
+blockuri		the urls that I block, per country
+
+mime_types		stolen from thttpd
+
+config.pl.dist		copy this to config.pl
+
+myhttpd			main server, start this
+access.pl		implement blocking, queue etc.
+database.pl		creates the database environment
+diridx.pl		directory indexing
+err.pl			error messages
+httpd.pl		the webserver
+misc.pl			stolen from PApp
+netgeo.pl		formerly netgeo client, now whois mess
+shell.pl		the interaktive shell
