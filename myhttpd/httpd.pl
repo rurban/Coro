@@ -123,7 +123,12 @@ sub DESTROY {
 
    $::conns--;
 
+   $self->eoconn;
    delete $conn{$self->{remote_addr}}{$self*1};
+}
+
+# end of connection
+sub eoconn {
    delete $uri{$self->{remote_addr}}{$self->{uri}}{$self*1};
 }
 
@@ -269,9 +274,11 @@ sub handle {
       $self->map_uri;
       $self->respond;
 
+      $self->eoconn;
+
       last if $self->{h}{connection} =~ /close/ || $self->{version} lt "1.1";
 
-      $self->slog(9, "persistant connection [".$self->{h}{"user-agent"}."][$self->{reqs}]");
+      $self->slog(9, "persistent connection [".$self->{h}{"user-agent"}."][$self->{reqs}]");
       $fh->timeout($::PER_TIMEOUT);
    }
 }
@@ -457,14 +464,25 @@ ignore:
 
       $h -= $l - 1;
 
+      if (0) {
+         if ($l) {
+            sysseek $fh, $l, 0;
+         }
+      }
+
       while ($h > 0) {
-         aio_read($fh, $l, ($h > $::BUFSIZE ? $::BUFSIZE : $h),
-                  $buf, 0, sub {
-                     $r = $_[0];
-                     $current->ready;
-                  });
-         &Coro::schedule;
-         last unless $r;
+         if (0) {
+            sysread $fh, $buf, $h > $::BUFSIZE ? $::BUFSIZE : $h
+               or last;
+         } else {
+            aio_read($fh, $l, ($h > $::BUFSIZE ? $::BUFSIZE : $h),
+                     $buf, 0, sub {
+                        $r = $_[0];
+                        $current->ready;
+                     });
+            &Coro::schedule;
+            last unless $r;
+         }
          my $w = $self->{fh}->syswrite($buf)
             or last;
          $::written += $w;

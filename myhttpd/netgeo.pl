@@ -240,12 +240,7 @@ sub ip_request {
             || $WHOIS{ARIN} ->ip_request($ip);
 
       $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
-         or warn "$whois($ip): no addresses found\n";
-      $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
-         or return;
-
-      $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
-         or die "$whois($ip): no addresses found\n";
+         or do { warn "$whois($ip): no addresses found\n", last };
 
       my ($ip0, $ip1) = ($1, $2);
 

@@ -102,30 +102,37 @@ sub conn::gen_statdata {
    $data;
 }
 
+use Tie::Cache;
+tie %statdata_cache, Tie::Cache::, 70;
+
 sub conn::get_statdata {
    my $self = shift;
 
    my $mtime = $self->{stat}[9];
 
-   my $st = sql_exec \my($statdata),
+   my $statdata = \$statdata_cache{$self->{path}, $mtime};
+
+   return $$statdata if $$statdata;
+
+   my $st = sql_exec $statdata,
                      "select statdata from diridx where mtime = ? and path = ?",
                      $mtime, $self->{path};
 
    if ($st->fetch) {
-      $statdata = Storable::thaw $statdata;
-      return $statdata if $statdata->{version} == $SD_VERSION;
+      $$statdata = Storable::thaw $$statdata;
+      return $$statdata if $$statdata->{version} == $SD_VERSION;
    }
 
    $self->slog(8, "creating index cache for $self->{path}");
 
-   $statdata = $self->gen_statdata;
-   $statdata->{version} = $SD_VERSION;
+   $$statdata = $self->gen_statdata;
+   $$statdata->{version} = $SD_VERSION;
 
    sql_exec "delete from diridx where path = ?", $self->{path};
    sql_exec "insert into diridx (path, mtime, statdata) values (?, ?, ?)",
-            $self->{path}, $mtime, Storable::freeze $statdata;
+            $self->{path}, $mtime, Storable::freeze $$statdata;
 
-   $statdata;
+   $$statdata;
 }
 
 sub conn::diridx {

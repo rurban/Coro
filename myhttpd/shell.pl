@@ -71,7 +71,7 @@ sub shell {
 # bind to tcp port
 if ($CMDSHELL_PORT) {
    my $port = new Coro::Socket
-        LocalAddr => "127.0.0.1",
+        #LocalAddr => "127.0.0.1",
         LocalPort => $CMDSHELL_PORT,
         ReuseAddr => 1,
         Listen => 1,

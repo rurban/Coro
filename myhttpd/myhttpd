@@ -9,7 +9,7 @@ $starttime = time;
 $PApp::SQL::DBH = PApp::SQL::connect_cached __FILE__, "DBI:mysql:myhttpd"
    or die "unable to connect to database";
 
-$VERSION = 0.006;
+$VERSION = 0.007;
 
 $SIG{CHLD} = 'IGNORE';
 

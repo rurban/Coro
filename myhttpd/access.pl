@@ -29,6 +29,9 @@ sub read_blocklist {
 
 read_blocklist;
 
+use Tie::Cache;
+tie %whois_cache, Tie::Cache::, $MAX_CONNECTS * 1.5;
+
 sub conn::access_check {
    my $self = shift;
 
@@ -41,7 +44,8 @@ sub conn::access_check {
       }
    }
    
-   my $whois = ::ip_request($self->{remote_addr});
+   my $whois = $whois_cache{$self->{remote_addr}}
+               ||= ::ip_request($self->{remote_addr});
 
    my $country = "XX";
 
