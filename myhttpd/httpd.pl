@@ -10,13 +10,6 @@ use bytes;
 # quite a bit faster than apache, ;)
 # and quite a bit slower than thttpd :(
 
-my $port = new Coro::Socket
-        LocalAddr => $SERVER_HOST,
-        LocalPort => $SERVER_PORT,
-        ReuseAddr => 1,
-        Listen => 1,
-   or die "unable to start server";
-
 $SIG{PIPE} = 'IGNORE';
    
 sub slog {
@@ -49,12 +42,21 @@ sub handler {
    }
 }
 
+my $http_port = new Coro::Socket
+        LocalAddr => $SERVER_HOST,
+        LocalPort => $SERVER_PORT,
+        ReuseAddr => 1,
+        Listen => 1,
+   or die "unable to start server";
+
+push @listen_sockets, $http_port;
+
 # the "main thread"
 async {
    slog 1, "accepting connections";
    while () {
       $connections->down;
-      push @fh, $port->accept;
+      push @fh, $http_port->accept;
       #slog 3, "accepted @$connections ".scalar(@pool);
       $::NOW = time;
       if (@pool) {
@@ -65,9 +67,6 @@ async {
 
    }
 };
-
-loop;
-print "ende\n";#d#
 
 package conn;
 
@@ -89,7 +88,6 @@ sub new {
    # enter ourselves into various lists
    weaken ($conn{$self->{remote_addr}}{$self*1} = $self);
 
-   print "$self->{remote_addr}: ".($self*1)." > ".%{$conn{$self->{remote_addr}}},"\n";
    $self;
 }
 
@@ -100,18 +98,21 @@ sub DESTROY {
 }
 
 sub slog {
-   main::slog(@_);
+   my $self = shift;
+   main::slog($_[0], "$self->{remote_addr}> $_[1]");
 }
 
-sub print_response {
+sub response {
    my ($self, $code, $msg, $hdr, $content) = @_;
    my $res = "HTTP/1.0 $code $msg\015\012";
 
-   $hdr->{Date} = time2str $::NOW; # slow? nah.
+   $res .= "Connection: close\015\012";
+   $res .= "Date: ".(time2str $::NOW)."\015\012"; # slow? nah. :(
 
    while (my ($h, $v) = each %$hdr) {
       $res .= "$h: $v\015\012"
    }
+
    $res .= "\015\012$content" if defined $content;
 
    print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
@@ -129,9 +130,7 @@ sub err {
       $hdr->{"Content-Length"} = length $content;
    }
 
-   $self->slog($msg) if $code;
-
-   $self->print_response($code, $msg, $hdr, $content);
+   $self->response($code, $msg, $hdr, $content);
 
    die bless {}, err::;
 }
@@ -141,11 +140,20 @@ sub err_blocked {
    my $ip = $self->{remote_addr};
    my $time = time2str $blocked{$ip} = $::NOW + $::BLOCKTIME;
    $self->err(403, "too many connections",
-              { "Retry-After" => $::BLOCKTIME },
+              {
+                 "Content-Type" => "text/html",
+                 "Retry-After" => $::BLOCKTIME
+              },
               <<EOF);
+<html><p>
 You have been blocked because you opened too many connections. You
-may retry at $time. Until then,
-every new access will renew the block.
+may retry at</p>
+
+   <p><blockquote>$time.</blockquote></p>
+   
+<p>Until then, each new access will renew the block. You might want to have a
+look at the <a href="http://www.goof.com/pcg/marc/animefaq.html">FAQ</a>.</p>
+</html>
 EOF
 }
 
@@ -360,6 +368,14 @@ sub handle_file {
       $self->err(416, "not satisfiable", $hdr);
 
 satisfiable:
+      # check for segmented downloads
+      if ($l && $NO_SEGMENTED) {
+         if (%{$uri{$self->{uri}}} > 1) {
+            $self->slog("segmented download refused\n");
+            $self->err(400, "segmented downloads are not allowed");
+         }
+      }
+
       $hdr->{"Content-Range"} = "bytes $l-$h/$length";
       @code = (206, "partial content");
       $length = $h - $l + 1;
@@ -377,7 +393,7 @@ ignore:
 
    $hdr->{"Content-Length"} = $length;
 
-   $self->print_response(@code, $hdr, "");
+   $self->response(@code, $hdr, "");
 
    if ($self->{method} eq "GET") {
       my ($fh, $buf);
@@ -392,9 +408,10 @@ ignore:
       $h -= $l - 1;
 
       while ($h > 0) {
-         $h -= sysread $fh, $buf, $h > 4096 ? 4096 : $h;
+         $h -= sysread $fh, $buf, $h > 16384 ? 16384 : $h;
          print {$self->{fh}} $buf
             or last;
+         cede;
       }
    }
 

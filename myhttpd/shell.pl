@@ -9,20 +9,26 @@ sub shell {
    my $fh = shift;
 
    while (defined (print $fh "cmd> "), $_ = <$fh>) {
+      s/\015?\012$//;
       chomp;
-      if (/quit/) {
+      if (/^q/) {
          Event::unloop;
-      } elsif (/info/) {
+      } elsif (/^i/) {
          my @conn;
          push @conn, values %$_ for values %conn::conn;
          for (values %conn::conn) {
             for (values %$_) {
                next unless $_;
-               print "$_: $_->{remote_addr} $_->{uri}\n";
+               print $fh "$_: $_->{remote_addr} $_->{uri}\n";
             }
          }
+      } elsif (/^r/) {
+         $::RESTART = 1;
+         unloop;
+         print $fh "bye bye.\n";
+         last;
       } else {
-         print "try quit\n";
+         print $fh "try quit, info, restart\n";
       }
    }
 }
@@ -35,6 +41,8 @@ if ($CMDSHELL_PORT) {
         ReuseAddr => 1,
         Listen => 1,
    or die "unable to bind cmdshell port: $!";
+
+   push @listen_sockets, $port;
 
    async {
       async \&shell, $port->accept;

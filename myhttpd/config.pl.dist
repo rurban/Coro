@@ -1,9 +1,9 @@
 $MAX_CONNECTS = 500;			# maximum simult. connects
 
 $MAX_CONN_IP  =   4;			# maximum simult. connects per ip
-$BLOCKTIME    = 21600;			# block time
+$BLOCKTIME    = 7200;			# block time
 
-$SEGMENTED_OK =   0;			# allow segmented downloads?
+$NO_SEGMENTED =   1;			# allow segmented downloads?
 
 $REQ_TIMEOUT  =  60;			# request timeout
 $RES_TIMEOUT  = 180;			# response timeout

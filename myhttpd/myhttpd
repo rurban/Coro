@@ -1,5 +1,20 @@
 #!/usr/bin/perl
 
+use Coro::Event;
+
+$SIG{CHLD} = 'IGNORE';
+
 require "config.pl";
 require "shell.pl";
 require "httpd.pl";
+
+loop;
+
+if ($RESTART) {
+   $_->close for @listen_sockets;
+   fork && exec $0, @ARGV;
+   loop(60*60);
+}
+
+print "myhttpd ended\n";#d#
+
