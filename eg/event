@@ -1,24 +1,16 @@
 #!/usr/bin/perl
 
-<<EOF;
-finger
-localhost
-root
-finger
-localhost
-root
-EOF
+# useless stuff
 
 use Coro;
 use Coro::Event;
 
-#$Event::DebugLevel = 4;
-
 my $stdin = Coro::Event->io(fd => \*STDIN, poll => 'r');
 
+# this gets started everytime a user enters a finger command
 sub finger {
-   my $host = shift;
    my $user = shift;
+   my $host = shift;
    use IO::Socket::INET;
    # is there ANY way to do non-blocking connects with IO::Socket::INET?
    # I don't see how...
@@ -32,11 +24,13 @@ sub finger {
    print $buf;
 }
 
+# this reads one line from the keyboard
 sub kbdline {
    $stdin->next;
    my $x = <STDIN>; chomp $x; $x;
 }
 
+# this is the main task
 sub keyboard : Coro {
    $|=1;
    while() {
@@ -54,12 +48,13 @@ sub keyboard : Coro {
    }
 }
 
+# display the time or garble the display, YMMV.
 sub timer : Coro {
    my $w = Coro::Event->timer(interval => 0.001, hard => 1);
    use Time::HiRes qw(time);
    while () {
       $w->next;
-      print "\e7\e[A\10\10\10    <time ",time,">   \e8";
+      print "\e7\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C   <time ",time,">   \e8";
    };
 }
 

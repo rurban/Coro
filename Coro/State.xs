@@ -159,10 +159,30 @@ free_padlist (AV *padlist)
   }
 }
 
-STATIC AV *
-unuse_padlist (AV *padlist)
+/* the next tow functions merely cache the padlists */
+STATIC void
+get_padlist (CV *cv)
 {
-  free_padlist (padlist);
+  SV **he = hv_fetch (padlist_cache, (void *)&cv, sizeof (CV *), 0);
+
+  if (he && AvFILLp ((AV *)*he) >= 0)
+    CvPADLIST (cv) = (AV *)av_pop ((AV *)*he);
+  else
+    CvPADLIST (cv) = clone_padlist (CvPADLIST (cv));
+}
+
+STATIC void
+put_padlist (CV *cv)
+{
+  SV **he = hv_fetch (padlist_cache, (void *)&cv, sizeof (CV *), 1);
+
+  if (SvTYPE (*he) != SVt_PVAV)
+    {
+      SvREFCNT_dec (*he);
+      *he = (SV *)newAV ();
+    }
+
+  av_push ((AV *)*he, (SV *)CvPADLIST (cv));
 }
 
 static void
@@ -185,7 +205,7 @@ SAVE(pTHX_ Coro__State c)
       {
         while (cxix >= 0)
           {
-            PERL_CONTEXT *cx = &ccstk[--cxix];
+            PERL_CONTEXT *cx = &ccstk[cxix--];
 
             if (CxTYPE(cx) == CXt_SUB)
               {
@@ -200,7 +220,7 @@ SAVE(pTHX_ Coro__State c)
                     PUSHs ((SV *)CvPADLIST(cv));
                     PUSHs ((SV *)cv);
 
-                    CvPADLIST(cv) = clone_padlist (CvPADLIST(cv));
+                    get_padlist (cv);
 
                     CvDEPTH(cv) = 0;
 #ifdef USE_THREADS
@@ -299,7 +319,7 @@ LOAD(pTHX_ Coro__State c)
       {
         AV *padlist = (AV *)POPs;
 
-        unuse_padlist (CvPADLIST(cv));
+        put_padlist (cv);
         CvPADLIST(cv) = padlist;
         CvDEPTH(cv) = (I32)POPs;
 
@@ -315,22 +335,48 @@ LOAD(pTHX_ Coro__State c)
 
 /* this is an EXACT copy of S_nuke_stacks in perl.c, which is unfortunately static */
 STATIC void
-S_nuke_stacks(pTHX)
+destroy_stacks(pTHX)
 {
-    while (PL_curstackinfo->si_next)
-        PL_curstackinfo = PL_curstackinfo->si_next;
-    while (PL_curstackinfo) {
-        PERL_SI *p = PL_curstackinfo->si_prev;
-        /* curstackinfo->si_stack got nuked by sv_free_arenas() */
-        Safefree(PL_curstackinfo->si_cxstack);
-        Safefree(PL_curstackinfo);
-        PL_curstackinfo = p;
-    }
-    Safefree(PL_tmps_stack);
-    Safefree(PL_markstack);
-    Safefree(PL_scopestack);
-    Safefree(PL_savestack);
-    Safefree(PL_retstack);
+  dSP;
+
+  /* die does this while calling POPSTACK, but I just don't see why. */
+  dounwind(-1);
+
+  /* is this ugly, I ask? */
+  while (PL_scopestack_ix)
+    LEAVE;
+
+  while (PL_curstackinfo->si_next)
+    PL_curstackinfo = PL_curstackinfo->si_next;
+
+  while (PL_curstackinfo)
+    {
+      PERL_SI *p = PL_curstackinfo->si_prev;
+
+      SvREFCNT_dec(PL_curstackinfo->si_stack);
+      Safefree(PL_curstackinfo->si_cxstack);
+      Safefree(PL_curstackinfo);
+      PL_curstackinfo = p;
+  }
+
+	if (PL_scopestack_ix != 0)
+	    Perl_warner(aTHX_ WARN_INTERNAL,
+	         "Unbalanced scopes: %ld more ENTERs than LEAVEs\n",
+		 (long)PL_scopestack_ix);
+	if (PL_savestack_ix != 0)
+	    Perl_warner(aTHX_ WARN_INTERNAL,
+		 "Unbalanced saves: %ld more saves than restores\n",
+		 (long)PL_savestack_ix);
+	if (PL_tmps_floor != -1)
+	    Perl_warner(aTHX_ WARN_INTERNAL,"Unbalanced tmps: %ld more allocs than frees\n",
+		 (long)PL_tmps_floor + 1);
+  /*
+                 */
+  Safefree(PL_tmps_stack);
+  Safefree(PL_markstack);
+  Safefree(PL_scopestack);
+  Safefree(PL_savestack);
+  Safefree(PL_retstack);
 }
 
 #define SUB_INIT "Coro::State::_newcoro"
@@ -392,7 +438,7 @@ transfer(prev,next)
                  */
                 UNOP myop;
 
-                init_stacks ();
+                init_stacks (); /* from perl.c */
                 PL_op = (OP *)&myop;
                 /*PL_curcop = 0;*/
                 GvAV (PL_defgv) = (SV *)SvREFCNT_inc (next->args);
@@ -431,7 +477,7 @@ DESTROY(coro)
             SAVE(aTHX_ (&temp));
             LOAD(aTHX_ coro);
 
-            S_nuke_stacks ();
+            destroy_stacks ();
             SvREFCNT_dec ((SV *)GvAV (PL_defgv));
 
             LOAD((&temp));

@@ -20,6 +20,11 @@ Coro - coroutine process abstraction
 
 =head1 DESCRIPTION
 
+This module collection manages coroutines. Coroutines are similar to
+Threads but don't run in parallel.
+
+This module is still experimental, see the BUGS section below.
+
 =cut
 
 package Coro;
@@ -217,6 +222,14 @@ sub ready {
 =cut
 
 1;
+
+=head1 BUGS
+
+ - could be faster, especially when the core would introduce special
+   support for coroutines (like it does for threads).
+ - there is still a memleak on coroutine termination that I could not
+   identify. Could be as small as a single SV.
+ - this module is not well-tested.
 
 =head1 SEE ALSO
 
