@@ -1017,13 +1017,13 @@ DESTROY(coro)
             struct coro temp;
 
             PUTBACK;
-            SAVE(aTHX_ (&temp), TRANSFER_SAVE_ALL);
-            LOAD(aTHX_ coro);
+            SAVE (aTHX_ (&temp), TRANSFER_SAVE_ALL);
+            LOAD (aTHX_ coro);
             SPAGAIN;
 
             destroy_stacks (aTHX);
 
-            LOAD((&temp)); /* this will get rid of defsv etc.. */
+            LOAD ((&temp)); /* this will get rid of defsv etc.. */
             SPAGAIN;
 
             coro->mainstack = 0;
@@ -1062,13 +1062,13 @@ yield(...)
         while (items--)
           av_store (defav, items, SvREFCNT_inc (ST(items)));
 
-        mg_get (returnstk); /* isn't documentation wrong for mg_get? */
+        SvGETMAGIC (returnstk); /* isn't documentation wrong for mg_get? */
         sv = av_pop ((AV *)SvRV (returnstk));
         prev = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
         next = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
         SvREFCNT_dec (sv);
 
-        transfer(aTHX_ prev, next, 0);
+        transfer (aTHX_ prev, next, 0);
 
 MODULE = Coro::State                PACKAGE = Coro
 
