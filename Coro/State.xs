@@ -58,6 +58,7 @@ struct coro {
   AV *defav;
   SV *defsv;
   SV *errsv;
+  /* TODO: PL_pmop might be nice && effortless to save. */
   
   /* saved global state not related to stacks */
   U8 dowarn;
