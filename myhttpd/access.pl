@@ -14,6 +14,7 @@ sub start_transfer {
    Scalar::Util::weaken($trans->[0]);
 
    push @{$self->{wait}}, $trans;
+   Scalar::Util::weaken($self->{wait}[-1]);
 
    if (--$self->{conns} >= 0) {
       $self->wake_next;
@@ -27,7 +28,15 @@ sub wake_next {
 
    return unless $self->{conns} >= 0;
 
-   (pop @{$self->{wait}})->wake if @{$self->{wait}};
+   if (@{$self->{wait}}) {
+      while() {
+         my $transfer = shift @{$self->{wait}};
+         if ($transfer) {
+            $transfer->wake;
+            last;
+         }
+      }
+   }
 }
 
 sub waiters {

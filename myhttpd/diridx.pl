@@ -211,7 +211,7 @@ $::internal{status} = sub {
 <h1>Server Status Page</h1>
 <h2>Myhttpd</h2>
 version <b>$VERSION</b>; current connections count: <b>$::conns</b>; uptime: <b>$uptime</b>;<br />
-client-iD <b>$self->{remote_id}</b>, client country <b>$self->{country}</b>;<br />
+client-id <b>$self->{remote_id}</b>, client country <b>$self->{country}</b>;<br />
 <h2>Queue Statistics</h2>
 <ul>
 EOF
