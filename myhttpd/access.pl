@@ -1,8 +1,8 @@
 package transferqueue;
 
 my @reserve = (
-      [  1_200_000, 1],
-      [  3_000_000, 1],
+      [  1_200_000, 2],
+      [  8_000_000, 1],
       [ 75_000_000, 1],
 );
 
@@ -65,8 +65,7 @@ sub wake_next {
       last unless $self->{slots} > $min;
       my $transfer = shift @{$self->{wait}};
       $self->{lastspb} = $transfer->{spb};
-      $self->{avgspb} ||= $transfer->{spb};
-      $self->{avgspb} = $self->{avgspb} * 0.95 + $transfer->{spb} * 0.05;
+      $self->{avgspb} = $self->{avgspb} * 0.99 + $transfer->{spb} * 0.01;
       $self->{started}++;
       $transfer->wake;
       last;

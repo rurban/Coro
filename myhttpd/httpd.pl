@@ -568,7 +568,7 @@ ignore:
 
          if ($blocked{$self->{remote_id}}) {
             $self->{h}{connection} = "close";
-            die bless {}, err:: 
+            die bless {}, err::;
          }
 
          if (0) { # !AIO
