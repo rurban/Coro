@@ -14,3 +14,14 @@ my %hash = (1,10,2,20,3,30);
 
 print join(",", %hash), "\n";
 
+# here is a random-number generator
+
+sub badrand : Cont {
+   my $seed = 1;
+   while() {
+      $seed = $seed * 121 % 97;
+      result $seed % $_[0];
+   }
+}
+
+print badrand($_), " " for 1..30; print "\n";
