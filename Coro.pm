@@ -6,7 +6,29 @@ Coro - create an manage coroutines
 
  use Coro;
 
+ $new = new Coro sub {
+    print "in coroutine, switching back\n";
+    $Coro::main->resume;
+    print "in coroutine again, switching back\n";
+    $Coro::main->resume;
+ };
+
+ print "in main, switching to coroutine\n";
+ $new->resume;
+ print "back in main, switch to coroutine again\n";
+ $new->resume;
+ print "back in main\n";
+
 =head1 DESCRIPTION
+
+This module implements coroutines. Coroutines, similar to continuations,
+allow you to run more than one "thread of execution" in parallel. Unlike
+threads this, only voluntary switching is used so locking problems are
+greatly reduced.
+
+Although this is the "main" module of the Coro family it provides only
+low-level functionality. See L<Coro::Process> and related modules for a
+more useful process abstraction including scheduling.
 
 =over 4
 
@@ -47,7 +69,7 @@ $error_msg =
 $error_coro = undef;
 
 $error = _newprocess {
-   print STDERR "FATAL: $error_msg, program aborted\n";
+   print STDERR "FATAL: $error_msg\nprogram aborted\n";
    exit 250;
 };
 
@@ -94,6 +116,10 @@ sub resume {
 =head1 BUGS
 
 This module has not yet been extensively tested.
+
+=head1 SEE ALSO
+
+L<Coro::Process>, L<Coro::Signal>.
 
 =head1 AUTHOR
 
