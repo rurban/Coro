@@ -8,6 +8,7 @@ Revision history for Perl extension Coro.
         - added eg/myhttpd, a web server.
         - Coro::Socket now accepts numeric ports as well as "port(number)"
           syntax.
+        - moved some scheduling primitives into xs code. more to come.
 
 0.13  Wed Aug  8 16:53:07 CEST 2001
 	- new method Coro::Handle::readline.

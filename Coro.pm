@@ -120,9 +120,6 @@ my $manager = new Coro sub {
    }
 };
 
-# we really need priorities...
-my @ready; # the ready queue. hehe, rather broken ;)
-
 # static methods. not really.
 
 =head2 STATIC METHODS
@@ -162,14 +159,6 @@ never be called again.
 
 =cut
 
-my $prev;
-
-sub schedule {
-   # should be done using priorities :(
-   ($prev, $current) = ($current, shift @ready || $idle);
-   Coro::State::transfer($prev, $current);
-}
-
 =item cede
 
 "Cede" to other processes. This function puts the current process into the
@@ -177,11 +166,6 @@ ready queue and calls C<schedule>, which has the effect of giving up the
 current "timeslice" to other coroutines of the same or higher priority.
 
 =cut
-
-sub cede {
-   $current->ready;
-   &schedule;
-}
 
 =item terminate
 
@@ -234,10 +218,6 @@ sub new {
 Put the current process into the ready queue.
 
 =cut
-
-sub ready {
-   push @ready, $_[0];
-}
 
 =item $process->cancel
 

@@ -84,7 +84,7 @@ sub std_cb {
    $q->[1] = $_[0];
    if ($q->[0]) { # somebody waiting?
       $q->[0]->ready;
-      Coro::schedule;
+      &Coro::schedule;
    } else {
       $w->stop;
    }
@@ -129,7 +129,7 @@ sub next {
       croak "only one coroutine can wait for an event";
    } else {
       local $q->[0] = $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
    }
    pop @$q;
 }

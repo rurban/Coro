@@ -101,6 +101,7 @@ sub new {
       or $self->err(500, "unable to decode peername");
 
    $self->{remote_addr} = inet_ntoa $iaddr;
+   $self->{time} = $::NOW;
 
    # enter ourselves into various lists
    weaken ($conn{$self->{remote_addr}}{$self*1} = $self);
@@ -135,7 +136,8 @@ sub response {
 
    print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
 
-   print {$self->{fh}} $res;
+   $self->{written} +=
+      print {$self->{fh}} $res;
 }
 
 sub err {
@@ -434,8 +436,10 @@ ignore:
 
       while ($h > 0) {
          $h -= sysread $fh, $buf, $h > $::BUFSIZE ? $::BUFSIZE : $h;
-         $self->{fh}->syswrite($buf)
+         my $w = $self->{fh}->syswrite($buf)
             or last;
+         $::written += $w;
+         $self->{written} += $w;
       }
    }
 

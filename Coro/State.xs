@@ -113,6 +113,10 @@ static SV *ucoro_state_sv;
 static U32 ucoro_state_hash;
 static HV *padlist_cache;
 
+/* for Coro.pm */
+static GV *coro_current, *coro_idle;
+static AV *coro_ready;
+
 /* mostly copied from op.c:cv_clone2 */
 STATIC AV *
 clone_padlist (AV *protopadlist)
@@ -750,6 +754,26 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
   next->cursp = stacklevel;
 }
 
+static struct coro *
+sv_to_coro (SV *arg, const char *funcname, const char *varname)
+{
+   if (SvROK(arg) && SvTYPE(SvRV(arg)) == SVt_PVHV)
+     {
+       HE *he = hv_fetch_ent((HV *)SvRV(arg), ucoro_state_sv, 0, ucoro_state_hash);
+
+       if (!he)
+         croak ("%s() -- %s is a hashref but lacks the " UCORO_STATE " key", funcname, varname);
+
+       arg = HeVAL(he);
+     }
+      
+   /* must also be changed inside Coro::Cont::yield */
+   if (SvROK(arg) && SvSTASH(SvRV(arg)) == coro_state_stash)
+     return (struct coro *) SvIV((SV*)SvRV(arg));
+   else
+     croak ("%s() -- %s is not (and contains not) a Coro::State object", funcname, varname);
+}
+
 MODULE = Coro::State                PACKAGE = Coro::State
 
 PROTOTYPES: ENABLE
@@ -792,7 +816,7 @@ _newprocess(args)
         RETVAL
 
 void
-transfer(prev, next, flags = TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK)
+transfer(prev, next, flags)
         Coro::State_or_hashref	prev
         Coro::State_or_hashref	next
         int			flags
@@ -847,7 +871,7 @@ _exit(code)
 
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
-# this is slightly dirty
+# this is slightly dirty (should expose a c-level api)
 
 void
 yield(...)
@@ -875,3 +899,41 @@ yield(...)
 
         transfer(aTHX_ prev, next, 0);
 
+MODULE = Coro::State                PACKAGE = Coro
+
+# this is slightly dirty (should expose a c-level api)
+
+BOOT:
+{
+        coro_current = gv_fetchpv ("Coro::current", TRUE, SVt_PV);
+        coro_ready   = newAV ();
+        coro_idle    = gv_fetchpv ("Coro::idle"   , TRUE, SVt_PV);
+}
+
+void
+ready(self)
+	SV *	self
+	CODE:
+        av_push (coro_ready, SvREFCNT_inc (self));
+
+void
+schedule(...)
+  	ALIAS:
+           cede = 1
+	CODE:
+        SV *prev = GvSV (coro_current);
+        SV *next = av_shift (coro_ready);
+
+        if (next == &PL_sv_undef)
+          next = SvREFCNT_inc (GvSV (coro_idle));
+
+        if (ix)
+          av_push (coro_ready, SvREFCNT_inc (prev));
+
+        GvSV (coro_current) = SvREFCNT_inc (next);
+        transfer (sv_to_coro (prev, "Coro::schedule", "current coroutine"),
+                  sv_to_coro (next, "Coro::schedule", "next coroutine"),
+                  TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
+        SvREFCNT_dec (next);
+        SvREFCNT_dec (prev);
+        

@@ -9,15 +9,15 @@ my $proc = new Coro::State \&a;
 
 sub a {
    print "ok 3\n";
-   $proc->transfer($main);
+   $proc->transfer($main, 0);
    print "ok 5\n";
-   $proc->transfer($main);
+   $proc->transfer($main, 0);
    die;
 }
 
 print "ok 2\n";
-$main->transfer($proc);
+$main->transfer($proc, 0);
 print "ok 4\n";
-$main->transfer($proc);
+$main->transfer($proc, 0);
 print "ok 6\n";
 

@@ -1,5 +1,10 @@
 #!/usr/bin/perl
 
+# this is a relatively small web-server, using coroutines
+# for connections. play around with it but do not use
+# it in production. ask myhttpd@plan9.de for a better
+# version that's more usable and bugfixed.
+
 use Coro;
 use Coro::Semaphore;
 use Coro::Event;
@@ -229,6 +234,8 @@ sub server_hostport {
    $host.$port;
 }
 
+# no, this doesn't do cgi, but it's close enough
+# for the no-longer-used directory indexing script.
 sub _cgi {
    my $self = shift;
    my $path = shift;
