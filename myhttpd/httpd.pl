@@ -36,10 +36,9 @@ our $httpevent   = new Coro::Signal;
 
 our $wait_factor = 0.95;
 
-our @transfers = (
-  (new transferqueue $MAX_TRANSFERS_SMALL),
-  (new transferqueue $MAX_TRANSFERS_LARGE),
-);
+our $queue_small = new transferqueue $MAX_TRANSFERS_SMALL;
+our $queue_large = new transferqueue $MAX_TRANSFERS_LARGE;
+our $queue_index = new transferqueue 5;
 
 my @newcons;
 my @pool;
@@ -450,14 +449,14 @@ sub respond {
             if (-r "$path/index.html") {
                # replace directory "size" by index.html filesize
                $self->{stat}[7] = (stat ($self->{path} .= "/index.html"))[7];
-               $self->handle_file;
+               $self->handle_file($queue_index);
             } else {
                $self->handle_dir;
             }
          }
       } elsif (-f _ && -r _) {
          -x _ and $self->err(403, "forbidden");
-         $self->handle_file;
+         $self->handle_file(-s _ >= $::TRANSFER_SMALL ? $queue_large : $queue_small);
       } else {
          $self->err(404, "not found");
       }
@@ -479,9 +478,8 @@ sub handle_dir {
 }
 
 sub handle_file {
-   my $self = shift;
+   my ($self, $queue) = @_;
    my $length = $self->{stat}[7];
-   my $queue = $::transfers[$length >= $::TRANSFER_SMALL];
    my $hdr = {
       "Last-Modified"  => time2str ((stat _)[9]),
    };
