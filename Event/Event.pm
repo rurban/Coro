@@ -140,7 +140,7 @@ into the Event dispatcher.
 =cut
 
 sub sweep {
-   one_event(0); # for now
+   Event::one_event(0); # for now
 }
 
 =item $result = loop([$timeout])
