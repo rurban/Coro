@@ -8,7 +8,8 @@ use HTTP::Date;
 no utf8;
 use bytes;
 
-our @wait_time = (0); # used to calculcate avg. waiting time
+our @wait_time = (); # used to calculcate avg. waiting time
+our $wait_time_length = 25;
 
 # at least on my machine, this thingy serves files
 # quite a bit faster than apache, ;)
@@ -487,7 +488,7 @@ ignore:
       $self->{fh}->writable or return;
 
       push @::wait_time, $::NOW - $self->{time};
-      shift @::wait_time if @wait_time > 25;
+      shift @::wait_time if @wait_time > $wait_time_length;
       $self->{time} = $::NOW;
 
       my ($fh, $buf, $r);

@@ -148,7 +148,9 @@ sub conn::diridx {
    }
 
    my $waiters = $::transfers->waiters*1;
-   my $avgtime = int (sum(@::wait_time) / @::wait_time);
+   my $avgtime = @::wait_time == $wait_time_length
+                 ? sprintf "%d second(s)", sum(@::wait_time) / $wait_time_length
+                 : "unknown[".scalar(@::wait_time)."]";
 
    <<EOF;
 <html>
@@ -156,12 +158,12 @@ sub conn::diridx {
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 <h1>$data->{path}</h1>
 $data->{top}
-<hr />
-clients waiting for data transfer: $waiters<br />
-average waiting time until transfer starts: $avgtime seconds <small>(adjust your timeout values)</small><br />
 <small><div align="right">
          <tt>$self->{remote_id}/$self->{country} - $::conns connection(s) - uptime $uptime - myhttpd/$VERSION
 </tt></div></small>
+<hr />
+clients waiting for data transfer: $waiters<br />
+average waiting time until transfer starts: $avgtime <small>(adjust your timeout values)</small><br />
 <hr />
 $stat
 $data->{bot}
