@@ -227,11 +227,11 @@ sub response {
 
    $res .= $content if defined $content and $self->{method} ne "HEAD";
 
-   my $log = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $NOW).
+   my $log = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $::NOW).
              " $self->{remote_id} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}.$GZ.
              " \"$self->{h}{referer}\"\n";
 
-   print $accesslog $log if $accesslog;
+   print $::accesslog $log if $::accesslog;
    print STDERR $log;
 
    $self->{written} +=
