@@ -34,8 +34,8 @@ our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
 our $wait_factor = 0.95;
 
 our @transfers = (
-  [(new Coro::Semaphore $MAX_TRANSFERS_SMALL || 50), 600],
-  [(new Coro::Semaphore $MAX_TRANSFERS_LARGE || 50), 600],
+  [(new Coro::Semaphore $MAX_TRANSFERS_SMALL || 50), 1],
+  [(new Coro::Semaphore $MAX_TRANSFERS_LARGE || 50), 1],
 );
 
 my @newcons;
@@ -195,7 +195,7 @@ sub err {
    my ($code, $msg, $hdr, $content) = @_;
 
    unless (defined $content) {
-      $content = "$code $msg";
+      $content = "$code $msg\n";
       $hdr->{"Content-Type"} = "text/plain";
       $hdr->{"Content-Length"} = length $content;
    }
@@ -454,7 +454,6 @@ sub handle_file {
       }
       $hdr->{"Content-Range"} = "bytes */$length";
       $hdr->{"Content-Length"} = $length;
-      $self->slog(9, "not satisfiable($self->{h}{range}|".$self->{h}{"user-agent"}.")");
       $self->err(416, "not satisfiable", $hdr, "");
 
 satisfiable:
@@ -488,12 +487,20 @@ ignore:
    if ($self->{method} eq "GET") {
       $self->{time} = $::NOW;
 
-      my $transfer = $queue->[0]->guard;
-      $self->{fh}->writable or return;
+      my $fudge = $queue->[0]->waiters;
+      $fudge = $fudge ? ($fudge+1)/$fudge : 1;
 
-      $queue->[1] = $queue->[1] * $::wait_factor
-                  + ($::NOW - $self->{time}) * (1 - $::wait_factor);
+      $queue->[1] *= $fudge;
+      my $transfer = $queue->[0]->guard;
+
+      if ($fudge != 1) {
+         $queue->[1] /= $fudge;
+         $queue->[1] = $queue->[1] * $::wait_factor
+                     + ($::NOW - $self->{time}) * (1 - $::wait_factor);
+      }
       $self->{time} = $::NOW;
+
+      $self->{fh}->writable or return;
 
       my ($fh, $buf, $r);
       my $current = $Coro::current;

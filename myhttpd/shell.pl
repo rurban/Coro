@@ -54,8 +54,8 @@ sub shell {
             do "config.pl";
             print $fh "config.pl: $@\n" if $@;
             %statdata_cache = ();
-            read_blockuri;
-            read_blockref;
+            conn::read_blockuri;
+            conn::read_blockref;
          } elsif ($cmd eq "restart") {
             $::RESTART = 1;
             unloop;
