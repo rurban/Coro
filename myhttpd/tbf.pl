@@ -51,7 +51,7 @@ sub inject {
 
       } else {
          if ($self->{maxbucket} < $self->{bucket}) {
-            ::slog (9, "unused bandwith: ".($self->{bucket} - $self->{maxbucket}));#d#
+            ::unused_bandwidth ($self->{bucket} - $self->{maxbucket});
             $self->{bucket} = $self->{maxbucket};
          }
       }
@@ -67,21 +67,17 @@ sub request {
 
    $weight ||= 1;
 
-   if ($self->{waitw} || $self->{bucket} < $bytes || 1) {
-      my $coro = $Coro::current;
-      my $id   = $_tbf_id++;
+   my $coro = $Coro::current;
+   my $id   = $_tbf_id++;
 
-      $self->{waitw} += $weight;
-      $self->{waitq}{$id} = [$weight, 0, $bytes, sub {
-         delete $self->{waitq}{$id};
-         $self->{waitw} -= $weight;
-         $coro->ready;
-      }];
+   $self->{waitw} += $weight;
+   $self->{waitq}{$id} = [$weight, 0, $bytes, sub {
+      delete $self->{waitq}{$id};
+      $self->{waitw} -= $weight;
+      $coro->ready;
+   }];
 
-      Coro::schedule;
-   } else {
-      $self->{bucket} -= $bytes;
-   }
+   Coro::schedule;
 }
 
 1;

@@ -74,6 +74,14 @@ sub wake_next {
    }
 }
 
+sub force_wake_next {
+   my $self = shift;
+
+   $self->{slots} += 1;
+   $self->wake_next;
+   $self->{slots} -= 1;
+}
+
 sub waiters {
    $_[0]->sort;
    @{$_[0]{wait}};
