@@ -6,6 +6,7 @@ $SIG{CHLD} = 'IGNORE';
 
 require "config.pl";
 require "netgeo.pl";
+require "access.pl";
 require "httpd.pl";
 require "shell.pl";
 

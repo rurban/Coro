@@ -14,7 +14,7 @@ $DOCROOT      = "/usr/www/htdocs";	# document root
 $INDEXPROG    = "/usr/www/bin/dols";	# indexing program (nph-cgi script)
 
 $SERVER_HOST  = "0.0.0.0";		# host to bind on
-$SERVER_PORT  = 84;			# port to listen on
+$SERVER_PORT  = 80;			# port to listen on
 
 $CMDSHELL_PORT = 7262;			# open a command shell on this port
 

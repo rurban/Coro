@@ -417,15 +417,4 @@ ignore:
    close $fh;
 }
 
-sub access_check {
-   my $self = shift;
-   my $whois = ::ip_request($self->{remote_addr});
-
-   if ($whois =~ /^\*cy: (\S+)/m) {
-      $self->slog(9, "COUNTRY($1)");
-   } else {
-      $self->slog(9, "no country($whois)");
-   }
-}
-
 1;

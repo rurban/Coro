@@ -23,13 +23,15 @@ sub shell {
          }
          print $fh sort @data;
          print $fh scalar@data, " connections\n";#d#
+      } elsif (/^ref/) {
+         read_blocklist;
       } elsif (/^r/) {
          $::RESTART = 1;
          unloop;
          print $fh "bye bye.\n";
          last;
       } else {
-         print $fh "try quit, info, restart\n";
+         print $fh "try quit, info, restart, refresh\n";
       }
    }
 }
