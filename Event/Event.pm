@@ -32,7 +32,7 @@ watcher constructors from Event is that you do not specify a callback
 function - it will be managed by this module.
 
 Your application should just create all necessary coroutines and then call
-Coro::Event->main.
+Coro::Event::loop.
 
 =over 4
 
