@@ -28,9 +28,11 @@ eg/prodcons3
 eg/attributes
 eg/cont
 eg/event
+eg/lwp
 t/00_basic.t
 t/01_process.t
 t/02_channel.t
 t/03_cont.t
 t/04_rwlock.t
+t/05_specific.t
 

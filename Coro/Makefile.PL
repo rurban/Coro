@@ -34,7 +34,7 @@ on the non-fact that the same machine stack pointer indicates the same
 function call nesting level, which usually works good enough but might
 fail...
 
-Disabling this option is save, as it only increases memory consumption.
+Disabling this option is safe, as it only increases memory consumption.
 
 EOF
 

@@ -45,6 +45,7 @@ $VERSION = 0.12;
 
 {
    my @async;
+   my $init;
 
    # this way of handling attributes simply is NOT scalable ;()
    sub import {
@@ -56,6 +57,13 @@ $VERSION = 0.12;
          for (@_) {
             if ($_ eq "Coro") {
                push @async, $ref;
+               unless ($init++) {
+                  eval q{
+                     sub INIT {
+                        &async(pop @async) while @async;
+                     }
+                  };
+               }
             } else {
                push @attrs, $_;
             }
@@ -64,9 +72,6 @@ $VERSION = 0.12;
       };
    }
 
-   sub INIT {
-      &async(pop @async) while @async;
-   }
 }
 
 =item $main
@@ -259,7 +264,7 @@ sub ready {
 
 L<Coro::Channel>, L<Coro::Cont>, L<Coro::Specific>, L<Coro::Semaphore>,
 L<Coro::Signal>, L<Coro::State>, L<Coro::Event>, L<Coro::RWLock>,
-L<Coro::L<Coro::Handle>, L<Coro::Socket>.
+L<Coro::Handle>, L<Coro::Socket>.
 
 =head1 AUTHOR
 

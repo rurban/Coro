@@ -49,6 +49,25 @@ until an error condition happens (and return false).
 sub readable	{ tied(${$_[0]})->readable }
 sub writable	{ tied(${$_[0]})->writable }
 
+=item $fh->readline([$terminator])
+
+Like the builtin of the same name, but allows you to specify the input
+record separator in a coroutine-safe manner (i.e. not usign a global
+variable).
+
+=cut
+
+sub readline	{ tied(${+shift})->READLINE(@_) }
+
+=item $fh->autoflush([...])
+
+Always returns true, arguments are being ignored (exists for compatibility
+only).
+
+=cut
+
+sub autoflush	{ !0 }
+
 package Coro::Handle::FH;
 
 use Fcntl ();
@@ -149,9 +168,10 @@ sub READ {
 
 sub READLINE {
    my $self = shift;
+   my $irs = @_ ? shift : $/;
 
    while() {
-      my $pos = index $self->{rb}, $/;
+      my $pos = index $self->{rb}, $irs;
       if ($pos >= 0) {
          $pos += length $/;
          my $res = substr $self->{rb}, 0, $pos;

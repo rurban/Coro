@@ -11,7 +11,7 @@ sub finger {
    my $user = shift;
    my $host = shift;
 
-   my $fh = new_inet Coro::Socket PeerHost => $host, PeerPort => "finger"
+   my $fh = new Coro::Socket PeerHost => $host, PeerPort => "finger"
       or die;
 
    print $fh "$user\n";

@@ -95,7 +95,7 @@ sub _prepare_socket {
    $fh;
 }
    
-sub new_inet {
+sub new {
    my $class = shift;
    my %arg = @_;
    my $fh;
