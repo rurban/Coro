@@ -41,7 +41,10 @@ use base Exporter;
 $VERSION = 0.45;
 
 @EXPORT = qw(async cede schedule terminate current);
-@EXPORT_OK = qw($current);
+%EXPORT_TAGS = (
+      prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
+);
+@EXPORT_OK = @{$EXPORT_TAGS{prio}};
 
 {
    my @async;
@@ -228,6 +231,46 @@ Like C<terminate>, but terminates the specified process instead.
 sub cancel {
    push @destroy, $_[0];
    $manager->ready;
+}
+
+=item $oldprio = $process->prio($newprio)
+
+Sets the priority of the process. Higher priority processes get run before
+lower priority processes. Priorities are smalled signed integer (currently
+-4 .. +3), that you can refer to using PRIO_xxx constants (use the import
+tag :prio to get then):
+
+   PRIO_MAX > PRIO_HIGH > PRIO_NORMAL > PRIO_LOW > PRIO_IDLE > PRIO_MIN
+       3    >     1     >      0      >    -1    >    -3     >    -4
+
+   # set priority to HIGH
+   current->prio(PRIO_HIGH);
+
+The idle coroutine ($Coro::idle) always has a lower priority than any
+existing coroutine.
+
+Changing the priority of the current process will take effect immediately,
+but changing the priority of processes in the ready queue (but not
+running) will only take effect after the next schedule (of that
+process). This is a bug that will be fixed in some future version.
+
+=cut
+
+sub prio {
+   my $old = $_[0]{prio};
+   $_[0]{prio} = $_[1] if @_ > 1;
+   $old;
+}
+
+=item $newprio = $process->nice($change)
+
+Similar to C<prio>, but subtract the given value from the priority (i.e.
+higher values mean lower priority, just as in unix).
+
+=cut
+
+sub nice {
+   $_[0]{prio} -= $_[1];
 }
 
 =back

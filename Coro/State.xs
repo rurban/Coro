@@ -113,10 +113,6 @@ static SV *ucoro_state_sv;
 static U32 ucoro_state_hash;
 static HV *padlist_cache;
 
-/* for Coro.pm */
-static GV *coro_current, *coro_idle;
-static AV *coro_ready;
-
 /* mostly copied from op.c:cv_clone2 */
 STATIC AV *
 clone_padlist (AV *protopadlist)
@@ -774,6 +770,59 @@ sv_to_coro (SV *arg, const char *funcname, const char *varname)
      croak ("%s() -- %s is not (and contains not) a Coro::State object", funcname, varname);
 }
 
+/** Coro ********************************************************************/
+
+#define PRIO_MAX     3
+#define PRIO_HIGH    1
+#define PRIO_NORMAL  0
+#define PRIO_LOW    -1
+#define PRIO_IDLE   -3
+#define PRIO_MIN    -4
+
+/* for Coro.pm */
+static GV *coro_current, *coro_idle;
+static AV *coro_ready[PRIO_MAX-PRIO_MIN+1];
+
+static void
+coro_enq (SV *sv)
+{
+  if (SvROK (sv))
+    {
+      SV *hv = SvRV (sv);
+      if (SvTYPE (hv) == SVt_PVHV)
+        {
+          SV **xprio = hv_fetch ((HV *)hv, "prio", 4, 0);
+          int prio = xprio ? SvIV (*xprio) : PRIO_NORMAL;
+
+          prio = prio > PRIO_MAX ? PRIO_MAX
+               : prio < PRIO_MIN ? PRIO_MIN
+               : prio;
+
+          av_push (coro_ready [prio - PRIO_MIN], sv);
+
+          return;
+        }
+    }
+
+  croak ("Coro::ready tried to enqueue something that is not a coroutine");
+}
+
+static SV *
+coro_deq (int min_prio)
+{
+  int prio = PRIO_MAX - PRIO_MIN;
+
+  min_prio -= PRIO_MIN;
+  if (min_prio < 0)
+    min_prio = 0;
+
+  for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= min_prio; )
+    if (av_len (coro_ready[prio]) >= 0)
+      return av_shift (coro_ready[prio]);
+
+  return 0;
+}
+
 MODULE = Coro::State                PACKAGE = Coro::State
 
 PROTOTYPES: ENABLE
@@ -905,30 +954,45 @@ MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
 {
+	int i;
+	HV *stash = gv_stashpv ("Coro", TRUE);
+
+        newCONSTSUB (stash, "PRIO_MAX",    newSViv (PRIO_MAX));
+        newCONSTSUB (stash, "PRIO_HIGH",   newSViv (PRIO_HIGH));
+        newCONSTSUB (stash, "PRIO_NORMAL", newSViv (PRIO_NORMAL));
+        newCONSTSUB (stash, "PRIO_LOW",    newSViv (PRIO_LOW));
+        newCONSTSUB (stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
+        newCONSTSUB (stash, "PRIO_MIN",    newSViv (PRIO_MIN));
+
         coro_current = gv_fetchpv ("Coro::current", TRUE, SVt_PV);
-        coro_ready   = newAV ();
         coro_idle    = gv_fetchpv ("Coro::idle"   , TRUE, SVt_PV);
+
+        for (i = PRIO_MAX - PRIO_MIN + 1; i--; )
+          coro_ready[i] = newAV ();
 }
 
 void
 ready(self)
 	SV *	self
 	CODE:
-        av_push (coro_ready, SvREFCNT_inc (self));
+        coro_enq (SvREFCNT_inc (self));
 
 void
 schedule(...)
   	ALIAS:
            cede = 1
 	CODE:
-        SV *prev = GvSV (coro_current);
-        SV *next = av_shift (coro_ready);
+        SV *prev, *next;
 
-        if (next == &PL_sv_undef)
-          next = SvREFCNT_inc (GvSV (coro_idle));
+        prev = GvSV (coro_current);
 
         if (ix)
-          av_push (coro_ready, SvREFCNT_inc (prev));
+          coro_enq (SvREFCNT_inc (prev));
+
+        next = coro_deq (PRIO_MIN);
+
+        if (!next)
+          next = SvREFCNT_inc (GvSV (coro_idle));
 
         GvSV (coro_current) = SvREFCNT_inc (next);
         transfer (sv_to_coro (prev, "Coro::schedule", "current coroutine"),

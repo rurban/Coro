@@ -205,7 +205,7 @@ sub handle {
       }
 
       if (%{$conn{$ip}} > $::MAX_CONN_IP) {
-         $self->slog("blocked ip $ip");
+         $self->slog(2, "blocked ip $ip");
          $self->err_blocked;
       }
 
@@ -402,7 +402,6 @@ satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
          if (%{$uri{$self->{uri}}} > 1) {
-            $self->slog("segmented download refused\n");
             $self->err(400, "segmented downloads are not allowed");
          }
       }
