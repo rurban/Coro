@@ -101,8 +101,6 @@ use Linux::AIO;
 
 Linux::AIO::min_parallel $::AIO_PARALLEL;
 
-my $aio_requests = new Coro::Semaphore $::AIO_PARALLEL * 4;
-
 Event->io(fd => Linux::AIO::poll_fileno,
           poll => 'r', async => 1,
           cb => \&Linux::AIO::poll_cb);
@@ -521,18 +519,15 @@ ignore:
             sysread $fh, $buf, $h > $::BUFSIZE ? $::BUFSIZE : $h
                or last;
          } else {
-            undef $buf;
-            $aio_requests->down;
             aio_read($fh, $l, ($h > $::BUFSIZE ? $::BUFSIZE : $h),
                      $buf, 0, sub {
                         $r = $_[0];
-                        $current->ready;
+                        Coro::ready($current);
                      });
             &Coro::schedule;
-            $aio_requests->up;
             last unless $r;
          }
-         my $w = $self->{fh}->syswrite($buf)
+         my $w = syswrite $self->{fh}, $buf
             or last;
          $::written += $w;
          $self->{written} += $w;

@@ -69,8 +69,8 @@ until an error condition happens (and return false).
 
 =cut
 
-sub readable	{ tied(${$_[0]})->readable }
-sub writable	{ tied(${$_[0]})->writable }
+sub readable	{ Coro::Handle::FH::readable(tied ${$_[0]}) }
+sub writable	{ Coro::Handle::FH::writable(tied ${$_[0]}) }
 
 =item $fh->readline([$terminator])
 
@@ -216,7 +216,7 @@ sub WRITE {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      last unless $self->writable;
+      last unless writable $self;
    }
 
    return $res;
@@ -253,7 +253,7 @@ sub READ {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      last unless $self->readable;
+      last unless readable $self;
    }
 
    return $res;
@@ -274,7 +274,7 @@ sub READLINE {
       my $r = sysread $self->{fh}, $self->{rb}, 8192, length $self->{rb};
       if (defined $r) {
          return undef unless $r;
-      } elsif ($! != Errno::EAGAIN || !$self->readable) {
+      } elsif ($! != Errno::EAGAIN || !readable $self) {
          return undef;
       }
    }
