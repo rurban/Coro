@@ -185,7 +185,7 @@ sub sanitize {
    s/^owner-c:\s+/*oc: /gm;
    s/^country:\s+/*cy: /gm;
    s/^phone:\s+/*ph: /gm;
-   s/^remarks:\s+/*re: /gm;
+   s/^remarks:\s+/*rm: /gm;
    s/^changed:\s+/*ch: /gm;
    s/^created:\s+/*cr: /gm;
    s/^address:\s+/*ad: /gm;
@@ -265,7 +265,7 @@ sub sanitize {
    s/^tech-contact;i:/*tc:/gm;
    s/^updated:/*ch:/gm;
    s/^street-address:/*ad:/gm;
-   s/^org-name:/*re:/gm;
+   s/^org-name:/*rm:/gm;
    s/^created:/*cr:/gm;
 
    $_;
