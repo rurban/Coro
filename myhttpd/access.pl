@@ -11,7 +11,6 @@ sub start_transfer {
    my $self = shift;
 
    my $trans = bless [ $self, $Coro::current ], transfer::;
-   print "$self $trans $trans->[0] <<\n";#d#
    Scalar::Util::weaken($trans->[0]);
 
    push @{$self->{wait}}, $trans;

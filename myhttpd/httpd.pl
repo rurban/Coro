@@ -37,8 +37,8 @@ our $httpevent   = new Coro::Signal;
 our $wait_factor = 0.95;
 
 our @transfers = (
-  (new Coro::Semaphore $MAX_TRANSFERS_SMALL),
-  (new Coro::Semaphore $MAX_TRANSFERS_LARGE),
+  (new transferqueue $MAX_TRANSFERS_SMALL),
+  (new transferqueue $MAX_TRANSFERS_LARGE),
 );
 
 my @newcons;
@@ -551,14 +551,13 @@ ignore:
          }
       }
       
-      my $transfer; # transfer guard
+      my $transfer = $queue->start_transfer;
+      my $locked;
       my $bufsize = $::WAIT_BUFSIZE; # initial buffer size
 
-      $self->{time} = $::NOW;
-
       while ($h > 0) {
-         unless ($transfer) {
-            if ($transfer ||= $queue->timed_guard($::WAIT_INTERVAL)) {
+         unless ($locked) {
+            if ($locked ||= $transfer->try($::WAIT_INTERVAL)) {
                $bufsize = $::BUFSIZE;
                $self->{time} = $::NOW;
             }
