@@ -133,7 +133,8 @@ sub new_inet {
    $fh;
 }
 
-=item connect, listen, bind, accept, getsockopt, setsockopt, send, recv
+=item connect, listen, bind, accept, getsockopt, setsockopt,
+send , recv, getpeername, getsockname
 
 Do the same thing as the perl builtins (but return true on
 EINPROGRESS). Remember that these must be method calls.
@@ -147,6 +148,8 @@ sub getsockopt	{ getsockopt tied(${$_[0]})->{fh}, $_[1], $_[2] }
 sub setsockopt	{ setsockopt tied(${$_[0]})->{fh}, $_[1], $_[2], $_[3] }
 sub send	{ send tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
+sub setsockname	{ setsockname tied(${$_[0]})->{fh} }
+sub setpeername	{ setpeername tied(${$_[0]})->{fh} }
 
 sub accept {
    my $fh;

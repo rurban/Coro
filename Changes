@@ -1,5 +1,9 @@
 Revision history for Perl extension Coro.
 
+	- added specialized hack for newer and older linux versions (fast).
+        - renamed Coro::Event::IO to Coro::Handle.
+        - new module Coro::Socket.
+
 0.1   Tue Jul 24 01:47:53 CEST 2001
 	- release candidate 3. A rather new internal structure :(
         - the great renaming: Damian Conway gave me a suitable replacement
