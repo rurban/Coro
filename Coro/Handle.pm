@@ -109,7 +109,7 @@ sub WRITE {
    my $ofs = $_[3];
    my $res = 0;
 
-   while () {
+   while() {
       my $r = syswrite $self->{fh}, $_[1], $len, $ofs;
       if (defined $r) {
          $len -= $r;
@@ -119,7 +119,7 @@ sub WRITE {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      $self->writable;
+      last unless $self->writable;
    }
 
    return $res;
@@ -131,7 +131,7 @@ sub READ {
    my $ofs = $_[3];
    my $res = 0;
 
-   while () {
+   while() {
       my $r = sysread $self->{fh}, $_[1], $len, $ofs;
       if (defined $r) {
          $len -= $r;
@@ -141,7 +141,7 @@ sub READ {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      $self->readable;
+      last unless $self->readable;
    }
 
    return $res;
@@ -161,9 +161,7 @@ sub READLINE {
       my $r = sysread $self->{fh}, $self->{rb}, 8192, length $self->{rb};
       if (defined $r) {
          return undef unless $r;
-      } elsif ($! == Errno::EAGAIN) {
-         $self->readable;
-      } else {
+      } elsif ($! != Errno::EAGAIN || !$self->readable) {
          return undef;
       }
    }

@@ -148,8 +148,8 @@ sub getsockopt	{ getsockopt tied(${$_[0]})->{fh}, $_[1], $_[2] }
 sub setsockopt	{ setsockopt tied(${$_[0]})->{fh}, $_[1], $_[2], $_[3] }
 sub send	{ send tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub setsockname	{ setsockname tied(${$_[0]})->{fh} }
-sub setpeername	{ setpeername tied(${$_[0]})->{fh} }
+sub setsockname	{ getsockname tied(${$_[0]})->{fh} }
+sub setpeername	{ getpeername tied(${$_[0]})->{fh} }
 
 sub accept {
    my $fh;
