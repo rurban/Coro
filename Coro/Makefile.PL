@@ -10,7 +10,7 @@ $DEFINE = "";
 
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
-if ($^O =~ /windows/) {
+if ($^O =~ /win32/i) {
    $DEFINE = " -DCORO_LOOSE";
 } elsif ($^O =~ /linux/) {
    $iface = "l";

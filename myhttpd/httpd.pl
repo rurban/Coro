@@ -224,8 +224,16 @@ sub handle {
       }
 
       if (%{$conn{$ip}} > $::MAX_CONN_IP) {
-         $self->slog(2, "blocked ip $ip");
-         $self->err_blocked;
+         my $delay = 120;
+         while (%{$conn{$ip}} > $::MAX_CONN_IP) {
+            if ($delay <= 0) {
+               $self->slog(2, "blocked ip $ip");
+               $self->err_blocked;
+            } else {
+               Coro::Event::do_timer(after => 3);
+               $delay -= 3;
+            }
+         }
       }
 
       $req =~ /^(?:\015\012)?
