@@ -1,0 +1,9 @@
+README
+Changes
+MANIFEST
+COPYING
+Makefile.PL
+Coro.pm
+Coro.xs
+typemap
+t/00_basic.t
