@@ -75,7 +75,7 @@ sub writable	{ tied(${$_[0]})->writable }
 =item $fh->readline([$terminator])
 
 Like the builtin of the same name, but allows you to specify the input
-record separator in a coroutine-safe manner (i.e. not usign a global
+record separator in a coroutine-safe manner (i.e. not using a global
 variable).
 
 =cut
@@ -183,6 +183,21 @@ sub READ {
    my $ofs = $_[3];
    my $res = 0;
 
+   # first deplete the read buffer
+   if (exists $self->{rb}) {
+      my $l = length $self->{rb};
+      if ($l <= $len) {
+         substr($_[1], $ofs) = delete $self->{rb};
+         $len -= $l;
+         $res += $l;
+         return $res unless $len;
+      } else {
+         substr($_[1], $ofs) = substr($self->{rb}, 0, $len);
+         substr($self->{rb}, 0, $len) = "";
+         return $len;
+      }
+   }
+
    while() {
       my $r = sysread $self->{fh}, $_[1], $len, $ofs;
       if (defined $r) {
@@ -206,7 +221,7 @@ sub READLINE {
    while() {
       my $pos = index $self->{rb}, $irs;
       if ($pos >= 0) {
-         $pos += length $/;
+         $pos += length $irs;
          my $res = substr $self->{rb}, 0, $pos;
          substr ($self->{rb}, 0, $pos) = "";
          return $res;
@@ -229,7 +244,6 @@ sub DESTROY {
 =head1 BUGS
 
  - Perl's IO-Handle model is THE bug.
- - READLINE cannot be mixed with other forms of input.
 
 =head1 AUTHOR
 

@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.13
+0.13  Wed Aug  8 16:53:07 CEST 2001
 	- new method Coro::Handle::readline.
         - added eg/lwp and Coro::Handle::autoflush, to make LWP work.
           (see eg/lwp on how to make LWP non-blocking).
