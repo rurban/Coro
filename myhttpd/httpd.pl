@@ -2,6 +2,7 @@ use Coro;
 use Coro::Semaphore;
 use Coro::Event;
 use Coro::Socket;
+use Coro::Signal;
 
 use HTTP::Date;
 
@@ -30,6 +31,7 @@ sub slog {
 }
 
 our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
+our $httpevent   = new Coro::Signal;
 
 our $wait_factor = 0.95;
 
@@ -170,6 +172,8 @@ sub eoconn {
    # clean up hints
    delete $conn{$self->{remote_id}}{$self*1};
    delete $uri{$self->{remote_id}}{$self->{uri}}{$self*1};
+
+   $httpevent->broadcast;
 }
 
 sub slog {
@@ -294,13 +298,13 @@ sub handle {
       }
 
       if (%{$conn{$id}} >= $::MAX_CONN_IP) {
-         my $delay = $::PER_TIMEOUT + 15;
+         my $delay = $::PER_TIMEOUT + $::NOW + 15;
          while (%{$conn{$id}} >= $::MAX_CONN_IP) {
-            if ($delay <= 0) {
+            if ($delay < $::NOW) {
                $self->slog(2, "blocked ip $id");
                $self->err_blocked;
             } else {
-               Coro::Event::do_timer(after => 4); $delay -= 4;
+               $httpevent->wait;
             }
          }
       }
@@ -337,6 +341,8 @@ sub handle {
       die if $@ && !ref $@;
 
       last if $self->{h}{connection} =~ /close/ || $self->{version} < 1.1;
+
+      $httpevent->broadcast;
 
       $fh->timeout($::PER_TIMEOUT);
    }
@@ -472,12 +478,12 @@ sub handle_file {
 satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
-         my $delay = $::PER_TIMEOUT + 15;
+         my $delay = $::NOW + $::PER_TIMEOUT + 15;
          while (%{$uri{$self->{remote_id}}{$self->{uri}}} > 1) {
-            if ($delay <= 0) {
+            if ($delay <= $::NOW) {
                $self->err_segmented_download;
             } else {
-               Coro::Event::do_timer(after => 4); $delay -= 4;
+               $httpevent->broadcast;
             }
          }
       }
