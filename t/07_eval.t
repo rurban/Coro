@@ -14,7 +14,7 @@ async {
    my $t = eval "3";
    print "ok $t\n";
    cede;
-   print defined eval "require Coro::Nonexistent" ? "not ok" : "ok", " 5\n";
+   print defined eval "die" ? "not ok" : "ok", " 5\n";
 };
 
 print "ok 1\n";

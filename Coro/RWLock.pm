@@ -30,7 +30,7 @@ no warnings qw(uninitialized);
 
 use Coro ();
 
-$VERSION = 0.531;
+$VERSION = 0.532;
 
 =item $l = new Coro::RWLock;
 

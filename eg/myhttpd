@@ -153,7 +153,7 @@ sub handle {
                 \015\012/gx
          or $self->err(403, "method not allowed", { Allow => "GET,HEAD" });
 
-      $2 ne "1.0"
+      $2 >= 2
          or $self->err(506, "http protocol version not supported");
 
       $self->{method} = $1;
@@ -346,7 +346,7 @@ ignore:
 
    if ($self->{method} eq "GET") {
       my ($fh, $buf);
-      open $fh, "<", $self->{path}
+      cpen $fh, "<", $self->{path}
          or die "$self->{path}: late open failure ($!)";
 
       if ($l) {

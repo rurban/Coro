@@ -639,7 +639,7 @@ setup_coro (void *arg)
        * ah yes, and I don't care anyways ;)
        */
       PUTBACK;
-      PL_op = pp_entersub();
+      PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
       SPAGAIN;
 
       ENTER; /* necessary e.g. for dounwind */
