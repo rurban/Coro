@@ -197,7 +197,7 @@ clone_padlist (AV *protopadlist)
 }
 
 #ifdef MAY_FLUSH
-STATIC AV *
+STATIC void
 free_padlist (AV *padlist)
 {
   /* may be during global destruction */
@@ -756,16 +756,18 @@ sv_to_coro (SV *arg, const char *funcname, const char *varname)
   /* must also be changed inside Coro::Cont::yield */
   if (SvROK(arg) && SvSTASH(SvRV(arg)) == coro_state_stash)
     return (struct coro *) SvIV((SV*)SvRV(arg));
-  else
-    croak ("%s() -- %s is not (and contains not) a Coro::State object", funcname, varname);
+
+  croak ("%s() -- %s is not (and contains not) a Coro::State object", funcname, varname);
+  /*NORETURN*/
 }
 
 static void
 api_transfer(pTHX_ SV *prev, SV *next, int flags)
 {
-  transfer(aTHX_ sv_to_coro (prev, "Coro::transfer", "prev"),
-                 sv_to_coro (next, "Coro::transfer", "next"),
-                 flags);
+  transfer(aTHX_
+           sv_to_coro (prev, "Coro::transfer", "prev"),
+           sv_to_coro (next, "Coro::transfer", "next"),
+           flags);
 }
 
 /** Coro ********************************************************************/
@@ -848,7 +850,8 @@ api_schedule (int cede)
     next = SvREFCNT_inc (GvSV (coro_idle));
 
   GvSV (coro_current) = SvREFCNT_inc (next);
-  transfer (sv_to_coro (prev, "Coro::schedule", "current coroutine"),
+  transfer (aTHX_
+            sv_to_coro (prev, "Coro::schedule", "current coroutine"),
             sv_to_coro (next, "Coro::schedule", "next coroutine"),
             TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
   SvREFCNT_dec (next);

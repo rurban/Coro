@@ -152,7 +152,8 @@ sub response {
    my ($self, $code, $msg, $hdr, $content) = @_;
    my $res = "HTTP/1.1 $code $msg\015\012";
 
-   #$res .= "Connection: close\015\012";
+   $self->{h}{connection} ||= $hdr->{Connection};
+
    $res .= "Date: ".(time2str $::NOW)."\015\012"; # slow? nah. :(
 
    while (my ($h, $v) = each %$hdr) {
@@ -200,6 +201,7 @@ sub err_blocked {
                  "Retry-After" => $::BLOCKTIME,
                  "Warning" => "Please do NOT retry, you have been blocked",
                  "WWW-Authenticate" => "Basic realm=\"Please do NOT retry, you have been blocked\"",
+                 "Connection" => "close",
               },
               <<EOF);
 <html>
@@ -214,7 +216,7 @@ may retry at</p>
    <p><blockquote>$time.</blockquote></p>
    
 <p>Until then, each new access will renew the block. You might want to have a
-look at the <a href="http://www.goof.com/pcg/marc/animefaq.html">FAQ</a>.</p>
+look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#connectionlimit">FAQ</a>.</p>
 
 </body></html>
 EOF
@@ -461,7 +463,20 @@ satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
          if (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
-            $self->err(400, "segmented downloads are not allowed");
+            $self->err(400, "segmented downloads are not allowed",
+                       { "Content-Type" => "text/html", Connection => "close" }, <<EOF);
+<html>
+<head>
+<title>Segmented downloads are not allowed</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
+
+<p>Segmented downloads are not allowed on this server. Please refer to the
+<a href="http://www.goof.com/pcg/marc/animefaq.html#segmented_downloads">FAQ</a>.</p>
+
+</body></html>
+EOF
+EOF
          }
       }
 

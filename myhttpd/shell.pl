@@ -53,6 +53,7 @@ sub shell {
          } elsif ($cmd eq "refresh") {
             do "config.pl";
             print $fh "config.pl: $@\n" if $@;
+            %statdata_cache = ();
             read_blockuri;
             read_blockref;
          } elsif ($cmd eq "restart") {

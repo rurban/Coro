@@ -57,7 +57,7 @@ sub conn::err_block_country {
 
    $whois =~ s/&/&amp;/g;
    $whois =~ s/</&lt;/g;
-   $self->err(403, "forbidden", { "Content-Type" => "text/html" }, <<EOF);
+   $self->err(403, "forbidden", { "Content-Type" => "text/html", Connection => "close" }, <<EOF);
 <html>
 <head>
 <title>This material is licensed in your country!</title>
@@ -80,6 +80,9 @@ actively <em>hurt</em> the industry behind it, which includes the artists
 and authors of these videos/mangas. So I hope you understand that I try to
 avoid this.</p>
 
+<p>Please see the <a href="http://www.goof.com/pcg/marc/animefaq.html#licensed">FAQ</a>
+for a more thorough explanation.</p>
+
 <p>If you <em>really</em> think that this is wrong, i.e. the
 material you tried to access is <em>not</em> licensed in your
 country or your ip address was misdetected, you can write to <a
@@ -99,8 +102,6 @@ sub conn::err_block_referer {
 
    my $uri = $self->{uri};
    $uri =~ s/\/[^\/]+$/\//;
-   $uri = escape_uri $uri;
-   print "hiho $uri\n";#d#
 
    $self->slog(6, "REFERER($self->{uri},$self->{h}{referer})");
 
