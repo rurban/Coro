@@ -66,7 +66,7 @@ sub _sa($$$) {
    }
 }
 
-=item $fh = new_inet Coro::Socket param => value, ...
+=item $fh = new Coro::Socket param => value, ...
 
 Create a new non-blocking tcp handle and connect to the given host
 and port. The parameter names and values are mostly the same as in
