@@ -26,10 +26,8 @@ sub start_transfer {
 sub wake_next {
    my $self = shift;
 
-   return unless $self->{conns} >= 0;
-
-   if (@{$self->{wait}}) {
-      while() {
+   if ($self->{conns} >= 0) {
+      while(@{$self->{wait}}) {
          my $transfer = shift @{$self->{wait}};
          if ($transfer) {
             $transfer->wake;
@@ -51,7 +49,7 @@ sub try {
    my $self = shift;
    my $timeout = Coro::Timer::timeout $_[0];
 
-   Coro::schedule;
+   $self->[2] or Coro::schedule;
 
    return $self->[2];
 }
