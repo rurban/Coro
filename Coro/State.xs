@@ -11,14 +11,15 @@
 
 #define MAY_FLUSH /* increases codesize */
 
-#define SUB_INIT "Coro::State::initialize"
-
 #define TRANSFER_SAVE_DEFAV	0x00000001
 #define TRANSFER_SAVE_DEFSV	0x00000002
 #define TRANSFER_SAVE_ERRSV	0x00000004
 #define TRANSFER_SAVE_CCTXT	0x00000008
 
 #define TRANSFER_SAVE_ALL	-1
+
+#define SUB_INIT    "Coro::State::initialize"
+#define UCORO_STATE "_coro_state"
 
 struct coro {
   /* the optional C context */
@@ -72,6 +73,8 @@ typedef struct coro *Coro__State_or_hashref;
 
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash;
+static SV *ucoro_state_sv;
+static U32 ucoro_state_hash;
 static HV *padlist_cache;
 
 /* mostly copied from op.c:cv_clone2 */
@@ -648,7 +651,9 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {       /* {} necessary for stoopid perl-5.6.x */
-	coro_state_stash = gv_stashpvn ("Coro::State", 10, TRUE);
+        ucoro_state_sv = newSVpv (UCORO_STATE, sizeof(UCORO_STATE) - 1);
+        PERL_HASH(ucoro_state_hash, UCORO_STATE, sizeof(UCORO_STATE) - 1);
+	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
         newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
         newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));

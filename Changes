@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.10
+0.10  Tue Jul 24 01:47:53 CEST 2001
 	- release candidate 3. A rather new internal structure :(
         - the great renaming: Damian Conway gave me a suitable replacement
           for yield.
@@ -17,6 +17,7 @@ Revision history for Perl extension Coro.
         - yet another bug workaround that I do not really understand :(
         - new module Coro::Event::IO (very undocumented) to do
           non-blocking i/o.
+        - performance tuning.
 
 0.08  Thu Jul 19 06:13:25 CEST 2001
 	- release candidate 2 (new functionality).

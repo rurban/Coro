@@ -9,34 +9,54 @@ $DEFINE = "";
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
 if ($^O =~ /windows/) {
-   # nop, autodetected
+   $DEFINE = " -DCORO_LOOSE";
 } elsif (-e "/usr/include/ucontext.h") {
-   $DEFINE .= " -DHAVE_UCONTEXT_H"; # lame
+   $iface = "u";
 } else {
-   $DEFINE .= " -DHAVE_SETJMP_H -DHAVE_SIGALTSTACK"; # well
+   $iface = "s";
 }
 
-print <<EOF;
+if ($iface) {
+   print <<EOF;
 
-*
-* compile config: $DEFINE
-*
-* if Coro doesn't work on your platform, try to adjust \$DEFINE
-* in Coro/Makefile.PL:
-*
-* -DHAVE_UCONTEXT_H
-*    for systems that have working ucontexts
-*    (e.g. linux + glibc-2.2.3 and above)
-*    (all modern unices)
-*
-* -DHAVE_SETJMP_H -DHAVE_SIGALTSTACK
-*    for other systems
-*    (e.g. linux + glibc below 2.2)
-*
-* and none for microsoft's platform.
-*
+Coro has the option of using two different ways to implement coroutines
+at the C level, The unix ucontext functions or a setjmp/longjmp-based
+implementation.
+
+The unix ucontext functions ("u") are newer and not implemented in older
+unices (or broken libc's like glibc-2.2.2 and below). They allow very fast
+coroutine creation and fast switching, and, most importantly, are very
+stable.
+
+If the ucontext functions are not working or you don't want
+to use them for other reasons you can try a workaround using
+setjmp/longjmp/sigaltstack ("s") (also standard unix functions).
+Coroutine creation is rather slow, but switching is very fast as well
+(often faster than with the ucontext functions). Unfortunately, glibc-2.1
+and below don't even feature a working sigaltstack, so all bets are off
+with that platform.
 
 EOF
+
+retry:
+   $|=1;
+   print "Use which implementation (s or u) [$iface]? ";
+   my $r = <>;
+   $iface = lc $1 if $r =~ /(\S)/;
+
+   if ($iface eq "u") {
+      $DEFINE .= " -DCORO_UCONTEXT";
+      print "\nUsing ucontext implementation\n\n";
+   } elsif ($iface eq "s") {
+      $DEFINE .= " -DCORO_SJLJ";
+      print "\nUsing setjmp/longjmp/sigaltstack implementation\n\n";
+   } else {
+      print "\nUnknown implementation \"$iface\"\n";
+      goto retry;
+   }
+} else {
+   print "\nUsing microsoft coroutine implementation\n\n";
+}
 
 WriteMakefile(
   NAME         => "Coro::State",
