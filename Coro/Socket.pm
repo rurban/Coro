@@ -24,7 +24,7 @@ use Socket;
 
 use base 'Coro::Handle';
 
-$VERSION = 0.11;
+$VERSION = 0.12;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {

@@ -26,7 +26,7 @@ WriteMakefile(
     NAME         => "Coro",
     VERSION_FROM => "Coro.pm",
     DIR          => ['Coro'],
-    PM_PREREQ => {
+    PREREQ_PM    => {
        Event	=> 0.84, # yes, 0.83 and below have serious bugs
     },
 );

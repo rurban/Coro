@@ -48,7 +48,7 @@ per coroutine.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.11;
+   $VERSION = 0.12;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
@@ -61,7 +61,7 @@ use base 'Exporter';
 =item $coro = new [$coderef] [, @args...]
 
 Create a new coroutine and return it. The first C<transfer> call to this
-coroutine will start execution at the given coderef. If, the subroutine
+coroutine will start execution at the given coderef. If the subroutine
 returns it will be executed again.
 
 If the coderef is omitted this function will create a new "empty"
@@ -72,15 +72,7 @@ to save the current coroutine in.
 
 sub initialize {
    my $proc = shift;
-   do {
-      eval { &$proc };
-      if ($@) {
-         my $err = $@;
-         $error->(undef, $err);
-         print STDERR "FATAL: error function returned\n";
-         exit(50);
-      }
-   } while (1);
+   &$proc while 1;
 }
 
 sub new {
@@ -89,7 +81,7 @@ sub new {
    bless _newprocess [$proc, @_], $class;
 }
 
-=item $prev->transfer($next,[$flags])
+=item $prev->transfer($next,$flags)
 
 Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
@@ -105,9 +97,7 @@ following constants together:
    SAVE_ERRSV  save/restore $@
    SAVE_CCTXT  save/restore C-stack (you usually want this)
 
-These constants are not exported by default. The default is subject to
-change (because we are still at an early development stage) but will
-stabilize.
+These constants are not exported by default.
 
 If you feel that something important is missing then tell me.  Also
 remember that every function call that might call C<transfer> (such

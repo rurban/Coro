@@ -2,6 +2,7 @@ README
 Changes
 MANIFEST
 COPYING
+INSTALL
 Makefile.PL
 Coro.pm
 Coro/Makefile.PL
@@ -16,6 +17,7 @@ Coro/Specific.pm
 Coro/Event.pm
 Coro/Handle.pm
 Coro/Socket.pm
+Coro/RWLock.pm
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c
@@ -30,3 +32,6 @@ t/00_basic.t
 t/01_process.t
 t/02_channel.t
 t/03_cont.t
+t/04_rwlock.t
+t/05_specific.t
+

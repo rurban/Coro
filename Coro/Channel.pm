@@ -28,7 +28,7 @@ package Coro::Channel;
 
 use Coro ();
 
-$VERSION = 0.11;
+$VERSION = 0.12;
 
 =item $q = new Coro:Channel $maxsize
 

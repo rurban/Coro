@@ -26,16 +26,17 @@ package Coro::Specific;
 
 no warnings;
 
-$VERSION = 0.11;
+$VERSION = 0.12;
 
 =item new
 
-Create a new coroutine-specific scalar and return a reference to it.
+Create a new coroutine-specific scalar and return a reference to it. The
+scalar is guarenteed to be "undef". Once such a scalar has been allocated
+you cannot deallocate it (yet), so allocate only when you must.
 
 =cut
 
 my $idx;
-my @idx;
 
 sub new {
    my $var;
@@ -44,21 +45,21 @@ sub new {
 }
 
 sub TIESCALAR {
-   my $idx = pop @idx || $idx++;
+   my $idx = $idx++;
    bless \$idx, $_[0];
 }
 
 sub FETCH {
-   $Coro::current->{specific}[$$_[0]];
+   $Coro::current->{specific}[${$_[0]}];
 }
 
 sub STORE {
-   $Coro::current->{specific}[$$_[0]] = $_[1];
+   $Coro::current->{specific}[${$_[0]}] = $_[1];
 }
 
-sub DESTROY {
-   push @idx, $$_[0];
-}
+#sub DESTROY {
+#   push @idx, $$_[0];
+#}
 
 1;
 

@@ -107,7 +107,8 @@ BUGS/LIMITATIONS
 SEE ALSO
     the Coro::Channel manpage, the Coro::Cont manpage, the Coro::Specific
     manpage, the Coro::Semaphore manpage, the Coro::Signal manpage, the
-    Coro::State manpage, the Coro::Event manpage.
+    Coro::State manpage, the Coro::Event manpage, the Coro::RWLock manpage,
+    the Coro::Handle manpage, the Coro::Socket manpage.
 
 AUTHOR
      Marc Lehmann <pcg@goof.com>

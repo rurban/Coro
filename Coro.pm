@@ -38,13 +38,14 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.11;
+$VERSION = 0.12;
 
 @EXPORT = qw(async cede schedule terminate current);
 @EXPORT_OK = qw($current);
 
 {
    my @async;
+   my $init;
 
    # this way of handling attributes simply is NOT scalable ;()
    sub import {
@@ -56,6 +57,13 @@ $VERSION = 0.11;
          for (@_) {
             if ($_ eq "Coro") {
                push @async, $ref;
+               unless ($init++) {
+                  eval q{
+                     sub INIT {
+                        &async(pop @async) while @async;
+                     }
+                  };
+               }
             } else {
                push @attrs, $_;
             }
@@ -64,9 +72,6 @@ $VERSION = 0.11;
       };
    }
 
-   sub INIT {
-      &async(pop @async) while @async;
-   }
 }
 
 =item $main
@@ -105,6 +110,16 @@ our $idle = new Coro sub {
    exit(51);
 };
 
+# this coroutine is necessary because a coroutine
+# cannot destroy itself.
+my @destroy;
+my $manager = new Coro sub {
+   while() {
+      delete ((pop @destroy)->{_coro_state}) while @destroy;
+      &schedule;
+   }
+};
+
 # we really need priorities...
 my @ready; # the ready queue. hehe, rather broken ;)
 
@@ -134,6 +149,7 @@ in an outer scope. This does NOT work. Pass arguments into it instead.
 
 sub async(&@) {
    my $pid = new Coro @_;
+   $manager->ready; # this ensures that the stack is cloned from the manager
    $pid->ready;
    $pid;
 }
@@ -175,19 +191,9 @@ Future versions of this function will allow result arguments.
 
 =cut
 
-# this coroutine is necessary because a coroutine
-# cannot destroy itself.
-my @destroy;
-my $terminate = new Coro sub {
-   while() {
-      delete ((pop @destroy)->{_coro_state}) while @destroy;
-      &schedule;
-   }
-};
-
 sub terminate {
    push @destroy, $current;
-   $terminate->ready;
+   $manager->ready;
    &schedule;
    # NORETURN
 }
@@ -257,7 +263,8 @@ sub ready {
 =head1 SEE ALSO
 
 L<Coro::Channel>, L<Coro::Cont>, L<Coro::Specific>, L<Coro::Semaphore>,
-L<Coro::Signal>, L<Coro::State>, L<Coro::Event>.
+L<Coro::Signal>, L<Coro::State>, L<Coro::Event>, L<Coro::RWLock>,
+L<Coro::Handle>, L<Coro::Socket>.
 
 =head1 AUTHOR
 

@@ -16,6 +16,17 @@ Coro::Semaphore - non-binary semaphores
 
 =head1 DESCRIPTION
 
+This module implements counted semaphores. You can initialize a mutex
+with any level of parallel users, that is, you can intialize a sempahore
+that can be C<down>ed more than once until it blocks. There is no owner
+associated with semaphores, so one coroutine can C<down> it while another
+can C<up> it.
+
+Counting semaphores are typically used to coordinate access to
+resources, with the semaphore count initialized to the number of free
+resources. Coroutines then increment the count when resources are added
+and decrement the count when resources are removed.
+
 =over 4
 
 =cut
@@ -24,12 +35,14 @@ package Coro::Semaphore;
 
 use Coro ();
 
-$VERSION = 0.11;
+$VERSION = 0.12;
 
-=item new [inital count, default zero]
+=item new [inital count, default one]
 
 Creates a new sempahore object with the given initial lock count. The
-default lock count is 1, which means it is unlocked by default.
+default lock count is 1, which means it is unlocked by default. Zero (or
+negative values) are also allowed, in which case the semaphore is locked
+by default.
 
 =cut
 
