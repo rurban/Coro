@@ -5,6 +5,7 @@ Revision history for Perl extension Coro.
           Looking at the perl source the problem might be missing locking
           between Coro and some perl internal routines. That's not easily
           fixable).
+        - (hopefully) got rid of the static xnext inside transfer.
 
 0.95 Sun Feb 15 03:20:28 CET 2004
 	- removed Coro::State::flush, implemented a new and much

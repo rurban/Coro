@@ -1,3 +1,5 @@
+#define PERL_NO_GET_CONTEXT
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -65,6 +67,11 @@ static perl_mutex coro_mutex;
 #endif
 
 static struct CoroAPI coroapi;
+static AV *main_mainstack; /* used to differentiate between $main and others */
+static HV *coro_state_stash;
+static SV *ucoro_state_sv;
+static U32 ucoro_state_hash;
+static __thread SV *coro_mortal; /* will be freed after next transfer */
 
 /* this is actually not only the c stack but also c registers etc... */
 typedef struct {
@@ -132,15 +139,9 @@ struct coro {
 typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
 
-static AV *main_mainstack; /* used to differentiate between $main and others */
-static HV *coro_state_stash;
-static SV *ucoro_state_sv;
-static U32 ucoro_state_hash;
-static SV *coro_mortal; /* will be freed after next transfer */
-
 /* mostly copied from op.c:cv_clone2 */
 STATIC AV *
-clone_padlist (AV *protopadlist)
+clone_padlist (pTHX_ AV *protopadlist)
 {
   AV *av;
   I32 ix;
@@ -239,7 +240,7 @@ clone_padlist (AV *protopadlist)
 }
 
 STATIC void
-free_padlist (AV *padlist)
+free_padlist (pTHX_ AV *padlist)
 {
   /* may be during global destruction */
   if (SvREFCNT (padlist))
@@ -270,7 +271,7 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 
   /* casting is fun. */
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-    free_padlist (padlist);
+    free_padlist (aTHX_ padlist);
 }
 
 #define PERL_MAGIC_coro PERL_MAGIC_ext
@@ -279,18 +280,18 @@ static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
 
 /* the next two functions merely cache the padlists */
 STATIC void
-get_padlist (CV *cv)
+get_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
 
   if (mg && AvFILLp ((AV *)mg->mg_obj) >= 0)
     CvPADLIST (cv) = (AV *)av_pop ((AV *)mg->mg_obj);
   else
-    CvPADLIST (cv) = clone_padlist (CvPADLIST (cv));
+    CvPADLIST (cv) = clone_padlist (aTHX_ CvPADLIST (cv));
 }
 
 STATIC void
-put_padlist (CV *cv)
+put_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
 
@@ -362,7 +363,7 @@ load_state(pTHX_ Coro__State c)
 
         if (padlist)
           {
-            put_padlist (cv); /* mark this padlist as available */
+            put_padlist (aTHX_ cv); /* mark this padlist as available */
             CvPADLIST(cv) = padlist;
           }
 
@@ -412,7 +413,7 @@ save_state(pTHX_ Coro__State c, int flags)
                     PUSHs ((SV *)CvPADLIST(cv));
                     PUSHs ((SV *)cv);
 
-                    get_padlist (cv); /* this is a monster */
+                    get_padlist (aTHX_ cv); /* this is a monster */
                   }
               }
 #ifdef CXt_FORMAT
@@ -627,6 +628,7 @@ setup_coro (void *arg)
   /*
    * emulate part of the perl startup here.
    */
+  dTHX;
   dSP;
   Coro__State ctx = (Coro__State)arg;
   SV *sub_init = (SV *)get_cv (SUB_INIT, FALSE);
@@ -685,6 +687,7 @@ continue_coro (void *arg)
   /*
    * this is a _very_ stripped down perl interpreter ;)
    */
+  dTHX;
   Coro__State ctx = (Coro__State)arg;
   JMPENV coro_start_env;
 
@@ -827,7 +830,7 @@ api_transfer(pTHX_ SV *prev, SV *next, int flags)
   SV_CORO (prev, "Coro::transfer");
   SV_CORO (next, "Coro::transfer");
 
-  transfer(aTHX_ SvSTATE(prev), SvSTATE(next), flags);
+  transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
 }
 
 /** Coro ********************************************************************/
@@ -845,7 +848,7 @@ static AV *coro_ready[PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
 
 static void
-coro_enq (SV *sv)
+coro_enq (pTHX_ SV *sv)
 {
   if (SvTYPE (sv) == SVt_PVHV)
     {
@@ -866,7 +869,7 @@ coro_enq (SV *sv)
 }
 
 static SV *
-coro_deq (int min_prio)
+coro_deq (pTHX_ int min_prio)
 {
   int prio = PRIO_MAX - PRIO_MIN;
 
@@ -887,23 +890,27 @@ coro_deq (int min_prio)
 static void
 api_ready (SV *coro)
 {
+  dTHX;
+
   if (SvROK (coro))
     coro = SvRV (coro);
 
   LOCK;
-  coro_enq (SvREFCNT_inc (coro));
+  coro_enq (aTHX_ SvREFCNT_inc (coro));
   UNLOCK;
 }
 
 static void
 api_schedule (void)
 {
+  dTHX;
+
   SV *prev, *next;
 
   LOCK;
 
   prev = SvRV (GvSV (coro_current));
-  next = coro_deq (PRIO_MIN);
+  next = coro_deq (aTHX_ PRIO_MIN);
 
   if (!next)
     next = SvREFCNT_inc (SvRV (GvSV (coro_idle)));
@@ -925,8 +932,10 @@ api_schedule (void)
 static void
 api_cede (void)
 {
+  dTHX;
+
   LOCK;
-  coro_enq (SvREFCNT_inc (SvRV (GvSV (coro_current))));
+  coro_enq (aTHX_ SvREFCNT_inc (SvRV (GvSV (coro_current))));
   UNLOCK;
 
   api_schedule ();
