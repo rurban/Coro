@@ -120,7 +120,12 @@ our $idle = new Coro sub {
 my @destroy;
 my $manager = new Coro sub {
    while() {
-      delete ((pop @destroy)->{_coro_state}) while @destroy;
+      # by overwriting the state object with the manager we destroy it
+      # while still being able to schedule this coroutine (in case it has
+      # been readied multiple times. this is harmless since the manager
+      # can be called as many times as neccessary and will always
+      # remove itself from the runqueue
+      (pop @destroy)->{_coro_state} = $manager->{_coro_state} while @destroy;
       &schedule;
    }
 };
