@@ -32,7 +32,7 @@ $finished->wait;
 
 print "producer finished\n";
 
-yield while $work->size;
+cede while $work->size;
 
 print "job finished\n";
 

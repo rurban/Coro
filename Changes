@@ -1,12 +1,31 @@
 Revision history for Perl extension Coro.
 
+0.10  Tue Jul 24 01:47:53 CEST 2001
+	- release candidate 3. A rather new internal structure :(
+        - the great renaming: Damian Conway gave me a suitable replacement
+          for yield.
+	- added Coro/libcoro, a portable coroutine implementation for C
+          (not even perl-dependent!!!), which can be used by Coro::State.
+	- renamed SAVE_DEFSV (on xs-level only) to avoid symbol clash in
+          perl-5.6.
+	- new function Coro::Event::idle.
+        - the idle process is now overriden
+          by default in Coro::Event.
+        - Coro::Channel now enforces the size.
+        - canceling events now works in all cases.
+        - Coro state now include $_ and $@.
+        - yet another bug workaround that I do not really understand :(
+        - new module Coro::Event::IO (very undocumented) to do
+          non-blocking i/o.
+        - performance tuning.
+
 0.08  Thu Jul 19 06:13:25 CEST 2001
 	- release candidate 2 (new functionality).
 	- add Coro::State::flush function.
         - transfer now supports a flags value (mostly for speed ATM).
         - might compile and work in the presence of threads now.
         - continuations have a saner syntax.
-        - memleaks down to 129 bytes / coroutine ):.
+        - no more memleaks.
 
 0.07  Tue Jul 17 17:40:18 CEST 2001
 	- release candidate 1 ;)

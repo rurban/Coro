@@ -16,7 +16,7 @@ Coro - coroutine process abstraction
     # some more async code
  }
 
- yield;
+ cede;
 
 =head1 DESCRIPTION
 
@@ -24,6 +24,11 @@ This module collection manages coroutines. Coroutines are similar to
 Threads but don't run in parallel.
 
 This module is still experimental, see the BUGS section below.
+
+In this module, coroutines are defined as "callchain + lexical variables
++ @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
+callchain, it's own set of lexicals and it's own set of perl's most
+important global variables.
 
 =cut
 
@@ -33,14 +38,12 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.08;
+$VERSION = 0.10;
 
-@EXPORT = qw(async yield schedule terminate);
+@EXPORT = qw(async cede schedule terminate current);
 @EXPORT_OK = qw($current);
 
 {
-   use subs 'async';
-
    my @async;
 
    # this way of handling attributes simply is NOT scalable ;()
@@ -62,7 +65,7 @@ $VERSION = 0.08;
    }
 
    sub INIT {
-      async pop @async while @async;
+      &async(pop @async) while @async;
    }
 }
 
@@ -74,7 +77,7 @@ This coroutine represents the main program.
 
 our $main = new Coro;
 
-=item $current
+=item $current (or as function: current)
 
 The current coroutine (the last coroutine switched to). The initial value is C<$main> (of course).
 
@@ -86,6 +89,8 @@ if ($current) {
 }
 
 our $current = $main;
+
+sub current() { $current }
 
 =item $idle
 
@@ -149,14 +154,15 @@ sub schedule {
    Coro::State::transfer($prev, $current);
 }
 
-=item yield
+=item cede
 
-Yield to other processes. This function puts the current process into the
-ready queue and calls C<schedule>.
+"Cede" to other processes. This function puts the current process into the
+ready queue and calls C<schedule>, which has the effect of giving up the
+current "timeslice" to other coroutines of the same or higher priority.
 
 =cut
 
-sub yield {
+sub cede {
    $current->ready;
    &schedule;
 }
@@ -169,9 +175,21 @@ Future versions of this function will allow result arguments.
 
 =cut
 
+# this coroutine is necessary because a coroutine
+# cannot destroy itself.
+my @destroy;
+my $terminate = new Coro sub {
+   while() {
+      delete ((pop @destroy)->{_coro_state}) while @destroy;
+      &schedule;
+   }
+};
+
 sub terminate {
-   $current->{_results} = [@_];
+   push @destroy, $current;
+   $terminate->ready;
    &schedule;
+   # NORETURN
 }
 
 =back
@@ -234,7 +252,7 @@ sub ready {
    remaining bugs.
  - this module is not thread-safe. You must only ever use this module from
    the same thread (this requirement might be loosened in the future to
-   allow per-thread schedulers, but Coro::Satte does not yet allow this).
+   allow per-thread schedulers, but Coro::State does not yet allow this).
 
 =head1 SEE ALSO
 

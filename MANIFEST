@@ -5,6 +5,7 @@ COPYING
 Makefile.PL
 Coro.pm
 Coro/Makefile.PL
+Coro/typemap
 Coro/State.pm
 Coro/State.xs
 Coro/Signal.pm
@@ -13,7 +14,10 @@ Coro/Channel.pm
 Coro/Cont.pm
 Coro/Specific.pm
 Coro/Event.pm
-Coro/typemap
+Coro/Event/IO.pm
+Coro/libcoro/LICENSE
+Coro/libcoro/coro.h
+Coro/libcoro/coro.c
 eg/bench
 eg/prodcons1
 eg/prodcons2

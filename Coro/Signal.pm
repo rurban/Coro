@@ -24,7 +24,7 @@ package Coro::Signal;
 
 use Coro ();
 
-$VERSION = 0.08;
+$VERSION = 0.10;
 
 =item $s = new Coro::Signal;
 
@@ -39,7 +39,8 @@ sub new {
 
 =item $s->wait
 
-Wait for the signal to occur. Returns immediately if the signal has been sent before.
+Wait for the signal to occur. Returns immediately if the signal has been
+sent before.
 
 =cut
 
@@ -54,7 +55,8 @@ sub wait {
 
 =item $s->send
 
-Send the signal, waking up a waiting process or remembering the signal.
+Send the signal, waking up I<one> waiting process or remember the signal
+if no process is waiting.
 
 =cut
 
@@ -68,7 +70,8 @@ sub send {
 
 =item $s->broadcast
 
-Send the signal, waking up all waiting process. If no process is waiting the signal is lost.
+Send the signal, waking up I<all> waiting process. If no process is
+waiting the signal is lost.
 
 =cut
 

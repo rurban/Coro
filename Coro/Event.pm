@@ -22,7 +22,7 @@ Coro::Event - do events the coro-way
 
 =head1 DESCRIPTION
 
-This module enables you to create programs using the powerful Event modell
+This module enables you to create programs using the powerful Event model
 (and module), while retaining the linear style known from simple or
 threaded programs.
 
@@ -44,14 +44,14 @@ no warnings;
 
 use Carp;
 
+use Coro;
 use Event qw(unloop); # we are re-exporting this, cooool!
 
-use base 'Event';
 use base 'Exporter';
 
-@EXPORT = qw(loop unloop);
+@EXPORT = qw(loop unloop sweep);
 
-$VERSION = 0.08;
+$VERSION = 0.10;
 
 =item $w = Coro::Event->flavour(args...)
 
@@ -78,46 +78,76 @@ next method often, but it does save typing sometimes.
 
 =cut
 
+sub std_cb {
+   my $w = $_[0]->w;
+   my $q = $w->private;
+   $q->[1] = $_[0];
+   if ($q->[0]) { # somebody waiting?
+      $q->[0]->ready;
+      Coro::schedule;
+   } else {
+      $w->stop;
+   }
+}
+
 for my $flavour (qw(idle var timer io signal)) {
    push @EXPORT, "do_$flavour";
    my $new = \&{"Event::$flavour"};
    my $class = "Coro::Event::$flavour";
-   @{"${class}::ISA"} = ("Coro::Event", "Event::$flavour");
+   @{"${class}::ISA"} = (Coro::Event::, "Event::$flavour");
    my $coronew = sub {
       # how does one do method-call-by-name?
       # my $w = $class->SUPER::$flavour(@_);
 
-      my $w;
+      $_[0] eq Coro::Event::
+         or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
+
       my $q = []; # [$coro, $event]
-      $w = $new->(@_, cb => sub {
-            $q->[1] = $_[0];
-            if ($q->[0]) { # somebody waiting?
-               $q->[0]->ready;
-               Coro::schedule;
-            } else {
-               $w->stop;
-            }
-      });
+      my $w = $new->(@_, cb => \&std_cb);
       $w->private($q); # using private as attribute is pretty useless...
       bless $w, $class; # reblessing due to broken Event
    };
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
-      unshift @_, $class;
+      unshift @_, Coro::Event::;
       (&$coronew)->next;
    };
 }
 
 sub next {
-   my $q = $_[0]->private;
-   croak "only one coroutine can wait for an event" if $q->[0];
-   if (!$q->[1]) { # no event waiting?
+   my $w = $_[0];
+   my $q = $w->private;
+   if ($q->[1]) { # event waiting?
+      $w->again unless $w->is_cancelled;
+   } elsif ($q->[0]) {
+      croak "only one coroutine can wait for an event";
+   } else {
       local $q->[0] = $Coro::current;
       Coro::schedule;
-   } else {
-      $_[0]->again;
    }
-   delete $q->[1];
+   #FIXME why doesn't delete work?
+   my $e = $q->[1];
+   $q->[1] = undef;
+   return $e;
+}
+
+=item sweep
+
+Similar to Event::one_event and Event::sweep: The idle task is called once
+(this has the effect of jumping back into the Event loop once to serve new
+events).
+
+The reason this function exists is that you sometimes want to serve events
+while doing other work. Calling C<Coro::cede> does not work because
+C<cede> implies that the current coroutine is runnable and does not call
+into the Event dispatcher.
+
+=cut
+
+sub sweep {
+   die "sweep NYI";#d#
+   $Coro::idle->ready;
+   Coro::cede;
 }
 
 =item $result = loop([$timeout])
@@ -140,12 +170,14 @@ Same as Event::unloop (provided here for your convinience only).
 
 =cut
 
+$Coro::idle = new Coro sub {
+   while () {
+      Event::one_event; # inefficient
+      Coro::schedule;
+   }
+};
+
 1;
-
-=head1 BUGS
-
-This module is implemented straightforward using Coro::Channel and thus
-not as efficient as possible.
 
 =head1 AUTHOR
 

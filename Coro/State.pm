@@ -31,6 +31,16 @@ greatly reduced.
 This module provides only low-level functionality. See L<Coro> and related
 modules for a more useful process abstraction including scheduling.
 
+=head2 MEMORY CONSUMPTION
+
+A newly created coroutine that has not been used only allocates a
+relatively small (a few hundred bytes) structure. Only on the first
+C<transfer> will perl stacks (a few k) and optionally C stack (4-16k) be
+allocated. On systems supporting mmap a 128k stack is allocated, on the
+assumption that the OS has on-demand virtual memory. All this is very
+system-dependent. On my i686-pc-linux-gnu system this amounts to about 10k
+per coroutine.
+
 =over 4
 
 =cut
@@ -38,7 +48,7 @@ modules for a more useful process abstraction including scheduling.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.08;
+   $VERSION = 0.10;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
@@ -46,7 +56,7 @@ BEGIN {
 
 use base 'Exporter';
 
-@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV);
+@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CCTXT);
 
 =item $coro = new [$coderef] [, @args...]
 
@@ -54,16 +64,13 @@ Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If, the subroutine
 returns it will be executed again.
 
-The coderef you submit MUST NOT be a closure that refers to variables
-in an outer scope. This does NOT work.
-
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
 to save the current coroutine in.
 
 =cut
 
-sub _newcoro {
+sub initialize {
    my $proc = shift;
    do {
       eval { &$proc };
@@ -89,18 +96,18 @@ coroutine saved in C<$next>.
 
 The "state" of a subroutine includes the scope, i.e. lexical variables and
 the current execution state. The C<$flags> value can be used to specify
-that additional state be saved/restored, by C<||>-ing the following
-constants together:
+that additional state be saved (and later restored), by C<||>-ing the
+following constants together:
 
-   Constant            Effect
-   SAVE_DEFAV          save/restore @_
-   SAVE_DEFSV          save/restore $_
-   SAVE_ERRSV          save/restore $@
+   Constant    Effect
+   SAVE_DEFAV  save/restore @_
+   SAVE_DEFSV  save/restore $_
+   SAVE_ERRSV  save/restore $@
+   SAVE_CCTXT  save/restore C-stack (you usually want this)
 
 These constants are not exported by default. The default is subject to
 change (because we are still at an early development stage) but will
-stabilize. You have to make sure that the destination state is valid with
-respect to the flags, segfaults or worse will result otherwise.
+stabilize.
 
 If you feel that something important is missing then tell me.  Also
 remember that every function call that might call C<transfer> (such
@@ -108,7 +115,8 @@ as C<Coro::Channel::put>) might clobber any global and/or special
 variables. Yes, this is by design ;) You can always create your own
 process abstraction model that saves these variables.
 
-The easiest way to do this is to create your own scheduling primitive like this:
+The easiest way to do this is to create your own scheduling primitive like
+this:
 
   sub schedule {
      local ($_, $@, ...);
@@ -135,8 +143,8 @@ C<$error_coro> return the error message and the error-causing coroutine
 =cut
 
 $error = sub {
-   require Carp;
-   Carp::confess("FATAL: $_[1]\n");
+   print STDERR "FATAL: $_[1]\n";
+   exit 51;
 };
 
 =item Coro::State::flush

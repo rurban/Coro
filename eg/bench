@@ -8,40 +8,63 @@
 use Coro;
 use Benchmark;
 
+sub a() { }
+
 $a = bless {}, main::;
 
-
-sub a {
-   $n++; # do something to taint the benchmark results ;)
+sub b {
+   my ($self) = shift;
+   $self->{b} = shift if @_;
+   $self->{b};
 }
 
 $b = async {
    # do a little unrolling...
    while() {
-      yield; yield; yield; yield; yield;
+      cede; cede; cede; cede; cede;
    }
 };
 
-yield;
+cede;
 
 $main = $Coro::main;
 
 *transfer = \&Coro::State::transfer;
 
-$c = Coro::State::_newprocess [sub {
+sub doit0 {
    while() {
       # some unrolling here as well..
-      transfer($c, $main); transfer($c, $main);
-      transfer($c, $main); transfer($c, $main);
-      transfer($c, $main); transfer($c, $main);
+      transfer($c0, $main); transfer($c0, $main);
+      transfer($c0, $main); transfer($c0, $main);
+      transfer($c0, $main); transfer($c0, $main);
    }
+}
+
+sub doit1 {
+   while() {
+      # some unrolling here as well..
+      transfer($c1, $main); transfer($c1, $main);
+      transfer($c1, $main); transfer($c1, $main);
+      transfer($c1, $main); transfer($c1, $main);
+   }
+}
+
+$c0 = Coro::State::_newprocess [sub {
+   doit0(1,2,3,4,5,6,7,8,9);
 }];
 
-transfer($main, $c);
+$c1 = Coro::State::_newprocess [sub {
+   doit1(1,2,3,4,5,6,7,8,9);
+}];
+
+transfer($main, $c0);
+transfer($main, $c1);
 
 timethese 100000, {
-   method   => '$a->a; $a->a',
-   resume   => 'yield',
-   transfer => 'transfer($main, $c)',
+   empty    => '&a; &a',
+   method   => '$a->b(5); $a->b(6)',
+   cede     => 'cede',
+   transfer0=> 'transfer($main, $c0, 0)',
+   transfer1=> 'transfer($main, $c1)',
 };
 

@@ -14,7 +14,7 @@ SYNOPSIS
         # some more async code
      }
 
-     yield;
+     cede;
 
 DESCRIPTION
     This module collection manages coroutines. Coroutines are similar to
@@ -22,10 +22,15 @@ DESCRIPTION
 
     This module is still experimental, see the BUGS section below.
 
+    In this module, coroutines are defined as "callchain + lexical variables
+    + @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
+    callchain, it's own set of lexicals and it's own set of perl's most
+    important global variables.
+
     $main
     This coroutine represents the main program.
 
-    $current
+    $current (or as function: current)
     The current coroutine (the last coroutine switched to). The initial
     value is $main (of course).
 
@@ -57,9 +62,11 @@ DESCRIPTION
         be put into the ready queue, so calling this function usually means
         you will never be called again.
 
-    yield
-        Yield to other processes. This function puts the current process
-        into the ready queue and calls "schedule".
+    cede
+        "Cede" to other processes. This function puts the current process
+        into the ready queue and calls "schedule", which has the effect of
+        giving up the current "timeslice" to other coroutines of the same or
+        higher priority.
 
     terminate
         Terminates the current process.
@@ -95,7 +102,7 @@ BUGS/LIMITATIONS
        remaining bugs.
      - this module is not thread-safe. You must only ever use this module from
        the same thread (this requirement might be loosened in the future to
-       allow per-thread schedulers, but Coro::Satte does not yet allow this).
+       allow per-thread schedulers, but Coro::State does not yet allow this).
 
 SEE ALSO
     the Coro::Channel manpage, the Coro::Cont manpage, the Coro::Specific
