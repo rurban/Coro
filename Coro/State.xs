@@ -251,7 +251,7 @@ free_padlist (AV *padlist)
 }
 
 STATIC int
-coro_cv_free (SV *sv, MAGIC *mg)
+coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 {
   AV *padlist;
   AV *av = (AV *)mg->mg_obj;

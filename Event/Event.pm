@@ -8,7 +8,7 @@ Coro::Event - do events the coro-way
  use Coro::Event;
 
  sub keyboard : Coro {
-    my $w = Coro::Event->io(fd => *STDIN, poll => 'r');
+    my $w = Coro::Event->io(fd => \*STDIN, poll => 'r');
     while() {
        print "cmd> ";
        my $ev = $w->next; my $cmd = <STDIN>;
