@@ -8,10 +8,10 @@ if (defined $DB_HOME) {
    $db_env = new BerkeleyDB::Env
                  -Home => $DB_HOME,
                  -Cachesize => 1_000_000,
-                 -ErrFile => \*STDOUT,
+                 -ErrFile => "/proc/self/fd/2",
                  -ErrPrefix => "DATABASE",
                  -Verbose => 1,
-                 -Flags => DB_CREATE|DB_RECOVER|DB_RECOVER_FATAL|DB_INIT_MPOOL|DB_INIT_TXN
+                 -Flags => DB_CREATE|DB_RECOVER|DB_INIT_MPOOL|DB_INIT_TXN
                     or die "unable to create database home $DB_HOME";
 }
 
