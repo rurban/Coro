@@ -8,9 +8,6 @@ use HTTP::Date;
 no utf8;
 use bytes;
 
-our @wait_time = (); # used to calculcate avg. waiting time
-our $wait_time_length = 25;
-
 # at least on my machine, this thingy serves files
 # quite a bit faster than apache, ;)
 # and quite a bit slower than thttpd :(
@@ -33,7 +30,13 @@ sub slog {
 }
 
 our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
-our $transfers   = new Coro::Semaphore $MAX_TRANSFER || 50;
+
+our $wait_factor = 0.95;
+
+our @transfers = (
+  [(new Coro::Semaphore $MAX_TRANSFERS_SMALL || 50), 600],
+  [(new Coro::Semaphore $MAX_TRANSFERS_LARGE || 50), 600],
+);
 
 my @newcons;
 my @pool;
@@ -71,7 +74,7 @@ our $HTTP_NOW;
 Event->timer(interval => 1, hard => 1, cb => sub {
    $NOW = time;
    $HTTP_NOW = time2str $NOW;
-});
+})->now;
 
 # the "main thread"
 async {
@@ -428,7 +431,8 @@ sub handle_dir {
 
 sub handle_file {
    my $self = shift;
-   my $length = -s _;
+   my $length = $self->{stat}[7];
+   my $queue = $::transfers[$length >= $::TRANSFER_SMALL];
    my $hdr = {
       "Last-Modified"  => time2str ((stat _)[9]),
    };
@@ -484,11 +488,11 @@ ignore:
    if ($self->{method} eq "GET") {
       $self->{time} = $::NOW;
 
-      my $transfer = $::transfers->guard;
+      my $transfer = $queue->[0]->guard;
       $self->{fh}->writable or return;
 
-      push @::wait_time, $::NOW - $self->{time};
-      shift @::wait_time if @wait_time > $wait_time_length;
+      $queue->[1] = $queue->[1] * $::wait_factor
+                  + ($::NOW - $self->{time}) * (1 - $::wait_factor);
       $self->{time} = $::NOW;
 
       my ($fh, $buf, $r);

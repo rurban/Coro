@@ -1,5 +1,7 @@
-$MAX_CONNECTS = 40;			# maximum simult. connects
-$MAX_TRANSFER = 1;			# the maximum number of sim. file transfers
+$MAX_CONNECTS = 2000;			# maximum simult. connects
+$MAX_TRANSFERS_SMALL = 100;		# the maximum number of sim. file transfers
+$MAX_TRANSFERS_LARGE = 300;		# the maximum number of sim. file transfers
+$TRANSFER_SMALL = 1_000_000;		# size of a "small" file
 
 $MAX_CONN_IP  =   4000;			# maximum simult. connects per ip
 $BLOCKTIME    = 7200;			# block time

@@ -109,6 +109,7 @@ WriteMakefile(
     		    'Signal.pm'		=> '$(INST_LIBDIR)/Signal.pm',
     		    'Channel.pm'	=> '$(INST_LIBDIR)/Channel.pm',
     		    'Semaphore.pm'	=> '$(INST_LIBDIR)/Semaphore.pm',
+    		    'SemaphoreSet.pm'	=> '$(INST_LIBDIR)/SemaphoreSet.pm',
     		    'RWLock.pm'		=> '$(INST_LIBDIR)/RWLock.pm',
                   },
 );

@@ -147,10 +147,8 @@ sub conn::diridx {
       $stat .= "</table>";
    }
 
-   my $waiters = $::transfers->waiters*1;
-   my $avgtime = @::wait_time == $wait_time_length
-                 ? sprintf "%d second(s)", sum(@::wait_time) / $wait_time_length
-                 : "unknown[".scalar(@::wait_time)."]";
+   my $waiters = sprintf "%d/%d", $::transfers[0][0]->waiters+0, $::transfers[1][0]->waiters+0;
+   my $avgtime = sprintf "%d/%d second(s)", $::transfers[0][1], $::transfers[1][1];
 
    <<EOF;
 <html>

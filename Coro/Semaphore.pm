@@ -16,7 +16,7 @@ Coro::Semaphore - non-binary semaphores
 
 =head1 DESCRIPTION
 
-This module implements counted semaphores. You can initialize a mutex
+This module implements counting semaphores. You can initialize a mutex
 with any level of parallel users, that is, you can intialize a sempahore
 that can be C<down>ed more than once until it blocks. There is no owner
 associated with semaphores, so one coroutine can C<down> it while another
@@ -37,7 +37,7 @@ use Coro ();
 
 $VERSION = 0.45;
 
-=item new [inital count, default one]
+=item new [inital count]
 
 Creates a new sempahore object with the given initial lock count. The
 default lock count is 1, which means it is unlocked by default. Zero (or
@@ -115,14 +115,14 @@ object is destroyed it automatically calls C<up>.
 =cut
 
 sub guard {
-   $_[0]->down;
+   &down;
    # double indirection because bless works on the referenced
    # object, not (only) on the reference itself.
    bless \\$_[0], Coro::Semaphore::Guard::;
 }
 
 sub Coro::Semaphore::Guard::DESTROY {
-   ${${$_[0]}}->up;
+   &up(${${$_[0]}});
 }
 
 1;

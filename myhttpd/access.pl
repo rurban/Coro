@@ -58,7 +58,7 @@ read_blockuri;
 read_blockref;
 
 use Tie::Cache;
-tie %whois_cache, Tie::Cache::, $::MAX_CONNECTS * 1.5;
+tie %whois_cache, Tie::Cache::, 32;
 
 sub access_check {
    my $self = shift;
