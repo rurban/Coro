@@ -31,7 +31,7 @@ no warnings qw(uninitialized);
 
 use Coro ();
 
-$VERSION = 0.651;
+$VERSION = 0.652;
 
 =item $s = new Coro::Signal;
 
