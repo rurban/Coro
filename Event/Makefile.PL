@@ -1,4 +1,5 @@
 use ExtUtils::MakeMaker;
+use Event::MakeMaker;
 
 use 5.005;
 
@@ -16,12 +17,18 @@ if (eval { require Event }) {
    $EVENT = 0;
 }
 
-WriteMakefile(
+WriteMakefile(Event::MakeMaker::event_args(
   NAME         => "Coro::Event",
   VERSION_FROM => "Event.pm",
   DEFINE       => $DEFINE,
   DIR          => [],
-);
+  PM           => {
+                    'Event.pm'	=> '$(INST_LIBDIR)/Event.pm',
+                    'Handle.pm'	=> '$(INST_LIBDIR)/Handle.pm',
+                    'Socket.pm'	=> '$(INST_LIBDIR)/Socket.pm',
+                    'Util.pm'	=> '$(INST_LIBDIR)/Util.pm',
+                  },
+));
 
 
 

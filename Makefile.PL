@@ -33,27 +33,7 @@ WriteMakefile(
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro/Coro.pm',
-    		    'Coro/State.pm'	=> '$(INST_LIBDIR)/Coro/State.pm',
-
-    		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
-    		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',
-
-    		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
-
-    		    'Coro/Specific.pm'	=> '$(INST_LIBDIR)/Coro/Specific.pm',
-
-    		    'Coro/Signal.pm'	=> '$(INST_LIBDIR)/Coro/Signal.pm',
-    		    'Coro/Channel.pm'	=> '$(INST_LIBDIR)/Coro/Channel.pm',
-    		    'Coro/Semaphore.pm'	=> '$(INST_LIBDIR)/Coro/Semaphore.pm',
-    		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
-
-                    $EVENT ? (
-                       'Event/Event.pm'	=> '$(INST_LIBDIR)/Coro/Event.pm',
-                       'Event/Handle.pm'=> '$(INST_LIBDIR)/Coro/Handle.pm',
-                       'Event/Socket.pm'=> '$(INST_LIBDIR)/Coro/Socket.pm',
-                       'Event/Util.pm'	=> '$(INST_LIBDIR)/Coro/Util.pm',
-                    ) : (),
-                  },
+                    },
 );
 
 sub MY::postamble {

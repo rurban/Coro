@@ -2,7 +2,8 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#include "CoroAPI.h"
+#include "EventAPI.h"
+#include "../Coro/CoroAPI.h"
 
 MODULE = Coro::Event                PACKAGE = Coro::Event
 
