@@ -38,7 +38,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.652;
+$VERSION = 0.7;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -328,8 +328,7 @@ sub desc {
 =head1 BUGS/LIMITATIONS
 
  - you must make very sure that no coro is still active on global
-   destruction. very bad things might happen otherwise (usually segfaults
-   or "panic: top_env").
+   destruction. very bad things might happen otherwise (usually segfaults).
 
  - this module is not thread-safe. You should only ever use this module
    from the same thread (this requirement might be losened in the future

@@ -49,6 +49,9 @@ typedef struct {
 } coro_stack;
 
 struct coro {
+  /* the top-level JMPENV for each coroutine, needed to catch dies. */
+  JMPENV start_env;
+
   /* the optional C context */
   coro_stack *stack;
   void *cursp;
@@ -658,11 +661,7 @@ continue_coro (void *arg)
   Coro__State ctx = (Coro__State)arg;
   JMPENV coro_start_env;
 
-  /* same as JMPENV_BOOTSTRAP */
-  Zero(&coro_start_env, 1, JMPENV);
-  coro_start_env.je_ret = -1;
-  coro_start_env.je_mustcatch = TRUE;
-  PL_top_env = &coro_start_env;
+  PL_top_env = &ctx->start_env;
 
   ctx->cursp = 0;
   PL_op = PL_op->op_next;
@@ -730,6 +729,8 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
 
               if (prev->stack->sptr && flags & TRANSFER_LAZY_STACK)
                 {
+                  PL_top_env = &next->start_env;
+
                   setup_coro (next);
 
                   prev->stack->refcnt++;
@@ -931,6 +932,12 @@ _newprocess(args)
         coro->args = (AV *)SvREFCNT_inc (SvRV (args));
         coro->mainstack = 0; /* actual work is done inside transfer */
         coro->stack = 0;
+
+        /* same as JMPENV_BOOTSTRAP */
+        /* we might be able to recycle start_env, but safe is safe */
+        Zero(&coro->start_env, 1, JMPENV);
+        coro->start_env.je_ret = -1;
+        coro->start_env.je_mustcatch = TRUE;
 
         RETVAL = coro;
         OUTPUT:
