@@ -80,10 +80,6 @@ Event->io(fd => Linux::AIO::poll_fileno,
           poll => 'r', async => 1,
           cb => \&Linux::AIO::poll_cb );
 
-Event->add_hooks(prepare => sub {
-   &Coro::cede;
-});
-
 our %conn; # $conn{ip}{fh} => connobj
 our %blocked;
 our %mimetype;

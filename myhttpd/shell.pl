@@ -22,9 +22,10 @@ sub shell {
       s/\015?\012$//;
       if (s/^(\S+)\s*// && (my $cmd = $complete{$1})) {
          if ($cmd eq "quit") {
-            print "bye bye.\n";#d#
+            print $fh "bye bye.\n";#d#
             last;
          } elsif ($cmd eq "squit") {
+            print $fh "server quit.\n";#d#
             Event::unloop;
             last;
          } elsif ($cmd eq "print") {
