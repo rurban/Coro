@@ -37,8 +37,8 @@ our $httpevent   = new Coro::Signal;
 our $wait_factor = 0.95;
 
 our @transfers = (
-  [(new Coro::Semaphore $MAX_TRANSFERS_SMALL), 1],
-  [(new Coro::Semaphore $MAX_TRANSFERS_LARGE), 1],
+  (new Coro::Semaphore $MAX_TRANSFERS_SMALL),
+  (new Coro::Semaphore $MAX_TRANSFERS_LARGE),
 );
 
 my @newcons;
@@ -154,6 +154,8 @@ sub new {
 
    $self->{remote_addr} = inet_ntoa $iaddr;
    $self->{time} = $::NOW;
+
+   weaken ($Coro::current->{conn} = $self);
 
    $::conns++;
 
@@ -416,38 +418,47 @@ sub respond {
    my $self = shift;
    my $path = $self->{path};
 
-   stat $path
-      or $self->err(404, "not found");
-
-   $self->{stat} = [stat _];
-
-   # idiotic netscape sends idiotic headers AGAIN
-   my $ims = $self->{h}{"if-modified-since"} =~ /^([^;]+)/
-             ? str2time $1 : 0;
-
-   if (-d _ && -r _) {
-      # directory
-      if ($path !~ /\/$/) {
-         # create a redirect to get the trailing "/"
-         # we don't try to avoid the :80
-         $self->err(301, "moved permanently", { Location =>  "http://".$self->server_hostport."$self->{uri}/" });
+   if ($self->{name} =~ s%^/internal/([^/]+)%%) {
+      if ($::internal{$1}) {
+         $::internal{$1}->($self);
       } else {
-         $ims < $self->{stat}[9]
-            or $self->err(304, "not modified");
-
-         if (-r "$path/index.html") {
-            # replace directory "size" by index.html filesize
-            $self->{stat}[7] = (stat ($self->{path} .= "/index.html"))[7];
-            $self->handle_file;
-         } else {
-            $self->handle_dir;
-         }
+         $self->err(404, "not found");
       }
-   } elsif (-f _ && -r _) {
-      -x _ and $self->err(403, "forbidden");
-      $self->handle_file;
    } else {
-      $self->err(404, "not found");
+
+      stat $path
+         or $self->err(404, "not found");
+
+      $self->{stat} = [stat _];
+
+      # idiotic netscape sends idiotic headers AGAIN
+      my $ims = $self->{h}{"if-modified-since"} =~ /^([^;]+)/
+                ? str2time $1 : 0;
+
+      if (-d _ && -r _) {
+         # directory
+         if ($path !~ /\/$/) {
+            # create a redirect to get the trailing "/"
+            # we don't try to avoid the :80
+            $self->err(301, "moved permanently", { Location =>  "http://".$self->server_hostport."$self->{uri}/" });
+         } else {
+            $ims < $self->{stat}[9]
+               or $self->err(304, "not modified");
+
+            if (-r "$path/index.html") {
+               # replace directory "size" by index.html filesize
+               $self->{stat}[7] = (stat ($self->{path} .= "/index.html"))[7];
+               $self->handle_file;
+            } else {
+               $self->handle_dir;
+            }
+         }
+      } elsif (-f _ && -r _) {
+         -x _ and $self->err(403, "forbidden");
+         $self->handle_file;
+      } else {
+         $self->err(404, "not found");
+      }
    }
 }
 
@@ -522,19 +533,16 @@ ignore:
    if ($self->{method} eq "GET") {
       $self->{time} = $::NOW;
 
-      my $fudge = $queue->[0]->waiters;
-      $fudge = $fudge ? ($fudge+1)/$fudge : 1;
-
-      $queue->[1] *= $fudge;
+      my $current = $Coro::current;
 
       my ($fh, $buf, $r);
-      my $current = $Coro::current;
+
       open $fh, "<", $self->{path}
          or die "$self->{path}: late open failure ($!)";
 
       $h -= $l - 1;
 
-      if (0) {
+      if (0) { # !AIO
          if ($l) {
             sysseek $fh, $l, 0;
          }
@@ -543,20 +551,17 @@ ignore:
       my $transfer; # transfer guard
       my $bufsize = $::WAIT_BUFSIZE; # initial buffer size
 
+      $self->{time} = $::NOW;
+
       while ($h > 0) {
          unless ($transfer) {
-            if ($transfer ||= $queue->[0]->timed_guard($::WAIT_INTERVAL)) {
-               if ($fudge != 1) {
-                  $queue->[1] /= $fudge;
-                  $queue->[1] = $queue->[1] * $::wait_factor
-                              + ($::NOW - $self->{time}) * (1 - $::wait_factor);
-               }
+            if ($transfer ||= $queue->timed_guard($::WAIT_INTERVAL)) {
                $bufsize = $::BUFSIZE;
                $self->{time} = $::NOW;
             }
          }
 
-         if (0) {
+         if (0) { # !AIO
             sysread $fh, $buf, $h > $bufsize ? $bufsize : $h
                or last;
          } else {
