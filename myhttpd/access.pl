@@ -14,18 +14,28 @@ sub start_transfer {
    my $size = $_[0];
 
    my $transfer = bless {
-      queue => $self,
-      time  => $::NOW,
-      size  => $size,
-      coro  => $Coro::current,
+      queue   => $self,
+      time    => $::NOW,
+      size    => $size,
+      coro    => $Coro::current,
+      started => 0,
    }, transfer::;
 
    push @{$self->{wait}}, $transfer;
-   Scalar::Util::weaken($self->{wait}[-1]);
 
    $self->wake_next;
 
-   $trans;
+   $transfer;
+}
+
+sub sort {
+   my @queue = grep $_, @{$_[0]{wait}};
+
+   $_->{spb} = ($::NOW-$_->{time}) / ($_->{size} || 1) for @queue;
+   
+   $_[0]{wait} = [sort { $b->{spb} <=> $a->{spb} } @queue];
+
+   Scalar::Util::weaken $_ for @{$_[0]{wait}};
 }
 
 sub wake_next {
@@ -39,18 +49,11 @@ sub wake_next {
          $self->{lastspb} = $transfer->{spb};
          $self->{avgspb} ||= $transfer->{spb};
          $self->{avgspb} = $self->{avgspb} * 0.95 + $transfer->{spb} * 0.05;
+         $self->{started}++;
          $transfer->wake;
          last;
       }
    }
-}
-
-sub sort {
-   my @queue = grep $_, @{$_[0]{wait}};
-
-   $_->{spb} = ($::NOW-$_->{time}) / ($_->{size} || 1) for @queue;
-   
-   $_[0]{wait} = [sort { $b->{spb} <=> $a->{spb} } @queue];
 }
 
 sub waiters {

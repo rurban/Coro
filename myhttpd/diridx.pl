@@ -232,7 +232,7 @@ EOF
       my ($name, $queue) = @$_;
       my @waiters = $queue->waiters;
       if (@waiters) {
-         $content .= "<li>$name<br />".(scalar @waiters)." client(s)";
+         $content .= "<li>$name<br />".(scalar @waiters)." client(s); $queue->{started} downloads started;";
          
          $content .= "<p>Waiting time until download starts, estimated:<ul>";
          for (
