@@ -7,6 +7,7 @@ $NO_SEGMENTED =   1;			# allow segmented downloads?
 
 $REQ_TIMEOUT  =  60;			# request timeout
 $RES_TIMEOUT  = 180;			# response timeout
+$PER_TIMEOUT  = 120;			# persistent connection timeout
 
 $MAX_POOL     =  20;			# max. number of idle workers
 

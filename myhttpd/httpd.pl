@@ -77,13 +77,11 @@ use Linux::AIO;
 Linux::AIO::min_parallel $::AIO_PARALLEL;
 
 Event->io(fd => Linux::AIO::poll_fileno,
-          poll => 'r',
-          async => 1,
+          poll => 'r', async => 1,
           cb => \&Linux::AIO::poll_cb );
 
 Event->add_hooks(prepare => sub {
-   &Coro::cede while &Coro::nready;
-   1e6;
+   &Coro::cede;
 });
 
 our %conn; # $conn{ip}{fh} => connobj
@@ -140,9 +138,9 @@ sub slog {
 
 sub response {
    my ($self, $code, $msg, $hdr, $content) = @_;
-   my $res = "HTTP/1.0 $code $msg\015\012";
+   my $res = "HTTP/1.1 $code $msg\015\012";
 
-   $res .= "Connection: close\015\012";
+   #$res .= "Connection: close\015\012";
    $res .= "Date: ".(time2str $::NOW)."\015\012"; # slow? nah. :(
 
    while (my ($h, $v) = each %$hdr) {
@@ -167,6 +165,7 @@ sub err {
       $hdr->{"Content-Type"} = "text/plain";
       $hdr->{"Content-Length"} = length $content;
    }
+   $hdr->{"Connection"} = "close";
 
    $self->response($code, $msg, $hdr, $content);
 
@@ -202,17 +201,24 @@ sub handle {
    my $self = shift;
    my $fh = $self->{fh};
 
-   #while() {
-      $self->{h} = {};
+   $fh->timeout($::REQ_TIMEOUT);
+   while() {
+      $self->{reqs}++;
 
       # read request and parse first line
-      $fh->timeout($::REQ_TIMEOUT);
       my $req = $fh->readline("\015\012\015\012");
+
+      unless (defined $req) {
+         if (exists $self->{version}) {
+            last;
+         } else {
+            $self->err(408, "request timeout");
+         }
+      }
+
+      $self->{h} = {};
+
       $fh->timeout($::RES_TIMEOUT);
-
-      defined $req or
-         $self->err(408, "request timeout");
-
       my $ip = $self->{remote_addr};
 
       if ($blocked{$ip}) {
@@ -234,11 +240,12 @@ sub handle {
                 \015\012/gx
          or $self->err(405, "method not allowed", { Allow => "GET,HEAD" });
 
-      $2 ne "1.0"
-         or $self->err(506, "http protocol version not supported");
-
       $self->{method} = $1;
       $self->{uri} = $2;
+      $self->{version} = $3;
+
+      $3 eq "1.0" or $3 eq "1.1"
+         or $self->err(506, "http protocol version $3 not supported");
 
       # parse headers
       {
@@ -265,7 +272,12 @@ sub handle {
 
       $self->map_uri;
       $self->respond;
-   #}
+
+      last if $self->{h}{connection} =~ /close/ || $self->{version} lt "1.1";
+
+      $self->slog(9, "persistant connection [".$self->{h}{"user-agent"}."][$self->{reqs}]");
+      $fh->timeout($::PER_TIMEOUT);
+   }
 }
 
 # uri => path mapping

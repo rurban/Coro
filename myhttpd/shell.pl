@@ -11,7 +11,7 @@ use Text::Abbrev;
 my $last_ts = time;
 
 my %complete;
-my @commands = qw(quit squit refresh country restart block info eval);
+my @commands = qw(quit squit refresh country restart block info print);
 
 abbrev \%complete, @commands;
 
@@ -27,7 +27,7 @@ sub shell {
          } elsif ($cmd eq "squit") {
             Event::unloop;
             last;
-         } elsif ($cmd eq "eval") {
+         } elsif ($cmd eq "print") {
             my @res = eval $_;
             print $fh "eval: $@\n" if $@;
             print $fh "RES = ", (join " : ", @res), "\n";
