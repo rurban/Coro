@@ -1,5 +1,10 @@
 package transferqueue;
 
+my @reserve = (
+      [  1_000_000, 1],
+      [ 10_000_000, 1],
+);
+
 sub new {
    my $class = shift;
    bless {
@@ -43,16 +48,21 @@ sub wake_next {
 
    $self->sort;
 
-   while($self->{slots} > 0 && @{$self->{wait}}) {
-      my $transfer = shift @{$self->{wait}};
-      if ($transfer) {
-         $self->{lastspb} = $transfer->{spb};
-         $self->{avgspb} ||= $transfer->{spb};
-         $self->{avgspb} = $self->{avgspb} * 0.95 + $transfer->{spb} * 0.05;
-         $self->{started}++;
-         $transfer->wake;
-         last;
+   while (@{$self->{wait}}) {
+      my $size = $self->{wait}[0]{size};
+      my $min = 0;
+      for (@reserve) {
+         last if $size <= $_->[0];
+         $min += $_->[1];
       }
+      last unless $self->{slots} > $min;
+      my $transfer = shift @{$self->{wait}};
+      $self->{lastspb} = $transfer->{spb};
+      $self->{avgspb} ||= $transfer->{spb};
+      $self->{avgspb} = $self->{avgspb} * 0.95 + $transfer->{spb} * 0.05;
+      $self->{started}++;
+      $transfer->wake;
+      last;
    }
 }
 

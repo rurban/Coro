@@ -234,7 +234,7 @@ EOF
       $waiters[$_]{idx} = $_ + 1 for 0..$#waiters;
 
       if (@waiters) {
-         $content .= "<li>$name<br />".(scalar @waiters)." client(s); $queue->{started} downloads started;";
+         $content .= "<li>$name<br />".(scalar @waiters)." client(s); $queue->{started} downloads started; $queue->{slots} slots free;";
          
          $content .= "<p>Waiting time until download starts, estimated:<ul>";
          for (
