@@ -13,6 +13,8 @@ independent of the event loop mechanism used. If no event mechanism is
 used, it is emulated. The C<Coro::Event> module overwrites functions with
 versions better suited.
 
+This module is not subclassable.
+
 =over 4
 
 =cut
@@ -22,19 +24,33 @@ package Coro::Timer;
 no warnings qw(uninitialized);
 
 use Carp ();
+use Exporter;
 
 use Coro ();
 
-BEGIN { eval "use Time::HiRes 'time'" }
+BEGIN {
+   eval "use Time::HiRes 'time'";
+}
 
 $VERSION = 0.52;
+@EXPORT_OK = qw(timeout sleep);
 
-=item $flag = Coro::Timer::timeout $seconds;
+=item $flag = timeout $seconds;
 
 This function will wake up the current coroutine after $seconds
 seconds and sets $flag to true (it is false intiially).  If $flag goes
 out of scope earlier nothing happens. This is used to implement the
-C<timed_down>, C<timed_wait> etc. primitives.
+C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
+
+   sub timed_wait {
+      my $timeout = Coro::Timer::timeout 60;
+
+      while (condition false) {
+         schedule; # wait until woken up or timeout
+         return 0 if $timeout; # timed out
+      }
+      return 1; # condition satisfied
+   }
 
 =cut
 
@@ -42,7 +58,7 @@ C<timed_down>, C<timed_wait> etc. primitives.
 sub timeout($) {
    my $self = \\my $timer;
    my $current = $Coro::current;
-   $timer = _new_timer(Coro::Timer, time + $_[0], sub {
+   $timer = _new_timer(time + $_[0], sub {
       undef $timer; # set flag
       $current->ready;
    });
@@ -58,6 +74,19 @@ use overload 'bool' => \&bool, '0+' => \&bool;
 
 package Coro::Timer;
 
+=item sleep $seconds
+
+This function works like the built-in sleep, except maybe more precise
+and, most important, without blocking other coroutines.
+
+=cut
+
+sub sleep {
+   my $current = $Coro::current;
+   _new_timer(time + $_[0], sub { $current->ready });
+   Coro::schedule;
+}
+
 =item $timer = new Coro::Timer at/after => xxx, cb => \&yyy;
 
 Create a new timer.
@@ -70,7 +99,7 @@ sub new {
 
    $arg{at} = time + delete $arg{after} if exists $arg{after};
 
-   _new_timer($class, $arg{at}, $arg{cb});
+   _new_timer($arg{at}, $arg{cb});
 }
 
 my $timer;
@@ -79,7 +108,7 @@ my @timer;
 unless ($override) {
    $override = 1;
    *_new_timer = sub {
-      my $self = bless [$_[1], $_[2]], $_[0];
+      my $self = bless [$_[0], $_[1]], Coro::Timer::simple;
 
       # my version of rapid prototyping. guys, use a real event module!
       @timer = sort { $a->[0] cmp $b->[0] } @timer, $self;
@@ -106,7 +135,7 @@ unless ($override) {
       $self;
    };
 
-   *cancel = sub {
+   *Coro::Timer::simple::cancel = sub {
       @{$_[0]} = ();
    };
 }

@@ -179,6 +179,17 @@ $Coro::idle = new Coro sub {
    }
 };
 
+# provide hooks for Coro::Timer
+
+package Coro::Timer;
+
+unless ($override) {
+   $override = 1;
+   *_new_timer = sub {
+      Event->timer(at => $_[0], cb => $_[1]);
+   };
+}
+
 1;
 
 =head1 AUTHOR
