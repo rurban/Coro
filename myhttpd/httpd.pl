@@ -75,6 +75,20 @@ use Convert::Scalar 'weaken';
 
 our %conn; # $conn{ip}{fh} => connobj
 our %blocked;
+our %mimetype;
+
+sub read_mimetypes {
+   local *M;
+   if (open M, "<mimetypes") {
+      while (<M>) {
+         if (/^([^#]\S+)\t+(\S+)$/) {
+            $mimetype{lc $1} = $2;
+         }
+      }
+   } else {
+      $self->slog(1, "cannot open mimetypes\n");
+   }
+}
 
 sub new {
    my $class = shift;
@@ -385,12 +399,8 @@ ignore:
       ($l, $h) = (0, $length - 1);
    }
 
-   if ($self->{path} =~ /\.html$/) {
-      $hdr->{"Content-Type"} = "text/html";
-   } else {
-      $hdr->{"Content-Type"} = "application/octet-stream";
-   }
-
+   $self->{path} =~ /\.([^.]+)$/;
+   $hdr->{"Content-Type"} = $mimetype{lc $1} || "application/octet-stream";
    $hdr->{"Content-Length"} = $length;
 
    $self->response(@code, $hdr, "");
