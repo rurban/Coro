@@ -28,7 +28,7 @@ use Coro::Util ();
 
 use base 'Coro::Handle';
 
-$VERSION = 0.6;
+$VERSION = 0.65;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {
@@ -52,6 +52,7 @@ sub _port($$) {
 
 sub _sa($$$) {
    my ($host, $port, $proto) = @_;
+   $port or $host =~ s/:([^:]+)$// and $port = $1;
    my $_proto = _proto($proto);
    my $_port = _port($port, $proto);
 
@@ -79,7 +80,7 @@ returns undef. On all other errors ot croak's.
 
 Multihomed is always enabled.
 
-   $fh = new_inet Coro::Socket PeerHost => "localhost", PeerPort => 'finger';
+   $fh = new Coro::Socket PeerHost => "localhost", PeerPort => 'finger';
 
 =cut
 
@@ -196,6 +197,8 @@ sub accept {
 }
 
 1;
+
+=back
 
 =head1 AUTHOR
 

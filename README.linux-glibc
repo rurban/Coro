@@ -1,0 +1,16 @@
+If Coro causes segfaults a lot on calls to libc functions, the cause is
+probably a glibc compiled for i386 and kernel 2.2.
+
+Glibc contains a bug that causes any program linked against pthreads AND
+using coroutines (of any kind, not only Coro, but including most userspace
+thread libraries like gnu-pth) or alternate stacks to segfault on calls to
+pthread functions. And glibc happens to do a lot of these calls.
+
+The bug is rather difficult to fix. This is not a problem, however, since
+glibcs compiled for linux-2.4 use a much more efficient method to locate
+their data, which happens to work with coroutines.
+
+So the easy fix is to install a libc which was compiled for linux-2.4,
+using the "--enable-kernel=2.4 i586-pc-linux-gnu" configure options.
+
+WARNING: This libc will no longer run on linux-2.2 or lower!

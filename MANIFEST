@@ -1,4 +1,5 @@
 README
+README.linux-glibc
 Changes
 MANIFEST
 COPYING
@@ -43,6 +44,7 @@ Event/Event.xs
 Event/Util.pm
 Event/Handle.pm
 Event/Socket.pm
+Event/Select.pm
 
 Event/t/00_basic.t
 Event/t/01_unblock.t

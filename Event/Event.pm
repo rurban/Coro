@@ -32,7 +32,7 @@ watcher constructors from Event is that you do not specify a callback
 function - it will be managed by this module.
 
 Your application should just create all necessary coroutines and then call
-Coro::Event->main.
+Coro::Event::loop.
 
 =over 4
 
@@ -52,9 +52,9 @@ use base 'Exporter';
 @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = 0.6;
+   $VERSION = 0.65;
 
-   local $^W = 0; # avoid redefine warning for Coro::ready
+   local $^W = 0; # avoid redefine warning for Coro::ready;
    require XSLoader;
    XSLoader::load Coro::Event, $VERSION;
 }

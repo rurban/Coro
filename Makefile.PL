@@ -16,7 +16,18 @@ if ($] < 5.006) {
 EOF
 }
 
-$EVENT = eval { require Event };
+if (eval { require Event }) {
+   if ($Event::VERSION < 0.86) {
+      print "*** Please read the INSTALL file, you need a patched Event.\n";
+   } else {
+      $EVENT = 1;
+      $DEFINE .= " -DHAVE_EVENT=1";
+      print "\nEvent version $Event::VERSION found, building Event support.\n\n";
+   }
+   print "\n";
+} else {
+   print "\n*** Event not found, not build Event support.\n\n";
+}
 
 WriteMakefile(
     dist         => {
@@ -28,11 +39,27 @@ WriteMakefile(
     VERSION_FROM => "Coro.pm",
     DIR          => ['Coro', ($EVENT ? 'Event' : ())],
     PREREQ_PM    => {
-       Event		=> 0.85,
+       Event		=> 0.86,
        Scalar::Util	=> 0.00,
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
+
+    		    'Coro/State.pm'	=> '$(INST_LIBDIR)/Coro/State.pm',
+
+    		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
+    		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',
+
+    		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
+
+    		    'Coro/Specific.pm'	=> '$(INST_LIBDIR)/Coro/Specific.pm',
+
+    		    'Coro/Timer.pm'	=> '$(INST_LIBDIR)/Coro/Timer.pm',
+    		    'Coro/Signal.pm'	=> '$(INST_LIBDIR)/Coro/Signal.pm',
+    		    'Coro/Channel.pm'	=> '$(INST_LIBDIR)/Coro/Channel.pm',
+    		    'Coro/Semaphore.pm'	=> '$(INST_LIBDIR)/Coro/Semaphore.pm',
+    		    'Coro/SemaphoreSet.pm'=> '$(INST_LIBDIR)/Coro/SemaphoreSet.pm',
+    		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
                     },
 );
 
