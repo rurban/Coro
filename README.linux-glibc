@@ -6,7 +6,7 @@ using coroutines (of any kind, not only Coro, but including most userspace
 thread libraries like gnu-pth) or alternate stacks to segfault on calls to
 pthread functions. And glibc happens to do a lot of these calls.
 
-(Even if you pelr is not compiled against pthreads, Time::HiRes links
+(Even if you perl is not compiled against pthreads, Time::HiRes links
 against -lrt, which drags in pthreads. The same is true for other modules,
 so watch out).
 
@@ -23,3 +23,6 @@ UPDATE: I am no longer able to compile glibc-2.3.2 in this way. The reason
 is most probably that the glibc folks work on an enhanced thread local
 storage facility, and it might be that you need a 2.5 or 2.6 kernel to
 make it work.  Glibc-2.3.1 works fine, though.
+
+UPDATE: Time::HiRes in current perl snapshots does no longer link against
+-lrt. That still means you need to patch it until 5.9.x gets out.

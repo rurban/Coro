@@ -18,12 +18,12 @@ does NOT inherit from IO::Handle but uses tied objects.
 
 package Coro::Handle;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 0.652;
+$VERSION = 0.8;
 
 @EXPORT = qw(unblock);
 
@@ -168,7 +168,7 @@ sub rbuf : lvalue {
 
 package Coro::Handle::FH;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Fcntl ();
 use Errno ();

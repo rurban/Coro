@@ -29,16 +29,18 @@ Coro::Cont - schmorp's faked continuations
 
 package Coro::Cont;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport }
 
 use Carp qw(croak);
 
 use Coro::State;
 use Coro::Specific;
 
+use vars qw($return);
+
 use base 'Exporter';
 
-$VERSION = 0.652;
+$VERSION = 0.8;
 @EXPORT = qw(csub yield);
 
 {
@@ -48,7 +50,6 @@ $VERSION = 0.652;
    sub import {
       Coro::Cont->export_to_level(1, @_);
       my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
-      no warnings;
       *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
          my ($package, $ref) = (shift, shift);
          my @attrs;
@@ -64,7 +65,6 @@ $VERSION = 0.652;
    }
 
    sub findsym {
-      no warnings;
       my ($pkg, $ref) = @_;
       my $type = ref $ref;
       for my $sym (values %{$pkg."::"}) {
@@ -76,7 +76,6 @@ $VERSION = 0.652;
    sub INIT {
       # prototypes are currently being ignored
       for (@csub) {
-         no warnings;
          my $ref = findsym(@$_)
             or croak "package $package: cannot declare non-global subs as 'Cont'";
          *$ref = &csub($_->[1]);
@@ -92,7 +91,7 @@ terminated).
 
 =cut
 
-our $return = new Coro::Specific;
+$return = new Coro::Specific;
 
 sub csub(&) {
    my $code = $_[0];

@@ -40,7 +40,7 @@ Coro::Event::loop.
 
 package Coro::Event;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Carp;
 
@@ -52,11 +52,13 @@ use base 'Exporter';
 @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = 0.652;
+   $VERSION = 0.8;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
-   require XSLoader;
-   XSLoader::load Coro::Event, $VERSION;
+
+   require DynaLoader;
+   push @ISA, 'DynaLoader';
+   bootstrap Coro::Event $VERSION;
 }
 
 =item $w = Coro::Event->flavour(args...)

@@ -17,7 +17,7 @@ functions by non-blocking counterparts.
 
 package Coro::Util;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 #use Carp qw(croak);
 
@@ -30,7 +30,7 @@ use base 'Exporter';
    gethostbyname gethostbyaddr
 );
 
-$VERSION = 0.652;
+$VERSION = 0.8;
 
 $MAXPARALLEL = 16; # max. number of parallel jobs
 

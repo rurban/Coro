@@ -18,7 +18,7 @@ handle. L<Coro::Handle>.
 
 package Coro::Socket;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Errno ();
 use Carp qw(croak);
@@ -28,7 +28,7 @@ use Coro::Util ();
 
 use base 'Coro::Handle';
 
-$VERSION = 0.652;
+$VERSION = 0.8;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {
@@ -104,8 +104,8 @@ sub _prepare_socket {
          or croak "setsockopt(SO_REUSEPORT): $!";
    }
 
-   if ($arg->{LocalPort}) {
-      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort}, $arg->{Proto});
+   if ($arg->{LocalPort} || $arg->{LocalHost}) {
+      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort} || 0, $arg->{Proto});
       $fh->bind($sa[0])
          or croak "bind($arg->{LocalHost}:$arg->{LocalPort}): $!";
    }

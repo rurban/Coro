@@ -61,4 +61,6 @@ eg/dns
 eg/myhttpd
 eg/readline
 
+doc/cede-vs-schedule
+
 META.yml                                Module meta-data in YAML

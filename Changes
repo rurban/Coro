@@ -1,5 +1,17 @@
 Revision history for Perl extension Coro.
 
+0.8   Wed Nov  5 19:38:40 CET 2003
+	- port to perl5.005_03, but only 5.8.x+ is supported!
+	- honor LocalAddr even without LocalPort in Coro::Socket.
+
+0.7   Tue May 27 03:12:38 CEST 2003
+        - the version jump indicates some level of testing, not gobs
+          of new features.
+	- uh... I found the prompt function in ExtUtils::MakeMaker.
+          Highly correct stuff, that is...
+        - fixed(?) a bug with die's in coroutines causing "panic: top_env".
+          the fix is not well understood by the author, so beware :(.
+
 0.652 Thu May  8 02:54:46 CEST 2003
 	- Applied patch by Slaven Rezic to set default to "s" on FreeBSD,
           cause version 4 doesn't have ucontext.

@@ -30,11 +30,11 @@ identifier.
 
 package Coro::SemaphoreSet;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 0.652;
+$VERSION = 0.8;
 
 =item new [inital count]
 

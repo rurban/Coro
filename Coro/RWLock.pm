@@ -26,11 +26,11 @@ OR a single writer (but no readers).
 
 package Coro::RWLock;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 0.652;
+$VERSION = 0.8;
 
 =item $l = new Coro::RWLock;
 

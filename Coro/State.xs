@@ -2,6 +2,29 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#include "patchlevel.h"
+
+#if PATCHLEVEL < 6
+# ifndef PL_ppaddr
+#  define PL_ppaddr ppaddr
+# endif
+# ifndef call_sv
+#  define call_sv perl_call_sv
+# endif
+# ifndef get_sv
+#  define get_sv perl_get_sv
+# endif
+# ifndef get_cv
+#  define get_cv perl_get_cv
+# endif
+# ifndef IS_PADGV
+#  define IS_PADGV(v) 0
+# endif
+# ifndef IS_PADCONST
+#  define IS_PADCONST(v) 0
+# endif
+#endif
+
 #include "libcoro/coro.c"
 
 #include <signal.h>
@@ -49,6 +72,9 @@ typedef struct {
 } coro_stack;
 
 struct coro {
+  /* the top-level JMPENV for each coroutine, needed to catch dies. */
+  JMPENV start_env;
+
   /* the optional C context */
   coro_stack *stack;
   void *cursp;
@@ -391,12 +417,14 @@ save_state(pTHX_ Coro__State c, int flags)
                     get_padlist (cv); /* this is a monster */
                   }
               }
+#ifdef CXt_FORMAT
             else if (CxTYPE(cx) == CXt_FORMAT)
               {
                 /* I never used formats, so how should I know how these are implemented? */
                 /* my bold guess is as a simple, plain sub... */
                 croak ("CXt_FORMAT not yet handled. Don't switch coroutines from within formats");
               }
+#endif
           }
 
         if (top_si->si_type == PERLSI_MAIN)
@@ -473,7 +501,9 @@ coro_init_stacks (pTHX)
     PL_markstack_ptr = PL_markstack;
     PL_markstack_max = PL_markstack + 16;
 
+#ifdef SET_MARK_OFFSET
     SET_MARK_OFFSET;
+#endif
 
     New(54,PL_scopestack,16,I32);
     PL_scopestack_ix = 0;
@@ -658,11 +688,7 @@ continue_coro (void *arg)
   Coro__State ctx = (Coro__State)arg;
   JMPENV coro_start_env;
 
-  /* same as JMPENV_BOOTSTRAP */
-  Zero(&coro_start_env, 1, JMPENV);
-  coro_start_env.je_ret = -1;
-  coro_start_env.je_mustcatch = TRUE;
-  PL_top_env = &coro_start_env;
+  PL_top_env = &ctx->start_env;
 
   ctx->cursp = 0;
   PL_op = PL_op->op_next;
@@ -730,6 +756,8 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
 
               if (prev->stack->sptr && flags & TRANSFER_LAZY_STACK)
                 {
+                  PL_top_env = &next->start_env;
+
                   setup_coro (next);
 
                   prev->stack->refcnt++;
@@ -932,6 +960,12 @@ _newprocess(args)
         coro->mainstack = 0; /* actual work is done inside transfer */
         coro->stack = 0;
 
+        /* same as JMPENV_BOOTSTRAP */
+        /* we might be able to recycle start_env, but safe is safe */
+        Zero(&coro->start_env, 1, JMPENV);
+        coro->start_env.je_ret = -1;
+        coro->start_env.je_mustcatch = TRUE;
+
         RETVAL = coro;
         OUTPUT:
         RETVAL
@@ -1009,7 +1043,7 @@ yield(...)
         struct coro *prev, *next;
 
         if (!returnstk)
-          returnstk = SvRV (get_sv ("Coro::Cont::return", FALSE));
+          returnstk = SvRV ((SV *)get_sv ("Coro::Cont::return", FALSE));
 
         /* set up @_ -- ugly */
         av_clear (defav);

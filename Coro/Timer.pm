@@ -24,7 +24,7 @@ This module is not subclassable.
 
 package Coro::Timer;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Carp ();
 use Exporter;
@@ -35,13 +35,13 @@ BEGIN {
    eval "use Time::HiRes 'time'";
 }
 
-$VERSION = 0.652;
+$VERSION = 0.8;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
 
 This function will wake up the current coroutine after $seconds
-seconds and sets $flag to true (it is false intiially).  If $flag goes
+seconds and sets $flag to true (it is false initially).  If $flag goes
 out of scope earlier nothing happens. This is used to implement the
 C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
 
