@@ -1,0 +1,13 @@
+README
+Changes
+MANIFEST
+COPYING
+Makefile.PL
+Coro.pm
+Coro.xs
+Coro/Process.pm
+Coro/Signal.pm
+typemap
+t/00_basic.t
+eg/prodcons
+eg/prodcons2

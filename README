@@ -1,0 +1,61 @@
+NAME
+    Coro - create an manage coroutines
+
+SYNOPSIS
+     use Coro;
+
+     $new = new Coro sub {
+        print "in coroutine, switching back\n";
+        $Coro::main->resume;
+        print "in coroutine again, switching back\n";
+        $Coro::main->resume;
+     };
+
+     print "in main, switching to coroutine\n";
+     $new->resume;
+     print "back in main, switch to coroutine again\n";
+     $new->resume;
+     print "back in main\n";
+
+DESCRIPTION
+    This module implements coroutines. Coroutines, similar to continuations,
+    allow you to run more than one "thread of execution" in parallel. Unlike
+    threads this, only voluntary switching is used so locking problems are
+    greatly reduced.
+
+    Although this is the "main" module of the Coro family it provides only
+    low-level functionality. See the Coro::Process manpage and related
+    modules for a more useful process abstraction including scheduling.
+
+    $main
+        This coroutine represents the main program.
+
+    $current
+        The current coroutine (the last coroutine switched to). The initial
+        value is "$main" (of course).
+
+    $error, $error_msg, $error_coro
+        This coroutine will be called on fatal errors. "$error_msg" and
+        "$error_coro" return the error message and the error-causing
+        coroutine, respectively.
+
+    $coro = new $coderef [, @args]
+        Create a new coroutine and return it. The first "resume" call to
+        this coroutine will start execution at the given coderef. If it
+        returns it should return a coroutine to switch to. If, after
+        returning, the coroutine is "resume"d again it starts execution
+        again at the givne coderef.
+
+    $coro->resume
+        Resume execution at the given coroutine.
+
+BUGS
+    This module has not yet been extensively tested.
+
+SEE ALSO
+    the Coro::Process manpage, the Coro::Signal manpage.
+
+AUTHOR
+     Marc Lehmann <pcg@goof.com>
+     http://www.goof.com/pcg/marc/
+
