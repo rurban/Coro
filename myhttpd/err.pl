@@ -119,6 +119,7 @@ sub conn::err_blocked {
       Coro::Event::do_timer(after => $limit - $::NOW);
 
       if ($block->[2] > 30) {
+         $block->[3] = $::NOW + 180;
          $status = 401;
          $hdr->{Warning} = "Please do NOT retry, you have been blocked. Press Cancel instead.";
          $hdr->{"WWW-Authenticate"} = "Basic realm=\"Please do NOT retry, you have been blocked. Press Cancel instead.\"";

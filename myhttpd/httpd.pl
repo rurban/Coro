@@ -450,9 +450,9 @@ sub respond {
       } elsif (-f _ && -r _) {
          -x _ and $self->err(403, "forbidden");
 
-         if (%{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
+         if (keys %{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
             my $timeout = $::NOW + 10;
-            while (%{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
+            while (keys %{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
                if ($timeout < $::NOW) {
                   $self->block($::BLOCKTIME, "too many connections");
                } else {
@@ -511,7 +511,7 @@ satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
          my $timeout = $::NOW + 15;
-         while (%{$uri{$self->{remote_id}}{$self->{uri}}} > 1) {
+         while (keys %{$uri{$self->{remote_id}}{$self->{uri}}} > 1) {
             if ($timeout <= $::NOW) {
                $self->block($::BLOCKTIME, "segmented downloads are forbidden");
                #$self->err_segmented_download;
