@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro - create an manage coroutines
+Coro - create and manage coroutines
 
 =head1 SYNOPSIS
 

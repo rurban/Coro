@@ -10,3 +10,4 @@ Coro/Signal.pm
 typemap
 t/00_basic.t
 eg/prodcons
+eg/prodcons2
