@@ -57,4 +57,5 @@ eg/event
 eg/lwp
 eg/dns
 eg/myhttpd
+eg/readline
 

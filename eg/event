@@ -12,7 +12,7 @@ sub finger {
    my $host = shift;
 
    my $fh = new Coro::Socket PeerHost => $host, PeerPort => "finger"
-      or die;
+      or die "$user\@$host: $!";
 
    print $fh "$user\n";
 
@@ -39,6 +39,8 @@ sub keyboard : Coro {
       }
    }
 }
+
+async { finger("root", "localhost") };
 
 # display the time or garble the display, YMMV.
 sub timer : Coro {

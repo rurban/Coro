@@ -140,6 +140,8 @@ sub new {
 
          $!{ECONNREFUSED} or $!{ENETUNREACH} or $!{ETIMEDOUT} or $!{EHOSTUNREACH}
             or return;
+
+         undef $fh;
       }
    } else {
       $fh = $class->_prepare_socket(\%arg)
