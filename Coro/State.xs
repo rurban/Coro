@@ -7,6 +7,13 @@
 #ifdef HAVE_MMAP
 # include <unistd.h>
 # include <sys/mman.h>
+# ifndef MAP_ANON
+#  ifdef MAP_ANONYMOUS
+#   define MAP_ANON MAP_ANONYMOUS
+#  else
+#   undef HAVE_MMAP
+#  endif
+# endif
 #endif
 
 #define MAY_FLUSH /* increases codesize */
@@ -547,8 +554,8 @@ allocate_stack (Coro__State ctx, int alloc)
   stack->gencnt = ctx->gencnt = 0;
   if (alloc)
     {
-#ifdef HAVE_MMAP 
-      stack->ssize = 128 * 1024 * sizeof (long); /* mmap should do allocate-on-use */
+#ifdef HAVE_MMAP
+      stack->ssize = 128 * 1024 * sizeof (long); /* mmap should do allocate-on-write */
       stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, 0, 0);
       if (stack->sptr == (void *)-1)
 #endif

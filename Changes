@@ -1,6 +1,7 @@
 Revision history for Perl extension Coro.
 
 0.12
+	- do not use mmap if neither MAP_ANON nor MAP_ANONYMOUS is defined.
 	- very experimental stack sharing algorithm. not 100% safe ut
           should work well in practise ;)
 
