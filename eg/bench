@@ -10,14 +10,10 @@ use Benchmark;
 
 $a = bless {}, main::;
 
-
-sub a {
-}
-
 sub b {
    my ($self) = shift;
-   my $num = shift;
-   return $num+1;
+   $self->{b} = shift if @_;
+   $self->{b};
 }
 
 $b = async {

@@ -106,7 +106,7 @@ for my $flavour (qw(idle var timer io signal)) {
    };
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
-      unshift @_, $class;
+      unshift @_, Coro::Event::;
       (&$coronew)->next;
    };
 }
