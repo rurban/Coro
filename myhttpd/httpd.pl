@@ -542,7 +542,8 @@ sub handle_file {
    my ($self, $queue, $tbf) = @_;
    my $length = $self->{stat}[7];
    my $hdr = {
-      "Last-Modified"  => time2str ((stat _)[9]),
+      "Last-Modified" => time2str ((stat _)[9]),
+      "Accept-Ranges" => "bytes",
    };
 
    my @code = (200, "ok");
