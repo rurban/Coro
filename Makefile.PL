@@ -32,7 +32,7 @@ WriteMakefile(
        Event	=> 0.83, # still, 0.83 and below have serious bugs(!)
     },
     PM           => {
-    		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro/Coro.pm',
+    		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
                     },
 );
 
