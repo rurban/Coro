@@ -96,6 +96,17 @@ sub try {
    }
 }
 
+=item $sem->waiters
+
+In scalar context, returns the number of coroutines waiting for this
+semaphore.
+
+=cut
+
+sub waiters {
+   @{$_[0][1]};
+}
+
 =item $guard = $sem->guard
 
 This method calls C<down> and then creates a guard object. When the guard

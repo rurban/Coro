@@ -3,8 +3,12 @@ use Coro::Semaphore;
 use Coro::Event;
 use Coro::Socket;
 
+use HTTP::Date;
+
 no utf8;
 use bytes;
+
+our @wait_time = (0); # used to calculcate avg. waiting time
 
 # at least on my machine, this thingy serves files
 # quite a bit faster than apache, ;)
@@ -27,7 +31,8 @@ sub slog {
    printf "---: $format\n", @_;
 }
 
-my $connections = new Coro::Semaphore $MAX_CONNECTS;
+our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
+our $transfers   = new Coro::Semaphore $MAX_TRANSFER || 50;
 
 my @newcons;
 my @pool;
@@ -59,6 +64,14 @@ my $http_port = new Coro::Socket
 
 push @listen_sockets, $http_port;
 
+our $NOW;
+our $HTTP_NOW;
+
+Event->timer(interval => 1, hard => 1, cb => sub {
+   $NOW = time;
+   $HTTP_NOW = time2str $NOW;
+});
+
 # the "main thread"
 async {
    slog 1, "accepting connections";
@@ -66,7 +79,6 @@ async {
       $connections->down;
       push @newcons, [$http_port->accept];
       #slog 3, "accepted @$connections ".scalar(@pool);
-      $::NOW = time;
       if (@pool) {
          (pop @pool)->ready;
       } else {
@@ -156,7 +168,7 @@ sub response {
 
    $self->{h}{connection} ||= $hdr->{Connection};
 
-   $res .= "Date: ".(time2str $::NOW)."\015\012"; # slow? nah. :(
+   $res .= "Date: $HTTP_NOW\015\012";
 
    while (my ($h, $v) = each %$hdr) {
       $res .= "$h: $v\015\012"
@@ -469,6 +481,15 @@ ignore:
    $self->response(@code, $hdr, "");
 
    if ($self->{method} eq "GET") {
+      $self->{time} = $::NOW;
+
+      my $transfer = $::transfers->guard;
+      $self->{fh}->writable or return;
+
+      push @::wait_time, $::NOW - $self->{time};
+      shift @::wait_time if @wait_time > 25;
+      $self->{time} = $::NOW;
+
       my ($fh, $buf, $r);
       my $current = $Coro::current;
       open $fh, "<", $self->{path}
@@ -504,9 +525,9 @@ ignore:
          $self->{written} += $w;
          $l += $r;
       }
-   }
 
-   close $fh;
+      close $fh;
+   }
 }
 
 1;

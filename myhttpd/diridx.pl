@@ -1,3 +1,5 @@
+use List::Util qw(sum);
+
 use Storable ();
 
 my $SD_VERSION = 1;
@@ -145,14 +147,22 @@ sub conn::diridx {
       $stat .= "</table>";
    }
 
+   my $waiters = $::transfers->waiters*1;
+   my $avgtime = int (sum(@::wait_time) / @::wait_time);
+
    <<EOF;
 <html>
 <head><title>$self->{uri}</title></head>
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 <h1>$data->{path}</h1>
 $data->{top}
-<small><div align="right"><tt>$self->{remote_id}/$self->{country} - $::conns connection(s) - uptime $uptime - myhttpd/$VERSION</tt></div></small>
-<hr>
+<hr />
+clients waiting for data transfer: $waiters<br />
+average waiting time until transfer starts: $avgtime seconds <small>(adjust your timeout values)</small><br />
+<small><div align="right">
+         <tt>$self->{remote_id}/$self->{country} - $::conns connection(s) - uptime $uptime - myhttpd/$VERSION
+</tt></div></small>
+<hr />
 $stat
 $data->{bot}
 </body>
