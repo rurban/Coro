@@ -51,7 +51,7 @@ use base 'Exporter';
 
 @EXPORT = qw(loop unloop);
 
-$VERSION = 0.08;
+$VERSION = 0.09;
 
 =item $w = Coro::Event->flavour(args...)
 
@@ -120,6 +120,19 @@ sub next {
    delete $q->[1];
 }
 
+=item idle
+
+Similar to Event::one_event and Event::sweep: The idle task is called once
+(this has the effect of jumping back into the Event loop once to serve new
+events).
+
+=cut
+
+sub idle {
+   $Coro::idle->ready;
+   Coro::yield;
+}
+
 =item $result = loop([$timeout])
 
 This is the version of C<loop> you should use instead of C<Event::loop>
@@ -139,6 +152,10 @@ sub loop(;$) {
 Same as Event::unloop (provided here for your convinience only).
 
 =cut
+
+$Coro::idle = new Coro sub {
+   Event::one_event; # inefficient
+};
 
 1;
 

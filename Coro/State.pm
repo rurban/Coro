@@ -38,7 +38,7 @@ modules for a more useful process abstraction including scheduling.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.08;
+   $VERSION = 0.09;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;

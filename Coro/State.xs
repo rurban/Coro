@@ -510,6 +510,7 @@ MODULE = Coro::State                PACKAGE = Coro::State
 PROTOTYPES: ENABLE
 
 BOOT:
+{ /* {} necessary for stoopid perl-5.6.x */
 	HV * stash = gv_stashpvn("Coro::State", 10, TRUE);
 
         newCONSTSUB (stash, "SAVE_DEFAV", newSViv (SAVE_DEFAV));
@@ -518,6 +519,7 @@ BOOT:
 
 	if (!padlist_cache)
 	  padlist_cache = newHV ();
+}
 
 Coro::State
 _newprocess(args)

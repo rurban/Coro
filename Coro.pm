@@ -33,7 +33,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.08;
+$VERSION = 0.09;
 
 @EXPORT = qw(async yield schedule terminate);
 @EXPORT_OK = qw($current);
