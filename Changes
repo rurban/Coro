@@ -1,5 +1,12 @@
 Revision history for Perl extension Coro.
 
+0.6   Thu Nov 21 11:09:06 CET 2002
+        - made lazy context switching the default.
+	- fixed the bug where SemaphoreSet::guard
+          was the same as timed_guard and timed_guard was missing.
+        - fix a memleak in Coro::Timer.
+        - reclassified context sharing as not experimental.
+
 0.534 Sun Apr 14 03:05:12 CEST 2002
 	- fixed backspace => tab in header parsing (myhttpd).
         - added eg/readline, for elmex.

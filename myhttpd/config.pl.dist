@@ -26,7 +26,8 @@ $WAIT_BUFSIZE  = 512;			# send this much data while waiting
 
 $BUFSIZE       = 32*1024;		# buffer size
 
-$TBF_RATE      = 100000000;
+$TBF_RATE      = 100000000;		# maximum allowed throughput
+$TBF_MAX_PER_CLIENT = 100000;		# maximum throughput per connection
 
 $AIO_PARALLEL  = 1;			# how many reader threads for i/o?
 

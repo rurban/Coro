@@ -52,7 +52,7 @@ use base 'Exporter';
 @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = 0.45;
+   $VERSION = 0.6;
 
    local $^W = 0; # avoid redefine warning for Coro::ready
    require XSLoader;

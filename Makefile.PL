@@ -41,7 +41,7 @@ sub MY::postamble {
 
 # set \$VERSION in all modules
 setver:
-	\$(PERL) -pi -e 's/^(\\s*\\\$\$VERSION\\s*=\\s*).*\$\$/\$\${1}\$(VERSION);/' *.pm Coro/*.pm
+	\$(PERL) -pi -e 's/^(\\s*\\\$\$VERSION\\s*=\\s*).*\$\$/\$\${1}\$(VERSION);/' *.pm Coro/*.pm Event/*.pm
 
 EOF
 }
