@@ -40,7 +40,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.51;
+$VERSION = 0.52;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -212,11 +212,8 @@ These are the methods you can call on process objects.
 
 Create a new process and return it. When the sub returns the process
 automatically terminates as if C<terminate> with the returned values were
-called. To start the process you must first put it into the ready queue by
-calling the ready method.
-
-The coderef you submit MUST NOT be a closure that refers to variables
-in an outer scope. This does NOT work. Pass arguments into it instead.
+called. To make the process run you must first put it into the ready queue
+by calling the ready method.
 
 =cut
 
@@ -268,10 +265,11 @@ sub join {
 
 =item $oldprio = $process->prio($newprio)
 
-Sets the priority of the process. Higher priority processes get run before
-lower priority processes. Priorities are smalled signed integer (currently
--4 .. +3), that you can refer to using PRIO_xxx constants (use the import
-tag :prio to get then):
+Sets (or gets, if the argument is missing) the priority of the
+process. Higher priority processes get run before lower priority
+processes. Priorities are smalled signed integer (currently -4 .. +3),
+that you can refer to using PRIO_xxx constants (use the import tag :prio
+to get then):
 
    PRIO_MAX > PRIO_HIGH > PRIO_NORMAL > PRIO_LOW > PRIO_IDLE > PRIO_MIN
        3    >     1     >      0      >    -1    >    -3     >    -4
@@ -304,6 +302,19 @@ higher values mean lower priority, just as in unix).
 
 sub nice {
    $_[0]{prio} -= $_[1];
+}
+
+=item $olddesc = $process->desc($newdesc)
+
+Sets (or gets in case the argument is missing) the description for this
+process. This is just a free-form string you can associate with a process.
+
+=cut
+
+sub desc {
+   my $old = $_[0]{desc};
+   $_[0]{desc} = $_[1] if @_ > 1;
+   $old;
 }
 
 =back
