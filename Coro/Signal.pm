@@ -22,35 +22,68 @@ Coro::Signal - coroutine signals (binary semaphores)
 
 package Coro::Signal;
 
-use Coro::Process ();
+use Coro ();
 
 $VERSION = 0.01;
 
+=item $s = new Coro::Signal;
+
+Create a new signal.
+
+=cut
+
 sub new {
+   # [flag, [pid's]]
    bless [], $_[0];
 }
 
+=item $s->wait
+
+Wait for the signal to occur. Returns immediately if the signal has been sent before.
+
+=cut
+
 sub wait {
-   my $self = shift;
-   if ($self->[0]) {
-      $self->[0] = 0;
+   if ($_[0][0]) {
+      $_[0][0] = 0;
    } else {
-      push @{$self->[1]}, $Coro::current;
-      Coro::Process::schedule;
+      push @{$_[0][1]}, $Coro::current;
+      Coro::schedule;
    }
 }
+
+=item $s->send
+
+Send the signal, waking up a waiting process or remembering the signal.
+
+=cut
 
 sub send {
-   my $self = shift;
-   if (@{$self->[1]}) {
-      (shift @{$self->[1]})->ready;
+   if (@{$_[0][1]}) {
+      (shift @{$_[0][1]})->ready;
    } else {
-      $self->[0] = 1;
+      $_[0][0] = 1;
    }
 }
 
+=item $s->broadcast
+
+Send the signal, waking up all waiting process. If no process is waiting the signal is lost.
+
+=cut
+
+sub broadcast {
+   (shift @{$_[0][1]})->ready while @{$_[0][1]};
+}
+
+=item $s->awaited
+
+Return true when the signal is beign awaited by some process.
+
+=cut
+
 sub awaited {
-   !!@{$self->[1]};
+   !!@{$_[0][1]};
 }
 
 1;

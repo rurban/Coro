@@ -1,6 +1,15 @@
 Revision history for Perl extension Coro.
 
-0.02
+0.03  Fri Jul 13 14:51:52 CEST 2001
+	- transfer() now implemented in XS (beware).
+	- new module Coro::Cont for really faked continuations.
+	- big internal architecture changes: Coro::State is now
+          really low-level and can thus be used to implement other
+          interesting things, While "Coro::" implements a process-like
+          model. Still crude and subject to change.
+        - $_ and $@ are no longer being localized.
+
+0.02  Tue Jul 10 01:38:17 CEST 2001
 	- implemented "async" attribute.
         - $_ and $@ are now localized.
         - added Coro::Channel.

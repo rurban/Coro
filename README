@@ -1,59 +1,63 @@
 NAME
-    Coro - create and manage coroutines
+    Coro - coroutine process abstraction
 
 SYNOPSIS
      use Coro;
 
-     $new = new Coro sub {
-        print "in coroutine, switching back\n";
-        $Coro::main->resume;
-        print "in coroutine again, switching back\n";
-        $Coro::main->resume;
+     async {
+        # some asynchronous thread of execution
      };
 
-     print "in main, switching to coroutine\n";
-     $new->resume;
-     print "back in main, switch to coroutine again\n";
-     $new->resume;
-     print "back in main\n";
+     # alternatively create an async process like this:
+
+     sub some_func : Coro {
+        # some more async code
+     }
+
+     yield;
 
 DESCRIPTION
-    This module implements coroutines. Coroutines, similar to continuations,
-    allow you to run more than one "thread of execution" in parallel. Unlike
-    threads this, only voluntary switching is used so locking problems are
-    greatly reduced.
-
-    Although this is the "main" module of the Coro family it provides only
-    low-level functionality. See the Coro::Process manpage and related
-    modules for a more useful process abstraction including scheduling.
-
     $main
-        This coroutine represents the main program.
+    This coroutine represents the main program.
 
     $current
-        The current coroutine (the last coroutine switched to). The initial
-        value is "$main" (of course).
+    The current coroutine (the last coroutine switched to). The initial
+    value is "$main" (of course).
 
-    $error, $error_msg, $error_coro
-        This coroutine will be called on fatal errors. "$error_msg" and
-        "$error_coro" return the error message and the error-causing
-        coroutine, respectively.
+  STATIC METHODS
 
-    $coro = new $coderef [, @args]
-        Create a new coroutine and return it. The first "resume" call to
-        this coroutine will start execution at the given coderef. If it
-        returns it should return a coroutine to switch to. If, after
-        returning, the coroutine is "resume"d again it starts execution
-        again at the givne coderef.
+    Static methods are actually functions that operate on the current
+    process only.
 
-    $coro->resume
-        Resume execution at the given coroutine.
+    async { ... };
+        Create a new asynchronous process and return it's process object
+        (usually unused). When the sub returns the new process is
+        automatically terminated.
 
-BUGS
-    This module has not yet been extensively tested.
+    schedule
+        Calls the scheduler. Please note that the current process will not
+        be put into the ready queue, so calling this function usually means
+        you will never be called again.
 
-SEE ALSO
-    the Coro::Process manpage, the Coro::Signal manpage.
+    yield
+        Yield to other processes. This function puts the current process
+        into the ready queue and calls "schedule".
+
+    terminate
+        Terminates the current process.
+
+    # dynamic methods
+
+  PROCESS METHODS
+
+    These are the methods you can call on process objects.
+
+    new Coro \&sub;
+        Create a new process, put it into the ready queue and return it.
+        When the sub returns the process automatically terminates.
+
+    $process->ready
+        Put the current process into the ready queue.
 
 AUTHOR
      Marc Lehmann <pcg@goof.com>

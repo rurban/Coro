@@ -1,22 +1,23 @@
 BEGIN { $| = 1; print "1..6\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use Coro;
+use Coro::State;
 $loaded = 1;
 print "ok 1\n";
 
-my $main = $Coro::main;
-my $proc = new Coro \&a;
+my $main = new Coro::State;
+my $proc = new Coro::State \&a;
 
 sub a {
    print "ok 3\n";
-   $main->resume;
+   $proc->transfer($main);
    print "ok 5\n";
-   $main;
+   $proc->transfer($main);
+   die;
 }
 
 print "ok 2\n";
-$proc->resume;
+$main->transfer($proc);
 print "ok 4\n";
-$proc->resume;
+$main->transfer($proc);
 print "ok 6\n";
 

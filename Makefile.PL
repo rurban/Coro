@@ -10,5 +10,6 @@ WriteMakefile(
 	           },
     NAME => "Coro",
     VERSION_FROM => "Coro.pm",
+    DIR  => ['Coro'],
 );
 

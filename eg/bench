@@ -10,30 +10,28 @@ use Benchmark;
 
 $a = bless {}, main::;
 
-# do something similar, switch two global vars and return something
 
 sub a {
-   $old = $current;
-   $current = $_[0];
+   $n++; # do something to taint the benchmark results ;)
 }
 
 $b = new Coro sub {
    # do a little unrolling...
    while() {
-      $Coro::main->resume; $Coro::main->resume; $Coro::main->resume;
+      yield; yield; yield; yield; yield;
    }
 };
 
-$b->resume; # the first resume is slow because it allocates all the memory
+yield;
 
 $main = $Coro::main;
 
-#*transfer = \&Coro::_transfer;
-sub transfer { Coro::_transfer($_[0], $_[1]) }
+*transfer = \&Coro::State::transfer;
 
-$c = Coro::_newprocess {
+$c = Coro::State::newprocess {
    while() {
-      transfer($c, $main); transfer($c, $main); transfer($c, $main);
+      transfer($c, $main); transfer($c, $main);
+      transfer($c, $main); transfer($c, $main);
    }
 };
 
@@ -41,6 +39,6 @@ transfer($main, $c);
 
 timethese 100000, {
    method   => '$a->a; $a->a; $a->a; $a->a',
-   resume   => '$b->resume; $b->resume',
+   resume   => 'yield; yield',
    transfer => 'transfer($main, $c); transfer($main, $c)',
 };

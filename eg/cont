@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+use Coro::Cont;
+
+my $cont = cont {
+   result $_*2;
+   result $_*3;
+};
+
+my %hash = (1,1,2,2,3,3);
+
+%hash = map &$cont, %hash;
+
+print join(",", %hash), "\n";
+

@@ -1,51 +1,76 @@
 =head1 NAME
 
-Coro - create and manage coroutines
+Coro - coroutine process abstraction
 
 =head1 SYNOPSIS
 
  use Coro;
 
- $new = new Coro sub {
-    print "in coroutine, switching back\n";
-    $Coro::main->resume;
-    print "in coroutine again, switching back\n";
-    $Coro::main->resume;
+ async {
+    # some asynchronous thread of execution
  };
 
- print "in main, switching to coroutine\n";
- $new->resume;
- print "back in main, switch to coroutine again\n";
- $new->resume;
- print "back in main\n";
+ # alternatively create an async process like this:
+
+ sub some_func : Coro {
+    # some more async code
+ }
+
+ yield;
 
 =head1 DESCRIPTION
-
-This module implements coroutines. Coroutines, similar to continuations,
-allow you to run more than one "thread of execution" in parallel. Unlike
-threads this, only voluntary switching is used so locking problems are
-greatly reduced.
-
-Although this is the "main" module of the Coro family it provides only
-low-level functionality. See L<Coro::Process> and related modules for a
-more useful process abstraction including scheduling.
-
-=over 4
 
 =cut
 
 package Coro;
 
-BEGIN {
-   $VERSION = 0.02;
+use base Coro::State;
+use base Exporter;
 
-   require XSLoader;
-   XSLoader::load Coro, $VERSION;
+$VERSION = 0.03;
+
+@EXPORT = qw(async yield schedule);
+@EXPORT_OK = qw($current);
+
+{
+   use subs 'async';
+
+   my @async;
+
+   # this way of handling attributes simply is NOT scalable ;()
+   sub import {
+      Coro->export_to_level(1, @_);
+      my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
+      *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
+         my ($package, $ref) = (shift, shift);
+         my @attrs;
+         for (@_) {
+            if ($_ eq "Coro") {
+               push @async, $ref;
+            } else {
+               push @attrs, @_;
+            }
+         }
+         return $old ? $old->($package, $name, @attrs) : @attrs;
+      };
+   }
+
+   sub INIT {
+      async pop @async while @async;
+   }
 }
+
+my $idle = new Coro sub {
+   &yield while 1;
+};
 
 =item $main
 
 This coroutine represents the main program.
+
+=cut
+
+$main = new Coro;
 
 =item $current
 
@@ -53,73 +78,108 @@ The current coroutine (the last coroutine switched to). The initial value is C<$
 
 =cut
 
-$main = $current = _newprocess { 
-   # never being called
-};
+$current = $main;
 
-=item $error, $error_msg, $error_coro
+# we really need priorities...
+my @ready = (); # the ready queue. hehe, rather broken ;)
 
-This coroutine will be called on fatal errors. C<$error_msg> and
-C<$error_coro> return the error message and the error-causing coroutine,
-respectively.
+# static methods. not really.
 
-=cut
+=head2 STATIC METHODS
 
-$error_msg =
-$error_coro = undef;
+Static methods are actually functions that operate on the current process only.
 
-$error = _newprocess {
-   print STDERR "FATAL: $error_msg\nprogram aborted\n";
-   exit 250;
-};
+=over 4
 
-=item $coro = new $coderef [, @args]
+=item async { ... };
 
-Create a new coroutine and return it. The first C<resume> call to this
-coroutine will start execution at the given coderef. If it returns it
-should return a coroutine to switch to. If, after returning, the coroutine
-is C<resume>d again it starts execution again at the givne coderef.
+Create a new asynchronous process and return it's process object
+(usually unused). When the sub returns the new process is automatically
+terminated.
 
 =cut
 
-sub new {
-   my $class = $_[0];
-   my $proc = $_[1];
-   bless _newprocess {
-      do {
-         eval { &$proc->resume };
-         if ($@) {
-            ($error_msg, $error_coro) = ($@, $current);
-            $error->resume;
-         }
-      } while (1);
-   }, $class;
+sub async(&) {
+   new Coro $_[0];
 }
 
-=item $coro->resume
+=item schedule
 
-Resume execution at the given coroutine.
+Calls the scheduler. Please note that the current process will not be put
+into the ready queue, so calling this function usually means you will
+never be called again.
 
 =cut
 
 my $prev;
 
-sub resume {
-   $prev = $current; $current = $_[0];
-   _transfer($prev, $current);
+sub schedule {
+   ($prev, $current) = ($current, shift @ready);
+   Coro::State::transfer($prev, $current);
 }
 
-1;
+=item yield
+
+Yield to other processes. This function puts the current process into the
+ready queue and calls C<schedule>.
+
+=cut
+
+sub yield {
+   $current->ready;
+   &schedule;
+}
+
+=item terminate
+
+Terminates the current process.
+
+=cut
+
+sub terminate {
+   &schedule;
+}
 
 =back
 
-=head1 BUGS
+# dynamic methods
 
-This module has not yet been extensively tested.
+=head2 PROCESS METHODS
 
-=head1 SEE ALSO
+These are the methods you can call on process objects.
 
-L<Coro::Process>, L<Coro::Signal>.
+=over 4
+
+=item new Coro \&sub;
+
+Create a new process, put it into the ready queue and return it. When the
+sub returns the process automatically terminates.
+
+=cut
+
+sub new {
+   my $class = shift;
+   my $proc = shift;
+   my $self = $class->SUPER::new($proc ? sub { &$proc; &terminate } : $proc);
+   $self->ready;
+   $self;
+}
+
+=item $process->ready
+
+Put the current process into the ready queue.
+
+=cut
+
+sub ready {
+   push @ready, $_[0];
+}
+
+=back
+
+=cut
+
+1;
 
 =head1 AUTHOR
 

@@ -2,7 +2,6 @@ $|=1;
 print "1..19\n";
 
 use Coro;
-use Coro::Process;
 use Coro::Channel;
 
 my $q = new Coro::Channel 0;
@@ -18,7 +17,7 @@ print "ok 1\n";
 yield;
 
 for (11..19) {
-   my $x = $q->get;
+   my $x = do { local $_; $q->get };
    print $x == $_-10 ? "ok " : "not ok ", ($_-10)*2+1, "\n";
 }
 
