@@ -27,7 +27,7 @@ use Coro::Process ();
 $VERSION = 0.01;
 
 sub new {
-   bless [$_[1]], $_[0];
+   bless [defined $_[1] ? $_[1] : 1], $_[0];
 }
 
 sub down {
@@ -41,7 +41,7 @@ sub down {
 
 sub up {
    my $self = shift;
-   if (++@{$self->[1]} == 0) {
+   if (++$self->[0] > 0) {
       (shift @{$self->[1]})->ready if @{$self->[1]};
    }
 }

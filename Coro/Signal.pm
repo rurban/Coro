@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Signal - coroutine signals
+Coro::Signal - coroutine signals (binary semaphores)
 
 =head1 SYNOPSIS
 
