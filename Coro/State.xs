@@ -337,8 +337,6 @@ LOAD(pTHX_ Coro__State c)
 STATIC void
 destroy_stacks(pTHX)
 {
-  dSP;
-
   /* die does this while calling POPSTACK, but I just don't see why. */
   dounwind(-1);
 
@@ -441,7 +439,7 @@ transfer(prev,next)
                 init_stacks (); /* from perl.c */
                 PL_op = (OP *)&myop;
                 /*PL_curcop = 0;*/
-                GvAV (PL_defgv) = (SV *)SvREFCNT_inc (next->args);
+                GvAV (PL_defgv) = (AV *)SvREFCNT_inc ((SV *)next->args);
 
                 SPAGAIN;
                 Zero(&myop, 1, UNOP);
