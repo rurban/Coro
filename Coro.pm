@@ -16,7 +16,7 @@ Coro - coroutine process abstraction
     # some more async code
  }
 
- yield;
+ cede;
 
 =head1 DESCRIPTION
 
@@ -36,6 +36,16 @@ end. The reason for this is that some coroutine of yours might have called
 into a C function, and falling off the end of main:: results in returning
 to that C function instead if to the main C interpreter.
 
+WARNING: Unless you really know what you are doing, do NOT do context
+switches inside callbacks from the XS level. The reason for this is
+similar to the reason above:  A callback calls a perl function, this
+perl function does a context switch, some other callback is called, the
+original function returns from it - to what? To the wrong XS function,
+with totally different return values. Unfortunately, this includes
+callbacks done by perl itself (tie'd variables!).
+
+The only workaround for this is to do coroutines on C level.
+
 =cut
 
 package Coro;
@@ -46,7 +56,7 @@ use base Exporter;
 
 $VERSION = 0.10;
 
-@EXPORT = qw(async yield schedule terminate current);
+@EXPORT = qw(async cede schedule terminate current);
 @EXPORT_OK = qw($current);
 
 {
@@ -160,14 +170,15 @@ sub schedule {
    Coro::State::transfer($prev, $current);
 }
 
-=item yield
+=item cede
 
-Yield to other processes. This function puts the current process into the
-ready queue and calls C<schedule>.
+"Cede" to other processes. This function puts the current process into the
+ready queue and calls C<schedule>, which has the effect of giving up the
+current "timeslice" to other coroutines of the same or higher priority.
 
 =cut
 
-sub yield {
+sub cede {
    $current->ready;
    &schedule;
 }
@@ -181,9 +192,12 @@ Future versions of this function will allow result arguments.
 =cut
 
 sub terminate {
-   $current->{_results} = [@_];
-   delete $current->{_coro_state};
-   &schedule;
+   my $self = $current;
+   $self->{_results} = [@_];
+   $current = shift @ready || $idle;
+   Coro::State::transfer(delete $self->{_coro_state}, $current);
+   # cannot return
+   die;
 }
 
 =back

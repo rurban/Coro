@@ -16,7 +16,7 @@ async {
       print "produced $i\n";
       push @buffer, $i;
       $produced->up;
-      yield if @buffer > 5; # simulate memory pressure ;)
+      cede if @buffer > 5; # simulate memory pressure ;)
    }
    print "work done\n";
    $finished->up;

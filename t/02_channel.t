@@ -14,7 +14,7 @@ sub producer : Coro {
 }
 
 print "ok 1\n";
-yield;
+cede;
 
 for (11..19) {
    my $x = $q->get;

@@ -10,6 +10,10 @@ Revision history for Perl extension Coro.
         - canceling events now works in all cases.
         - Coro state now include $_ and $@.
         - yet another bug workaround that I do not really understand :(
+        - added Coro/libcoro, a portable coroutine implementation for c,
+          which can be used by Coro::State.
+        - new module Coro::Event::IO (very undocumented) to do
+          non-blocking i/o.
 
 0.08  Thu Jul 19 06:13:25 CEST 2001
 	- release candidate 2 (new functionality).
