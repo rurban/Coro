@@ -17,6 +17,7 @@ Coro/Channel.pm
 Coro/Cont.pm
 Coro/Specific.pm
 Coro/RWLock.pm
+Coro/Timer.pm
 Coro/MakeMaker.pm
 Coro/CoroAPI.h
 
@@ -34,6 +35,7 @@ t/05_specific.t
 t/06_prio.t
 t/07_eval.t
 t/08_join.t
+t/09_timer.t
 
 Event/Makefile.PL
 Event/Event.pm

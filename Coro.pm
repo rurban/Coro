@@ -77,6 +77,8 @@ $VERSION = 0.52;
 
 }
 
+=over 4
+
 =item $main
 
 This coroutine represents the main program.
@@ -135,6 +137,8 @@ $manager = new Coro sub {
 };
 
 # static methods. not really.
+
+=back
 
 =head2 STATIC METHODS
 

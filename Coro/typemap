@@ -1,8 +1,1 @@
 Coro::State			T_PTROBJ
-Coro::State_or_hashref		T_STATE_OR_HASHREF
-
-INPUT
-
-T_STATE_OR_HASHREF
-        $var = sv_to_coro ($arg, \"${Package}::$func_name()\", \"$var\");
-
