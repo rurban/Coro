@@ -185,9 +185,19 @@ sub response {
    my ($self, $code, $msg, $hdr, $content) = @_;
    my $res = "HTTP/1.1 $code $msg\015\012";
 
-   $self->{h}{connection} = "close"
-      if exists $hdr->{Connection} # to avoid "empty" header lines due to vivification
-         and $hdr->{Connection} =~ /close/;
+   if (exists $hdr->{Connection}) {
+      if ($hdr->{Connection} =~ /close/) {
+         $self->{h}{connection} = "close"
+      }
+   } else {
+      if ($self->{version} < 1.1) {
+         if ($self->{h}{connection} =~ /keep-alive/i) {
+            $hdr->{Connection} = "Keep-Alive";
+         } else {
+            $self->{h}{connection} = "close"
+         }
+      }
+   }
 
    $res .= "Date: $HTTP_NOW\015\012";
 
@@ -342,7 +352,7 @@ sub handle {
 
       die if $@ && !ref $@;
 
-      last if $self->{h}{connection} =~ /close/ || $self->{version} < 1.1;
+      last if $self->{h}{connection} =~ /close/;
 
       $httpevent->broadcast;
 
@@ -486,7 +496,7 @@ satisfiable:
             if ($delay <= $::NOW) {
                $self->err_segmented_download;
             } else {
-               $httpevent->broadcast;
+               $httpevent->wait;
             }
          }
       }
