@@ -89,7 +89,7 @@ sub whois_request {
          } else {
             # only retry once a minute
             print STDERR "unable to connect to $self->{ip} ($self->{name}), retrying...\n";
-            Coro::Timer::sleep 60;
+            Coro::Timer::sleep 300;
          }
       }
 
