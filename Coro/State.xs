@@ -571,14 +571,14 @@ allocate_stack (Coro__State ctx, int alloc)
   if (alloc)
     {
 #if HAVE_MMAP
-      stack->ssize = 128 * 1024 * sizeof (long); /* mmap should do allocate-on-write for us */
+      stack->ssize = 16384 * sizeof (long); /* mmap should do allocate-on-write for us */
       stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
       if (stack->sptr == (void *)-1)
 #endif
         {
           /*FIXME*//*D*//* reasonable stack size! */
-          stack->ssize = - (16384 * sizeof (long));
-          New (0, stack->sptr, 16384, long);
+          stack->ssize = - (8192 * sizeof (long));
+          New (0, stack->sptr, 8192, long);
         }
     }
   else
