@@ -170,7 +170,7 @@ sub send	{ send tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub sockname	{ getsockname tied(${$_[0]})->[0] }
 sub peername	{ getpeername tied(${$_[0]})->[0] }
-sub shutdown	{ shutdown tied(${$_[0]})->[0], $_[1] }
+sub shutdown	{ shutdown tied(${$_[0]})->[0] }
 
 =item ($peername, $fh) = $listen_fh->accept
 
