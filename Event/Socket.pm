@@ -28,7 +28,7 @@ use Coro::Util ();
 
 use base 'Coro::Handle';
 
-$VERSION = 0.6;
+$VERSION = 0.65;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {

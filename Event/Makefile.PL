@@ -12,6 +12,13 @@ WriteMakefile(Event::MakeMaker::event_args(
   VERSION_FROM => "Event.pm",
   DEFINE       => $DEFINE,
   DIR          => [],
+  PM           => {
+                       'Event.pm'	=> '$(INST_LIBDIR)/Event.pm',
+                       'Handle.pm'	=> '$(INST_LIBDIR)/Handle.pm',
+                       'Socket.pm'	=> '$(INST_LIBDIR)/Socket.pm',
+                       'Util.pm'	=> '$(INST_LIBDIR)/Util.pm',
+                       'Select.pm'	=> '$(INST_LIBDIR)/Select.pm',
+                  },
 ));
 
 

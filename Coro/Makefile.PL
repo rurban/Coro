@@ -15,7 +15,8 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/) {
 } elsif ($^O =~ /irix/) {
    $iface = "i";
 } elsif ($^O =~ /linux/) {
-   $iface = "l";
+   # default to setjmp/longjmp on non-x86...
+   $iface = $Config{archname} =~ /^i[3456]86-/ ? "l" : "s";
 } elsif ($^O =~ /solaris/) {
    $iface = "s";
 } elsif (-e "/usr/include/ucontext.h") {
@@ -67,7 +68,7 @@ s  If the ucontext functions are not working or you don't want
 
 l  Older GNU/Linux systems (glibc-2.1 and below) need this hack. Since it is
    very linux-specific it is also quite fast for newer versions; when it
-   works, that is...
+   works, that is (currently x86 only)...
 
 i  IRIX. For some reason, SGI really does not like to follow the unix
    standard (does that surprise you?), so this workaround might be needed

@@ -29,7 +29,6 @@ if (eval { require Event }) {
    print "\n*** Event not found, not build Event support.\n\n";
 }
 
-
 WriteMakefile(
     dist         => {
        PREOP	=> 'pod2text Coro.pm | tee README >$(DISTVNAME)/README; chmod -R u=rwX,go=rX . ;',
@@ -61,13 +60,6 @@ WriteMakefile(
     		    'Coro/Semaphore.pm'	=> '$(INST_LIBDIR)/Coro/Semaphore.pm',
     		    'Coro/SemaphoreSet.pm'=> '$(INST_LIBDIR)/Coro/SemaphoreSet.pm',
     		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
-                    $EVENT ? (
-                       'Event/Event.pm'	=> '$(INST_LIBDIR)/Coro/Event.pm',
-                       'Event/Handle.pm'=> '$(INST_LIBDIR)/Coro/Handle.pm',
-                       'Event/Socket.pm'=> '$(INST_LIBDIR)/Coro/Socket.pm',
-                       'Event/Util.pm'	=> '$(INST_LIBDIR)/Coro/Util.pm',
-                       'Event/Select.pm'=> '$(INST_LIBDIR)/Coro/Select.pm',
-                          ) : (),
                     },
 );
 
