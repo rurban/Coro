@@ -58,7 +58,7 @@ sub shell {
             conn::read_blockref;
          } elsif ($cmd eq "clrdiridx") {
             %statdata_cache = ();
-            %diridx = ();
+            delete $diridx{$_} for keys %diridx; # server error on %diridx = ();
          } elsif ($cmd eq "restart") {
             $::RESTART = 1;
             unloop;
