@@ -103,6 +103,7 @@ static HV *coro_state_stash;
 static SV *ucoro_state_sv;
 static U32 ucoro_state_hash;
 static HV *padlist_cache;
+static SV *coro_mortal; /* will be freed after next transfer */
 
 /* mostly copied from op.c:cv_clone2 */
 STATIC AV *
@@ -749,42 +750,49 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
 
       /*
        * xnext is now either prev or next, depending on wether
-       * we switched the c stack or not. that's why i use a global
+       * we switched the c stack or not. that's why I use a global
        * variable, that should become thread-specific at one point.
        */
       xnext->cursp = stacklevel;
     }
-}
 
-static struct coro *
-sv_to_coro (SV *arg, const char *funcname, const char *varname)
-{
-  if (SvROK(arg) && SvTYPE(SvRV(arg)) == SVt_PVHV)
+  if (coro_mortal)
     {
-      HE *he = hv_fetch_ent((HV *)SvRV(arg), ucoro_state_sv, 0, ucoro_state_hash);
-
-      if (!he)
-        croak ("%s() -- %s is a hashref but lacks the " UCORO_STATE " key", funcname, varname);
-
-      arg = HeVAL(he);
+      SvREFCNT_dec (coro_mortal);
+      coro_mortal = 0;
     }
-     
-  /* must also be changed inside Coro::Cont::yield */
-  if (SvROK(arg) && SvOBJECT(SvRV(arg))
-      && SvSTASH(SvRV(arg)) == coro_state_stash)
-    return (struct coro *) SvIV((SV*)SvRV(arg));
-
-  croak ("%s() -- %s is not (and contains not) a Coro::State object", funcname, varname);
-  /*NORETURN*/
 }
+
+#define SV_CORO(sv,func)									\
+  do {												\
+    if (SvROK (sv))										\
+      sv = SvRV (sv);										\
+        											\
+    if (SvTYPE(sv) == SVt_PVHV)						\
+      {												\
+        HE *he = hv_fetch_ent((HV *)sv, ucoro_state_sv, 0, ucoro_state_hash);		\
+												\
+        if (!he)										\
+          croak ("%s() -- %s is a hashref but lacks the " UCORO_STATE " key", func, # sv);	\
+                                                                                                \
+        (sv) = SvRV (HeVAL(he));									\
+      }												\
+                                                                                                \
+    /* must also be changed inside Coro::Cont::yield */						\
+    if (!SvOBJECT(sv) || SvSTASH(sv) != coro_state_stash)						\
+      croak ("%s() -- %s is not (and contains not) a Coro::State object", func, # sv);		\
+												\
+  } while(0)
+
+#define SvSTATE(sv) (struct coro *)SvIV (sv)
 
 static void
 api_transfer(pTHX_ SV *prev, SV *next, int flags)
 {
-  transfer(aTHX_
-           sv_to_coro (prev, "Coro::transfer", "prev"),
-           sv_to_coro (next, "Coro::transfer", "next"),
-           flags);
+  SV_CORO (prev, "Coro::transfer");
+  SV_CORO (next, "Coro::transfer");
+
+  transfer(aTHX_ SvSTATE(prev), SvSTATE(next), flags);
 }
 
 /** Coro ********************************************************************/
@@ -804,23 +812,19 @@ static int coro_nready;
 static void
 coro_enq (SV *sv)
 {
-  if (SvROK (sv))
+  if (SvTYPE (sv) == SVt_PVHV)
     {
-      SV *hv = SvRV (sv);
-      if (SvTYPE (hv) == SVt_PVHV)
-        {
-          SV **xprio = hv_fetch ((HV *)hv, "prio", 4, 0);
-          int prio = xprio ? SvIV (*xprio) : PRIO_NORMAL;
+      SV **xprio = hv_fetch ((HV *)sv, "prio", 4, 0);
+      int prio = xprio ? SvIV (*xprio) : PRIO_NORMAL;
 
-          prio = prio > PRIO_MAX ? PRIO_MAX
-               : prio < PRIO_MIN ? PRIO_MIN
-               : prio;
+      prio = prio > PRIO_MAX ? PRIO_MAX
+           : prio < PRIO_MIN ? PRIO_MIN
+           : prio;
 
-          av_push (coro_ready [prio - PRIO_MIN], sv);
-          coro_nready++;
+      av_push (coro_ready [prio - PRIO_MIN], sv);
+      coro_nready++;
 
-          return;
-        }
+      return;
     }
 
   croak ("Coro::ready tried to enqueue something that is not a coroutine");
@@ -848,31 +852,41 @@ coro_deq (int min_prio)
 static void
 api_ready (SV *coro)
 {
+  if (SvROK (coro))
+    coro = SvRV (coro);
+
   coro_enq (SvREFCNT_inc (coro));
 }
 
 static void
-api_schedule (int cede)
+api_schedule (void)
 {
   SV *prev, *next;
 
-  prev = GvSV (coro_current);
-
-  if (cede)
-    coro_enq (SvREFCNT_inc (prev));
-
+  prev = SvRV (GvSV (coro_current));
   next = coro_deq (PRIO_MIN);
 
   if (!next)
-    next = SvREFCNT_inc (GvSV (coro_idle));
+    next = SvREFCNT_inc (SvRV (GvSV (coro_idle)));
 
-  GvSV (coro_current) = SvREFCNT_inc (next);
-  transfer (aTHX_
-            sv_to_coro (prev, "Coro::schedule", "current coroutine"),
-            sv_to_coro (next, "Coro::schedule", "next coroutine"),
+  /* free this only after the transfer */
+  coro_mortal = prev;
+  SV_CORO (prev, "Coro::schedule");
+
+  SvRV (GvSV (coro_current)) = next;
+
+  SV_CORO (next, "Coro::schedule");
+
+  transfer (aTHX_ SvSTATE (prev), SvSTATE (next),
             TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
-  SvREFCNT_dec (next);
-  SvREFCNT_dec (prev);
+}
+
+static void
+api_cede (void)
+{
+  coro_enq (SvREFCNT_inc (SvRV (GvSV (coro_current))));
+
+  api_schedule ();
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State
@@ -921,13 +935,15 @@ _newprocess(args)
 
 void
 transfer(prev, next, flags)
-        Coro::State_or_hashref	prev
-        Coro::State_or_hashref	next
-        int			flags
+        SV	*prev
+        SV	*next
+        int	flags
         PROTOTYPE: @
         CODE:
         PUTBACK;
-        transfer (aTHX_ prev, next, flags);
+        SV_CORO (next, "Coro::transfer");
+        SV_CORO (prev, "Coro::transfer");
+        transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
         SPAGAIN;
 
 void
@@ -1032,6 +1048,7 @@ BOOT:
           SV *sv = perl_get_sv("Coro::API", 1);
 
           coroapi.schedule = api_schedule;
+          coroapi.cede     = api_cede;
           coroapi.ready    = api_ready;
           coroapi.nready   = &coro_nready;
           coroapi.current  = coro_current;
@@ -1060,8 +1077,12 @@ nready(...)
 void
 schedule(...)
 	PROTOTYPE:
-  	ALIAS:
-           cede = 1
 	CODE:
-        api_schedule (ix);
+        api_schedule ();
+
+void
+cede(...)
+	PROTOTYPE:
+	CODE:
+        api_cede ();
 

@@ -1,5 +1,13 @@
 Revision history for Perl extension Coro.
 
+0.53 Tue Nov 27 21:11:13 CET 2001
+	- some tests for Event.
+        - slightly different internal architecture to get refcnt into the object
+          and not the reference. might fix a few bugs, certainly did introduce
+          new ones.
+        - Coro::Timer (independent of Event).
+        - new timed_wait functions for Coro::Signal, Semaphore, SemaphoreSet.
+
 0.52 Tue Nov  6 21:36:18 CET 2001
 	- ported to cygwin (trivial).
           patch by Gerrit P. Haase <gp@familiehaase.de>.

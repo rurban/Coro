@@ -34,7 +34,7 @@ no warnings qw(uninitialized);
 
 use Coro ();
 
-$VERSION = 0.52;
+$VERSION = 0.53;
 
 =item new [inital count]
 
@@ -52,6 +52,11 @@ sub new {
 Decrement the counter, therefore "locking" the named semaphore. This
 method waits until the semaphore is available if the counter is zero.
 
+=item $status = $sem->timed_down($id, $timeout)
+
+Like C<down>, but returns false if semaphore couldn't be acquired within
+$timeout seconds, otherwise true.
+
 =cut
 
 sub down {
@@ -61,6 +66,29 @@ sub down {
       Coro::schedule;
    }
    --$sem->[0];
+}
+
+sub timed_down {
+   require Coro::Timer;
+   my $timeout = Coro::Timer::timeout($_[2]);
+
+   my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
+   while ($sem->[0] <= 0) {
+      push @{$sem->[1]}, $Coro::current;
+      Coro::schedule;
+      if ($timeout) {
+         # ugly as hell. splice would be faster
+         for (0..$#{$_[0][1]}) {
+            if ($_[0][1][$_] == $Coro::current) {
+               splice @{$_[0][1]}, $_, 1;
+               return;
+            }
+         }
+         die;
+      }
+   }
+   --$sem->[0];
+   return 1;
 }
 
 =item $sem->up($id)
@@ -110,16 +138,25 @@ sub waiters {
 This method calls C<down> and then creates a guard object. When the guard
 object is destroyed it automatically calls C<up>.
 
+=item $guard = $sem->timed_guard($id, $timeout)
+
+Like C<guard>, but returns undef if semaphore couldn't be acquired within
+$timeout seconds, otherwise the guard object.
+
 =cut
 
 sub guard {
    &down;
-   # double indirection because bless works on the referenced
-   # object, not (only) on the reference itself.
-   bless [@_], Coro::SemaphoreSet::Guard::;
+   bless [@_], Coro::SemaphoreSet::guard::;
 }
 
-sub Coro::SemaphoreSet::Guard::DESTROY {
+sub guard {
+   &timed_down
+      ? bless [$_[0], $_[1]], Coro::SemaphoreSet::guard::
+      : ();
+}
+
+sub Coro::SemaphoreSet::guard::DESTROY {
    &up(@{$_[0]});
 }
 

@@ -6,13 +6,13 @@
 #include "XSUB.h"
 
 /* perl-related */
-#define TRANSFER_SAVE_DEFAV	0x00000001
-#define TRANSFER_SAVE_DEFSV	0x00000002
-#define TRANSFER_SAVE_ERRSV	0x00000004
+#define TRANSFER_SAVE_DEFAV	0x00000001 /* @_ */
+#define TRANSFER_SAVE_DEFSV	0x00000002 /* $_ */
+#define TRANSFER_SAVE_ERRSV	0x00000004 /* $@ */
 /* c-related */
-#define TRANSFER_SAVE_CCTXT	0x00000008
+#define TRANSFER_SAVE_CCTXT	0x00000100
 #ifdef CORO_LAZY_STACK
-# define TRANSFER_LAZY_STACK	0x00000010
+# define TRANSFER_LAZY_STACK	0x00000200
 #else
 # define TRANSFER_LAZY_STACK	0x00000000
 #endif
@@ -33,7 +33,8 @@ struct CoroAPI {
   void (*transfer)(pTHX_ SV *prev, SV *next, int flags);
 
   /* public, coro */
-  void (*schedule)(int cede);
+  void (*schedule)(void);
+  void (*cede)(void);
   void (*ready)(SV *sv);
   int *nready;
   GV *current;
@@ -42,11 +43,11 @@ struct CoroAPI {
 static struct CoroAPI *GCoroAPI;
 
 #define CORO_TRANSFER(prev,next) GCoroAPI->transfer(aTHX_ (prev),(next))
-#define CORO_SCHEDULE            GCoroAPI->schedule(0)
-#define CORO_CEDE                GCoroAPI->schedule(1)
+#define CORO_SCHEDULE            GCoroAPI->schedule()
+#define CORO_CEDE                GCoroAPI->cede()
 #define CORO_READY(coro)         GCoroAPI->ready(coro)
 #define CORO_NREADY              (*GCoroAPI->nready)
-#define CORO_CURRENT             GvSV(GCoroAPI->current)
+#define CORO_CURRENT             SvRV(GvSV(GCoroAPI->current))
 
 #define I_CORO_API(YourName)                                               \
 STMT_START {                                                               \

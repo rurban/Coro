@@ -31,7 +31,7 @@ no warnings qw(uninitialized);
 
 use Coro ();
 
-$VERSION = 0.52;
+$VERSION = 0.53;
 
 =item $s = new Coro::Signal;
 
@@ -49,6 +49,11 @@ sub new {
 Wait for the signal to occur. Returns immediately if the signal has been
 sent before.
 
+=item $status = $s->timed_wait($timeout)
+
+Like C<wait>, but returns false if no signal happens within $timeout
+seconds, otherwise true.
+
 =cut
 
 sub wait {
@@ -57,6 +62,19 @@ sub wait {
    } else {
       push @{$_[0][1]}, $Coro::current;
       Coro::schedule;
+   }
+}
+
+sub timed_wait {
+   if ($_[0][0]) {
+      $_[0][0] = 0;
+      return 1;
+   } else {
+      require Coro::Timer;
+      my $timeout = Coro::Timer::timeout($_[1]);
+      push @{$_[0][1]}, $Coro::current;
+      Coro::schedule;
+      return !$timeout;
    }
 }
 
@@ -88,7 +106,7 @@ sub broadcast {
 
 =item $s->awaited
 
-Return true when the signal is beign awaited by some process.
+Return true when the signal is being awaited by some process.
 
 =cut
 

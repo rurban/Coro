@@ -38,7 +38,7 @@ use Coro::Specific;
 
 use base 'Exporter';
 
-$VERSION = 0.52;
+$VERSION = 0.53;
 @EXPORT = qw(csub yield);
 
 {

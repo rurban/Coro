@@ -18,9 +18,7 @@ SYNOPSIS
 
 DESCRIPTION
     This module collection manages coroutines. Coroutines are similar to
-    Threads but don't run in parallel.
-
-    This module is still experimental, see the BUGS section below.
+    threads but don't run in parallel.
 
     In this module, coroutines are defined as "callchain + lexical variables
     + @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
@@ -28,18 +26,17 @@ DESCRIPTION
     important global variables.
 
     $main
-    This coroutine represents the main program.
+        This coroutine represents the main program.
 
     $current (or as function: current)
-    The current coroutine (the last coroutine switched to). The initial
-    value is $main (of course).
+        The current coroutine (the last coroutine switched to). The initial
+        value is $main (of course).
 
     $idle
-    The coroutine to switch to when no other coroutine is running. The
-    default implementation prints "FATAL: deadlock detected" and exits.
+        The coroutine to switch to when no other coroutine is running. The
+        default implementation prints "FATAL: deadlock detected" and exits.
 
   STATIC METHODS
-
     Static methods are actually functions that operate on the current
     process only.
 
@@ -76,7 +73,6 @@ DESCRIPTION
     # dynamic methods
 
   PROCESS METHODS
-
     These are the methods you can call on process objects.
 
     new Coro \&sub [, @args...]
@@ -130,15 +126,14 @@ DESCRIPTION
 BUGS/LIMITATIONS
      - you must make very sure that no coro is still active on global destruction.
        very bad things might happen otherwise (usually segfaults).
-     - this module is not thread-safe. You must only ever use this module from
+     - this module is not thread-safe. You should only ever use this module from
        the same thread (this requirement might be loosened in the future to
        allow per-thread schedulers, but Coro::State does not yet allow this).
 
 SEE ALSO
-    the Coro::Channel manpage, the Coro::Cont manpage, the Coro::Specific
-    manpage, the Coro::Semaphore manpage, the Coro::Signal manpage, the
-    Coro::State manpage, the Coro::Event manpage, the Coro::RWLock manpage,
-    the Coro::Handle manpage, the Coro::Socket manpage.
+    Coro::Channel, Coro::Cont, Coro::Specific, Coro::Semaphore,
+    Coro::Signal, Coro::State, Coro::Event, Coro::RWLock, Coro::Handle,
+    Coro::Socket.
 
 AUTHOR
      Marc Lehmann <pcg@goof.com>

@@ -21,9 +21,7 @@ Coro - coroutine process abstraction
 =head1 DESCRIPTION
 
 This module collection manages coroutines. Coroutines are similar to
-Threads but don't run in parallel.
-
-This module is still experimental, see the BUGS section below.
+threads but don't run in parallel.
 
 In this module, coroutines are defined as "callchain + lexical variables
 + @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
@@ -40,7 +38,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.52;
+$VERSION = 0.53;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -78,6 +76,8 @@ $VERSION = 0.52;
    }
 
 }
+
+=over 4
 
 =item $main
 
@@ -137,6 +137,8 @@ $manager = new Coro sub {
 };
 
 # static methods. not really.
+
+=back
 
 =head2 STATIC METHODS
 
@@ -327,7 +329,7 @@ sub desc {
 
  - you must make very sure that no coro is still active on global destruction.
    very bad things might happen otherwise (usually segfaults).
- - this module is not thread-safe. You must only ever use this module from
+ - this module is not thread-safe. You should only ever use this module from
    the same thread (this requirement might be loosened in the future to
    allow per-thread schedulers, but Coro::State does not yet allow this).
 

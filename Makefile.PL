@@ -29,7 +29,8 @@ WriteMakefile(
     VERSION_FROM => "Coro.pm",
     DIR          => ['Coro', ($EVENT ? 'Event' : ())],
     PREREQ_PM    => {
-       Event	=> 0.83, # still, 0.83 and below have serious bugs(!)
+       Event		=> 0.83, # still, 0.83 and below have serious bugs(!)
+       Scalar::Util	=> 0.00,
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',

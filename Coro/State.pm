@@ -50,7 +50,7 @@ package Coro::State;
 no warnings qw(uninitialized);
 
 BEGIN {
-   $VERSION = 0.52;
+   $VERSION = 0.53;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;
@@ -58,7 +58,7 @@ BEGIN {
 
 use base 'Exporter';
 
-@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CCTXT);
+@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);
 
 =item $coro = new [$coderef] [, @args...]
 
@@ -98,9 +98,9 @@ Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
 
 The "state" of a subroutine includes the scope, i.e. lexical variables and
-the current execution state. The C<$flags> value can be used to specify
-that additional state be saved (and later restored), by C<||>-ing the
-following constants together:
+the current execution state (subroutine, stack). The C<$flags> value can
+be used to specify that additional state be saved (and later restored), by
+C<||>-ing the following constants together:
 
    Constant    Effect
    SAVE_DEFAV  save/restore @_
