@@ -93,6 +93,7 @@ sub conn::get_statdata {
    $$statdata->{mtime}   = $mtime;
 
    $diridx{$self->{path}} = Storable::freeze $$statdata;
+   (tied %diridx)->db_sync;
 
    $$statdata;
 }

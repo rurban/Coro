@@ -229,14 +229,11 @@ sub ip_request {
    if (!$c->c_get((inet_aton $ip), $v, DB_SET_RANGE)) {
       my ($ip0, $ip1, $whois) = split /\x0/, $v;
       my $_ip = ip2int $ip;
-      print "looked for $_ip, found $ip0, $ip1 ", length($v),"\n";
       if ($ip0 <= $_ip && $_ip <= $ip1) {
          return $whois;
       }
    }
 
-   print "looked for $ip, ONLY found $v->[0], $v->[1]\n";
-   
    my ($arin, $ripe, $apnic);
 
    $whois = $WHOIS{APNIC}->ip_request($ip)
@@ -258,7 +255,6 @@ sub ip_request {
       $_ip1 = $_ip + 255 if $_ip1 > $_ip + 255;
    }
 
-   print "setting entry ($_ip0, $_ip, $_ip1)\n";
    $iprange->db_put((pack "N", $_ip1), (join "\x0", $_ip0, $_ip1, $whois));
    (tied %whois)->db_sync;
    $iprange->db_sync;
