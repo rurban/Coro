@@ -151,7 +151,7 @@ sub response {
 
    $res .= $content if defined $content and $self->{method} ne "HEAD";
 
-   print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
+   print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";
 
    $self->{written} +=
       print {$self->{fh}} $res;
@@ -383,13 +383,11 @@ sub respond {
          $ims < $self->{stat}[9]
             or $self->err(304, "not modified");
 
-         if ($self->{method} eq "GET") {
-            if (-r "$path/index.html") {
-               $self->{path} .= "/index.html";
-               $self->handle_file;
-            } else {
-               $self->handle_dir;
-            }
+         if (-r "$path/index.html") {
+            $self->{path} .= "/index.html";
+            $self->handle_file;
+         } else {
+            $self->handle_dir;
          }
       }
    } elsif (-f _ && -r _) {

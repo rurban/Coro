@@ -1,6 +1,6 @@
 $MAX_CONNECTS = 500;			# maximum simult. connects
 
-$MAX_CONN_IP  =   4;			# maximum simult. connects per ip
+$MAX_CONN_IP  =   4000;			# maximum simult. connects per ip
 $BLOCKTIME    = 7200;			# block time
 
 $NO_SEGMENTED =   1;			# allow segmented downloads?
