@@ -7,26 +7,68 @@ GROUP fra FR LU
 !.					far
 !./neon genesis				usa de IT fra
 !./pokemon				fra eur usa de
-!/eps/najica blitz tactics		usa
-!/eps/noir				usa
-!/eps/full metal panic			usa
-!/eps/angelic layer			usa de
 !/eps/.*creamy mami			eur usa
+!/eps/3x3 eyes				usa
+!/eps/Ah! My Goddess			usa
+!/eps/Alian 9				usa
+!/eps/Aquarian Age			usa
+!/eps/Argento Soma			usa
+!/eps/Azumanga Daioh			usa
+!/eps/Brainpowered			usa
+!/eps/Chobits				usa
+!/eps/Comic Party			usa
+!/eps/Cowboy Bebop			usa
+!/eps/DNA²				usa de
+!/eps/Digi Charat			usa
+!/eps/Figure 17				usa
+!/eps/Final Fantasy Unlimited 		usa
+!/eps/Flame of Recca			usa
+!/eps/Gate Keepers			usa
+!/eps/Geneshaft				usa
+!/eps/Gravitation			usa
+!/eps/Hajime no Ippo			usa
+!/eps/Happy Lesson			usa
+!/eps/Hyper Police			usa
+!/eps/Infinite Ryvius			usa
+!/eps/Initial D				usa
+!/eps/Iria				usa
+!/eps/K O Century Beast			usa
+!/eps/Kodomo no Omocha			usa
+!/eps/Love Hina				usa
+!/eps/Mahoromatic			usa
+!/eps/Marmalade Boy			usa
+!/eps/Master Keaton			usa
+!/eps/Memories Off OVA			usa
+!/eps/Nadesciso				usa
+!/eps/Project Arms			usa
+!/eps/Puni Puni Poemi			usa
+!/eps/Saint Seiya			usa
+!/eps/Scryed				usa
+!/eps/Sentimental Journey Story		usa
+!/eps/Sister Princess			usa
+!/eps/Super Gals Kotobuki Ran		usa
+!/eps/Tales of Eternia			usa
+!/eps/Trouble Chocolate			usa
+!/eps/Vampire Princess Miyu 		usa
+!/eps/Vampire Princess Miyu OAV		usa
+!/eps/Wedding Peach			usa
+!/eps/Wild Arms				usa
 !/eps/X					usa de
+!/eps/Yume de Aetera			usa
 !/eps/amazing nurse nanako		usa
 !/eps/ancient books of ys		usa
 !/eps/angel sanctuary			usa
+!/eps/angelic layer			usa de
 !/eps/arc the lad			usa
 !/eps/armitage				usa
 !/eps/bastard				usa
 !/eps/berserk				usa
 !/eps/berserk				usa
 !/eps/biohunter				usa
-!/eps/blue sabmarine			usa
 !/eps/blue seed				usa
 !/eps/blue submarine			IT
 !/eps/boogiepop phantom			usa
-!/eps/bubblegum crisis			usa
+!/eps/brigadoon				usa
 !/eps/bubblegum crisis			usa
 !/eps/burn up				usa
 !/eps/candidate for goddess		usa
@@ -41,25 +83,23 @@ GROUP fra FR LU
 !/eps/excel saga			IT usa
 !/eps/flcl				usa
 !/eps/fruits basket			usa
+!/eps/full metal panic			usa
 !/eps/fushigi yuugi			usa de
 !/eps/gasaraki				usa
 !/eps/gatekeepers			usa
 !/eps/gestalt				usa
-!/eps/golden boy			usa
 !/eps/golden boy			usa IT
+!/eps/gto				usa
 !/eps/gundam wing			usa
 !/eps/hand maid may			usa IT
 !/eps/haunted junction			usa
 !/eps/hellsing				usa
 !/eps/himiko-den			usa
-!/eps/read or die			usa
-!/eps/brigadoon				usa
 !/eps/i my me				usa
 !/eps/i will become an angel		usa
 !/eps/inu yasha				usa
 !/eps/jubei chan			usa
-!/eps/kareshi kanojo no jijou		IT
-!/eps/kareshi kanojo no jijou		usa
+!/eps/kareshi kanojo no jijou		usa IT
 !/eps/kasemakase tsukikage ran		usa
 !/eps/lost universe			usa
 !/eps/love hina				IT
@@ -68,27 +108,27 @@ GROUP fra FR LU
 !/eps/magic knight rayearth		usa
 !/eps/mahou senshi riui			usa
 !/eps/mahou senshi riui			usa
-!/eps/maison ikkoku			usa
+!/eps/maison ikkoku			usa de
 !/eps/martian successor nadesico	usa
 !/eps/mini goddess			usa
 !/eps/miracle girls			IT
 !/eps/miyuki-chan in wonderland		AU
 !/eps/nadia				usa
+!/eps/najica blitz tactics		usa
 !/eps/nazca				usa
 !/eps/neo ranga				usa
 !/eps/niea 7				usa
 !/eps/nightwalker			usa
-!/eps/now and then			usa
+!/eps/noir				usa
 !/eps/now and then			usa
 !/eps/orguss 2				usa
 !/eps/orphen				usa
 !/eps/outlaw star			usa
 !/eps/ranma				usa fra IT
-!/eps/record of the lodoss war		usa
+!/eps/read or die			usa
 !/eps/record of the lodoss war		usa
 !/eps/rev.*utena			usa IT
-!/eps/robotech				usa
-!/eps/robotech				usa
+!/eps/robotech				usa de
 !/eps/rurouni kenshin			usa
 !/eps/saber marionette j to x		usa
 !/eps/saint tail			usa
@@ -96,8 +136,8 @@ GROUP fra FR LU
 !/eps/sakura diaries			usa
 !/eps/sakura wars			usa
 !/eps/serial experiments		usa IT fra
-!/eps/shin hakkenden			usa
-!/eps/silent moebius			usa
+!/eps/shin hakkenden			usa de
+!/eps/silent moebius			usa de
 !/eps/silent service			usa
 !/eps/slayers				usa
 !/eps/sol bianca			usa
@@ -112,14 +152,14 @@ GROUP fra FR LU
 !/eps/vandread				usa
 !/eps/wedding peach			IT de
 !/eps/yu yu hakusho			usa
-!/eps/gto				usa
-!/manga/angelic layer			de
-!/manga/ayashi no ceres			usa
-!/manga/battle angel			de
+!/manga/angelic layer			usa de
+!/manga/ayashi no ceres			usa de
+!/manga/battle angel			usa de
 !/manga/card captor sakura		usa de fra IT
+!/manga/chobits				usa de
 !/manga/ghost in the shell		usa de
-!/manga/love hina			usa
-!/manga/neon genesis evangelion		usa
+!/manga/love hina			usa de
+!/manga/neon genesis evangelion		usa de
 !/manga/one piece			de
 !/manga/plastic little			de
 !/manga/ranma				usa de IT
@@ -127,12 +167,10 @@ GROUP fra FR LU
 !/manga/slayers				de
 !/manga/vampire princess miyu		de
 !/manga/video girl ai			de usa
-!/manga/chobits				usa
 !/movies/adolescence of utena		usa
 !/movies/akira				eur usa
 !/movies/angel's egg			usa
 !/movies/armitage iii			fra
-!/movies/blood				usa
 !/movies/blood the last vamp		usa
 !/movies/card captor sakura		usa
 !/movies/final fantasy			usa eur
@@ -147,13 +185,12 @@ GROUP fra FR LU
 !/movies/vampire hunter d		usa
 !/movies/whisper of the heart		usa
 !/movies/zone of enders			usa
-!hentai/urotsukidoji			eur usa
-!hentai/Tokyo Private Police		usa
-!hentai/advanturekid			usa
-!hentai/area 88				usa
-!hentai/cool devices			eur usa
-!hentai/la blue girl			AU
-!movies/nausicaa of the valley		usa
-!series/midnight_panter			usa
-
+!/movies/nausicaa of the valley		usa de
+!/hentai/Tokyo Private Police		usa
+!/hentai/advanturekid			usa
+!/hentai/area 88			usa
+!/hentai/cool devices			eur usa
+!/hentai/la blue girl			AU
+!/hentai/urotsukidoji			eur usa
+!/series/midnight_panter		usa
 
