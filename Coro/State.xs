@@ -186,7 +186,9 @@ clone_padlist (AV *protopadlist)
                 sv = (SV *) newHV ();
               else
                 sv = NEWSV (0, 0);
+#ifdef SvPADBUSY
               if (!SvPADBUSY (sv))
+#endif
                 SvPADMY_on (sv);
               npad[ix] = sv;
             }
