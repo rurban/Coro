@@ -10,7 +10,7 @@ $DEFINE = "";
 
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
-if ($^O =~ /win32/i) {
+if ($^O =~ /win32/i or $^O =~ /cygwin/) {
    $DEFINE = " -DCORO_LOOSE";
 } elsif ($^O =~ /irix/) {
    $iface = "i";
@@ -70,8 +70,8 @@ l  Older GNU/Linux systems (glibc-2.1 and below) need this hack. Since it is
    works, that is...
 
 i  IRIX. For some reason, SGI really does not like to follow the unix
-   standard (does that surprise you?), so this techniquee should be fast
-   and safe (althogh s and u should also work now).
+   standard (does that surprise you?), so this technique should be fast
+   and safe (although s and u should also work now).
 
 EOF
 

@@ -1,5 +1,10 @@
 Revision history for Perl extension Coro.
 
+0.52 Tue Nov  6 21:36:18 CET 2001
+	- ported to cygwin (trivial).
+          patch by Gerrit P. Haase <gp@familiehaase.de>.
+        - small setjmp code fix by Sullivan.DanielJ@epamail.epa.gov.
+
 0.51 Thu Nov  1 20:39:01 CET 2001
 	- terminate/cancel now work properly (otherwise termination
           could cause a "next coroutine is not and contains not..."
