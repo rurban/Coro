@@ -52,6 +52,7 @@ sub conn::access_check {
    }
 
    if ($disallow{$country}) {
+      $self->slog(6, "DISALLOW($uri,$country)");
       $whois =~ s/&/&amp;/g;
       $whois =~ s/</&lt;/g;
       $self->err(403, "forbidden", { "Content-Type" => "text/html" }, <<EOF);
