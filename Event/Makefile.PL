@@ -10,8 +10,11 @@ $|=1;
 if (eval { require Event }) {
    $EVENT = 1;
    $DEFINE .= " -DHAVE_EVENT=1";
-   print "\n*** Event version $Event::VERSION found, building Event support.\n",
-         "*** Please read the INSTALL file, you might need to patch Event.\n\n";
+   print "\nEvent version $Event::VERSION found, building Event support.\n\n";
+   if ($Event::VERSION < 0.85) {
+      print "*** Please read the INSTALL file, you need a patched Event.\n";
+   }
+   print "\n";
 } else {
    print "\n*** Event not found, not build Event support.\n\n";
    $EVENT = 0;

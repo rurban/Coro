@@ -94,11 +94,10 @@ for my $flavour (qw(idle var timer io signal)) {
       # how does one do method-call-by-name?
       # my $w = $class->SUPER::$flavour(@_);
 
-      $_[0] eq Coro::Event::
+      shift eq Coro::Event::
          or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
 
-      my $q = []; # [$coro, $event]
-      my $w = $new->(
+      my $w = $new->($class,
             desc => $flavour,
             @_,
             parked => 1,

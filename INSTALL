@@ -6,10 +6,10 @@ choice of c-level coroutine model:
 
 =============================================================================
 
-Event-0.84 cannot be found / Event programs do not work.
+Event-0.85 cannot be found / Event programs do not work.
 
-There is a serious bug in Event's poll implementation (if your os uses
-select for io multiplexing then this bug doesn't affect you), in that
+There is a serious bug in Event's (<0.85) poll implementation (if your os
+uses select for io multiplexing then this bug doesn't affect you), in that
 errors never get reported and result in endless loops.
 
 The fix is easy. Unpack Event and edit the file c/unix.c and look for the

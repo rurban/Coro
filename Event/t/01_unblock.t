@@ -1,4 +1,11 @@
-BEGIN { $| = 1; print "1..12\n"; }
+$| = 1;
+
+if ($^O eq "cygwin") {
+   print "1..0 # skipped: pipe() blocking on cygwin\n";
+   exit;
+}
+
+print "1..12\n";
 
 use Coro;
 use Coro::Event;
