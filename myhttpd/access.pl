@@ -10,7 +10,7 @@ sub new {
 sub start_transfer {
    my $self = shift;
 
-   my $trans = bless [ $self, $Coro::current ], transfer::;
+   my $trans = bless [ $self ], transfer::;
    Scalar::Util::weaken($trans->[0]);
 
    push @{$self->{wait}}, $trans;
@@ -49,7 +49,10 @@ sub try {
    my $self = shift;
    my $timeout = Coro::Timer::timeout $_[0];
 
-   $self->[2] or Coro::schedule;
+   unless ($self->[2]) {
+      local $self->[1] = $Coro::current;
+      Coro::schedule;
+   }
 
    return $self->[2];
 }
@@ -57,7 +60,7 @@ sub try {
 sub wake {
    my $self = shift;
    $self->[2] = 1;
-   $self->[1]->ready;
+   ref $self->[1] and $self->[1]->ready;
 }
 
 sub DESTROY {

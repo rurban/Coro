@@ -220,16 +220,20 @@ EOF
    for (@::transfers) {
       my $name = shift @queuename;
       if ($_->waiters) {
-         $content .= "<li>$name<table border='1'><tr><th>Remote ID</th><th>CN</th><th>Waiting</th><th>URI</th></tr>";
+         $content .= "<li>$name<table border='1' width='100%'><tr><th>Remote ID</th><th>CN</th><th>Waiting</th><th>URI</th></tr>";
          for ($_->waiters) {
-            my $conn = $_->{conn};
-            my $time = format_time ($::NOW - $conn->{time});
-            $content .= "<tr>".
-                        "<td>$conn->{remote_id}</td>".
-                        "<td>$conn->{country}</td>".
-                        "<td>$time</td>".
-                        "<td>".escape_html($conn->{name})."</td>".
-                        "</tr>";
+            if (defined $_) {
+               my $conn = $_->{conn};
+               my $time = format_time ($::NOW - $conn->{time});
+               $content .= "<tr>".
+                           "<td>$conn->{remote_id}</td>".
+                           "<td>$conn->{country}</td>".
+                           "<td>$time</td>".
+                           "<td>".escape_html($conn->{name})."</td>".
+                           "</tr>";
+            } else {
+               $content .= "<tr><td colspan='4'>premature ejaculation</td></tr>";
+            }
          }
          $content .= "</table></li>";
       } else {
