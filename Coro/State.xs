@@ -186,7 +186,9 @@ clone_padlist (AV *protopadlist)
                 sv = (SV *) newHV ();
               else
                 sv = NEWSV (0, 0);
+#ifdef SvPADBUSY
               if (!SvPADBUSY (sv))
+#endif
                 SvPADMY_on (sv);
               npad[ix] = sv;
             }
@@ -305,7 +307,7 @@ flush_padlist_cache ()
 #define LOAD(state)       load_state(aTHX_ (state));
 #define SAVE(state,flags) save_state(aTHX_ (state),(flags));
 
-#define REPLACE_SV(sv,val) SB SvREFCNT_dec(sv); (sv) = (val); SE
+#define REPLACE_SV(sv,val) SB SvREFCNT_dec(sv); (sv) = (val); (val) = 0; SE
 
 static void
 load_state(pTHX_ Coro__State c)
@@ -520,7 +522,6 @@ coro_init_stacks (pTHX)
 
 /*
  * destroy the stacks, the callchain etc...
- * still there is a memleak of 128 bytes...
  */
 STATIC void
 destroy_stacks(pTHX)
@@ -611,9 +612,9 @@ deallocate_stack (Coro__State ctx)
           if (stack->ssize > 0 && stack->sptr)
             munmap (stack->sptr, stack->ssize);
           else
-#else
-            Safefree (stack->sptr);
 #endif
+            Safefree (stack->sptr);
+
           Safefree (stack);
         }
       else if (ctx->gencnt == stack->gencnt)
@@ -635,7 +636,7 @@ setup_coro (void *arg)
   /*PL_curcop = 0;*/
   /*PL_in_eval = PL_in_eval;*/ /* inherit */
   SvREFCNT_dec (GvAV (PL_defgv));
-  GvAV (PL_defgv) = ctx->args;
+  GvAV (PL_defgv) = ctx->args; ctx->args = 0;
 
   SPAGAIN;
 
@@ -767,6 +768,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                 }
               else
                 {
+                  assert (!next->stack);
                   allocate_stack (next, 1);
                   coro_create (&(next->stack->cctx),
                                setup_coro, (void *)next,
@@ -954,7 +956,7 @@ _newprocess(args)
         if (!SvROK (args) || SvTYPE (SvRV (args)) != SVt_PVAV)
           croak ("Coro::State::_newprocess expects an arrayref");
         
-        New (0, coro, 1, struct coro);
+        Newz (0, coro, 1, struct coro);
 
         coro->args = (AV *)SvREFCNT_inc (SvRV (args));
         coro->mainstack = 0; /* actual work is done inside transfer */
@@ -962,7 +964,7 @@ _newprocess(args)
 
         /* same as JMPENV_BOOTSTRAP */
         /* we might be able to recycle start_env, but safe is safe */
-        Zero(&coro->start_env, 1, JMPENV);
+        //Zero(&coro->start_env, 1, JMPENV);
         coro->start_env.je_ret = -1;
         coro->start_env.je_mustcatch = TRUE;
 
@@ -1006,7 +1008,7 @@ DESTROY(coro)
           }
 
         deallocate_stack (coro);
-
+        SvREFCNT_dec (coro->args);
         Safefree (coro);
 
 void

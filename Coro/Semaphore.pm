@@ -37,7 +37,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 0.8;
+$VERSION = "0.9";
 
 =item new [inital count]
 

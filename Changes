@@ -1,5 +1,12 @@
 Revision history for Perl extension Coro.
 
+0.9  Sun Nov 23 04:32:39 CET 2003
+	- fix a few very hard to track down but (of course) stupid
+          memory leaks.
+        - stringify version number to avoid locale problems :(.
+        - perl 5.9.0 does not have SvPADBUSY, reported by Scott Walters,
+          hopefully ignoring it "just works".
+
 0.8   Wed Nov  5 19:38:40 CET 2003
 	- port to perl5.005_03, but only 5.8.x+ is supported!
 	- honor LocalAddr even without LocalPort in Coro::Socket.

@@ -40,7 +40,7 @@ use vars qw($idle $main $current);
 
 use base Exporter;
 
-$VERSION = 0.8;
+$VERSION = "0.9";
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
