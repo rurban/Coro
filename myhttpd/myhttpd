@@ -1,4 +1,5 @@
 #!/usr/bin/perl
 
 require "config.pl";
+require "shell.pl";
 require "httpd.pl";

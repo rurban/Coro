@@ -56,6 +56,7 @@ async {
       $connections->down;
       push @fh, $port->accept;
       #slog 3, "accepted @$connections ".scalar(@pool);
+      $::NOW = time;
       if (@pool) {
          (pop @pool)->ready;
       } else {
@@ -74,7 +75,8 @@ use Socket;
 use HTTP::Date;
 use Convert::Scalar 'weaken';
 
-my %conn; # $conn{ip}{fh} => connobj
+our %conn; # $conn{ip}{fh} => connobj
+our %blocked;
 
 sub new {
    my $class = shift;
@@ -82,17 +84,19 @@ sub new {
    my $self = bless { fh => $fh }, $class;
    my (undef, $iaddr) = unpack_sockaddr_in $fh->getpeername
       or $self->err(500, "unable to get peername");
-   $self->{remote_address} = inet_ntoa $iaddr;
+   $self->{remote_addr} = inet_ntoa $iaddr;
 
    # enter ourselves into various lists
-   weaken ($conn{$self->{remote_address}}{$self*1} = $self);
-   print $self->{remote_address}.": ".($self*1)." > ".%{$conn{$self->{remote_address}}},"\n";
+   weaken ($conn{$self->{remote_addr}}{$self*1} = $self);
+
+   print "$self->{remote_addr}: ".($self*1)." > ".%{$conn{$self->{remote_addr}}},"\n";
    $self;
 }
 
 sub DESTROY {
    my $self = shift;
-   delete $conn{$self->{remote_address}}{$self*1};
+   delete $conn{$self->{remote_addr}}{$self*1};
+   delete $uri{$self->{uri}}{$self*1};
 }
 
 sub slog {
@@ -103,14 +107,14 @@ sub print_response {
    my ($self, $code, $msg, $hdr, $content) = @_;
    my $res = "HTTP/1.0 $code $msg\015\012";
 
-   $hdr->{Date} = time2str time; # slow? nah.
+   $hdr->{Date} = time2str $::NOW; # slow? nah.
 
    while (my ($h, $v) = each %$hdr) {
       $res .= "$h: $v\015\012"
    }
    $res .= "\015\012$content" if defined $content;
 
-   print STDERR "$self->{remote_address} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
+   print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
 
    print {$self->{fh}} $res;
 }
@@ -132,6 +136,19 @@ sub err {
    die bless {}, err::;
 }
 
+sub err_blocked {
+   my $self = shift;
+   my $ip = $self->{remote_addr};
+   my $time = time2str $blocked{$ip} = $::NOW + $::BLOCKTIME;
+   $self->err(403, "too many connections",
+              { "Retry-After" => $::BLOCKTIME },
+              <<EOF);
+You have been blocked because you opened too many connections. You
+may retry at $time. Until then,
+every new access will renew the block.
+EOF
+}
+
 sub handle {
    my $self = shift;
    my $fh = $self->{fh};
@@ -146,6 +163,20 @@ sub handle {
 
       defined $req or
          $self->err(408, "request timeout");
+
+      my $ip = $self->{remote_addr};
+
+      if ($blocked{$ip}) {
+         $self->err_blocked($blocked{$ip})
+            if $blocked{$ip} > $::NOW;
+
+         delete $blocked{$ip};
+      }
+
+      if (%{$conn{$ip}} > $::MAX_CONN_IP) {
+         $self->slog("blocked ip $ip");
+         $self->err_blocked;
+      }
 
       $req =~ /^(?:\015\012)?
                 (GET|HEAD) \040+
@@ -180,6 +211,8 @@ sub handle {
       }
 
       $self->{server_port} = $self->{h}{host} =~ s/:([0-9]+)$// ? $1 : 80;
+
+      weaken ($uri{$self->{uri}}{$self*1} = $self);
 
       $self->map_uri;
 

@@ -1,12 +1,19 @@
 $MAX_CONNECTS = 500;			# maximum simult. connects
+
 $MAX_CONN_IP  =   4;			# maximum simult. connects per ip
+$BLOCKTIME    = 21600;			# block time
+
 $SEGMENTED_OK =   0;			# allow segmented downloads?
+
 $REQ_TIMEOUT  =  60;			# request timeout
 $RES_TIMEOUT  = 180;			# response timeout
+
 $MAX_POOL     =  20;			# max. number of idle workers
+
 $DOCROOT      = "/usr/www/htdocs";	# document root
 $INDEXPROG    = "/usr/www/bin/dols";	# indexing program (nph-cgi script)
+
 $SERVER_HOST  = "0.0.0.0";		# host to bind on
 $SERVER_PORT  = 84;			# port to listen on
 
-
+$CMDSHELL_PORT = 7262;			# open a command shell on this port
