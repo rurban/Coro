@@ -780,6 +780,7 @@ api_transfer(pTHX_ SV *prev, SV *next, int flags)
 /* for Coro.pm */
 static GV *coro_current, *coro_idle;
 static AV *coro_ready[PRIO_MAX-PRIO_MIN+1];
+static int coro_nready;
 
 static void
 coro_enq (SV *sv)
@@ -797,6 +798,7 @@ coro_enq (SV *sv)
                : prio;
 
           av_push (coro_ready [prio - PRIO_MIN], sv);
+          coro_nready++;
 
           return;
         }
@@ -816,7 +818,10 @@ coro_deq (int min_prio)
 
   for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= min_prio; )
     if (av_len (coro_ready[prio]) >= 0)
-      return av_shift (coro_ready[prio]);
+      {
+        coro_nready--;
+        return av_shift (coro_ready[prio]);
+      }
 
   return 0;
 }
@@ -877,6 +882,7 @@ BOOT:
           coroapi.transfer = api_transfer;
           coroapi.schedule = api_schedule;
           coroapi.ready    = api_ready;
+          coroapi.nready   = &coro_nready;
 
           GCoroAPI = &coroapi;
           sv_setiv(sv, (IV)&coroapi);
@@ -1017,8 +1023,17 @@ ready(self)
 	CODE:
         api_ready (self);
 
+int
+nready(...)
+	PROTOTYPE:
+        CODE:
+        RETVAL = coro_nready;
+	OUTPUT:
+        RETVAL
+
 void
 schedule(...)
+	PROTOTYPE:
   	ALIAS:
            cede = 1
 	CODE:

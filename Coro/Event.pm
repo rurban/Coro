@@ -78,13 +78,17 @@ next method often, but it does save typing sometimes.
 
 =cut
 
+Event->add_hooks(prepare => sub {
+   &Coro::cede while &Coro::nready;
+   1e6;
+});
+
 sub std_cb {
    my $w = $_[0]->w;
    my $q = $w->private;
    $q->[1] = $_[0];
    if ($q->[0]) { # somebody waiting?
       $q->[0]->ready;
-      &Coro::schedule;
    } else {
       $w->stop;
    }
