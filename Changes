@@ -1,6 +1,7 @@
 Revision history for Perl extension Coro.
 
 0.5
+	- small tweaks.
 
 0.49  Sun Sep 16 02:42:45 CEST 2001
 	- changed some method calls to function calls for speed

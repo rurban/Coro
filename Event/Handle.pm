@@ -203,6 +203,12 @@ sub FILENO {
    fileno $_[0][0];
 }
 
+# seems to be called for stringification (how weird), at least
+# when DumpValue::dumpValue is used to print this.
+sub FETCH {
+   "$_[0]<$_[0][1]>";
+}
+
 sub readable {
    ($_[0][5] ||= Coro::Event->io(
       fd      => $_[0][0],

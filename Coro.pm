@@ -231,6 +231,7 @@ Like C<terminate>, but terminates the specified process instead.
 sub cancel {
    push @destroy, $_[0];
    $manager->ready;
+   &schedule if $current == $_[0];
 }
 
 =item $oldprio = $process->prio($newprio)
