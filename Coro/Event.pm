@@ -129,6 +129,11 @@ Similar to Event::one_event and Event::sweep: The idle task is called once
 (this has the effect of jumping back into the Event loop once to serve new
 events).
 
+The reason this function exists is that you sometimes want to serve events
+while doing other work. Calling C<Coro::yield> does not work because
+C<yield> implies that the current coroutine is runnable and does not call
+into the Event dispatcher.
+
 =cut
 
 sub sweep {
