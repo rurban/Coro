@@ -471,8 +471,8 @@ save_state(pTHX_ Coro__State c, int flags)
 /*
  * allocate various perl stacks. This is an exact copy
  * of perl.c:init_stacks, except that it uses less memory
- * on the assumption that coroutines do not usually need
- * a lot of stackspace.
+ * on the (sometimes correct) assumption that coroutines do
+ * not usually need a lot of stackspace.
  */
 STATIC void
 coro_init_stacks (pTHX)
@@ -521,12 +521,10 @@ destroy_stacks(pTHX)
   if (!IN_DESTRUCT)
     {
       /* is this ugly, I ask? */
-      while (PL_scopestack_ix)
-        LEAVE;
+      LEAVE_SCOPE (0);
 
       /* sure it is, but more important: is it correct?? :/ */
-      while (PL_tmps_ix > PL_tmps_floor) /* should only ever be one iteration */
-        FREETMPS;
+      FREETMPS;
     }
 
   while (PL_curstackinfo->si_next)
@@ -579,8 +577,8 @@ allocate_stack (Coro__State ctx, int alloc)
 #endif
         {
           /*FIXME*//*D*//* reasonable stack size! */
-          stack->ssize = -4096 * sizeof (long);
-          New (0, stack->sptr, 4096, long);
+          stack->ssize = - (16384 * sizeof (long));
+          New (0, stack->sptr, 16384, long);
         }
     }
   else
@@ -622,7 +620,7 @@ setup_coro (void *arg)
    */
   dSP;
   Coro__State ctx = (Coro__State)arg;
-  SV *sub_init = (SV*)get_cv(SUB_INIT, FALSE);
+  SV *sub_init = (SV *)get_cv (SUB_INIT, FALSE);
 
   coro_init_stacks (aTHX);
   /*PL_curcop = 0;*/
@@ -1008,13 +1006,7 @@ _exit(code)
 	int	code
         PROTOTYPE: $
 	CODE:
-#if defined(__GLIBC__) || _POSIX_C_SOURCE
 	_exit (code);
-#else
-        signal (SIGTERM, SIG_DFL);
-        raise (SIGTERM);
-        exit (code);
-#endif
 
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
