@@ -142,9 +142,7 @@ sub new {
 
 sub DESTROY {
    my $self = shift;
-
    $::conns--;
-
    $self->eoconn;
 }
 

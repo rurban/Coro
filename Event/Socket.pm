@@ -159,15 +159,15 @@ EINPROGRESS). Remember that these must be method calls.
 
 =cut
 
-sub connect	{ connect tied(${$_[0]})->{fh}, $_[1] or $! == Errno::EINPROGRESS }
-sub bind	{ bind    tied(${$_[0]})->{fh}, $_[1] }
-sub listen	{ listen  tied(${$_[0]})->{fh}, $_[1] }
-sub getsockopt	{ getsockopt tied(${$_[0]})->{fh}, $_[1], $_[2] }
-sub setsockopt	{ setsockopt tied(${$_[0]})->{fh}, $_[1], $_[2], $_[3] }
-sub send	{ send tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub recv	{ recv tied(${$_[0]})->{fh}, $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub getsockname	{ getsockname tied(${$_[0]})->{fh} }
-sub getpeername	{ getpeername tied(${$_[0]})->{fh} }
+sub connect	{ connect tied(${$_[0]})->[0], $_[1] or $! == Errno::EINPROGRESS }
+sub bind	{ bind    tied(${$_[0]})->[0], $_[1] }
+sub listen	{ listen  tied(${$_[0]})->[0], $_[1] }
+sub getsockopt	{ getsockopt tied(${$_[0]})->[0], $_[1], $_[2] }
+sub setsockopt	{ setsockopt tied(${$_[0]})->[0], $_[1], $_[2], $_[3] }
+sub send	{ send tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
+sub recv	{ recv tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
+sub getsockname	{ getsockname tied(${$_[0]})->[0] }
+sub getpeername	{ getpeername tied(${$_[0]})->[0] }
 
 =item ($peername, $fh) = $listen_fh->accept
 
@@ -179,7 +179,7 @@ list context return the ($peername, $fh) pair (or nothing).
 sub accept {
    my ($peername, $fh);
    while () {
-      $peername = accept $fh, tied(${$_[0]})->{fh}
+      $peername = accept $fh, tied(${$_[0]})->[0]
          and return ($peername, $fh = new_from_fh Coro::Socket $fh);
 
       return unless $!{EAGAIN};
