@@ -1,10 +1,10 @@
 =head1 NAME
 
-Coro::Event::IO - non-blocking io with a blocking interface.
+Coro::Handle - non-blocking io with a blocking interface.
 
 =head1 SYNOPSIS
 
- use Coro::Event::IO;
+ use Coro::Handle;
 
 =head1 DESCRIPTION
 
@@ -16,35 +16,46 @@ does NOT inherit from IO::Handle but uses tied objects.
 
 =cut
 
-package Coro::Event::IO;
+package Coro::Handle;
 
 use Errno ();
 
-$VERSION = 0.10;
+$VERSION = 0.11;
+
+=item $fh = new_from_fh Coro::Handle $fhandle
+
+Create a new non-blocking io-handle using the given
+perl-filehandle. Returns undef if no fhandle is given.
+
+=cut
 
 sub new_from_fh {
    my $class = shift;
-   my $fh = shift;
-   my $self = do { local *Coro::Event::IO };
+   my $fh = shift or return;
+   my $self = do { local *Coro::Handle };
 
-   tie $self, Coro::Event::IO::FH, $fh;
+   tie $self, Coro::Handle::FH, $fh;
 
-   my $_fh = select bless \$self, $class;
-   $| = 1;
-   select $_fh;
+   my $_fh = select bless \$self, $class; $| = 1; select $_fh;
 }
 
-sub connect {
-   connect tied(${$_[0]})->{fh}, $_[1]
-      or $! == Errno::EINPROGRESS;
-}
+=item $fh->writable, $fh->readable
 
-package Coro::Event::IO::FH;
+Wait until the filehandle is readable or writable (and return true) or
+until an error condition happens (and return false).
+
+=cut
+
+sub readable	{ tied(${$_[0]})->readable }
+sub writable	{ tied(${$_[0]})->writable }
+
+package Coro::Handle::FH;
 
 use Fcntl ();
 use Errno ();
 
 use Coro::Event;
+use Event::Watcher qw(R W E);
 
 use base 'Tie::Handle';
 
@@ -70,7 +81,6 @@ sub OPEN {
    if ($r) {
       fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
          or die "fcntl(O_NONBLOCK): $!";
-      $self->{w} = Coro::Event->io(fh => $self->{fh}, parked => 1),
    }
    $r;
 }
@@ -85,13 +95,21 @@ sub CLOSE {
    close $self->{fh};
 }
 
+sub writable {
+   ($_[0]->{ww} ||= Coro::Event->io(fd => $_[0]->{fh}, poll => W+E))->next->got & W;
+}
+
+sub readable {
+   ($_[0]->{rw} ||= Coro::Event->io(fd => $_[0]->{fh}, poll => R+E))->next->got & R;
+}
+
 sub WRITE {
    my $self = $_[0];
    my $len = defined $_[2] ? $_[2] : length $_[1];
    my $ofs = $_[3];
    my $res = 0;
 
-   while () {
+   while() {
       my $r = syswrite $self->{fh}, $_[1], $len, $ofs;
       if (defined $r) {
          $len -= $r;
@@ -101,7 +119,7 @@ sub WRITE {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      ($self->{ww} ||= Coro::Event->io(fd => $self->{fh}, poll => Event::Watcher::R))->next;
+      last unless $self->writable;
    }
 
    return $res;
@@ -113,7 +131,7 @@ sub READ {
    my $ofs = $_[3];
    my $res = 0;
 
-   while () {
+   while() {
       my $r = sysread $self->{fh}, $_[1], $len, $ofs;
       if (defined $r) {
          $len -= $r;
@@ -123,7 +141,7 @@ sub READ {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      ($self->{rw} ||= Coro::Event->io(fd => $self->{fh}, poll => Event::Watcher::R))->next;
+      last unless $self->readable;
    }
 
    return $res;
@@ -143,9 +161,7 @@ sub READLINE {
       my $r = sysread $self->{fh}, $self->{rb}, 8192, length $self->{rb};
       if (defined $r) {
          return undef unless $r;
-      } elsif ($! == Errno::EAGAIN) {
-         ($self->{rw} ||= Coro::Event->io(fd => $self->{fh}, poll => Event::Watcher::R))->next;
-      } else {
+      } elsif ($! != Errno::EAGAIN || !$self->readable) {
          return undef;
       }
    }

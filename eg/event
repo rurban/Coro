@@ -1,49 +1,40 @@
 #!/usr/bin/perl
 
-# useless stuff
+# this crap is an asynchroneous finger client. it's rather idiotic ;)
 
 use Coro;
 use Coro::Event;
-
-my $stdin = Coro::Event->io(fd => \*STDIN, poll => 'r');
+use Coro::Socket;
 
 # this gets started everytime a user enters a finger command
 sub finger {
    my $user = shift;
    my $host = shift;
-   use IO::Socket::INET;
-   # is there ANY way to do non-blocking connects with IO::Socket::INET?
-   # I don't see how...
-   my $io = new IO::Socket::INET PeerAddr => "$host:finger";
-   $io or die;
-   syswrite $io, "$user\n";
-   my $r = Coro::Event->io(fd => $io, poll => 'r');
-   my $buf;
-   $r->next while 0 != sysread $io, $buf, 8192, length $buf;
-   #do_timer(after => 5);
-   print $buf;
+
+   my $fh = new_inet Coro::Socket PeerHost => $host, PeerPort => "finger" or die;
+
+   print $fh "$user\n";
+
+   print "$user\@$host: $_" while <$fh>;
+   print "$user\@$host: done\n";
 }
 
-# this reads one line from the keyboard
-sub kbdline {
-   $stdin->next;
-   my $x = <STDIN>; chomp $x; $x;
-}
+my $stdin = new_from_fh Coro::Handle \*STDIN;
 
 # this is the main task
 sub keyboard : Coro {
    $|=1;
    while() {
-      print "cmd> ";  my $cmd  = kbdline;
+      print "cmd> "; my $cmd = <$stdin>; chomp $cmd;
       if ($cmd eq "finger") {
-         print "user> "; my $user = kbdline;
-         print "host> "; my $host = kbdline;
-         async { finger(@_) } $user, $host;
+         print "user> "; my $user = <$stdin>; chomp $user;
+         print "host> "; my $host = <$stdin>; chomp $host;
+         async { finger($user, $host) };
       } elsif ($cmd eq "quit") {
          unloop(777);
          terminate;
       } else {
-         print "enter command, either 'finger' or 'quit'\n";
+         print "unknown command '$cmd', either 'finger' or 'quit'\n";
       }
    }
 }

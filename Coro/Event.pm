@@ -51,7 +51,7 @@ use base 'Exporter';
 
 @EXPORT = qw(loop unloop sweep);
 
-$VERSION = 0.10;
+$VERSION = 0.11;
 
 =item $w = Coro::Event->flavour(args...)
 

@@ -24,7 +24,7 @@ package Coro::Signal;
 
 use Coro ();
 
-$VERSION = 0.10;
+$VERSION = 0.11;
 
 =item $s = new Coro::Signal;
 

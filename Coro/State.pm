@@ -48,7 +48,7 @@ per coroutine.
 package Coro::State;
 
 BEGIN {
-   $VERSION = 0.10;
+   $VERSION = 0.11;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;

@@ -18,14 +18,17 @@ EOF
 }
 
 WriteMakefile(
-    dist	=> {
-	            PREOP	=> 'pod2text Coro.pm | tee README >$(DISTVNAME)/README; chmod -R u=rwX,go=rX . ;',
-	            COMPRESS	=> 'gzip -9v',
-	            SUFFIX	=> '.gz',
-	           },
-    NAME => "Coro",
+    dist         => {
+       PREOP	=> 'pod2text Coro.pm | tee README >$(DISTVNAME)/README; chmod -R u=rwX,go=rX . ;',
+       COMPRESS	=> 'gzip -9v',
+       SUFFIX	=> '.gz',
+	            },
+    NAME         => "Coro",
     VERSION_FROM => "Coro.pm",
-    DIR  => ['Coro'],
+    DIR          => ['Coro'],
+    PM_PREREQ => {
+       Event	=> 0.84, # yes, 0.83 and below have serious bugs
+    },
 );
 
 sub MY::postamble {

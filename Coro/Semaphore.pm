@@ -24,7 +24,7 @@ package Coro::Semaphore;
 
 use Coro ();
 
-$VERSION = 0.10;
+$VERSION = 0.11;
 
 =item new [inital count, default zero]
 
