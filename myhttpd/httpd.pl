@@ -72,6 +72,19 @@ package conn;
 use Socket;
 use HTTP::Date;
 use Convert::Scalar 'weaken';
+use Linux::AIO;
+
+Linux::AIO::min_parallel $::AIO_PARALLEL;
+
+Event->io(fd => Linux::AIO::poll_fileno,
+          poll => 'r',
+          async => 1,
+          cb => \&Linux::AIO::poll_cb );
+
+Event->add_hooks(prepare => sub {
+   &Coro::cede while &Coro::nready;
+   1e6;
+});
 
 our %conn; # $conn{ip}{fh} => connobj
 our %blocked;
@@ -429,23 +442,26 @@ ignore:
    $self->response(@code, $hdr, "");
 
    if ($self->{method} eq "GET") {
-      my ($fh, $buf);
+      my ($fh, $buf, $r);
+      my $current = $Coro::current;
       open $fh, "<", $self->{path}
          or die "$self->{path}: late open failure ($!)";
-
-      if ($l) {
-         sysseek $fh, $l, 0
-            or die "$self->{path}: cannot seek to $l ($!)";
-      }
 
       $h -= $l - 1;
 
       while ($h > 0) {
-         $h -= sysread $fh, $buf, $h > $::BUFSIZE ? $::BUFSIZE : $h;
+         aio_read($fh, $l, ($h > $::BUFSIZE ? $::BUFSIZE : $h),
+                  $buf, 0, sub {
+                     $r = $_[0];
+                     $current->ready;
+                  });
+         &Coro::schedule;
+         last unless $r;
          my $w = $self->{fh}->syswrite($buf)
             or last;
          $::written += $w;
          $self->{written} += $w;
+         $l += $r;
       }
    }
 
