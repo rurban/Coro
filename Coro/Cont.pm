@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Cont - schmorp's faked continuations
+Coro::Cont - continuations in perl
 
 =head1 SYNOPSIS
 
