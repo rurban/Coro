@@ -49,7 +49,7 @@ use Event qw(unloop); # we are re-exporting this, cooool!
 use base 'Event';
 use base 'Exporter';
 
-@EXPORT = qw(loop unloop);
+@EXPORT = qw(loop unloop idle);
 
 $VERSION = 0.09;
 
@@ -115,7 +115,7 @@ sub next {
       local $q->[0] = $Coro::current;
       Coro::schedule;
    } else {
-      $_[0]->again;
+      $_[0]->again unless $_[0]->is_canceled;
    }
    delete $q->[1];
 }

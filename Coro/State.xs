@@ -10,7 +10,7 @@
 
 #define MAY_FLUSH /* increases codesize */
 
-#define SUB_INIT "Coro::State::_newcoro"
+#define SUB_INIT "Coro::State::coroutine_initialization"
 
 #define SAVE_DEFAV	0x00000001
 #define SAVE_DEFSV	0x00000002

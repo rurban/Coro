@@ -63,7 +63,7 @@ to save the current coroutine in.
 
 =cut
 
-sub _newcoro {
+sub coroutine_initialization {
    my $proc = shift;
    do {
       eval { &$proc };
