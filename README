@@ -134,6 +134,6 @@ SEE ALSO
     Coro::RWLock, Coro::Socket.
 
 AUTHOR
-     Marc Lehmann <pcg@goof.com>
+     Marc Lehmann <schmorp@schmorp.de>
      http://home.schmorp.de/
 

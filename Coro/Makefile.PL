@@ -133,7 +133,7 @@ sub conftest {
 
    print "\n\n*****************************************************************************\n";
    print "If the testsuite fails PLEASE provide the following information\n";
-   print "to Marc Lehmann <pcg\@goof.com>: operating system name, version,\n";
+   print "to Marc Lehmann <schmorp\@schmorp.de>: operating system name, version,\n";
    print "architecture name and this string '$sp|$ss'. Thanks a lot!\n";#d#
    print "*****************************************************************************\n\n";
 

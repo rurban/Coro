@@ -30,7 +30,7 @@ use base Exporter;
 use Coro;
 use Event;
 
-$VERSION = 1.1;
+$VERSION = 1.11;
 
 BEGIN {
    @EXPORT_OK = qw(select);
@@ -93,7 +93,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
 
 =head1 AUTHOR
 
- Marc Lehmann <pcg@goof.com>
+ Marc Lehmann <schmorp@schmorp.de>
  http://home.schmorp.de/
 
 =cut

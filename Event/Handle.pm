@@ -23,7 +23,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 1.1;
+$VERSION = 1.11;
 
 @EXPORT = qw(unblock);
 
@@ -379,7 +379,7 @@ sub READLINE {
 
 =head1 AUTHOR
 
- Marc Lehmann <pcg@goof.com>
+ Marc Lehmann <schmorp@schmorp.de>
  http://home.schmorp.de/
 
 =cut
