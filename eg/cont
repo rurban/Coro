@@ -4,8 +4,8 @@ use Coro;
 use Coro::Cont;
 
 sub mul23 : Cont {
-   result 2*shift;
-   result 3*shift;
+   yield 2*shift;
+   yield 3*shift;
 }
 
 my %hash = (1,10,2,20,3,30);
@@ -20,7 +20,7 @@ sub badrand : Cont {
    my $seed = 1;
    while() {
       $seed = $seed * 121 % 97;
-      result $seed % $_[0];
+      yield $seed % $_[0];
    }
 }
 
