@@ -163,6 +163,7 @@ sub new {
 
    $self->{remote_addr} =
       $self->{remote_id} = inet_ntoa $iaddr;
+
    $self->{time} = $::NOW;
 
    weaken ($Coro::current->{conn} = $self);
