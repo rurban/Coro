@@ -8,8 +8,7 @@ if ($] < 5.006) {
 *** internals to do it's job. While it seems to work fine with perl-5.8,
 *** 5.7 and 5.6, it has not been tested with older versions. If it
 *** compiles and passes the testsuite, it should work.  Otherwise you
-*** should either upgrade or contact the author, maybe it can be made to
-*** work...
+*** should either upgrade or fix it ;)
 ***
 *** Marc Lehmann <pcg\@goof.com>
 ***
