@@ -152,10 +152,10 @@ sub new {
 }
 
 =item connect, listen, bind, getsockopt, setsockopt,
-send, recv, getpeername, getsockname
+send, recv, peername, sockname
 
-Do the same thing as the perl builtins (but return true on
-EINPROGRESS). Remember that these must be method calls.
+Do the same thing as the perl builtins or IO::Socket methods (but return
+true on EINPROGRESS). Remember that these must be method calls.
 
 =cut
 
@@ -166,8 +166,8 @@ sub getsockopt	{ getsockopt tied(${$_[0]})->[0], $_[1], $_[2] }
 sub setsockopt	{ setsockopt tied(${$_[0]})->[0], $_[1], $_[2], $_[3] }
 sub send	{ send tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub getsockname	{ getsockname tied(${$_[0]})->[0] }
-sub getpeername	{ getpeername tied(${$_[0]})->[0] }
+sub sockname	{ getsockname tied(${$_[0]})->[0] }
+sub peername	{ getpeername tied(${$_[0]})->[0] }
 
 =item ($peername, $fh) = $listen_fh->accept
 
@@ -181,7 +181,7 @@ sub accept {
    while () {
       $peername = accept $fh, tied(${$_[0]})->[0]
          and return wantarray 
-                    ? ((new_from_fh Coro::Socket $fh), $peername),
+                    ? ((new_from_fh Coro::Socket $fh), $peername)
                     : (new_from_fh Coro::Socket $fh);
 
       return unless $!{EAGAIN};

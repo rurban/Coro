@@ -9,6 +9,10 @@ Revision history for Perl extension Coro.
           sjlj and ucontext should now work.
         - IRIX-specific port for libcoro.
         - swapped order of accept results to match IO::Socket.
+        - changed getsock/peername to sock/peername to match IO::Socket.
+        - fixed a bug that caused segfault when returning to main task
+          under some circumstances.
+        - other bugfixes.
 
 0.45  Sun Sep  2 02:54:01 CEST 2001
 	- new method Coro::Handle::timeout.

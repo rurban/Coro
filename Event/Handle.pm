@@ -172,10 +172,10 @@ sub TIEHANDLE {
 
 sub cleanup {
    $_[0][3] = "";
-   ($_[0][5])->cancel if exists $_[0][5]; $_[0][5] = undef;
+   ($_[0][5])->cancel if defined $_[0][5]; $_[0][5] = undef;
 
    $_[0][4] = "";
-   ($_[0][6])->cancel if exists $_[0][6]; $_[0][6] = undef;
+   ($_[0][6])->cancel if defined $_[0][6]; $_[0][6] = undef;
 }
 
 sub OPEN {

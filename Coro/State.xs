@@ -28,6 +28,8 @@
  * and should be unique. */
 #define dSTACKLEVEL void *stacklevel = &stacklevel
 
+#define IN_DESTRUCT (PL_main_cv == Nullcv)
+
 #define labs(l) ((l) >= 0 ? (l) : -(l))
 
 #include "CoroAPI.h"
@@ -489,9 +491,7 @@ coro_init_stacks (pTHX)
 STATIC void
 destroy_stacks(pTHX)
 {
-  int destruct = PL_main_cv != Nullcv;
-
-  if (destruct)
+  if (!IN_DESTRUCT)
     {
       /* is this ugly, I ask? */
       while (PL_scopestack_ix)
@@ -515,7 +515,7 @@ destroy_stacks(pTHX)
         PUTBACK; /* possibly superfluous */
       }
 
-      if (destruct)
+      if (!IN_DESTRUCT)
         {
           dounwind(-1);
           SvREFCNT_dec(PL_curstackinfo->si_stack);
@@ -746,14 +746,14 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
           else
             setup_coro (next);
         }
-    }
 
-  /*
-   * xnext is now either prev or next, depending on wether
-   * we switched the c stack or not. that's why i use a global
-   * variable, that should become thread-specific at one point.
-   */
-  xnext->cursp = stacklevel;
+      /*
+       * xnext is now either prev or next, depending on wether
+       * we switched the c stack or not. that's why i use a global
+       * variable, that should become thread-specific at one point.
+       */
+      xnext->cursp = stacklevel;
+    }
 }
 
 static struct coro *
