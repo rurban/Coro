@@ -6,12 +6,12 @@ my $ignore = qr/ ^(?:robots.txt$|\.) /x;
 
 our %diridx;
 
-if ($::DIRIDX) {
-   require GDBM_File;
-   my $dbm = tie %diridx, GDBM_File, $::DIRIDX,
-                 &GDBM_File::GDBM_WRCREAT, # | &GDBM_File::GDBM_FAST,
-                 0600;
-   $dbm->setopt(&GDBM_File::GDBM_CACHESIZE, (pack "i", 1_000), length (pack "i", 1_000));
+if ($db_env) {
+   tie %diridx, BerkeleyDB::Hash,
+       -Env => $db_env,
+       -Filename => "directory",
+       -Flags => DB_CREATE,
+          or die "unable to create database index";
 }
 
 sub conn::gen_statdata {

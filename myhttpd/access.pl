@@ -71,7 +71,7 @@ sub access_check {
       if $self->{h}{referer} =~ $blockref;
 
    my $whois = $whois_cache{$self->{remote_addr}}
-               ||= ::ip_request($self->{remote_addr});
+               ||= netgeo::ip_request($self->{remote_addr});
 
    my $country = "XX";
 

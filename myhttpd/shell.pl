@@ -62,7 +62,7 @@ sub shell {
             print $fh "restarting, cu!\n";
             last;
          } elsif ($cmd eq "country") {
-            print $fh ip_request($_), "\n";
+            print $fh netgeo::ip_request($_), "\n";
          }
       } else {
          print $fh "try one of @commands\n";

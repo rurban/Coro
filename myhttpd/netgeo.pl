@@ -5,8 +5,6 @@
 use Socket;
 use Fcntl;
 
-use PApp::SQL;
-
 use Coro;
 use Coro::Event;
 use Coro::Semaphore;
@@ -17,9 +15,19 @@ $Event::DIED = sub {
    #Event::unloop_all();
 };
 
+tie %netgeo::whois, BerkeleyDB::Btree,
+    -Env => $db_env,
+    -Filename => "whois",
+    -Flags => DB_CREATE,
+       or die "unable to create/open whois table";
+$netgeo::iprange = new BerkeleyDB::Btree
+    -Env => $db_env,
+    -Filename => "iprange",
+    -Flags => DB_CREATE,
+       or die "unable to create/open iprange table";
+
 package Whois;
 
-use PApp::SQL;
 use Coro::Event;
 
 sub new {
@@ -41,14 +49,13 @@ sub sanitize {
 
 sub whois_request {
    my ($self, $query) = @_;
-   my ($id, $whois);
 
-   my $st = sql_exec \($id, $whois),
-                     "select id, whois from whois
-                      where nic = ? and query = ?",
-                     $self->{name}, $query;
+   my $id = "$self->{name}\x0$query";
+   my $whois = $netgeo::whois{$id};
 
-   unless ($st->fetch) {
+   unless (defined $whois) {
+      print "WHOIS($self->{name},$query)\n";
+
       my $guard = $self->{maxjobs}->guard;
       my $timeout = 5;
 
@@ -78,14 +85,7 @@ sub whois_request {
          }
       }
 
-      sql_exec "replace into whois values (NULL,?,?,NULL,?,?)",
-               $self->{name}, $query, $whois, time;
-
-      my $st = sql_exec \$id,
-                        "select id from whois
-                         where nic = ? and query = ?",
-                        $self->{name}, $query;
-      $st->fetch or die;
+      $netgeo::whois{$id} = $whois;
    }
 
    $whois;
@@ -94,7 +94,6 @@ sub whois_request {
 package Whois::ARIN;
 
 use Date::Parse;
-use PApp::SQL;
 
 use base Whois;
 
@@ -167,8 +166,6 @@ EOF
 
 package Whois::RIPE;
 
-use PApp::SQL;
-
 use base Whois;
 
 sub sanitize {
@@ -204,7 +201,10 @@ sub ip_request {
    $whois;
 }
 
-package main;
+package netgeo;
+
+use BerkeleyDB;
+use Socket;
 
 sub ip2int($) {
    unpack "N", inet_aton $_[0];
@@ -222,42 +222,46 @@ $WHOIS{APNIC} = new Whois::RIPE APNIC => "whois.apnic.net", maxjobs => 20;
 
 sub ip_request {
    my $ip = $_[0];
-   my $_ip = ip2int($ip);
 
-   my $st = sql_exec \my($whois, $ip0),
-                     "select data, ip0 from iprange
-                      where ? <= ip1
-                      having ip0 <= ?
-                      order by ip1
-                      limit 1",
-                     $_ip, $_ip;
+   my $c = $iprange->db_cursor;
+   my $v;
 
-   unless ($st->fetch) {
-      my ($arin, $ripe, $apnic);
-
-      $whois = $WHOIS{APNIC}->ip_request($ip)
-            || $WHOIS{RIPE} ->ip_request($ip)
-            || $WHOIS{ARIN} ->ip_request($ip);
-
-      $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
-         or do { warn "$whois($ip): no addresses found\n", last };
-
-      my ($ip0, $ip1) = ($1, $2);
-
-      my $_ip0 = ip2int($ip0);
-      my $_ip1 = ip2int($ip1);
-
-      if ($_ip0 + 256 < $_ip1) {
-         $_ip  = $_ip & 0xffffff00;
-         $_ip0 = $_ip       if $_ip0 < $_ip;
-         $_ip1 = $_ip + 255 if $_ip1 > $_ip + 255;
+   if (!$c->c_get((inet_aton $ip), $v, DB_SET_RANGE)) {
+      my ($ip0, $ip1, $whois) = split /\x0/, $v;
+      my $_ip = ip2int $ip;
+      print "looked for $_ip, found $ip0, $ip1 ", length($v),"\n";
+      if ($ip0 <= $_ip && $_ip <= $ip1) {
+         return $whois;
       }
-
-      sql_exec "replace into iprange values (?, ?, NULL, ?)",
-               $_ip0, $_ip1, $whois;
-
-      #print "$ip ($ip0, $ip1 ($_ip0, $_ip1)\n$whois\n";
    }
+
+   print "looked for $ip, ONLY found $v->[0], $v->[1]\n";
+   
+   my ($arin, $ripe, $apnic);
+
+   $whois = $WHOIS{APNIC}->ip_request($ip)
+         || $WHOIS{RIPE} ->ip_request($ip)
+         || $WHOIS{ARIN} ->ip_request($ip);
+
+   $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
+      or do { warn "$whois($ip): no addresses found\n", last };
+
+   my ($ip0, $ip1) = ($1, $2);
+
+   my $_ip  = ip2int($ip);
+   my $_ip0 = ip2int($ip0);
+   my $_ip1 = ip2int($ip1);
+
+   if ($_ip0 + 256 < $_ip1) {
+      $_ip  = $_ip & 0xffffff00;
+      $_ip0 = $_ip       if $_ip0 < $_ip;
+      $_ip1 = $_ip + 255 if $_ip1 > $_ip + 255;
+   }
+
+   print "setting entry ($_ip0, $_ip, $_ip1)\n";
+   $iprange->db_put((pack "N", $_ip1), (join "\x0", $_ip0, $_ip1, $whois));
+   (tied %whois)->db_sync;
+   $iprange->db_sync;
 
    $whois;
 }

@@ -11,7 +11,7 @@ $PER_TIMEOUT  = 120;			# persistent connection timeout
 
 $MAX_POOL     =  3;			# max. number of idle workers
 
-$DIRIDX       = "directory.idx";	# directory index gdbm file
+$DB_HOME      = "db";			# database home directory
 
 $DOCROOT      = "/usr/www/htdocs";	# document root
 
