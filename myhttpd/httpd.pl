@@ -57,6 +57,8 @@ our $httpevent   = new Coro::Signal;
 our $queue_file  = new transferqueue $MAX_TRANSFERS;
 our $queue_index = new transferqueue 10;
 
+our $tbf_top     = new tbf rate => 200000;
+
 my @newcons;
 my @pool;
 
@@ -234,8 +236,8 @@ sub response {
    print $::accesslog $log if $::accesslog;
    print STDERR $log;
 
-   $self->{written} +=
-      print {$self->{fh}} $res;
+   $tbf_top->request(length $res, 1e6);
+   $self->{written} += print {$self->{fh}} $res;
 }
 
 sub err {
@@ -459,7 +461,7 @@ sub respond {
             if (-r "$path/index.html") {
                # replace directory "size" by index.html filesize
                $self->{stat} = [stat ($self->{path} .= "/index.html")];
-               $self->handle_file($queue_index);
+               $self->handle_file($queue_index, $tbf_top);
             } else {
                $self->handle_dir;
             }
@@ -478,7 +480,7 @@ sub respond {
             }
          }
 
-         $self->handle_file($queue_file);
+         $self->handle_file($queue_file, $tbf_top);
       } else {
          $self->err(404, "not found");
       }
@@ -499,7 +501,7 @@ sub handle_dir {
 }
 
 sub handle_file {
-   my ($self, $queue) = @_;
+   my ($self, $queue, $tbf) = @_;
    my $length = $self->{stat}[7];
    my $hdr = {
       "Last-Modified"  => time2str ((stat _)[9]),
@@ -600,6 +602,8 @@ ignore:
             &Coro::schedule;
             last unless $r;
          }
+
+         $tbf->request(length $buf);
          my $w = syswrite $self->{fh}, $buf
             or last;
          $::written += $w;

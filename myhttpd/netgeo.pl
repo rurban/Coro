@@ -243,9 +243,9 @@ sub ip_request {
 
    my ($arin, $ripe, $apnic);
 
-   $whois = $WHOIS{APNIC}->ip_request($ip)
-         || $WHOIS{RIPE} ->ip_request($ip)
-         || $WHOIS{ARIN} ->ip_request($ip);
+   $whois = $WHOIS{RIPE}->ip_request($ip)
+         || $WHOIS{ARIN} ->ip_request($ip)
+         || $WHOIS{APNIC} ->ip_request($ip);
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
       or do { warn "$whois($ip): no addresses found\n", last };

@@ -31,16 +31,6 @@ actively <em>hurt</em> the industry behind it, which includes the artists
 and authors of these videos/mangas. So I hope you understand that I try to
 avoid this.</p>
 
-<p>Please see the <a href="http://www.goof.com/pcg/marc/animefaq.html#licensed">FAQ</a>
-for a more thorough explanation.</p>
-
-<p>If you <em>really</em> think that this is wrong, i.e. the
-material you tried to access is <em>not</em> licensed in your
-country or your ip address was misdetected, you can write to <a
-href="mailto:licensed\@plan9.de">licensed\@plan9.de</a>. Please explain
-what happened and why you think this is wrong in as much detail as
-possible.</p>
-
 <div align="right">Thanks a lot for understanding.</div>
 
 </body>
@@ -142,8 +132,7 @@ sub conn::err_blocked {
 
    <p><blockquote>$etime.</blockquote></p>
 
-<p>Until then, each access will renew the block. This should give
-you ample time to look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#blocked">FAQ</a>.</p>
+<p>Until then, each access will renew the block.</p>
 
 <p>For your reference, the current time and your connection ID is:</p>
    
@@ -163,8 +152,7 @@ sub conn::err_segmented_download {
 </head>
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 
-<p>Segmented downloads are not allowed on this server. Please refer to the
-<a href="http://www.goof.com/pcg/marc/animefaq.html#segmented_downloads">FAQ</a>.</p>
+<p>Segmented downloads are not allowed on this server.</p>
 
 </body></html>
 EOF

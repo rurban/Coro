@@ -15,7 +15,10 @@ require "database.pl";
 require "netgeo.pl";
 require "err.pl";
 require "access.pl";
+require "queue.pl";
+require "tbf.pl";
 require "diridx.pl";
+require "internal.pl";
 require "httpd.pl";
 require "shell.pl";
 
