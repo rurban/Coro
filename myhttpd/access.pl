@@ -43,7 +43,7 @@ sub wake_next {
 
    $self->sort;
 
-   while($self->{slots} && @{$self->{wait}}) {
+   while($self->{slots} > 0 && @{$self->{wait}}) {
       my $transfer = shift @{$self->{wait}};
       if ($transfer) {
          $self->{lastspb} = $transfer->{spb};
