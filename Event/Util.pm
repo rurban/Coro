@@ -86,7 +86,7 @@ sub gethostbyaddr($$) {
 =head1 AUTHOR
 
  Marc Lehmann <pcg@goof.com>
- http://www.goof.com/pcg/marc/
+ http://home.schmorp.de/
 
 =cut
 
