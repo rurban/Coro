@@ -1,5 +1,8 @@
 Revision history for Perl extension Coro.
 
+0.534
+	- fixed backspace => tab in header parsing (myhttpd).
+
 0.533 Mon Feb 18 18:49:40 CET 2002
 	- adapt to finally working Event-0.85.
         - fixed buggy event initialization (trapped under windows, but how
