@@ -231,6 +231,8 @@ EOF
    ) {
       my ($name, $queue) = @$_;
       my @waiters = $queue->waiters;
+      $waiters[$_]{idx} = $_ + 1 for 0..$#waiters;
+
       if (@waiters) {
          $content .= "<li>$name<br />".(scalar @waiters)." client(s); $queue->{started} downloads started;";
          
@@ -258,21 +260,18 @@ EOF
          if (@waiters) {
             $content .= "<table border='1' width='100%'><tr><th>#</th><th>Remote ID</th>".
                         "<th>CN</th><th>Size</th><th>Waiting</th><th>ETA</th><th>URI</th></tr>";
-            my $idx = 0;
             for (@waiters) {
                my $conn = $_->{coro}{conn};
                my $time = format_time ($::NOW - $_->{time});
-               my $eta  = format_time ($queue->{avgspb} * $_->{size} - ($::NOW - $_->{time}));
-
-               $idx++;
+               my $eta  = $queue->{avgspb} * $_->{size} - ($::NOW - $_->{time});
 
                $content .= "<tr>".
-                           "<td align='right'>$idx</td>".
+                           "<td align='right'>$_->{idx}</td>".
                            "<td>$conn->{remote_id}</td>".
                            "<td>$conn->{country}</td>".
                            "<td align='right'>$_->{size}</td>".
                            "<td align='right'>$time</td>".
-                           "<td align='right'>$eta</td>".
+                           "<td align='right'>".($eta < 0 ? "<font color='red'>overdue</font>" : format_time $eta)."</td>".
                            "<td>".escape_html($conn->{name})."</td>".
                            "</tr>";
             }
