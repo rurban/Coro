@@ -18,7 +18,7 @@ Coro::Event - do events the coro-way
     }
  }
 
- &loop;
+ loop;
 
 =head1 DESCRIPTION
 
@@ -45,7 +45,7 @@ no warnings qw(uninitialized);
 use Carp;
 
 use Coro;
-use Event qw(unloop); # we are re-exporting this, cooool!
+use Event qw(loop unloop); # we are re-exporting this, cooool!
 
 use base 'Exporter';
 
@@ -110,7 +110,7 @@ for my $flavour (qw(idle var timer io signal)) {
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
       my $e = (&$coronew)->next;
-      $e->cancel; # $e = $e->w
+      $e->cancel; # $e = $e->w->cancel ($e == $e->w!)
       $e;
    };
 }
@@ -140,7 +140,7 @@ into the Event dispatcher.
 =cut
 
 sub sweep {
-   one_event(0); # for now
+   Event::one_event(0); # for now
 }
 
 =item $result = loop([$timeout])
@@ -158,11 +158,13 @@ loop silently returns in this case, as if unloop(undef) were called.
 
 =cut
 
-sub loop(;$) {
-   local $Coro::idle = $Coro::current;
-   Coro::schedule; # become idle task, which is implicitly ready
-   &Event::loop;
-}
+# no longer do something special - it's done internally now
+
+#sub loop(;$) {
+#   #local $Coro::idle = $Coro::current;
+#   #Coro::schedule; # become idle task, which is implicitly ready
+#   &Event::loop;
+#}
 
 =item unloop([$result])
 

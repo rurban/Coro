@@ -40,7 +40,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.5;
+$VERSION = 0.51;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -118,14 +118,20 @@ our $idle = new Coro sub {
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 my @destroy;
-my $manager = new Coro sub {
+my $manager;
+$manager = new Coro sub {
    while() {
       # by overwriting the state object with the manager we destroy it
       # while still being able to schedule this coroutine (in case it has
       # been readied multiple times. this is harmless since the manager
       # can be called as many times as neccessary and will always
       # remove itself from the runqueue
-      (pop @destroy)->{_coro_state} = $manager->{_coro_state} while @destroy;
+      while (@destroy) {
+         my $coro = pop @destroy;
+         $coro->{status} ||= [];
+         $_->ready for @{delete $coro->{join} || []};
+         $coro->{_coro_state} = $manager->{_coro_state};
+      }
       &schedule;
    }
 };
@@ -177,7 +183,7 @@ current "timeslice" to other coroutines of the same or higher priority.
 
 =cut
 
-=item terminate
+=item terminate [arg...]
 
 Terminates the current process.
 
@@ -186,6 +192,7 @@ Future versions of this function will allow result arguments.
 =cut
 
 sub terminate {
+   $current->{status} = [@_];
    $current->cancel;
    &schedule;
    die; # NORETURN
@@ -204,8 +211,9 @@ These are the methods you can call on process objects.
 =item new Coro \&sub [, @args...]
 
 Create a new process and return it. When the sub returns the process
-automatically terminates. To start the process you must first put it into
-the ready queue by calling the ready method.
+automatically terminates as if C<terminate> with the returned values were
+called. To start the process you must first put it into the ready queue by
+calling the ready method.
 
 The coderef you submit MUST NOT be a closure that refers to variables
 in an outer scope. This does NOT work. Pass arguments into it instead.
@@ -225,7 +233,7 @@ sub new {
 
 =item $process->ready
 
-Put the current process into the ready queue.
+Put the given process into the ready queue.
 
 =cut
 
@@ -239,6 +247,23 @@ sub cancel {
    push @destroy, $_[0];
    $manager->ready;
    &schedule if $current == $_[0];
+}
+
+=item $process->join
+
+Wait until the coroutine terminates and return any values given to the
+C<terminate> function. C<join> can be called multiple times from multiple
+processes.
+
+=cut
+
+sub join {
+   my $self = shift;
+   unless ($self->{status}) {
+      push @{$self->{join}}, $current;
+      &schedule;
+   }
+   wantarray ? @{$self->{status}} : $self->{status}[0];
 }
 
 =item $oldprio = $process->prio($newprio)

@@ -154,7 +154,7 @@ sub new {
 }
 
 =item connect, listen, bind, getsockopt, setsockopt,
-send, recv, peername, sockname
+send, recv, peername, sockname, shutdown
 
 Do the same thing as the perl builtins or IO::Socket methods (but return
 true on EINPROGRESS). Remember that these must be method calls.
@@ -170,8 +170,9 @@ sub send	{ send tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub sockname	{ getsockname tied(${$_[0]})->[0] }
 sub peername	{ getpeername tied(${$_[0]})->[0] }
+sub shutdown	{ shutdown tied(${$_[0]})->[0], $_[1] }
 
-=item ($peername, $fh) = $listen_fh->accept
+=item ($fh, $peername) = $listen_fh->accept
 
 In scalar context, returns the newly accepted socket (or undef) and in
 list context return the ($fh, $peername) pair (or nothing).

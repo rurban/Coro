@@ -68,7 +68,7 @@ DESCRIPTION
         giving up the current "timeslice" to other coroutines of the same or
         higher priority.
 
-    terminate
+    terminate [arg...]
         Terminates the current process.
 
         Future versions of this function will allow result arguments.
@@ -81,18 +81,24 @@ DESCRIPTION
 
     new Coro \&sub [, @args...]
         Create a new process and return it. When the sub returns the process
-        automatically terminates. To start the process you must first put it
-        into the ready queue by calling the ready method.
+        automatically terminates as if "terminate" with the returned values
+        were called. To start the process you must first put it into the
+        ready queue by calling the ready method.
 
         The coderef you submit MUST NOT be a closure that refers to
         variables in an outer scope. This does NOT work. Pass arguments into
         it instead.
 
     $process->ready
-        Put the current process into the ready queue.
+        Put the given process into the ready queue.
 
     $process->cancel
         Like "terminate", but terminates the specified process instead.
+
+    $process->join
+        Wait until the coroutine terminates and return any values given to
+        the "terminate" function. "join" can be called multiple times from
+        multiple processes.
 
     $oldprio = $process->prio($newprio)
         Sets the priority of the process. Higher priority processes get run

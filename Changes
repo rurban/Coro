@@ -1,5 +1,13 @@
 Revision history for Perl extension Coro.
 
+0.51 Thu Nov  1 20:39:01 CET 2001
+	- terminate/cancel now work properly (otherwise termination
+          could cause a "next coroutine is not and contains not..."
+          error.
+        - added Coro::Socket::shutdown.
+        - Coro::Event::loop no is the same as Event::loop.
+        - implemented terminate with args + join.
+
 0.5  Fri Sep 28 16:15:35 CEST 2001
 	- fixed "print" on a Coro::Handle. The print method worked.
 	- small tweaks (seem to reduce memory consumption a lot)

@@ -134,30 +134,27 @@ interface.
 
 =item $fh->rbuf
 
-Returns the current contents of the raed buffer (this is an lvalue, so you
+Returns the current contents of the read buffer (this is an lvalue, so you
 can change the read buffer if you like).
 
-You can use this fucntion to implement your own optimized reader when neither
+You can use this function to implement your own optimized reader when neither
 readline nor sysread are viable candidates, like this:
 
   # first get the _real_ non-blocking filehandle
-  # and fetch the current contents of the read buffer
+  # and fetch a reference to the read buffer
   my $nb_fh = $fh->fh;
-  my $buf = $fh->rbuf;
+  my $buf = \$fh->rbuf;
 
   for(;;) {
      # now use buffer contents, modifying
      # if necessary to reflect the removed data
 
-     last if $buf ne ""; # we have leftover data
+     last if $$buf ne ""; # we have leftover data
 
      # read another buffer full of data
      $fh->readable or die "end of file";
-     sysread $nb_fh, $buf, 8192;
+     sysread $nb_fh, $$buf, 8192;
   }
-
-  # put the read buffer back
-  $fh->rbuf = $buf;
 
 =cut
 
@@ -322,10 +319,10 @@ sub READ {
    my $res = 0;
 
    # first deplete the read buffer
-   if (defined $_[0][3]) {
+   if (length $_[0][3]) {
       my $l = length $_[0][3];
       if ($l <= $len) {
-         substr($_[1], $ofs) = $_[0][3]; undef $_[0][3];
+         substr($_[1], $ofs) = $_[0][3]; $_[0][3] = "";
          $len -= $l;
          $res += $l;
          return $res unless $len;
