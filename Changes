@@ -3,6 +3,7 @@ Revision history for Perl extension Coro.
 	- new function Coro::Event::idle.
         - the idle process is now overriden
           by default in Coro::Event.
+        - Coro::Channel now enforces the size.
 
 0.08  Thu Jul 19 06:13:25 CEST 2001
 	- release candidate 2 (new functionality).

@@ -35,7 +35,7 @@ use base Exporter;
 
 $VERSION = 0.09;
 
-@EXPORT = qw(async yield schedule terminate);
+@EXPORT = qw(async yield schedule terminate current);
 @EXPORT_OK = qw($current);
 
 {
@@ -74,7 +74,7 @@ This coroutine represents the main program.
 
 our $main = new Coro;
 
-=item $current
+=item $current (or as function: current)
 
 The current coroutine (the last coroutine switched to). The initial value is C<$main> (of course).
 
@@ -86,6 +86,8 @@ if ($current) {
 }
 
 our $current = $main;
+
+sub current() { $current }
 
 =item $idle
 
