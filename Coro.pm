@@ -269,7 +269,7 @@ sub join {
 
 Sets (or gets, if the argument is missing) the priority of the
 process. Higher priority processes get run before lower priority
-processes. Priorities are smalled signed integer (currently -4 .. +3),
+processes. Priorities are small signed integers (currently -4 .. +3),
 that you can refer to using PRIO_xxx constants (use the import tag :prio
 to get then):
 
@@ -327,11 +327,14 @@ sub desc {
 
 =head1 BUGS/LIMITATIONS
 
- - you must make very sure that no coro is still active on global destruction.
-   very bad things might happen otherwise (usually segfaults).
- - this module is not thread-safe. You should only ever use this module from
-   the same thread (this requirement might be loosened in the future to
-   allow per-thread schedulers, but Coro::State does not yet allow this).
+ - you must make very sure that no coro is still active on global
+   destruction. very bad things might happen otherwise (usually segfaults
+   or "panic: top_env").
+
+ - this module is not thread-safe. You should only ever use this module
+   from the same thread (this requirement might be losened in the future
+   to allow per-thread schedulers, but Coro::State does not yet allow
+   this).
 
 =head1 SEE ALSO
 
