@@ -111,6 +111,7 @@ struct coro {
   OP *op;
   SV **curpad;
   AV *comppad;
+  CV *compcv;
   SV **stack_base;
   SV **stack_max;
   SV **tmps_stack;
@@ -329,6 +330,7 @@ load_state(pTHX_ Coro__State c)
   PL_op = c->op;
   PL_curpad = c->curpad;
   PL_comppad = c->comppad;
+  PL_compcv = c->compcv;
   PL_stack_base = c->stack_base;
   PL_stack_max = c->stack_max;
   PL_tmps_stack = c->tmps_stack;
@@ -453,6 +455,7 @@ save_state(pTHX_ Coro__State c, int flags)
   c->op = PL_op;
   c->curpad = PL_curpad;
   c->comppad = PL_comppad;
+  c->compcv = PL_compcv;
   c->stack_base = PL_stack_base;
   c->stack_max = PL_stack_max;
   c->tmps_stack = PL_tmps_stack;
