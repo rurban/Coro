@@ -1,5 +1,5 @@
 GROUP usa US CA
-GROUP far JP CN TW SG HK
+GROUP far JP CN TW HK
 GROUP eur DE AT FR GB IT ES CH
 
 !.			far
@@ -8,8 +8,8 @@ GROUP eur DE AT FR GB IT ES CH
 !/urotsukidoji		eur usa
 !/cool devices		eur usa
 !/dilbert		usa
-!/slayers		usa
-!/serial experiment	usa
+!/slayers		usa de
+!/serial experiment	usa IT FR
 !creamy mami		eur usa
 !/robotech		usa
 !/bubblegum crisis	usa
@@ -17,6 +17,25 @@ GROUP eur DE AT FR GB IT ES CH
 !/akira			eur usa
 !/princess mononoke	eur usa
 !/ghost in the shell	eur usa
-!/neon genesis		usa DE AT CH
-!/ranma			usa
-!/manga/ranma		usa DE AT CH
+!/neon genesis		usa DE AT CH IT FR
+!/ranma			usa FR
+!/manga/ranma		usa DE AT CH IT
+!/rev.*utena		IT
+!/blood the last vamp	usa
+!/i my me		usa
+!/escaflowne		IT
+!/cowboy be		IT
+!/blue submarine	IT
+!/armitage iii		FR
+!/el hazard		FR
+!/perfect blue		FR
+!/macross		FR
+!/ninja scroll		FR
+!/pokemon		FR
+!/digimon		FR
+!/card captor sakura	FR usa
+!/hand maid may		usa
+!/mahou senshi riui	usa
+!/saiyuki		usa
+!/mini goddess		usa
+

@@ -85,6 +85,8 @@ use Linux::AIO;
 
 Linux::AIO::min_parallel $::AIO_PARALLEL;
 
+my $aio_requests = new Coro::Semaphore $::AIO_PARALLEL * 4;
+
 Event->io(fd => Linux::AIO::poll_fileno,
           poll => 'r', async => 1,
           cb => \&Linux::AIO::poll_cb);
@@ -145,7 +147,7 @@ sub eoconn {
 
 sub slog {
    my $self = shift;
-   main::slog($_[0], "$self->{remote_addr}> $_[1]");
+   main::slog($_[0], ($self->{remote_id} || $self->{remote_addr}) ."> $_[1]");
 }
 
 sub response {
@@ -226,6 +228,8 @@ sub handle {
    my $self = shift;
    my $fh = $self->{fh};
 
+   my $host;
+
    $fh->timeout($::REQ_TIMEOUT);
    while() {
       $self->{reqs}++;
@@ -291,7 +295,32 @@ sub handle {
             while ($h, $v) = each %hdr;
       }
 
-      $self->{server_port} = $self->{h}{host} =~ s/:([0-9]+)$// ? $1 : 80;
+      # find out server name and port
+      if ($self->{uri} =~ s/^http:\/\/([^\/?#]*)//i) {
+         $host = $1;
+      } else {
+         $host = $self->{h}{host};
+      }
+
+      if (defined $host) {
+         $self->{server_port} = $host =~ s/:([0-9]+)$// ? $1 : 80;
+      } else {
+         ($self->{server_port}, $host)
+            = unpack_sockaddr_in $self->{fh}->getsockname
+               or $self->err(500, "unable to get socket name");
+         $host = inet_ntoa $host;
+      }
+
+      $self->{server_name} = $host;
+
+      # remote id should be unique per user
+      $self->{remote_id} = $self->{remote_addr};
+
+      if (exists $self->{h}{"client-ip"}) {
+         $self->{remote_id} .= "[".$self->{h}{"client-ip"}."]";
+      } elsif (exists $self->{h}{"x-forwarded-for"}) {
+         $self->{remote_id} .= "[".$self->{h}{"x-forwarded-for"}."]";
+      }
 
       weaken ($uri{$self->{remote_addr}}{$self->{uri}}{$self*1} = $self);
 
@@ -304,9 +333,8 @@ sub handle {
 
       die if $@ && !ref $@;
 
-      last if $self->{h}{connection} =~ /close/ || $self->{version} lt "1.1";
+      last if $self->{h}{connection} =~ /close/ || $self->{version} < 1.1;
 
-      $self->slog(9, "persistent connection [".$self->{h}{"user-agent"}."][$self->{reqs}]");
       $fh->timeout($::PER_TIMEOUT);
    }
 }
@@ -314,7 +342,7 @@ sub handle {
 # uri => path mapping
 sub map_uri {
    my $self = shift;
-   my $host = $self->{h}{host} || "default";
+   my $host = $self->{server_name};
    my $uri = $self->{uri};
 
    # some massaging, also makes it more secure
@@ -334,34 +362,6 @@ sub map_uri {
    $self->access_check;
 }
 
-sub server_address {
-   my $self = shift;
-   my ($port, $iaddr) = unpack_sockaddr_in $self->{fh}->getsockname
-      or $self->err(500, "unable to get socket name");
-   ((inet_ntoa $iaddr), $port);
-}
-
-sub server_host {
-   my $self = shift;
-   if (exists $self->{h}{host}) {
-      return $self->{h}{host};
-   } else {
-      return (($self->server_address)[0]);
-   }
-}
-
-sub server_hostport {
-   my $self = shift;
-   my ($host, $port);
-   if (exists $self->{h}{host}) {
-      ($host, $port) = ($self->{h}{host}, $self->{server_port});
-   } else {
-      ($host, $port) = $self->server_address;
-   }
-   $port = $port == 80 ? "" : ":$port";
-   $host.$port;
-}
-
 sub _cgi {
    my $self = shift;
    my $path = shift;
@@ -372,14 +372,21 @@ sub _cgi {
       open STDOUT, ">&".fileno($self->{fh});
       if (chdir $::DOCROOT) {
          $ENV{SERVER_SOFTWARE} = "thttpd-myhttpd"; # we are thttpd-alike
-         $ENV{HTTP_HOST}       = $self->server_host;
-         $ENV{HTTP_PORT}       = $self->{server_host};
+         $ENV{HTTP_HOST}       = $self->{server_name};
+         $ENV{HTTP_PORT}       = $self->{server_port};
          $ENV{SCRIPT_NAME}     = $self->{name};
          exec $path;
       }
       Coro::State::_exit(0);
    } else {
+      die;
    }
+}
+
+sub server_hostport {
+   $_[0]{server_port} == 80
+      ? $_[0]{server_name}
+      : "$_[0]{server_name}:$_[0]{server_port}";
 }
 
 sub respond {
@@ -399,8 +406,8 @@ sub respond {
       # directory
       if ($path !~ /\/$/) {
          # create a redirect to get the trailing "/"
-         my $host = $self->server_hostport;
-         $self->err(301, "moved permanently", { Location =>  "http://$host$self->{uri}/" });
+         # we don't try to avoid the :80
+         $self->err(301, "moved permanently", { Location =>  "http://".$self->server_hostport."$self->{uri}/" });
       } else {
          $ims < $self->{stat}[9]
             or $self->err(304, "not modified");
@@ -462,9 +469,11 @@ sub handle_file {
 satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
-         if (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
-            $self->err(400, "segmented downloads are not allowed",
-                       { "Content-Type" => "text/html", Connection => "close" }, <<EOF);
+         my $delay = 60;
+         while (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
+            if ($delay <= 0) {
+               $self->err(400, "segmented downloads are not allowed",
+                          { "Content-Type" => "text/html", Connection => "close" }, <<EOF);
 <html>
 <head>
 <title>Segmented downloads are not allowed</title>
@@ -476,7 +485,9 @@ satisfiable:
 
 </body></html>
 EOF
-EOF
+            } else {
+               Coro::Event::do_timer(after => 3); $delay -= 3;
+            }
          }
       }
 
@@ -514,12 +525,15 @@ ignore:
             sysread $fh, $buf, $h > $::BUFSIZE ? $::BUFSIZE : $h
                or last;
          } else {
+            undef $buf;
+            $aio_requests->down;
             aio_read($fh, $l, ($h > $::BUFSIZE ? $::BUFSIZE : $h),
                      $buf, 0, sub {
                         $r = $_[0];
                         $current->ready;
                      });
             &Coro::schedule;
+            $aio_requests->up;
             last unless $r;
          }
          my $w = $self->{fh}->syswrite($buf)
