@@ -37,7 +37,7 @@ no warnings qw(uninitialized);
 
 use Coro ();
 
-$VERSION = 0.53;
+$VERSION = 0.531;
 
 =item new [inital count]
 
@@ -80,7 +80,7 @@ sub timed_down {
       push @{$_[0][1]}, $Coro::current;
       Coro::schedule;
       if ($timeout) {
-         # ugly as hell. slow, too!
+         # ugly as hell. slow, too, btw!
          for (0..$#{$_[0][1]}) {
             if ($_[0][1][$_] == $Coro::current) {
                splice @{$_[0][1]}, $_, 1;
