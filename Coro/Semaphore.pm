@@ -57,6 +57,11 @@ sub new {
 Decrement the counter, therefore "locking" the semaphore. This method
 waits until the semaphore is available if the counter is zero.
 
+=item $status = $sem->timed_down($timeout)
+
+Like C<down>, but returns false if semaphore couldn't be acquired within
+$timeout seconds, otherwise true.
+
 =cut
 
 sub down {
@@ -65,6 +70,20 @@ sub down {
       Coro::schedule;
    }
    --$_[0][0];
+}
+
+sub timed_down {
+   require Coro::Timer;
+   my $timeout = Coro::Timer::timeout($_[1]);
+
+   while ($_[0][0] <= 0) {
+      push @{$_[0][1]}, $Coro::current;
+      Coro::schedule;
+      $timeout and return;
+   }
+
+   --$_[0][0];
+   return 1;
 }
 
 =item $sem->up

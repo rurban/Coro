@@ -89,7 +89,6 @@ struct coro {
   I32 retstack_ix;
   I32 retstack_max;
   COP *curcop;
-  PMOP *curpm;
   JMPENV *top_env;
 
   /* data associated with this coroutine (initial args) */
@@ -600,7 +599,6 @@ setup_coro (void *arg)
   SV *sub_init = (SV*)get_cv(SUB_INIT, FALSE);
 
   coro_init_stacks (aTHX);
-  PL_curpm = 0; /* segfault on first access */
   /*PL_curcop = 0;*/
   /*PL_in_eval = PL_in_eval;*/ /* inherit */
   SvREFCNT_dec (GvAV (PL_defgv));
@@ -752,7 +750,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
 
       /*
        * xnext is now either prev or next, depending on wether
-       * we switched the c stack or not. that's why i use a global
+       * we switched the c stack or not. that's why I use a global
        * variable, that should become thread-specific at one point.
        */
       xnext->cursp = stacklevel;
@@ -904,7 +902,6 @@ BOOT:
         newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
         newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
         newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
-        newCONSTSUB (coro_state_stash, "SAVE_CURPM", newSViv (TRANSFER_SAVE_CURPM));
         newCONSTSUB (coro_state_stash, "SAVE_CCTXT", newSViv (TRANSFER_SAVE_CCTXT));
 
 	if (!padlist_cache)

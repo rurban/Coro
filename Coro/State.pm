@@ -98,15 +98,14 @@ Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
 
 The "state" of a subroutine includes the scope, i.e. lexical variables and
-the current execution state. The C<$flags> value can be used to specify
-that additional state be saved (and later restored), by C<||>-ing the
-following constants together:
+the current execution state (subroutine, stack). The C<$flags> value can
+be used to specify that additional state be saved (and later restored), by
+C<||>-ing the following constants together:
 
    Constant    Effect
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
-   SAVE_CURPM  save/restore regex contetx ($1, $2 ...)
    SAVE_CCTXT  save/restore C-stack (you usually want this)
 
 These constants are not exported by default. If you don't need any extra

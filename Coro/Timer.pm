@@ -29,6 +29,35 @@ BEGIN { eval "use Time::HiRes 'time'" }
 
 $VERSION = 0.52;
 
+=item $flag = Coro::Timer::timeout $seconds;
+
+This function will wake up the current coroutine after $seconds
+seconds and sets $flag to true (it is false intiially).  If $flag goes
+out of scope earlier nothing happens. This is used to implement the
+C<timed_down>, C<timed_wait> etc. primitives.
+
+=cut
+
+# deep magic, expecially the double indirection :(:(
+sub timeout($) {
+   my $self = \\my $timer;
+   my $current = $Coro::current;
+   $timer = _new_timer(Coro::Timer, time + $_[0], sub {
+      undef $timer; # set flag
+      $current->ready;
+   });
+   bless $self, Coro::timeout::;
+}
+
+package Coro::timeout;
+
+sub bool    { !${${$_[0]}} }
+sub DESTROY { ${${$_[0]}}->cancel }
+
+use overload 'bool' => \&bool, '0+' => \&bool;
+
+package Coro::Timer;
+
 =item $timer = new Coro::Timer at/after => xxx, cb => \&yyy;
 
 Create a new timer.
@@ -78,7 +107,7 @@ unless ($override) {
    };
 
    *cancel = sub {
-      undef $_[0][1];
+      @{$_[0]} = ();
    };
 }
 
