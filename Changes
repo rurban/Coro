@@ -1,6 +1,7 @@
 Revision history for Perl extension Coro.
 
 0.04
+	- @_ is now properly localized.
 	- Coro::State is now easier subclassable.
         - Coro::Cont now coroutine-aware.
         - Coro::Specific is a low-overhead module to create

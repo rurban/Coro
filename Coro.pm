@@ -28,7 +28,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.03;
+$VERSION = 0.04;
 
 @EXPORT = qw(async yield schedule);
 @EXPORT_OK = qw($current);
@@ -61,17 +61,13 @@ $VERSION = 0.03;
    }
 }
 
-my $idle = new Coro sub {
-   &yield while 1;
-};
-
 =item $main
 
 This coroutine represents the main program.
 
 =cut
 
-$main = new Coro;
+our $main = new Coro;
 
 =item $current
 
@@ -84,7 +80,20 @@ if ($current) {
    $main->{specific} = $current->{specific};
 }
 
-$current = $main;
+our $current = $main;
+
+=item $idle
+
+The coroutine to switch to when no other coroutine is running. The default
+implementation prints "FATAL: deadlock detected" and exits.
+
+=cut
+
+# should be done using priorities :(
+our $idle = new Coro sub {
+   print STDERR "FATAL: deadlock detected\n";
+   exit(51);
+};
 
 # we really need priorities...
 my @ready = (); # the ready queue. hehe, rather broken ;)
@@ -120,7 +129,8 @@ never be called again.
 my $prev;
 
 sub schedule {
-   ($prev, $current) = ($current, shift @ready);
+   # should be done using priorities :(
+   ($prev, $current) = ($current, shift @ready || $idle);
    Coro::State::transfer($prev, $current);
 }
 
@@ -187,6 +197,11 @@ sub ready {
 =cut
 
 1;
+
+=head1 SEE ALSO
+
+L<Coro::Channel>, L<Coro::Cont>, L<Coro::Specific>, L<Coro::Semaphore>,
+L<Coro::Signal>, L<Coro::State>.
 
 =head1 AUTHOR
 
