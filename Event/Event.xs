@@ -9,14 +9,13 @@
 
 #define CD_CORO	0
 #define CD_TYPE	1
-#define CD_W	2
-#define CD_GOT	3
+#define CD_OK	2
+#define CD_GOT	3 /* hardcoded in Coro::Event, Coro::Handle */
 #define CD_MAX	3
 /* no support for hits and prio so far. */
 
-#define EV_CLASS "Coro::Event::Ev"
+#define EV_CLASS "Coro::Event"
 
-static HV *ev_stash;
 static pe_idle *scheduler;
 static int do_schedule;
 
@@ -25,24 +24,27 @@ static int do_schedule;
  		          do_schedule = 1;				\
 		          GEventAPI->now ((pe_watcher *)scheduler);	\
                         }
+
 static void
 coro_std_cb(pe_event *pe)
 {
-  AV *av = (AV *)SvRV ((SV *)pe->ext_data);
-  IV type = SvIV (*av_fetch (av, CD_TYPE, 1));
-  SV *cd_coro = *av_fetch (av, CD_CORO, 1);
-
-  av_store (av, CD_W, SvREFCNT_inc (pe->up->mysv));
+  AV *priv = (AV *)SvRV ((SV *)pe->ext_data);
+  IV type = SvIV (*av_fetch (priv, CD_TYPE, 1));
+  SV *cd_coro = *av_fetch (priv, CD_CORO, 1);
 
   if (type == 1)
-    av_store (av, CD_GOT, newSViv (((pe_ioevent *)pe)->got));
-
-  GEventAPI->stop (pe->up, 0);
+    av_store (priv, CD_GOT, newSViv (((pe_ioevent *)pe)->got));
 
   if (SvROK (cd_coro))
     {
       CORO_READY (cd_coro);
+      av_store (priv, CD_CORO, &PL_sv_undef);
       NEED_SCHEDULE;
+    }
+  else
+    {
+      av_store (priv, CD_OK, &PL_sv_yes);
+      GEventAPI->stop (pe->up, 0);
     }
 }
 
@@ -64,8 +66,6 @@ BOOT:
         I_EVENT_API("Coro::Event");
 	I_CORO_API ("Coro::Event");
 
-	ev_stash = gv_stashpv (EV_CLASS, TRUE);
-
         /* create a fake idle handler (we only ever call now) */
         scheduler = GEventAPI->new_idle (0, 0);
         scheduler->base.callback = scheduler_cb;
@@ -81,44 +81,39 @@ _install_std_cb(self,type)
         CODE:
         pe_watcher *w = GEventAPI->sv_2watcher (self);
         AV *priv = newAV ();
-        SV *rv;
+        SV *rv = newRV_noinc ((SV *)priv);
 
         av_extend (priv, CD_MAX);
         av_store (priv, CD_TYPE, newSViv (type));
 
-        rv = sv_bless (newRV_noinc ((SV *)priv), ev_stash);
+        w->callback = coro_std_cb;
+        w->ext_data = rv;
 
         hv_store ((HV *)SvRV (self),
                   EV_CLASS, strlen (EV_CLASS),
                   rv, 0);
 
-        w->ext_data = rv;
-        w->callback = coro_std_cb;
-
 void
-_next0(self)
+_next(self)
 	SV *	self
         CODE:
         pe_watcher *w = GEventAPI->sv_2watcher (self);
         AV *priv = (AV *)SvRV ((SV *)w->ext_data);
 
-        GEventAPI->start (w, 1);
-
-        if (SvROK (*av_fetch (priv, CD_CORO, 1)))
+        if (SvOK (*av_fetch (priv, CD_CORO, 1)))
           croak ("only one coroutine can wait for an event");
 
-        av_store (priv, CD_CORO, SvREFCNT_inc (CORO_CURRENT));
+        if (!w->running)
+          GEventAPI->start (w, 1);
 
-SV *
-_next1(self)
-	SV *	self
-        CODE:
-        pe_watcher *w = GEventAPI->sv_2watcher (self);
-        AV *priv = (AV *)SvRV ((SV *)w->ext_data);
-
-        av_store (priv, CD_CORO, &PL_sv_undef);
-
-        RETVAL = SvREFCNT_inc ((SV *)w->ext_data);
-	OUTPUT:
-        RETVAL
+        if (*av_fetch (priv, CD_OK, 1) == &PL_sv_yes)
+          {
+            av_store (priv, CD_OK, &PL_sv_no);
+            XSRETURN_NO;
+          }
+        else 
+          {
+            av_store (priv, CD_CORO, SvREFCNT_inc (CORO_CURRENT));
+            XSRETURN_YES;
+          }
 

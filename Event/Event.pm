@@ -83,18 +83,6 @@ next method often, but it does save typing sometimes.
 
 =cut
 
-#sub std_cb {
-#   my $w = $_[0]->w;
-#   my $q = $w->private;
-#   $q->[1] = $_[0];
-#   if ($q->[0]) { # somebody waiting?
-#      $q->[0]->ready;
-#      &Coro::schedule;
-#   } else {
-#      $w->stop;
-#   }
-#}
-
 for my $flavour (qw(idle var timer io signal)) {
    push @EXPORT, "do_$flavour";
    my $new = \&{"Event::$flavour"};
@@ -127,31 +115,15 @@ for my $flavour (qw(idle var timer io signal)) {
 }
 
 # double calls to avoid stack-cloning ;()
-# is about 20% slower, though.
+# is about 10% slower, though.
 sub next($) {
-   &_next0;
-   &Coro::schedule;
-   &_next1;
+   &Coro::schedule if &_next; $_[0];
 }
 
-#sub next {
-#   my $w = $_[0];
-#   my $q = $w->private;
-#   if ($q->[1]) { # event waiting?
-#      $w->again unless $w->is_cancelled;
-#   } elsif ($q->[0]) {
-#      croak "only one coroutine can wait for an event";
-#   } else {
-#      local $q->[0] = $Coro::current;
-#      &Coro::schedule;
-#   }
-#   pop @$q;
-#}
-
-sub Coro::Event::Ev::w    { $_[0][2] }
-sub Coro::Event::Ev::got  { $_[0][3] }
-sub Coro::Event::Ev::prio { croak "prio not supported yet, please mail to pcg\@goof.com" }
-sub Coro::Event::Ev::hits { croak "prio not supported yet, please mail to pcg\@goof.com" }
+sub Coro::Event::w    { $_[0]{Coro::Event}[2] }
+sub Coro::Event::got  { $_[0]{Coro::Event}[3] }
+sub Coro::Event::prio { croak "prio not supported yet, please mail to pcg\@goof.com" }
+sub Coro::Event::hits { croak "prio not supported yet, please mail to pcg\@goof.com" }
 
 =item sweep
 
