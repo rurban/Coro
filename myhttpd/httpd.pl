@@ -165,7 +165,9 @@ sub err_blocked {
    my $ip = $self->{remote_addr};
    my $time = time2str $blocked{$ip} = $::NOW + $::BLOCKTIME;
 
-   $self->err(403, "too many connections",
+   Coro::Event::do_timer(after => 15);
+
+   $self->err(401, "too many connections",
               {
                  "Content-Type" => "text/html",
                  "Retry-After" => $::BLOCKTIME
@@ -200,6 +202,7 @@ sub handle {
 
       my $ip = $self->{remote_addr};
 
+         $self->err_blocked($blocked{$ip});
       if ($blocked{$ip}) {
          $self->err_blocked($blocked{$ip})
             if $blocked{$ip} > $::NOW;
@@ -217,7 +220,7 @@ sub handle {
                 ([^\040]+) \040+
                 HTTP\/([0-9]+\.[0-9]+)
                 \015\012/gx
-         or $self->err(403, "method not allowed", { Allow => "GET,HEAD" });
+         or $self->err(405, "method not allowed", { Allow => "GET,HEAD" });
 
       $2 ne "1.0"
          or $self->err(506, "http protocol version not supported");
@@ -405,6 +408,8 @@ satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
          if (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
+            Coro::Event::do_timer(after => 15);
+
             $self->err(400, "segmented downloads are not allowed");
          }
       }
