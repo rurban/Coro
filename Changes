@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.51
+0.51 Thu Nov  1 20:39:01 CET 2001
 	- terminate/cancel now work properly (otherwise termination
           could cause a "next coroutine is not and contains not..."
           error.
