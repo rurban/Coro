@@ -18,7 +18,7 @@ handle. L<Coro::Handle>.
 
 package Coro::Socket;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Errno ();
 use Carp qw(croak);
@@ -28,7 +28,7 @@ use Coro::Util ();
 
 use base 'Coro::Handle';
 
-$VERSION = 0.7;
+$VERSION = 0.8;
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {

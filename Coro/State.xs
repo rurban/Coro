@@ -2,6 +2,29 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#include "patchlevel.h"
+
+#if PATCHLEVEL < 6
+# ifndef PL_ppaddr
+#  define PL_ppaddr ppaddr
+# endif
+# ifndef call_sv
+#  define call_sv perl_call_sv
+# endif
+# ifndef get_sv
+#  define get_sv perl_get_sv
+# endif
+# ifndef get_cv
+#  define get_cv perl_get_cv
+# endif
+# ifndef IS_PADGV
+#  define IS_PADGV(v) 0
+# endif
+# ifndef IS_PADCONST
+#  define IS_PADCONST(v) 0
+# endif
+#endif
+
 #include "libcoro/coro.c"
 
 #include <signal.h>
@@ -394,12 +417,14 @@ save_state(pTHX_ Coro__State c, int flags)
                     get_padlist (cv); /* this is a monster */
                   }
               }
+#ifdef CXt_FORMAT
             else if (CxTYPE(cx) == CXt_FORMAT)
               {
                 /* I never used formats, so how should I know how these are implemented? */
                 /* my bold guess is as a simple, plain sub... */
                 croak ("CXt_FORMAT not yet handled. Don't switch coroutines from within formats");
               }
+#endif
           }
 
         if (top_si->si_type == PERLSI_MAIN)
@@ -476,7 +501,9 @@ coro_init_stacks (pTHX)
     PL_markstack_ptr = PL_markstack;
     PL_markstack_max = PL_markstack + 16;
 
+#ifdef SET_MARK_OFFSET
     SET_MARK_OFFSET;
+#endif
 
     New(54,PL_scopestack,16,I32);
     PL_scopestack_ix = 0;
@@ -1016,7 +1043,7 @@ yield(...)
         struct coro *prev, *next;
 
         if (!returnstk)
-          returnstk = SvRV (get_sv ("Coro::Cont::return", FALSE));
+          returnstk = SvRV ((SV *)get_sv ("Coro::Cont::return", FALSE));
 
         /* set up @_ -- ugly */
         av_clear (defav);

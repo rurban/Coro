@@ -5,6 +5,13 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#ifndef pTHX_
+# define pTHX_
+# define aTHX_
+# define pTHX
+# define aTHX
+#endif
+
 /* perl-related */
 #define TRANSFER_SAVE_DEFAV	0x00000001 /* @_ */
 #define TRANSFER_SAVE_DEFSV	0x00000002 /* $_ */

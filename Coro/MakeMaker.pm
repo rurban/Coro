@@ -1,6 +1,6 @@
 package Coro::MakeMaker;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Config;
 use base 'Exporter';

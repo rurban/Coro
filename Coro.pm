@@ -32,13 +32,15 @@ important global variables.
 
 package Coro;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro::State;
 
+use vars qw($idle $main $current);
+
 use base Exporter;
 
-$VERSION = 0.7;
+$VERSION = 0.8;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -85,7 +87,7 @@ This coroutine represents the main program.
 
 =cut
 
-our $main = new Coro;
+$main = new Coro;
 
 =item $current (or as function: current)
 
@@ -98,7 +100,7 @@ if ($current) {
    $main->{specific} = $current->{specific};
 }
 
-our $current = $main;
+$current = $main;
 
 sub current() { $current }
 
@@ -110,7 +112,7 @@ implementation prints "FATAL: deadlock detected" and exits.
 =cut
 
 # should be done using priorities :(
-our $idle = new Coro sub {
+$idle = new Coro sub {
    print STDERR "FATAL: deadlock detected\n";
    exit(51);
 };

@@ -24,7 +24,7 @@ This module is not subclassable.
 
 package Coro::Timer;
 
-no warnings qw(uninitialized);
+BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Carp ();
 use Exporter;
@@ -35,7 +35,7 @@ BEGIN {
    eval "use Time::HiRes 'time'";
 }
 
-$VERSION = 0.7;
+$VERSION = 0.8;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
