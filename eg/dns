@@ -6,7 +6,7 @@ use Coro::Util;
 
 use Socket;
 
-# do some asynchroneous hostname resolution
+# do some asynchronous hostname resolution
 
 async {
    for my $x (1..255) {

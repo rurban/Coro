@@ -38,7 +38,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.45;
+$VERSION = 0.49;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -281,14 +281,8 @@ sub nice {
 
 =head1 BUGS/LIMITATIONS
 
- - could be faster, especially when the core would introduce special
-   support for coroutines (like it does for threads).
- - there is still a memleak on coroutine termination that I could not
-   identify. Could be as small as a single SV.
- - this module is not well-tested.
- - if variables or arguments "disappear" (become undef) or become
-   corrupted please contact the author so he cen iron out the
-   remaining bugs.
+ - you must make very sure that no coro is still active on global destruction.
+   very bad things might happen otherwise (usually segfaults).
  - this module is not thread-safe. You must only ever use this module from
    the same thread (this requirement might be loosened in the future to
    allow per-thread schedulers, but Coro::State does not yet allow this).

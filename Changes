@@ -1,5 +1,19 @@
 Revision history for Perl extension Coro.
 
+0.49  Sun Sep 16 02:42:45 CEST 2001
+	- changed some method calls to function calls for speed
+          inside Coro::Handle.
+        - make Coro::Handle use an array instead of a hash for
+          speed reasons.
+        - IRIX mystery solved: it's SGI's NT, after all: "standard, huh?".
+          sjlj and ucontext should now work.
+        - IRIX-specific port for libcoro.
+        - swapped order of accept results to match IO::Socket.
+        - changed getsock/peername to sock/peername to match IO::Socket.
+        - fixed a bug that caused segfault when returning to main task
+          under some circumstances.
+        - other bugfixes.
+
 0.45  Sun Sep  2 02:54:01 CEST 2001
 	- new method Coro::Handle::timeout.
         - corrected speling of set...name to get...name in Coro::Socket.

@@ -69,8 +69,8 @@ until an error condition happens (and return false).
 
 =cut
 
-sub readable	{ tied(${$_[0]})->readable }
-sub writable	{ tied(${$_[0]})->writable }
+sub readable	{ Coro::Handle::FH::readable(tied ${$_[0]}) }
+sub writable	{ Coro::Handle::FH::writable(tied ${$_[0]}) }
 
 =item $fh->readline([$terminator])
 
@@ -111,12 +111,12 @@ C<0> is a valid timeout, use C<undef> to disable the timeout.
 
 sub timeout {
    my $self = tied(${$_[0]});
-   if (@_) {
-      $self->{timeout} = $_[0];
-      $self->{rw}->timeout($_[0]) if $self->{rw};
-      $self->{ww}->timeout($_[0]) if $self->{ww};
+   if (@_ > 1) {
+      $self->[2] = $_[1];
+      $self->[5]->timeout($_[1]) if $self->[5];
+      $self->[6]->timeout($_[1]) if $self->[6];
    }
-   $self->{timeout};
+   $self->[2];
 }
 
 =item $fh->fh
@@ -142,72 +142,92 @@ use Event::Watcher qw(R W E);
 
 use base 'Tie::Handle';
 
+# formerly a hash, but we are speed-critical, so try
+# to be faster even if it hurts.
+#
+# 0 FH
+# 1 desc
+# 2 timeout
+# 3 rb
+# 4 wb
+# 5 rw
+# 6 ww
+
 sub TIEHANDLE {
    my $class = shift;
+   my %args = @_;
 
-   my $self = bless {
-      rb => "",
-      wb => "",
-      @_,
-   }, $class;
+   my $self = bless [], $class;
+   $self->[0] = $args{fh};
+   $self->[1] = $args{desc};
+   $self->[2] = $args{timeout};
+   $self->[3] = "";
+   $self->[4] = "";
 
-   fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
+   fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
       or croak "fcntl(O_NONBLOCK): $!";
 
    $self;
 }
 
+sub cleanup {
+   $_[0][3] = "";
+   ($_[0][5])->cancel if defined $_[0][5]; $_[0][5] = undef;
+
+   $_[0][4] = "";
+   ($_[0][6])->cancel if defined $_[0][6]; $_[0][6] = undef;
+}
+
 sub OPEN {
+   &cleanup;
    my $self = shift;
-   $self->CLOSE;
-   my $r = @_ == 2 ? open $self->{fh}, $_[0], $_[1]
-                   : open $self->{fh}, $_[0], $_[1], $_[2];
+   my $r = @_ == 2 ? open $self->[0], $_[0], $_[1]
+                   : open $self->[0], $_[0], $_[1], $_[2];
    if ($r) {
-      fcntl $self->{fh}, &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
+      fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
          or croak "fcntl(O_NONBLOCK): $!";
    }
    $r;
 }
 
 sub CLOSE {
-   my $self = shift;
-   $self->{rb} =
-   $self->{wb} = "";
-   (delete $self->{rw})->cancel if exists $self->{rw};
-   (delete $self->{ww})->cancel if exists $self->{ww};
-   close $self->{fh};
+   &cleanup;
+   close $_[0][0];
+}
+
+sub DESTROY {
+   &cleanup;
 }
 
 sub FILENO {
-   fileno $_[0]->{fh};
-}
-
-sub writable {
-   ($_[0]->{ww} ||= Coro::Event->io(
-      fd      => $_[0]->{fh},
-      desc    => "$_[0]->{desc} WW",
-      timeout => $_[0]->{timeout},
-      poll    => W+E,
-   ))->next->{Coro::Event}[5] & W;
+   fileno $_[0][0];
 }
 
 sub readable {
-   ($_[0]->{rw} ||= Coro::Event->io(
-      fd      => $_[0]->{fh},
-      desc    => "$_[0]->{desc} RW",
-      timeout => $_[0]->{timeout},
+   ($_[0][5] ||= Coro::Event->io(
+      fd      => $_[0][0],
+      desc    => "$_[0][1] R",
+      timeout => $_[0][2],
       poll    => R+E,
    ))->next->{Coro::Event}[5] & R;
 }
 
+sub writable {
+   ($_[0][6] ||= Coro::Event->io(
+      fd      => $_[0][0],
+      desc    => "$_[0][1] W",
+      timeout => $_[0][2],
+      poll    => W+E,
+   ))->next->{Coro::Event}[5] & W;
+}
+
 sub WRITE {
-   my $self = $_[0];
    my $len = defined $_[2] ? $_[2] : length $_[1];
    my $ofs = $_[3];
    my $res = 0;
 
    while() {
-      my $r = syswrite $self->{fh}, $_[1], $len, $ofs;
+      my $r = syswrite $_[0][0], $_[1], $len, $ofs;
       if (defined $r) {
          $len -= $r;
          $ofs += $r;
@@ -216,35 +236,34 @@ sub WRITE {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      last unless $self->writable;
+      last unless &writable;
    }
 
    return $res;
 }
 
 sub READ {
-   my $self = $_[0];
    my $len = $_[2];
    my $ofs = $_[3];
    my $res = 0;
 
    # first deplete the read buffer
-   if (exists $self->{rb}) {
-      my $l = length $self->{rb};
+   if (defined $_[0][3]) {
+      my $l = length $_[0][3];
       if ($l <= $len) {
-         substr($_[1], $ofs) = delete $self->{rb};
+         substr($_[1], $ofs) = $_[0][3]; undef $_[0][3];
          $len -= $l;
          $res += $l;
          return $res unless $len;
       } else {
-         substr($_[1], $ofs) = substr($self->{rb}, 0, $len);
-         substr($self->{rb}, 0, $len) = "";
+         substr($_[1], $ofs) = substr($_[0][3], 0, $len);
+         substr($_[0][3], 0, $len) = "";
          return $len;
       }
    }
 
    while() {
-      my $r = sysread $self->{fh}, $_[1], $len, $ofs;
+      my $r = sysread $_[0][0], $_[1], $len, $ofs;
       if (defined $r) {
          $len -= $r;
          $ofs += $r;
@@ -253,35 +272,31 @@ sub READ {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      last unless $self->readable;
+      last unless &readable;
    }
 
    return $res;
 }
 
 sub READLINE {
-   my $self = shift;
-   my $irs = @_ ? shift : $/;
+   my $irs = @_ > 1 ? $_[1] : $/;
 
    while() {
-      my $pos = index $self->{rb}, $irs;
+      my $pos = index $_[0][3], $irs;
       if ($pos >= 0) {
          $pos += length $irs;
-         my $res = substr $self->{rb}, 0, $pos;
-         substr ($self->{rb}, 0, $pos) = "";
+         my $res = substr $_[0][3], 0, $pos;
+         substr ($_[0][3], 0, $pos) = "";
          return $res;
       }
-      my $r = sysread $self->{fh}, $self->{rb}, 8192, length $self->{rb};
+
+      my $r = sysread $_[0][0], $_[0][3], 8192, length $_[0][3];
       if (defined $r) {
          return undef unless $r;
-      } elsif ($! != Errno::EAGAIN || !$self->readable) {
+      } elsif ($! != Errno::EAGAIN || !&readable) {
          return undef;
       }
    }
-}
-
-sub DESTROY {
-   &CLOSE;
 }
 
 1;

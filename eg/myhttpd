@@ -90,7 +90,7 @@ use HTTP::Date;
 sub new {
    my $class = shift;
    my $fh = shift;
-   my (undef, $iaddr) = unpack_sockaddr_in $fh->getpeername
+   my (undef, $iaddr) = unpack_sockaddr_in $fh->peername
       or $self->err(500, "unable to get peername");
    $self->{remote_address} = inet_ntoa $iaddr;
    bless { fh => $fh }, $class;
@@ -208,7 +208,7 @@ sub map_uri {
 
 sub server_address {
    my $self = shift;
-   my ($port, $iaddr) = unpack_sockaddr_in $self->{fh}->getsockname
+   my ($port, $iaddr) = unpack_sockaddr_in $self->{fh}->sockname
       or $self->err(500, "unable to get socket name");
    ((inet_ntoa $iaddr), $port);
 }

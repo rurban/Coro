@@ -17,6 +17,8 @@ use Coro;
 use Coro::Event;
 use LWP::Simple;
 
+$SIG{PIPE} = 'IGNORE';
+
 async {
    print "hi\n";
    get "http://localhost/";
