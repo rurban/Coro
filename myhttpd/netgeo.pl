@@ -65,7 +65,7 @@ sub whois_request {
       while () {
          my $fh = new Coro::Socket
                          PeerAddr => $self->ip,
-                         PeerPort => 'whois',
+                         PeerPort => $self->{port} || "whois",
                          Timeout  => 30;
          if ($fh) {
             print $fh "$query\n";
@@ -169,20 +169,112 @@ EOF
 
 package Whois::RIPE;
 
+use Socket;
 use base Whois;
 
 sub sanitize {
    local $_ = $_[1];
+
    s/^%.*\n//gm;
    s/^\n+//;
    s/\n*$/\n/;
+
+   s/^inetnum:\s+/*in: /gm;
+   s/^admin-c:\s+/*ac: /gm;
+   s/^tech-c:\s+/*tc: /gm;
+   s/^owner-c:\s+/*oc: /gm;
+   s/^country:\s+/*cy: /gm;
+   s/^phone:\s+/*ph: /gm;
+   s/^remarks:\s+/*re: /gm;
+   s/^changed:\s+/*ch: /gm;
+   s/^created:\s+/*cr: /gm;
+   s/^address:\s+/*ad: /gm;
+   s/^status:\s+/*st: /gm;
+   s/^inetrev:\s+/*ir: /gm;
+   s/^nserver:\s+/*ns: /gm;
+
    $_;
 }
 
 sub ip_request {
    my ($self, $ip) = @_;
 
-   my $whois = $self->whois_request("-FSTin $ip");
+   my $whois = $self->whois_request("$self->{rflags}$ip");
+
+   $whois =~ s{
+      (2[0-5][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])
+      (?:\.
+         (2[0-5][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])
+         (?:\.
+            (2[0-5][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])
+            (?:\.
+               (2[0-5][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])
+            )?
+         )?
+      )?
+      /
+      ([0-9]+)
+   }{
+      my $ip   = inet_aton sprintf "%d.%d.%d.%d", $1, $2, $3, $4;
+      my $net  = 1 << (31 - $5);
+      my $mask = inet_aton 2 ** 32 - $net;
+
+      my $ip1 = $ip & $mask;
+      my $ip2 = $ip1 | inet_aton $net * 2 - 1;
+      (inet_ntoa $ip1) . " - " . (inet_ntoa $ip2);
+   }gex;
+
+   $whois =~ /^\*in: 0\.0\.0\.0 - 255\.255\.255\.255/
+      and return;
+
+   $whois =~ /^\*ac: XXX0/m # 192.0.0.0
+      and return;
+
+   $whois =~ /^\*st: (?:ALLOCATED )?UNSPECIFIED/m
+      and return;
+
+   $whois =~ /^%ERROR:/m
+      and return;
+
+   #while ($whois =~ s/^\*(?:ac|tc):\s+(\S+)\n//m) {
+   #   $whois .= $self->whois_request("-FSTpn $1");
+   #}
+
+   #$whois =~ s/^\*(?:pn|nh|mb|ch|so|rz|ny|st|rm):.*\n//mg;
+
+   $whois =~ s/\n+$//;
+
+   $whois;
+}
+
+package Whois::RWHOIS;
+
+use base Whois;
+
+sub sanitize {
+   local $_ = $_[1];
+   s/^%referral\s+/referral:/gm;
+   s/^network://gm;
+   s/^%.*\n//gm;
+   s/^\n+//m;
+   s/\n*$/\n/m;
+
+   s/^(\S+):\s*/\L$1: /gm;
+   s/^ip-network-block:/*in:/gm;
+   s/^country-code:/*cy:/gm;
+   s/^tech-contact;i:/*tc:/gm;
+   s/^updated:/*ch:/gm;
+   s/^street-address:/*ad:/gm;
+   s/^org-name:/*re:/gm;
+   s/^created:/*cr:/gm;
+
+   $_;
+}
+
+sub ip_request {
+   my ($self, $ip) = @_;
+
+   my $whois = $self->whois_request("$ip");
 
    $whois =~ /^\*in: 0\.0\.0\.0 - 255\.255\.255\.255/
       and return;
@@ -219,9 +311,11 @@ sub int2ip($) {
 
 our %WHOIS;
 
-$WHOIS{ARIN}  = new Whois::ARIN ARIN  => "whois.arin.net",  maxjobs => 12;
-$WHOIS{RIPE}  = new Whois::RIPE RIPE  => "whois.ripe.net",  maxjobs => 20;
-$WHOIS{APNIC} = new Whois::RIPE APNIC => "whois.apnic.net", maxjobs => 20;
+#$WHOIS{ARIN}   = new Whois::ARIN ARIN  => "whois.arin.net",    port =>   43, maxjobs => 12;
+$WHOIS{ARIN}   = new Whois::RWHOIS ARIN  => "rwhois.arin.net", port => 4321, maxjobs => 12;
+$WHOIS{RIPE}   = new Whois::RIPE RIPE  => "whois.ripe.net",    port =>   43, rflags => "-FSTin ", maxjobs => 20;
+$WHOIS{APNIC}  = new Whois::RIPE APNIC => "whois.apnic.net",   port =>   43, rflags => "-FSTin ", maxjobs => 20;
+$WHOIS{LACNIC} = new Whois::RIPE LACNIC => "whois.lacnic.net",   port =>   43, maxjobs => 20;
 
 $whoislock = new Coro::SemaphoreSet;
 
@@ -244,8 +338,10 @@ sub ip_request {
    my ($arin, $ripe, $apnic);
 
    $whois = $WHOIS{RIPE}->ip_request($ip)
+         || $WHOIS{LACNIC}->ip_request($ip)
+         || $WHOIS{APNIC} ->ip_request($ip)
          || $WHOIS{ARIN} ->ip_request($ip)
-         || $WHOIS{APNIC} ->ip_request($ip);
+         ;
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
       or do { warn "$whois($ip): no addresses found\n", last };
@@ -267,6 +363,19 @@ sub ip_request {
    $iprange->db_sync;
 
    $whois;
+}
+
+if (0) {
+   #print ip_request "68.52.164.8"; # goof
+   #print "\n\n";
+   #print ip_request "200.202.220.222"; # lacnic
+   #print "\n\n";
+   #print ip_request "62.116.167.250";
+   #print "\n\n";
+   #print ip_request "133.11.128.254"; # jp
+   #print "\n\n";
+   #print ip_request "151.197.52.251";
+   #print "\n\n";
 }
 
 
