@@ -27,6 +27,8 @@ waking up all waiters.
 
 package Coro::Signal;
 
+no warnings;
+
 use Coro ();
 
 $VERSION = 0.5;

@@ -18,6 +18,8 @@ does NOT inherit from IO::Handle but uses tied objects.
 
 package Coro::Handle;
 
+no warnings;
+
 use Errno ();
 use base 'Exporter';
 
@@ -58,10 +60,6 @@ sub unblock($) {
    new_from_fh Coro::Handle $_[0];
 }
 
-sub read	{ read     $_[0], $_[1], $_[2], $_[3] }
-sub sysread	{ sysread  $_[0], $_[1], $_[2], $_[3] }
-sub syswrite	{ syswrite $_[0], $_[1], $_[2], $_[3] }
-
 =item $fh->writable, $fh->readable
 
 Wait until the filehandle is readable or writable (and return true) or
@@ -91,14 +89,23 @@ only). Might change in the future.
 
 sub autoflush	{ !0 }
 
-=item $fh->fileno, $fh->close
+=item $fh->fileno, $fh->close,
+$fh->read, $fh->sysread, $fh->syswrite,
+$fh->print, $fh->printf
 
-Work like their function equivalents.
+Work like their function equivalents (except read, which works like
+sysread. You should not use the read function with Coro::Handles, it will
+work but it's not efficient).
 
 =cut
 
-sub fileno { tied(${$_[0]})->FILENO }
-sub close  { tied(${$_[0]})->CLOSE  }
+sub read	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub sysread	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub syswrite	{ Coro::Handle::FH::WRITE (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub print	{ Coro::Handle::FH::WRITE (tied ${+shift}, join "", @_) }
+sub printf	{ Coro::Handle::FH::PRINTF(tied ${+shift}, @_) }
+sub fileno	{ Coro::Handle::FH::FILENO(tied ${$_[0]}) }
+sub close	{ Coro::Handle::FH::CLOSE (tied ${$_[0]}) }
 
 =item $fh->timeout([...])
 
@@ -133,14 +140,14 @@ sub fh {
 
 package Coro::Handle::FH;
 
+no warnings;
+
 use Fcntl ();
 use Errno ();
 use Carp 'croak';
 
 use Coro::Event;
 use Event::Watcher qw(R W E);
-
-use base 'Tie::Handle';
 
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
@@ -188,6 +195,36 @@ sub OPEN {
          or croak "fcntl(O_NONBLOCK): $!";
    }
    $r;
+}
+
+sub PRINT {
+   WRITE($_[0], $_[1]);
+}
+
+sub PRINTF {
+   WRITE(shift, sprintf(shift,@_));
+}
+
+sub GETC {
+   my $buf;
+   READ($_[0], $buf, 1);
+   $buf;
+}
+
+sub BINMODE {
+   binmode $_[0][0];
+}
+
+sub TELL {
+   use Carp (); Carp::croak("Coro::Handle's don't support tell()");
+}
+
+sub SEEK {
+   use Carp (); Carp::croak("Coro::Handle's don't support seek()");
+}
+
+sub EOF {
+   use Carp (); Carp::croak("Coro::Handle's don't support eof()");
 }
 
 sub CLOSE {

@@ -47,6 +47,8 @@ per coroutine, 5k when the experimental context sharing is enabled.
 
 package Coro::State;
 
+no warnings;
+
 BEGIN {
    $VERSION = 0.5;
 

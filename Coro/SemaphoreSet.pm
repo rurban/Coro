@@ -30,6 +30,8 @@ identifier.
 
 package Coro::SemaphoreSet;
 
+no warnings;
+
 use Coro ();
 
 $VERSION = 0.5;

@@ -26,6 +26,8 @@ OR a single writer (but no readers).
 
 package Coro::RWLock;
 
+no warnings;
+
 use Coro ();
 
 $VERSION = 0.5;

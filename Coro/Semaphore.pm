@@ -33,6 +33,8 @@ and decrement the count when resources are removed.
 
 package Coro::Semaphore;
 
+no warnings;
+
 use Coro ();
 
 $VERSION = 0.5;

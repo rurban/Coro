@@ -29,6 +29,8 @@ Coro::Cont - schmorp's faked continuations
 
 package Coro::Cont;
 
+no warnings;
+
 use Carp qw(croak);
 
 use Coro::State;

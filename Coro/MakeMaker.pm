@@ -1,5 +1,7 @@
 package Coro::MakeMaker;
 
+no warnings;
+
 use Config;
 use base 'Exporter';
 

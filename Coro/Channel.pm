@@ -27,6 +27,7 @@ read/written from as many coroutines as you want.
 package Coro::Channel;
 
 use Coro ();
+no warnings;
 
 $VERSION = 0.5;
 
