@@ -30,6 +30,12 @@ In this module, coroutines are defined as "callchain + lexical variables
 own set of lexicals and it's own set of perl's most important global
 variables.
 
+WARNING: When using this module, make sure that, at program end, no
+coroutines are still running OR just call exit before falling off the
+end. The reason for this is that some coroutine of yours might have called
+into a C function, and falling off the end of main:: results in returning
+to that C function instead if to the main C interpreter.
+
 =cut
 
 package Coro;
@@ -176,6 +182,7 @@ Future versions of this function will allow result arguments.
 
 sub terminate {
    $current->{_results} = [@_];
+   delete $current->{_coro_state};
    &schedule;
 }
 

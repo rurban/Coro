@@ -12,11 +12,11 @@
 
 #define SUB_INIT "Coro::State::initialize"
 
-#define SAVE_DEFAV	0x00000001
-#define SAVE_DEFSV	0x00000002
-#define SAVE_ERRSV	0x00000004
+#define TRANSFER_SAVE_DEFAV	0x00000001
+#define TRANSFER_SAVE_DEFSV	0x00000002
+#define TRANSFER_SAVE_ERRSV	0x00000004
 
-#define SAVE_ALL	-1
+#define TRANSFER_SAVE_ALL	-1
 
 struct coro {
   /* optionally saved, might be zero */
@@ -60,6 +60,8 @@ struct coro {
 
 typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
+
+static AV *main_mainstack; /* used to differentiate between $main and others */
 
 static HV *padlist_cache;
 
@@ -365,9 +367,9 @@ save_state(pTHX_ Coro__State c, int flags)
     PUTBACK;
   }
 
-  c->defav = flags & SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
-  c->defsv = flags & SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
-  c->errsv = flags & SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
+  c->defav = flags & TRANSFER_SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
+  c->defsv = flags & TRANSFER_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
+  c->errsv = flags & TRANSFER_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
 
   /* I have not the slightest idea of why av_reify is necessary */
   /* but if it's missing the defav contents magically get replaced sometimes */
@@ -518,12 +520,14 @@ BOOT:
 {       /* {} necessary for stoopid perl-5.6.x */
 	HV * stash = gv_stashpvn("Coro::State", 10, TRUE);
 
-        newCONSTSUB (stash, "SAVE_DEFAV", newSViv (SAVE_DEFAV));
-        newCONSTSUB (stash, "SAVE_DEFSV", newSViv (SAVE_DEFSV));
-        newCONSTSUB (stash, "SAVE_ERRSV", newSViv (SAVE_ERRSV));
+        newCONSTSUB (stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
+        newCONSTSUB (stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
+        newCONSTSUB (stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
 
 	if (!padlist_cache)
 	  padlist_cache = newHV ();
+
+        main_mainstack = PL_mainstack;
 }
 
 Coro::State
@@ -546,7 +550,7 @@ _newprocess(args)
         RETVAL
 
 void
-transfer(prev, next, flags = SAVE_ALL)
+transfer(prev, next, flags = TRANSFER_SAVE_ALL)
         Coro::State_or_hashref	prev
         Coro::State_or_hashref	next
         int			flags
@@ -560,11 +564,11 @@ DESTROY(coro)
         Coro::State	coro
         CODE:
 
-        if (coro->mainstack)
+        if (coro->mainstack && coro->mainstack != main_mainstack)
           {
             struct coro temp;
 
-            SAVE(aTHX_ (&temp), SAVE_ALL);
+            SAVE(aTHX_ (&temp), TRANSFER_SAVE_ALL);
             LOAD(aTHX_ coro);
 
             destroy_stacks ();
@@ -573,6 +577,34 @@ DESTROY(coro)
           }
 
         Safefree (coro);
+
+        /*
+         * there is one problematic case left (remember _recurse?)
+         * consider the case when we
+         *
+         * 1. start a coroutine
+         * 2. inside it descend into some xs functions
+         * 3. xs function calls a callback
+         * 4. callback switches to $main
+         * 5. $main ends - we will end inside the xs function
+         * 6. xs function returns and perl executes - what?
+         *
+         * to avoid this case we recurse in this function
+         * and simply call my_exit(0), skipping other xs functions
+         */
+
+#if 0
+void
+_recurse()
+	CODE:
+        LEAVE;
+        PL_stack_sp = PL_stack_base + ax - 1;
+        PL_op = PL_op->op_next;
+        CALLRUNOPS(aTHX);
+        printf ("my_exit\n");
+        my_exit (0);
+
+#endif
 
 void
 flush()

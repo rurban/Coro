@@ -22,7 +22,7 @@ Coro::Event - do events the coro-way
 
 =head1 DESCRIPTION
 
-This module enables you to create programs using the powerful Event modell
+This module enables you to create programs using the powerful Event model
 (and module), while retaining the linear style known from simple or
 threaded programs.
 
@@ -44,6 +44,7 @@ no warnings;
 
 use Carp;
 
+use Coro;
 use Event qw(unloop); # we are re-exporting this, cooool!
 
 use base 'Event';
@@ -162,15 +163,13 @@ Same as Event::unloop (provided here for your convinience only).
 =cut
 
 $Coro::idle = new Coro sub {
-   Event::one_event; # inefficient
+   while () {
+      Event::one_event; # inefficient
+      Coro::schedule;
+   }
 };
 
 1;
-
-=head1 BUGS
-
-This module is implemented straightforward using Coro::Channel and thus
-not as efficient as possible.
 
 =head1 AUTHOR
 

@@ -1,6 +1,8 @@
 Revision history for Perl extension Coro.
 
 0.10
+	- renamed SAVE_DEFSV (on xs-level only) to avoid symbol clash in
+          perl-5.6.
 	- new function Coro::Event::idle.
         - the idle process is now overriden
           by default in Coro::Event.
