@@ -55,6 +55,15 @@
 
 #include "CoroAPI.h"
 
+#ifdef USE_ITHREADS
+static perl_mutex coro_mutex;
+# define LOCK   do { MUTEX_LOCK (&coro_mutex);   } while (0)
+# define UNLOCK do { MUTEX_UNLOCK (&coro_mutex); } while (0)
+#else
+# define LOCK   0
+# define UNLOCK 0
+#endif
+
 static struct CoroAPI coroapi;
 
 /* this is actually not only the c stack but also c registers etc... */
@@ -127,7 +136,6 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash;
 static SV *ucoro_state_sv;
 static U32 ucoro_state_hash;
-static HV *padlist_cache;
 static SV *coro_mortal; /* will be freed after next transfer */
 
 /* mostly copied from op.c:cv_clone2 */
@@ -166,9 +174,11 @@ clone_padlist (AV *protopadlist)
   for (ix = fpad; ix > 0; ix--)
     {
       SV *namesv = (ix <= fname) ? pname[ix] : Nullsv;
+
       if (namesv && namesv != &PL_sv_undef)
         {
           char *name = SvPVX (namesv);        /* XXX */
+
           if (SvFLAGS (namesv) & SVf_FAKE || *name == '&')
             {                        /* lexical from outside? */
               npad[ix] = SvREFCNT_inc (ppad[ix]);
@@ -184,10 +194,12 @@ clone_padlist (AV *protopadlist)
                 sv = (SV *) newHV ();
               else
                 sv = NEWSV (0, 0);
+
 #ifdef SvPADBUSY
               if (!SvPADBUSY (sv))
 #endif
                 SvPADMY_on (sv);
+
               npad[ix] = sv;
             }
         }
@@ -352,9 +364,6 @@ load_state(pTHX_ Coro__State c)
           {
             put_padlist (cv); /* mark this padlist as available */
             CvPADLIST(cv) = padlist;
-#ifdef USE_THREADS
-            /*CvOWNER(cv) = (struct perl_thread *)POPs;*/
-#endif
           }
 
         ++CvDEPTH(cv);
@@ -391,11 +400,6 @@ save_state(pTHX_ Coro__State c, int flags)
                 CV *cv = cx->blk_sub.cv;
                 if (CvDEPTH(cv))
                   {
-#ifdef USE_THREADS
-                    /*XPUSHs ((SV *)CvOWNER(cv));*/
-                    /*CvOWNER(cv) = 0;*/
-                    /*error must unlock this cv etc.. etc...*/
-#endif
                     EXTEND (SP, CvDEPTH(cv)*2);
 
                     while (--CvDEPTH(cv))
@@ -477,6 +481,8 @@ save_state(pTHX_ Coro__State c, int flags)
 STATIC void
 coro_init_stacks (pTHX)
 {
+    LOCK;
+
     PL_curstackinfo = new_stackinfo(96, 1024/sizeof(PERL_CONTEXT) - 1);
     PL_curstackinfo->si_type = PERLSI_MAIN;
     PL_curstack = PL_curstackinfo->si_stack;
@@ -510,6 +516,8 @@ coro_init_stacks (pTHX)
     New(54,PL_retstack,8,OP*);
     PL_retstack_ix = 0;
     PL_retstack_max = 8;
+
+    UNLOCK;
 }
 
 /*
@@ -568,6 +576,7 @@ allocate_stack (Coro__State ctx, int alloc)
   stack->refcnt = 1;
   stack->usecnt = 1;
   stack->gencnt = ctx->gencnt = 0;
+
   if (alloc)
     {
 #if HAVE_MMAP
@@ -689,19 +698,18 @@ continue_coro (void *arg)
 }
 
 STATIC void
-transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
+transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
 {
   dSTACKLEVEL;
-  static struct coro *xnext;
 
   if (prev != next)
     {
-      xnext = next;
-
       if (next->mainstack)
         {
+          LOCK;
           SAVE (prev, flags);
           LOAD (next);
+          UNLOCK;
 
           /* mark this state as in-use */
           next->mainstack = 0;
@@ -730,15 +738,19 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                 }
 
               coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
+              prev->cursp = stacklevel;
               /* don't add any code here */
             }
-
+          else
+            next->cursp = stacklevel;
         }
       else if (next->tmps_ix == -2)
         croak ("tried to transfer to running coroutine");
       else
         {
+          LOCK;
           SAVE (prev, -1); /* first get rid of the old state */
+          UNLOCK;
 
           if (flags & TRANSFER_SAVE_CCTXT)
             {
@@ -750,6 +762,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                   PL_top_env = &next->start_env;
 
                   setup_coro (next);
+                  next->cursp = stacklevel;
 
                   prev->stack->refcnt++;
                   prev->stack->usecnt++;
@@ -764,26 +777,25 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                                setup_coro, (void *)next,
                                next->stack->sptr, labs (next->stack->ssize));
                   coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
+                  prev->cursp = stacklevel;
                   /* don't add any code here */
                 }
             }
           else
-            setup_coro (next);
+            {
+              setup_coro (next);
+              next->cursp = stacklevel;
+            }
         }
-
-      /*
-       * xnext is now either prev or next, depending on wether
-       * we switched the c stack or not. that's why I use a global
-       * variable, that should become thread-specific at one point.
-       */
-      xnext->cursp = stacklevel;
     }
 
+  LOCK;
   if (coro_mortal)
     {
       SvREFCNT_dec (coro_mortal);
       coro_mortal = 0;
     }
+  UNLOCK;
 }
 
 #define SV_CORO(sv,func)									\
@@ -791,18 +803,18 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
     if (SvROK (sv))										\
       sv = SvRV (sv);										\
         											\
-    if (SvTYPE(sv) == SVt_PVHV)						\
+    if (SvTYPE (sv) == SVt_PVHV)								\
       {												\
-        HE *he = hv_fetch_ent((HV *)sv, ucoro_state_sv, 0, ucoro_state_hash);		\
+        HE *he = hv_fetch_ent ((HV *)sv, ucoro_state_sv, 0, ucoro_state_hash);			\
 												\
         if (!he)										\
           croak ("%s() -- %s is a hashref but lacks the " UCORO_STATE " key", func, # sv);	\
                                                                                                 \
-        (sv) = SvRV (HeVAL(he));									\
+        (sv) = SvRV (HeVAL(he));								\
       }												\
                                                                                                 \
     /* must also be changed inside Coro::Cont::yield */						\
-    if (!SvOBJECT(sv) || SvSTASH(sv) != coro_state_stash)						\
+    if (!SvOBJECT (sv) || SvSTASH (sv) != coro_state_stash)					\
       croak ("%s() -- %s is not (and contains not) a Coro::State object", func, # sv);		\
 												\
   } while(0)
@@ -878,13 +890,17 @@ api_ready (SV *coro)
   if (SvROK (coro))
     coro = SvRV (coro);
 
+  LOCK;
   coro_enq (SvREFCNT_inc (coro));
+  UNLOCK;
 }
 
 static void
 api_schedule (void)
 {
   SV *prev, *next;
+
+  LOCK;
 
   prev = SvRV (GvSV (coro_current));
   next = coro_deq (PRIO_MIN);
@@ -900,6 +916,8 @@ api_schedule (void)
 
   SV_CORO (next, "Coro::schedule");
 
+  UNLOCK;
+
   transfer (aTHX_ SvSTATE (prev), SvSTATE (next),
             TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
 }
@@ -907,7 +925,9 @@ api_schedule (void)
 static void
 api_cede (void)
 {
+  LOCK;
   coro_enq (SvREFCNT_inc (SvRV (GvSV (coro_current))));
+  UNLOCK;
 
   api_schedule ();
 }
@@ -918,6 +938,10 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {       /* {} necessary for stoopid perl-5.6.x */
+#ifdef USE_ITHREADS
+        MUTEX_INIT (&coro_mutex);
+#endif
+
         ucoro_state_sv = newSVpv (UCORO_STATE, sizeof(UCORO_STATE) - 1);
         PERL_HASH(ucoro_state_hash, UCORO_STATE, sizeof(UCORO_STATE) - 1);
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
@@ -926,9 +950,6 @@ BOOT:
         newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
         newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
         newCONSTSUB (coro_state_stash, "SAVE_CCTXT", newSViv (TRANSFER_SAVE_CCTXT));
-
-	if (!padlist_cache)
-	  padlist_cache = newHV ();
 
         main_mainstack = PL_mainstack;
 
