@@ -185,7 +185,9 @@ sub response {
    my ($self, $code, $msg, $hdr, $content) = @_;
    my $res = "HTTP/1.1 $code $msg\015\012";
 
-   $self->{h}{connection} = "close" if $hdr->{Connection} =~ /close/;
+   $self->{h}{connection} = "close"
+      if exists $hdr->{Connection} # to avoid "empty" header lines due to vivification
+         and $hdr->{Connection} =~ /close/;
 
    $res .= "Date: $HTTP_NOW\015\012";
 
@@ -422,7 +424,8 @@ sub respond {
             or $self->err(304, "not modified");
 
          if (-r "$path/index.html") {
-            $self->{path} .= "/index.html";
+            # replace directory "size" by index.html filesize
+            $self->{stat}[7] = (stat ($self->{path} .= "/index.html"))[7];
             $self->handle_file;
          } else {
             $self->handle_dir;
