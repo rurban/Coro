@@ -3,55 +3,64 @@ GROUP far JP CN TW HK KR
 GROUP eur DE AT FR GB IT ES CH
 GROUP de DE AT CH
 
-!.				far
-!/creamy mami			eur usa
-!/pokemon			eur usa
-!/urotsukidoji			eur usa
-!/cool devices			eur usa
-!/dilbert			usa
-!/slayers			usa de
-!/serial experiment		usa IT FR
-!/robotech			usa
-!/bubblegum crisis		usa
-!/inu yasha			usa
-!/akira				eur usa
-!/princess mononoke		eur usa
-!/ghost in the shell		eur usa
-!/neon genesis			usa de IT FR
-!/ranma				usa FR
-!/manga/ranma			usa de IT
-!/rev.*utena			IT
-!/blood the last vamp		usa
-!/i my me			usa
-!/escaflowne			IT
-!/cowboy be			IT
-!/blue submarine		IT
-!/armitage iii			FR
-!/el hazard			FR
-!/perfect blue			FR de
-!/macross			FR
-!/ninja scroll			FR AU usa
-!/pokemon			FR de
-!/digimon			FR de
-!/card captor sakura		FR usa de
-!/hand maid may			usa
-!/mahou senshi riui		usa
-!/saiyuki			usa
-!/mini goddess			usa
-!/final fantasy			usa eur
-!/maison ikkoku			usa
-!/berserk			usa
-!/gatekeepers			usa
-!/manga/angelic layer		de
-!/manga/plastic little		de
-!/manga/battle angel		de
-!/manga/one piece		de
-!/manga/vampire princess miyu	de
-!/manga/video girl ai		de
-!/now and then			usa
-!/miyuki-chan in wonderland	AU
-!/la blue girl			AU
-!/kiki's delivery service	usa
+!.					far
+!./neon genesis				usa de IT FR
+!./pokemon				FR eur usa de
+!/eps/berserk				usa
+!/eps/blue submarine			IT
+!/eps/bubblegum crisis			usa
+!/eps/card captor sakura		FR IT usa de
+!/eps/cowboy be				IT
+!/eps/creamy mami			eur usa
+!/eps/digimon				FR de
+!/eps/dilbert				usa de
+!/eps/el hazard				FR IT
+!/eps/escaflowne			IT
+!/eps/excel saga			IT
+!/eps/gatekeepers			usa
+!/eps/golden boy			usa IT
+!/eps/hand maid may			usa IT
+!/eps/i my me				usa
+!/eps/inu yasha				usa
+!/eps/kareshi kanojo no jijou		IT
+!/eps/love hina				IT
+!/eps/macross				FR
+!/eps/magic knight			usa IT
+!/eps/mahou senshi riui			usa
+!/eps/maison ikkoku			usa
+!/eps/mini goddess			usa
+!/eps/miracle girls			IT
+!/eps/miyuki-chan in wonderland		AU
+!/eps/now and then			usa
+!/eps/ranma				usa FR IT
+!/eps/tenchi muyo			usa FR IT
+!/eps/rev.*utena			IT
+!/eps/robotech				usa
+!/eps/saiyuki				usa
+!/eps/serial experiment			usa IT FR
+!/eps/slayers				usa
+!/eps/wedding peach			IT de
+!/manga/angelic layer			de
+!/manga/battle angel			de
+!/manga/one piece			de
+!/manga/plastic little			de
+!/manga/ranma				usa de
+!/manga/ranma				usa de IT
+!/manga/slayers				de
+!/manga/vampire princess miyu		de
+!/manga/video girl ai			de
+!/movies/akira				eur usa
+!/movies/armitage iii			FR
+!/movies/blood the last vamp		usa
+!/movies/final fantasy			usa eur
+!/movies/ghost in the shell		eur usa
+!/movies/kiki's delivery service	usa
+!/movies/ninja scroll			FR AU usa
+!/movies/perfect blue			FR de
+!/movies/princess mononoke		eur usa
+!hentai//urotsukidoji			eur usa
+!hentai/cool devices			eur usa
+!hentai/la blue girl			AU
 
 
 
