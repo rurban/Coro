@@ -1,5 +1,8 @@
 Revision history for Perl extension Coro.
 
+0.98
+	- Event 0.89 fixes the bug again.
+
 0.97 Fri May 14 15:23:32 CEST 2004
 	- remove stupid gcc extension that was an experiment only anyway.
 
