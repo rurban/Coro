@@ -153,7 +153,7 @@ sub handle {
                 \015\012/gx
          or $self->err(403, "method not allowed", { Allow => "GET,HEAD" });
 
-      $2 >= 2
+      $2 < 2
          or $self->err(506, "http protocol version not supported");
 
       $self->{method} = $1;
@@ -166,8 +166,8 @@ sub handle {
          $hdr{lc $1} .= ",$2"
             while $req =~ /\G
                   ([^:\000-\040]+):
-                  [\008\040]*
-                  ((?: [^\015\012]+ | \015\012[\008\040] )*)
+                  [\010\040]*
+                  ((?: [^\015\012]+ | \015\012[\010\040] )*)
                   \015\012
                /gxc;
 
