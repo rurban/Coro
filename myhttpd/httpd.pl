@@ -58,6 +58,28 @@ sub handler {
    }
 }
 
+sub listen_on {
+   my $listen = $_[0];
+
+   push @listen_sockets, $listen;
+
+   # the "main thread"
+   async {
+      slog 1, "accepting connections";
+      while () {
+         $connections->down;
+         push @newcons, [$listen->accept];
+         #slog 3, "accepted @$connections ".scalar(@pool);
+         if (@pool) {
+            (pop @pool)->ready;
+         } else {
+            async \&handler;
+         }
+
+      }
+   };
+}
+
 my $http_port = new Coro::Socket
         LocalAddr => $SERVER_HOST,
         LocalPort => $SERVER_PORT,
@@ -65,7 +87,16 @@ my $http_port = new Coro::Socket
         Listen => 50,
    or die "unable to start server";
 
-push @listen_sockets, $http_port;
+listen_on $http_port;
+
+my $http_port = new Coro::Socket
+        LocalAddr => $SERVER_HOST,
+        LocalPort => $SERVER_PORT2,
+        ReuseAddr => 1,
+        Listen => 50,
+   or die "unable to start server";
+
+listen_on $http_port;
 
 our $NOW;
 our $HTTP_NOW;
@@ -74,22 +105,6 @@ Event->timer(interval => 1, hard => 1, cb => sub {
    $NOW = time;
    $HTTP_NOW = time2str $NOW;
 })->now;
-
-# the "main thread"
-async {
-   slog 1, "accepting connections";
-   while () {
-      $connections->down;
-      push @newcons, [$http_port->accept];
-      #slog 3, "accepted @$connections ".scalar(@pool);
-      if (@pool) {
-         (pop @pool)->ready;
-      } else {
-         async \&handler;
-      }
-
-   }
-};
 
 package conn;
 
