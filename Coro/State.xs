@@ -534,6 +534,8 @@ destroy_stacks(pTHX)
 
       /* sure it is, but more important: is it correct?? :/ */
       FREETMPS;
+
+      /*POPSTACK_TO (PL_mainstack);*//*D*//*use*/
     }
 
   while (PL_curstackinfo->si_next)
@@ -543,7 +545,7 @@ destroy_stacks(pTHX)
     {
       PERL_SI *p = PL_curstackinfo->si_prev;
 
-      {
+      { /*D*//*remove*/
         dSP;
         SWITCHSTACK (PL_curstack, PL_curstackinfo->si_stack);
         PUTBACK; /* possibly superfluous */
@@ -551,20 +553,20 @@ destroy_stacks(pTHX)
 
       if (!IN_DESTRUCT)
         {
-          dounwind(-1);
-          SvREFCNT_dec(PL_curstackinfo->si_stack);
+          dounwind (-1);/*D*//*remove*/
+          SvREFCNT_dec (PL_curstackinfo->si_stack);
         }
 
-      Safefree(PL_curstackinfo->si_cxstack);
-      Safefree(PL_curstackinfo);
+      Safefree (PL_curstackinfo->si_cxstack);
+      Safefree (PL_curstackinfo);
       PL_curstackinfo = p;
   }
 
-  Safefree(PL_tmps_stack);
-  Safefree(PL_markstack);
-  Safefree(PL_scopestack);
-  Safefree(PL_savestack);
-  Safefree(PL_retstack);
+  Safefree (PL_tmps_stack);
+  Safefree (PL_markstack);
+  Safefree (PL_scopestack);
+  Safefree (PL_savestack);
+  Safefree (PL_retstack);
 }
 
 static void
