@@ -176,7 +176,7 @@ sub writable {
       desc    => "$_[0]->{desc} WW",
       timeout => $_[0]->{timeout},
       poll    => W+E,
-   ))->next->{Coro::Event}[3] & W;
+   ))->next->{Coro::Event}[5] & W;
 }
 
 sub readable {
@@ -185,7 +185,7 @@ sub readable {
       desc    => "$_[0]->{desc} RW",
       timeout => $_[0]->{timeout},
       poll    => R+E,
-   ))->next->{Coro::Event}[3] & R;
+   ))->next->{Coro::Event}[5] & R;
 }
 
 sub WRITE {

@@ -49,7 +49,7 @@ use Event qw(unloop); # we are re-exporting this, cooool!
 
 use base 'Exporter';
 
-@EXPORT = qw(loop unloop sweep);
+@EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
    $VERSION = 0.45;
@@ -121,9 +121,9 @@ sub next($) {
 }
 
 sub Coro::Event::w    { $_[0] }
-sub Coro::Event::got  { $_[0]{Coro::Event}[3] }
-sub Coro::Event::prio { croak "prio not supported yet, please mail to pcg\@goof.com" }
-sub Coro::Event::hits { croak "hits not supported yet, please mail to pcg\@goof.com" }
+sub Coro::Event::prio { $_[0]{Coro::Event}[3] }
+sub Coro::Event::hits { $_[0]{Coro::Event}[4] }
+sub Coro::Event::got  { $_[0]{Coro::Event}[5] }
 
 =item sweep
 
