@@ -190,40 +190,6 @@ sub err {
    die bless {}, err::;
 }
 
-sub err_blocked {
-   my $self = shift;
-   my $ip = $self->{remote_addr};
-   my $time = time2str $blocked{$ip} = $::NOW + $::BLOCKTIME;
-
-   Coro::Event::do_timer(after => 20*rand);
-
-   $self->err(401, "too many connections",
-              {
-                 "Content-Type" => "text/html",
-                 "Retry-After" => $::BLOCKTIME,
-                 "Warning" => "Please do NOT retry, you have been blocked",
-                 "WWW-Authenticate" => "Basic realm=\"Please do NOT retry, you have been blocked\"",
-                 "Connection" => "close",
-              },
-              <<EOF);
-<html>
-<head>
-<title>Too many connections</title>
-</head>
-<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
-
-<p>You have been blocked because you opened too many connections. You
-may retry at</p>
-
-   <p><blockquote>$time.</blockquote></p>
-   
-<p>Until then, each new access will renew the block. You might want to have a
-look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#connectionlimit">FAQ</a>.</p>
-
-</body></html>
-EOF
-}
-
 sub handle {
    my $self = shift;
    my $fh = $self->{fh};
@@ -469,22 +435,10 @@ sub handle_file {
 satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
-         my $delay = 60;
+         my $delay = 180;
          while (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
             if ($delay <= 0) {
-               $self->err(400, "segmented downloads are not allowed",
-                          { "Content-Type" => "text/html", Connection => "close" }, <<EOF);
-<html>
-<head>
-<title>Segmented downloads are not allowed</title>
-</head>
-<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
-
-<p>Segmented downloads are not allowed on this server. Please refer to the
-<a href="http://www.goof.com/pcg/marc/animefaq.html#segmented_downloads">FAQ</a>.</p>
-
-</body></html>
-EOF
+               $self->err_segmented_download;
             } else {
                Coro::Event::do_timer(after => 3); $delay -= 3;
             }

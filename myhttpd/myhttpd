@@ -9,13 +9,14 @@ $starttime = time;
 $PApp::SQL::DBH = PApp::SQL::connect_cached __FILE__, "DBI:mysql:myhttpd"
    or die "unable to connect to database";
 
-$VERSION = 0.011;
+$VERSION = 0.02;
 
 $SIG{CHLD} = 'IGNORE';
 
 require "config.pl";
 require "misc.pl";
 require "netgeo.pl";
+require "err.pl";
 require "access.pl";
 require "diridx.pl";
 require "httpd.pl";

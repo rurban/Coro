@@ -1,43 +1,54 @@
 GROUP usa US CA
 GROUP far JP CN TW HK
 GROUP eur DE AT FR GB IT ES CH
+GROUP de DE AT CH
 
-!.			far
-!/creamy mami		eur usa
-!/pokemon		eur usa
-!/urotsukidoji		eur usa
-!/cool devices		eur usa
-!/dilbert		usa
-!/slayers		usa de
-!/serial experiment	usa IT FR
-!creamy mami		eur usa
-!/robotech		usa
-!/bubblegum crisis	usa
-!/inu yasha		usa
-!/akira			eur usa
-!/princess mononoke	eur usa
-!/ghost in the shell	eur usa
-!/neon genesis		usa DE AT CH IT FR
-!/ranma			usa FR
-!/manga/ranma		usa DE AT CH IT
-!/rev.*utena		IT
-!/blood the last vamp	usa
-!/i my me		usa
-!/escaflowne		IT
-!/cowboy be		IT
-!/blue submarine	IT
-!/armitage iii		FR
-!/el hazard		FR
-!/perfect blue		FR
-!/macross		FR
-!/ninja scroll		FR
-!/pokemon		FR
-!/digimon		FR
-!/card captor sakura	FR usa
-!/hand maid may		usa
-!/mahou senshi riui	usa
-!/saiyuki		usa
-!/mini goddess		usa
-!/final fantasy		usa eur
-!/maison ikkoku		usa
+!.				far
+!/creamy mami			eur usa
+!/pokemon			eur usa
+!/urotsukidoji			eur usa
+!/cool devices			eur usa
+!/dilbert			usa
+!/slayers			usa de
+!/serial experiment		usa IT FR
+!/robotech			usa
+!/bubblegum crisis		usa
+!/inu yasha			usa
+!/akira				eur usa
+!/princess mononoke		eur usa
+!/ghost in the shell		eur usa
+!/neon genesis			usa de IT FR
+!/ranma				usa FR
+!/manga/ranma			usa de IT
+!/rev.*utena			IT
+!/blood the last vamp		usa
+!/i my me			usa
+!/escaflowne			IT
+!/cowboy be			IT
+!/blue submarine		IT
+!/armitage iii			FR
+!/el hazard			FR
+!/perfect blue			FR de
+!/macross			FR
+!/ninja scroll			FR
+!/pokemon			FR de
+!/digimon			FR de
+!/card captor sakura		FR usa de
+!/hand maid may			usa
+!/mahou senshi riui		usa
+!/saiyuki			usa
+!/mini goddess			usa
+!/final fantasy			usa eur
+!/maison ikkoku			usa
+!/berserk			usa
+!/gatekeepers			usa
+!/manga/angelic layer		de
+!/manga/plastic little		de
+!/manga/battle angel		de
+!/manga/one piece		de
+!/manga/vampire princess miyu	de
+!/manga/video girl ai		de
+
+
+
 

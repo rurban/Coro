@@ -1,9 +1,18 @@
-use PApp::SQL;
 use Storable ();
 
 my $SD_VERSION = 1;
 
 my $ignore = qr/ ^(?:robots.txt$|\.) /x;
+
+our %diridx;
+
+if ($::DIRIDX) {
+   require GDBM_File;
+   my $dbm = tie %diridx, GDBM_File, $::DIRIDX,
+                 &GDBM_File::GDBM_WRCREAT, # | &GDBM_File::GDBM_FAST,
+                 0600;
+   $dbm->setopt(&GDBM_File::GDBM_CACHESIZE, (pack "i", 1_000), length (pack "i", 1_000));
+}
 
 sub conn::gen_statdata {
    my $self = shift;
@@ -38,9 +47,6 @@ sub conn::gen_statdata {
 
    local *DIR;
    if (opendir DIR, $self->{path}) {
-      my $stat;
-
-      my (@files, @dirs);
       my $dlen = 0;
       my $flen = 0;
       my $slen = 0;
@@ -50,81 +56,43 @@ sub conn::gen_statdata {
          next unless -r _;
          if (-d _) {
             $dlen = length $_ if length $_ > $dlen;
-            push @dirs, "$_/";
+            push @{$data->{d}}, $_;
          } else {
             my $s = -s _;
             $flen = length $_ if length $_ > $dlen;
             $slen = length $s if length $s > $dlen;
-            push @files, [$_, $s];
+            push @{$data->{f}}, [$_, $s];
          }
       }
-      if (@dirs) {
-         $stat .= "<table><tr><th>Directories</th></tr>";
-         $dlen += 1;
-         my $cols = int ((79 + $dlen) / $dlen);
-         my $col = $cols;
-         $cols = @dirs if @dirs < $cols;
-         for (@dirs) {
-            if (++$col >= $cols) {
-               $stat .= "<tr>";
-               $col = 0;
-            }
-            $stat .= "<td><a href='".escape_uri($_)."'>$_</a> ";
-         }
-         $stat .= "</table>";
-      }
-      if (@files) {
-         $flen = $flen + 1 + $slen + 1 + 3;
-         my $cols = int ((79 + $flen) / $flen);
-         my $col = $cols;
-         $cols = @files if @files < $cols;
-         $stat .= "<table><tr>". ("<th align='left'>File<th>Size<th>&nbsp;" x $cols);
-         for (@files) {
-            if (++$col >= $cols) {
-               $stat .= "<tr>";
-               $col = 0;
-            }
-            $stat .= "<td><a href='".escape_uri($_->[0])."'>$_->[0]</a><td align='right'>$_->[1]<td>&nbsp;";
-         }
-         $stat .= "</table>";
-      }
-      $data->{stat} = $stat;
-   } else {
-      $data->{stat} = "Unable to index $uri: $!<br>";
+      $data->{dlen} = $dlen;
+      $data->{flen} = $flen;
+      $data->{slen} = $slen;
    }
 
    $data;
 }
-
-use Tie::Cache;
-tie %statdata_cache, Tie::Cache::, 70;
 
 sub conn::get_statdata {
    my $self = shift;
 
    my $mtime = $self->{stat}[9];
 
-   my $statdata = \$statdata_cache{$self->{path}, $mtime};
+   $statdata = $diridx{$self->{path}};
 
-   return $$statdata if $$statdata;
-
-   my $st = sql_exec $statdata,
-                     "select statdata from diridx where mtime = ? and path = ?",
-                     $mtime, $self->{path};
-
-   if ($st->fetch) {
-      $$statdata = Storable::thaw $$statdata;
-      return $$statdata if $$statdata->{version} == $SD_VERSION;
+   if (defined $statdata) {
+      $$statdata = Storable::thaw $statdata;
+      return $$statdata
+         if $$statdata->{version} == $SD_VERSION
+            && $$statdata->{mtime} == $mtime;
    }
 
    $self->slog(8, "creating index cache for $self->{path}");
 
    $$statdata = $self->gen_statdata;
    $$statdata->{version} = $SD_VERSION;
+   $$statdata->{mtime}   = $mtime;
 
-   sql_exec "delete from diridx where path = ?", $self->{path};
-   sql_exec "insert into diridx (path, mtime, statdata) values (?, ?, ?)",
-            $self->{path}, $mtime, Storable::freeze $$statdata;
+   $diridx{$self->{path}} = Storable::freeze $$statdata;
 
    $$statdata;
 }
@@ -140,6 +108,42 @@ sub conn::diridx {
                      int ($uptime / (60 * 60)) % 24,
                      int ($uptime / 60) % 60;
    
+   my $stat;
+   if ($data->{dlen}) {
+      $stat .= "<table><tr><th>Directories</th></tr>";
+      $data->{dlen} += 1;
+      my $cols = int ((79 + $data->{dlen}) / $data->{dlen});
+      $cols = @{$data->{d}} if @{$data->{d}} < $cols;
+      my $col = $cols;
+      for (@{$data->{d}}) {
+         if (++$col >= $cols) {
+            $stat .= "<tr>";
+            $col = 0;
+         }
+         if ("$self->{path}$_" =~ $conn::blockuri{$self->{country}}) {
+            $stat .= "<td>$_ ";
+         } else {
+            $stat .= "<td><a href='".escape_uri("$_/")."'>$_</a> ";
+         }
+      }
+      $stat .= "</table>";
+   }
+   if ($data->{flen}) {
+      $data->{flen} += 1 + $data->{slen} + 1 + 3;
+      my $cols = int ((79 + $data->{flen}) / $data->{flen});
+      $cols = @{$data->{f}} if @{$data->{f}} < $cols;
+      my $col = $cols;
+      $stat .= "<table><tr>". ("<th align='left'>File<th>Size<th>&nbsp;" x $cols);
+      for (@{$data->{f}}) {
+         if (++$col >= $cols) {
+            $stat .= "<tr>";
+            $col = 0;
+         }
+         $stat .= "<td><a href='".escape_uri($_->[0])."'>$_->[0]</a><td align='right'>$_->[1]<td>&nbsp;";
+      }
+      $stat .= "</table>";
+   }
+
    <<EOF;
 <html>
 <head><title>$self->{uri}</title></head>
@@ -148,7 +152,7 @@ sub conn::diridx {
 $data->{top}
 <small><div align="right"><tt>$self->{remote_id}/$self->{country} - $::conns connection(s) - uptime $uptime - myhttpd/$VERSION</tt></div></small>
 <hr>
-$data->{stat}
+$stat
 $data->{bot}
 </body>
 </html>
