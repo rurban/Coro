@@ -226,7 +226,7 @@ sub new {
 
 =item $process->ready
 
-Put the current process into the ready queue.
+Put the given process into the ready queue.
 
 =cut
 

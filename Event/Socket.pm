@@ -170,9 +170,9 @@ sub send	{ send tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub recv	{ recv tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub sockname	{ getsockname tied(${$_[0]})->[0] }
 sub peername	{ getpeername tied(${$_[0]})->[0] }
-sub shutdown	{ shutdown tied(${$_[0]})->[0] }
+sub shutdown	{ shutdown tied(${$_[0]})->[0], $_[1] }
 
-=item ($peername, $fh) = $listen_fh->accept
+=item ($fh, $peername) = $listen_fh->accept
 
 In scalar context, returns the newly accepted socket (or undef) and in
 list context return the ($fh, $peername) pair (or nothing).

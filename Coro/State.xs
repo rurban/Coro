@@ -545,7 +545,7 @@ allocate_stack (Coro__State ctx, int alloc)
   stack->gencnt = ctx->gencnt = 0;
   if (alloc)
     {
-#ifdef HAVE_MMAP
+#if HAVE_MMAP
       stack->ssize = 128 * 1024 * sizeof (long); /* mmap should do allocate-on-write for us */
       stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
       if (stack->sptr == (void *)-1)
