@@ -8,15 +8,15 @@ Coro::Cont - schmorp's faked continuations
 
  # multiply all hash keys by 2
  my $cont = csub {
-    result $_*2;
-    result $_;
+    yield $_*2;
+    yield $_;
  };
  my %hash2 = map &$csub, &hash1;
 
  # dasselbe in grün (as we germans say)
  sub mul2 : Cont {
-    result $_[0]*2;
-    result $_[0];
+    yield $_[0]*2;
+    yield $_[0];
  }
 
  my %hash2 = map mul2($_), &hash1;
@@ -37,7 +37,7 @@ use Coro::Specific;
 use base 'Exporter';
 
 $VERSION = 0.10;
-@EXPORT = qw(csub result);
+@EXPORT = qw(csub yield);
 
 {
    my @csub;
@@ -96,12 +96,11 @@ sub csub(&) {
    my $code = $_[0];
    my $prev = new Coro::State;
 
-   # the fol
    my $coro = new Coro::State sub {
       # we do this superfluous switch just to
       # avoid the parameter passing problem
       # on the first call
-      &result;
+      &yield;
       &$code while 1;
    };
 
@@ -116,7 +115,7 @@ sub csub(&) {
    };
 }
 
-=item @_ = result [list]
+=item @_ = yield [list]
 
 Return the given list/scalar as result of the continuation. Also returns
 the new arguments given to the subroutine on the next call.
@@ -124,7 +123,7 @@ the new arguments given to the subroutine on the next call.
 =cut
 
 # implemented in Coro/State.xs
-#sub result {
+#sub yield(@) {
 #   &Coro::State::transfer(@{pop @$$return}, 0);
 #   wantarray ? @_ : $_[0];
 #}

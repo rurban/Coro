@@ -2,10 +2,11 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#if 1
-# define CHK(x) (void *)0
-#else
-# define CHK(x) if (!(x)) croak("FATAL, CHK: " #x)
+#include "libcoro/coro.c"
+
+#ifdef HAVE_MMAP
+# include <unistd.h>
+# include <sys/mman.h>
 #endif
 
 #define MAY_FLUSH /* increases codesize */
@@ -15,10 +16,16 @@
 #define TRANSFER_SAVE_DEFAV	0x00000001
 #define TRANSFER_SAVE_DEFSV	0x00000002
 #define TRANSFER_SAVE_ERRSV	0x00000004
+#define TRANSFER_SAVE_CCTXT	0x00000008
 
 #define TRANSFER_SAVE_ALL	-1
 
 struct coro {
+  /* the optional C context */
+  coro_context cctx;
+  void *sptr;
+  long ssize;
+
   /* optionally saved, might be zero */
   AV *defav;
   SV *defsv;
@@ -53,6 +60,8 @@ struct coro {
   I32 retstack_ix;
   I32 retstack_max;
   COP *curcop;
+  JMPENV start_env;
+  JMPENV *top_env;
 
   /* data associated with this coroutine (initial args) */
   AV *args;
@@ -62,7 +71,7 @@ typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
 
 static AV *main_mainstack; /* used to differentiate between $main and others */
-
+static HV *coro_state_stash;
 static HV *padlist_cache;
 
 /* mostly copied from op.c:cv_clone2 */
@@ -235,8 +244,8 @@ flush_padlist_cache ()
 #define SB do {
 #define SE } while (0)
 
-#define LOAD(state)       SB load_state(aTHX_ state); SPAGAIN;       SE
-#define SAVE(state,flags) SB PUTBACK; save_state(aTHX_ state,flags); SE
+#define LOAD(state)       SB load_state(aTHX_ (state)); SPAGAIN;         SE
+#define SAVE(state,flags) SB PUTBACK; save_state(aTHX_ (state),(flags)); SE
 
 #define REPLACE_SV(sv,val) SB SvREFCNT_dec(sv); (sv) = (val); SE
 
@@ -270,6 +279,8 @@ load_state(pTHX_ Coro__State c)
   PL_retstack_ix = c->retstack_ix;
   PL_retstack_max = c->retstack_max;
   PL_curcop = c->curcop;
+  PL_start_env = c->start_env;
+  PL_top_env = c->top_env;
 
   if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
   if (c->defsv) REPLACE_SV (DEFSV          , c->defsv);
@@ -403,6 +414,50 @@ save_state(pTHX_ Coro__State c, int flags)
   c->retstack_ix = PL_retstack_ix;
   c->retstack_max = PL_retstack_max;
   c->curcop = PL_curcop;
+  c->start_env = PL_start_env;
+  c->top_env = PL_top_env;
+}
+
+/*
+ * allocate various perl stacks. This is an exact copy
+ * of perl.c:init_stacks, except that it uses less memory
+ * on the assumption that coroutines do not usually need
+ * a lot of stackspace.
+ */
+STATIC void
+coro_init_stacks (pTHX)
+{
+    PL_curstackinfo = new_stackinfo(96, 1024/sizeof(PERL_CONTEXT) - 1);
+    PL_curstackinfo->si_type = PERLSI_MAIN;
+    PL_curstack = PL_curstackinfo->si_stack;
+    PL_mainstack = PL_curstack;		/* remember in case we switch stacks */
+
+    PL_stack_base = AvARRAY(PL_curstack);
+    PL_stack_sp = PL_stack_base;
+    PL_stack_max = PL_stack_base + AvMAX(PL_curstack);
+
+    New(50,PL_tmps_stack,64,SV*);
+    PL_tmps_floor = -1;
+    PL_tmps_ix = -1;
+    PL_tmps_max = 64;
+
+    New(54,PL_markstack,12,I32);
+    PL_markstack_ptr = PL_markstack;
+    PL_markstack_max = PL_markstack + 12;
+
+    SET_MARK_OFFSET;
+
+    New(54,PL_scopestack,12,I32);
+    PL_scopestack_ix = 0;
+    PL_scopestack_max = 12;
+
+    New(54,PL_savestack,64,ANY);
+    PL_savestack_ix = 0;
+    PL_savestack_max = 64;
+
+    New(54,PL_retstack,8,OP*);
+    PL_retstack_ix = 0;
+    PL_retstack_max = 8;
 }
 
 /*
@@ -448,6 +503,84 @@ destroy_stacks(pTHX)
   Safefree(PL_retstack);
 }
 
+static void
+allocate_stack (Coro__State ctx)
+{
+#ifdef HAVE_MMAP 
+  ctx->ssize = 128 * 1024 * sizeof (long); /* mmap should do allocate-on-use */
+  ctx->sptr = mmap (0, ctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, 0, 0);
+  if (ctx->sptr == (void *)-1)
+#endif
+    {
+      /*FIXME*//*D*//* reasonable stack size! */
+      ctx->ssize = 4096 * sizeof (long);
+      New (0, ctx->sptr, 4096, long);
+    }
+}
+
+static void
+deallocate_stack (Coro__State ctx)
+{
+#ifdef HAVE_MMAP
+  munmap (ctx->sptr, ctx->ssize);
+#else
+  Safefree (ctx->sptr);
+#endif
+}
+
+/* might go away together with optional SAVE_CCTXT */
+static void
+setup_coro (void *arg)
+{
+  /*
+   * emulate part of the perl startup here.
+   */
+  dSP;
+  Coro__State ctx = (Coro__State)arg;
+  SV *sub_init = (SV*)get_cv(SUB_INIT, FALSE);
+
+  coro_init_stacks (aTHX);
+  JMPENV_BOOTSTRAP;
+  SPAGAIN;
+
+  /*PL_curcop = 0;*/
+  SvREFCNT_dec (GvAV (PL_defgv));
+  GvAV (PL_defgv) = ctx->args;
+
+  if (ctx->sptr)
+    {
+      PUSHMARK(SP);
+      PUTBACK;
+      (void) call_sv (sub_init, G_VOID|G_NOARGS);
+      croak ("FATAL: CCTXT coroutine returned!");
+    }
+  else
+    {
+      UNOP myop;
+
+      PL_op = (OP *)&myop;
+
+      Zero(&myop, 1, UNOP);
+      myop.op_next = Nullop;
+      myop.op_flags = OPf_WANT_VOID;
+
+      PUSHMARK(SP);
+      XPUSHs (sub_init);
+      /*
+       * the next line is slightly wrong, as PL_op->op_next
+       * is actually being executed so we skip the first op.
+       * that doesn't matter, though, since it is only
+       * pp_nextstate and we never return...
+       * ah yes, and I don't care anyways ;)
+       */
+      PUTBACK;
+      PL_op = pp_entersub();
+      SPAGAIN;
+
+      ENTER; /* necessary e.g. for dounwind */
+    }
+}
+
 STATIC void
 transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
 {
@@ -457,7 +590,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
     {
       /*
        * this could be done in newprocess which would lead to
-       * extremely elegant and fast (just SAVE/LOAD)
+       * extremely elegant and fast (basically just SAVE/LOAD)
        * code here, but lazy allocation of stacks has also
        * some virtues and the overhead of the if() is nil.
        */
@@ -465,49 +598,46 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
         {
           SAVE (prev, flags);
           LOAD (next);
+
           /* mark this state as in-use */
           next->mainstack = 0;
           next->tmps_ix = -2;
+
+          if (flags & TRANSFER_SAVE_CCTXT)
+            {
+              if (!next->ssize)
+                croak ("destination coroutine has no CCTXT (%p, %d)", next->sptr, next->ssize);
+
+              if (!prev->ssize)
+                prev->ssize = 1; /* mark cctx as valid ;) */
+
+              coro_transfer (&(prev->cctx), &(next->cctx));
+            }
+
         }
       else if (next->tmps_ix == -2)
-        {
-          croak ("tried to transfer to running coroutine");
-        }
+        croak ("tried to transfer to running coroutine");
       else
         {
-          /*
-           * emulate part of the perl startup here.
-           */
-          UNOP myop;
-
           SAVE (prev, -1); /* first get rid of the old state */
 
-          init_stacks (); /* from perl.c */
-          SPAGAIN;
+          if (flags & TRANSFER_SAVE_CCTXT)
+            {
+              if (!next->ssize)
+                {
+                  allocate_stack (next);
+                  coro_create (&(next->cctx),
+                               setup_coro, (void *)next,
+                               next->sptr, next->ssize);
+                }
 
-          PL_op = (OP *)&myop;
-          /*PL_curcop = 0;*/
-          SvREFCNT_dec (GvAV (PL_defgv));
-          GvAV (PL_defgv) = next->args;
+              if (!prev->ssize)
+                prev->ssize = 1; /* mark cctx as valid ;) */
 
-          Zero(&myop, 1, UNOP);
-          myop.op_next = Nullop;
-          myop.op_flags = OPf_WANT_VOID;
-
-          PUSHMARK(SP);
-          XPUSHs ((SV*)get_cv(SUB_INIT, TRUE));
-          /*
-           * the next line is slightly wrong, as PL_op->op_next
-           * is actually being executed so we skip the first op.
-           * that doesn't matter, though, since it is only
-           * pp_nextstate and we never return...
-           * ah yes, and I don't care anyways ;)
-           */
-          PUTBACK;
-          PL_op = pp_entersub(aTHX);
-          SPAGAIN;
-
-          ENTER; /* necessary e.g. for dounwind */
+              coro_transfer (&(prev->cctx), &(next->cctx));
+            }
+          else
+            setup_coro (next);
         }
     }
 }
@@ -518,11 +648,12 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {       /* {} necessary for stoopid perl-5.6.x */
-	HV * stash = gv_stashpvn("Coro::State", 10, TRUE);
+	coro_state_stash = gv_stashpvn ("Coro::State", 10, TRUE);
 
-        newCONSTSUB (stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
-        newCONSTSUB (stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
-        newCONSTSUB (stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
+        newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
+        newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
+        newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
+        newCONSTSUB (coro_state_stash, "SAVE_CCTXT", newSViv (TRANSFER_SAVE_CCTXT));
 
 	if (!padlist_cache)
 	  padlist_cache = newHV ();
@@ -542,8 +673,10 @@ _newprocess(args)
         
         New (0, coro, 1, struct coro);
 
-        coro->mainstack = 0; /* actual work is done inside transfer */
         coro->args = (AV *)SvREFCNT_inc (SvRV (args));
+        coro->mainstack = 0; /* actual work is done inside transfer */
+        coro->sptr = 0;
+        coro->ssize = 0;
 
         RETVAL = coro;
         OUTPUT:
@@ -556,7 +689,6 @@ transfer(prev, next, flags = TRANSFER_SAVE_ALL)
         int			flags
         PROTOTYPE: @
         CODE:
-
         transfer (aTHX_ prev, next, flags);
 
 void
@@ -571,40 +703,20 @@ DESTROY(coro)
             SAVE(aTHX_ (&temp), TRANSFER_SAVE_ALL);
             LOAD(aTHX_ coro);
 
-            destroy_stacks ();
+            destroy_stacks (aTHX);
 
             LOAD((&temp)); /* this will get rid of defsv etc.. */
+
+            coro->mainstack = 0;
+          }
+
+        if (coro->sptr)
+          {
+            deallocate_stack (coro);
+            coro->sptr = 0;
           }
 
         Safefree (coro);
-
-        /*
-         * there is one problematic case left (remember _recurse?)
-         * consider the case when we
-         *
-         * 1. start a coroutine
-         * 2. inside it descend into some xs functions
-         * 3. xs function calls a callback
-         * 4. callback switches to $main
-         * 5. $main ends - we will end inside the xs function
-         * 6. xs function returns and perl executes - what?
-         *
-         * to avoid this case we recurse in this function
-         * and simply call my_exit(0), skipping other xs functions
-         */
-
-#if 0
-void
-_recurse()
-	CODE:
-        LEAVE;
-        PL_stack_sp = PL_stack_base + ax - 1;
-        PL_op = PL_op->op_next;
-        CALLRUNOPS(aTHX);
-        printf ("my_exit\n");
-        my_exit (0);
-
-#endif
 
 void
 flush()
@@ -615,10 +727,10 @@ flush()
 
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
-# this is dirty (do you hear me?) and should be in it's own .xs
+# this is slightly dirty
 
 void
-result(...)
+yield(...)
 	PROTOTYPE: @
         CODE:
         static SV *returnstk;
@@ -640,5 +752,6 @@ result(...)
         prev = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
         next = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
         SvREFCNT_dec (sv);
-        transfer(prev, next, 0);
+
+        transfer(aTHX_ prev, next, 0);
 

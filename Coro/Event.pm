@@ -47,7 +47,6 @@ use Carp;
 use Coro;
 use Event qw(unloop); # we are re-exporting this, cooool!
 
-use base 'Event';
 use base 'Exporter';
 
 @EXPORT = qw(loop unloop sweep);
@@ -79,11 +78,23 @@ next method often, but it does save typing sometimes.
 
 =cut
 
+sub std_cb {
+   my $w = $_[0]->w;
+   my $q = $w->private;
+   $q->[1] = $_[0];
+   if ($q->[0]) { # somebody waiting?
+      $q->[0]->ready;
+      Coro::schedule;
+   } else {
+      $w->stop;
+   }
+}
+
 for my $flavour (qw(idle var timer io signal)) {
    push @EXPORT, "do_$flavour";
    my $new = \&{"Event::$flavour"};
    my $class = "Coro::Event::$flavour";
-   @{"${class}::ISA"} = ("Coro::Event", "Event::$flavour");
+   @{"${class}::ISA"} = (Coro::Event::, "Event::$flavour");
    my $coronew = sub {
       # how does one do method-call-by-name?
       # my $w = $class->SUPER::$flavour(@_);
@@ -91,17 +102,8 @@ for my $flavour (qw(idle var timer io signal)) {
       $_[0] eq Coro::Event::
          or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
 
-      my $w;
       my $q = []; # [$coro, $event]
-      $w = $new->(@_, cb => sub {
-            $q->[1] = $_[0];
-            if ($q->[0]) { # somebody waiting?
-               $q->[0]->ready;
-               Coro::schedule;
-            } else {
-               $w->stop;
-            }
-      });
+      my $w = $new->(@_, cb => \&std_cb);
       $w->private($q); # using private as attribute is pretty useless...
       bless $w, $class; # reblessing due to broken Event
    };
@@ -113,15 +115,20 @@ for my $flavour (qw(idle var timer io signal)) {
 }
 
 sub next {
-   my $q = $_[0]->private;
-   croak "only one coroutine can wait for an event" if $q->[0];
-   if (!$q->[1]) { # no event waiting?
+   my $w = $_[0];
+   my $q = $w->private;
+   if ($q->[1]) { # event waiting?
+      $w->again unless $w->is_cancelled;
+   } elsif ($q->[0]) {
+      croak "only one coroutine can wait for an event";
+   } else {
       local $q->[0] = $Coro::current;
       Coro::schedule;
-   } else {
-      $_[0]->again unless $_[0]->is_canceled;
    }
-   delete $q->[1];
+   #FIXME why doesn't delete work?
+   my $e = $q->[1];
+   $q->[1] = undef;
+   return $e;
 }
 
 =item sweep
@@ -131,15 +138,16 @@ Similar to Event::one_event and Event::sweep: The idle task is called once
 events).
 
 The reason this function exists is that you sometimes want to serve events
-while doing other work. Calling C<Coro::yield> does not work because
-C<yield> implies that the current coroutine is runnable and does not call
+while doing other work. Calling C<Coro::cede> does not work because
+C<cede> implies that the current coroutine is runnable and does not call
 into the Event dispatcher.
 
 =cut
 
 sub sweep {
+   die "sweep NYI";#d#
    $Coro::idle->ready;
-   Coro::yield;
+   Coro::cede;
 }
 
 =item $result = loop([$timeout])
