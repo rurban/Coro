@@ -272,6 +272,8 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
   /* casting is fun. */
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
     free_padlist (aTHX_ padlist);
+
+  SvREFCNT_dec (av);
 }
 
 #define PERL_MAGIC_coro PERL_MAGIC_ext

@@ -78,6 +78,10 @@ i  IRIX. For some reason, SGI really does not like to follow the unix
    standard (does that surprise you?), so this workaround might be needed
    (it's fast), although s and u should also work now.
 
+For most systems, the default chosen should be OK. If you experience
+problems then you should experiment with this setting and/or turn off
+optimizations (make OPTIMIZE=-O0).
+
 EOF
 
 retry:
