@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-0.45
+0.45  Sun Sep  2 02:54:01 CEST 2001
 	- new method Coro::Handle::timeout.
         - corrected speling of set...name to get...name in Coro::Socket.
         - Coro::Socket::accept now returns a Coro::Socket, not a Coro::Handle.

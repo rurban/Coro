@@ -138,9 +138,6 @@ sub new {
    $self->{remote_addr} = inet_ntoa $iaddr;
    $self->{time} = $::NOW;
 
-   # enter ourselves into various lists
-   weaken ($conn{$self->{remote_addr}}{$self*1} = $self);
-
    $::conns++;
 
    $self;
@@ -152,13 +149,15 @@ sub DESTROY {
    $::conns--;
 
    $self->eoconn;
-   delete $conn{$self->{remote_addr}}{$self*1};
 }
 
 # end of connection
 sub eoconn {
    my $self = shift;
-   delete $uri{$self->{remote_addr}}{$self->{uri}}{$self*1};
+
+   # clean up hints
+   delete $conn{$self->{remote_id}}{$self*1};
+   delete $uri{$self->{remote_id}}{$self->{uri}}{$self*1};
 }
 
 sub slog {
@@ -230,27 +229,6 @@ sub handle {
       $self->{h} = {};
 
       $fh->timeout($::RES_TIMEOUT);
-      my $ip = $self->{remote_addr};
-
-      if ($blocked{$ip}) {
-         $self->err_blocked($blocked{$ip})
-            if $blocked{$ip} > $::NOW;
-
-         delete $blocked{$ip};
-      }
-
-      if (%{$conn{$ip}} > $::MAX_CONN_IP) {
-         my $delay = 120;
-         while (%{$conn{$ip}} > $::MAX_CONN_IP) {
-            if ($delay <= 0) {
-               $self->slog(2, "blocked ip $ip");
-               $self->err_blocked;
-            } else {
-               Coro::Event::do_timer(after => 3);
-               $delay -= 3;
-            }
-         }
-      }
 
       $req =~ /^(?:\015\012)?
                 (GET|HEAD) \040+
@@ -285,6 +263,36 @@ sub handle {
             while ($h, $v) = each %hdr;
       }
 
+      # remote id should be unique per user
+      my $id = $self->{remote_addr};
+
+      if (exists $self->{h}{"client-ip"}) {
+         $id .= "[".$self->{h}{"client-ip"}."]";
+      } elsif (exists $self->{h}{"x-forwarded-for"}) {
+         $id .= "[".$self->{h}{"x-forwarded-for"}."]";
+      }
+
+      $self->{remote_id} = $id;
+
+      if ($blocked{$id}) {
+         $self->err_blocked($blocked{$id})
+            if $blocked{$id} > $::NOW;
+
+         delete $blocked{$id};
+      }
+
+      if (%{$conn{$id}} >= $::MAX_CONN_IP) {
+         my $delay = $::PER_TIMEOUT + 15;
+         while (%{$conn{$id}} >= $::MAX_CONN_IP) {
+            if ($delay <= 0) {
+               $self->slog(2, "blocked ip $id");
+               $self->err_blocked;
+            } else {
+               Coro::Event::do_timer(after => 4); $delay -= 4;
+            }
+         }
+      }
+
       # find out server name and port
       if ($self->{uri} =~ s/^http:\/\/([^\/?#]*)//i) {
          $host = $1;
@@ -303,16 +311,9 @@ sub handle {
 
       $self->{server_name} = $host;
 
-      # remote id should be unique per user
-      $self->{remote_id} = $self->{remote_addr};
-
-      if (exists $self->{h}{"client-ip"}) {
-         $self->{remote_id} .= "[".$self->{h}{"client-ip"}."]";
-      } elsif (exists $self->{h}{"x-forwarded-for"}) {
-         $self->{remote_id} .= "[".$self->{h}{"x-forwarded-for"}."]";
-      }
-
-      weaken ($uri{$self->{remote_addr}}{$self->{uri}}{$self*1} = $self);
+      # enter ourselves into various lists
+      weaken ($conn{$id}{$self*1} = $self);
+      weaken ($uri{$id}{$self->{uri}}{$self*1} = $self);
 
       eval {
          $self->map_uri;
@@ -459,12 +460,12 @@ sub handle_file {
 satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
-         my $delay = 180;
-         while (%{$uri{$self->{remote_addr}}{$self->{uri}}} > 1) {
+         my $delay = $::PER_TIMEOUT + 15;
+         while (%{$uri{$self->{remote_id}}{$self->{uri}}} > 1) {
             if ($delay <= 0) {
                $self->err_segmented_download;
             } else {
-               Coro::Event::do_timer(after => 3); $delay -= 3;
+               Coro::Event::do_timer(after => 4); $delay -= 4;
             }
          }
       }

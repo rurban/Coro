@@ -97,8 +97,8 @@ Work like their function equivalents.
 
 =cut
 
-sub fileno { tied(${+shift})->FILENO }
-sub close  { tied(${+shift})->CLOSE  }
+sub fileno { tied(${$_[0]})->FILENO }
+sub close  { tied(${$_[0]})->CLOSE  }
 
 =item $fh->timeout([...])
 
@@ -110,13 +110,25 @@ C<0> is a valid timeout, use C<undef> to disable the timeout.
 =cut
 
 sub timeout {
-   my $self = tied(${+shift});
+   my $self = tied(${$_[0]});
    if (@_) {
       $self->{timeout} = $_[0];
       $self->{rw}->timeout($_[0]) if $self->{rw};
       $self->{ww}->timeout($_[0]) if $self->{ww};
    }
    $self->{timeout};
+}
+
+=item $fh->fh
+
+Returns the "real" (non-blocking) filehandle. Use this if you want to
+do operations on the file handle you cannot do using the Coro::Handle
+interface.
+
+=cut
+
+sub fh {
+   tied(${$_[0]})->{fh};
 }
 
 package Coro::Handle::FH;
