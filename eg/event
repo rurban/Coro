@@ -3,7 +3,25 @@
 use Coro;
 use Coro::Event;
 
+$Event::DebugLevel = 4;
+
 my $stdin = Coro::Event->io(fd => \*STDIN, poll => 'r');
+
+sub finger {
+   my $host = shift;
+   my $user = shift;
+   use IO::Socket::INET;
+   # is there ANY way to do non-blocking connects with IO::Socket::INET?
+   # I don't see how...
+   my $io = new IO::Socket::INET PeerAddr => "$host:finger";
+   syswrite $io, "$user\n";
+   #do_timer(after => 5);
+   my $r = Coro::Event->io(fd => $io, poll => 'r');
+   my $buf;
+   $r->next while 0 != sysread $io, $buf, 8192, length $buf;
+   #do_timer(after => 5);
+   print $buf;
+}
 
 sub kbdline {
    $stdin->next;
@@ -14,35 +32,27 @@ sub keyboard : Coro {
    $|=1;
    while() {
       print "cmd> ";  my $cmd  = kbdline;
-      print "data> "; my $data = kbdline;
-      print "cmd<$cmd> data<$data>\n";
-      print "working...";
-      do_timer(after => 1);
-      print "done\n";
+      if ($cmd eq "finger") {
+         print "user> "; my $user = kbdline;
+         print "host> "; my $host = kbdline;
+         async sub { finger($host, $user) };
+      } elsif ($cmd eq "quit") {
+         unloop(777);
+         terminate;
+      } else {
+         print "enter command, either 'finger' or 'quit'\n";
+      }
    }
 }
 
-sub idle : Coro {
-   my $w = Coro::Event->idle(min => 1, max => 2);
+sub timer : Coro {
+   my $w = Coro::Event->timer(interval => 0.1, hard => 1);
+   use Time::HiRes qw(time);
    while () {
       $w->next;
-      print ".";
+      print "\e7\e[A\10\10\10    <time ",time,">   \e8";
    };
 }
 
-sub finger : Coro {
-   use IO::Socket::INET;
-   # is there ANY way to do non-blocking connects with IO::Socket::INET?
-   # I don't see how...
-   my $io = new IO::Socket::INET PeerAddr => "noc.dfn.de:finger";
-   print "connected, sending\n";
-   syswrite $io, "trouble\n";
-   my $r = Coro::Event->io(fd => $io, poll => 'r');
-   my $buf;
-   $r->next while 0 != sysread $io, $buf, 8192, length $buf;
-   print $buf;
-   do_timer(after => 60);
-}
-
-Coro::Event->main;
+print "unlooped with value: ",loop(),"\n";
 
