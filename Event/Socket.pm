@@ -184,8 +184,8 @@ sub accept {
    while () {
       $peername = accept $fh, tied(${$_[0]})->[0]
          and return wantarray 
-                    ? ((new_from_fh Coro::Socket $fh), $peername)
-                    : (new_from_fh Coro::Socket $fh);
+                    ? ($_[0]->new_from_fh($fh), $peername)
+                    :  $_[0]->new_from_fh($fh);
 
       return unless $!{EAGAIN};
 

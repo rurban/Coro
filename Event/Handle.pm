@@ -45,7 +45,7 @@ sub new_from_fh {
 
    tie $self, Coro::Handle::FH, fh => $fh, desc => "$filename:$line", @_;
 
-   my $_fh = select bless \$self, $class; $| = 1; select $_fh;
+   my $_fh = select bless \$self, ref $class ? ref $class : $class; $| = 1; select $_fh;
 }
 
 =item $fh = unblock $fh
