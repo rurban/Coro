@@ -30,7 +30,7 @@ use base 'Exporter';
    gethostbyname gethostbyaddr
 );
 
-$VERSION = 0.45;
+$VERSION = 0.6;
 
 $MAXPARALLEL = 16; # max. number of parallel jobs
 
@@ -62,12 +62,22 @@ this is being implemented by forking, so it's not exactly low-cost.
 
 =cut
 
+my $netdns = 0 && eval { use Net::DNS 0.24 };
+
 sub gethostbyname($) {
-   _do_asy { gethostbyname $_[0] } @_;
+   if ($netdns) {
+      die;
+   } else {
+      _do_asy { gethostbyname $_[0] } @_;
+   }
 }
 
 sub gethostbyaddr($$) {
-   _do_asy { gethostbyaddr $_[0], $_[1] } @_;
+   if ($netdns) {
+      die;
+   } else {
+      _do_asy { gethostbyaddr $_[0], $_[1] } @_;
+   }
 }
 
 1;

@@ -35,7 +35,7 @@ BEGIN {
    eval "use Time::HiRes 'time'";
 }
 
-$VERSION = 0.534;
+$VERSION = 0.6;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
@@ -70,8 +70,14 @@ sub timeout($) {
 
 package Coro::timeout;
 
-sub bool    { !${${$_[0]}} }
-sub DESTROY { ${${$_[0]}}->cancel }
+sub bool    {
+   !${${$_[0]}}
+}
+
+sub DESTROY { 
+   ${${$_[0]}}->cancel;
+   undef ${${$_[0]}}; # without this it leaks like hell. breaks the circular reference inside the closure
+}
 
 use overload 'bool' => \&bool, '0+' => \&bool;
 
@@ -86,8 +92,9 @@ and, most important, without blocking other coroutines.
 
 sub sleep {
    my $current = $Coro::current;
-   _new_timer(time + $_[0], sub { $current->ready });
+   my $timer = _new_timer(time + $_[0], sub { $current->ready });
    Coro::schedule;
+   $timer->cancel;
 }
 
 =item $timer = new Coro::Timer at/after => xxx, cb => \&yyy;
@@ -145,7 +152,9 @@ unless ($override) {
 
 =item $timer->cancel
 
-Cancel the timer (the callback will no longer be called).
+Cancel the timer (the callback will no longer be called). This method MUST
+be called to remove the timer from memory, otherwise it will never be
+freed!
 
 =cut
 

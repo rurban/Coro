@@ -34,7 +34,7 @@ no warnings qw(uninitialized);
 
 use Coro ();
 
-$VERSION = 0.534;
+$VERSION = 0.6;
 
 =item new [inital count]
 
@@ -150,7 +150,7 @@ sub guard {
    bless [@_], Coro::SemaphoreSet::guard::;
 }
 
-sub guard {
+sub timed_guard {
    &timed_down
       ? bless [$_[0], $_[1]], Coro::SemaphoreSet::guard::
       : ();

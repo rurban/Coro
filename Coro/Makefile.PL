@@ -26,23 +26,24 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/) {
 
 print <<EOF;
 
-Version 0.12 introduced experimental C context sharing. This makes it
-possible to share the C stack and context between many coroutines,
-resulting in memory savings and slight speed gains, at the cost of
-potential segfaults (especially with exception handling). On my Linux/x86
-machine this decreased the size of a new coroutine from 9k to 5k, the
-savings are much more apparent on machines without mmap or good memory
-management. This algorithm relies on the non-fact that the same machine
-stack pointer indicates the same function call nesting level, which
-usually works good enough but might fail...
+Version 0.12 introduced C context sharing. This makes it possible to share
+the C stack and context between many coroutines, resulting in memory
+savings and slight speed gains, at the cost of potential (but mostly
+theoretical) segfaults. On my Linux/x86 machine this decreased the size
+of a new coroutine from 9k to 5k, but the savings are much more apparent
+on machines without mmap or good memory management. This algorithm relies
+on the non-fact that the same machine stack pointer indicates the same
+function call nesting level, which usually works good enough but might
+fail...
 
-The default (disabled) is safe, as it only increases memory consumption.
+The default (enabled) has been in-use on productions servers for some time
+now, without any problem reports so far.
 
 EOF
 
-print "Do you want to enable experimental context sharing (y/n) [n]? ";
+print "Do you want to enable C context sharing (y/n) [y]? ";
 
-if (<> =~ /^\s*y/i) {
+if (<> !~ /^\s*n/i) {
    print "\nExperimental context sharing enabled.\n\n";
    $DEFINE .= " -DCORO_LAZY_STACK";
 }

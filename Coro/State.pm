@@ -50,7 +50,7 @@ package Coro::State;
 no warnings qw(uninitialized);
 
 BEGIN {
-   $VERSION = 0.534;
+   $VERSION = 0.6;
 
    require XSLoader;
    XSLoader::load Coro::State, $VERSION;

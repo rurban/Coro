@@ -26,7 +26,7 @@ package Coro::Specific;
 
 no warnings qw(uninitialized);
 
-$VERSION = 0.534;
+$VERSION = 0.6;
 
 =item new
 
