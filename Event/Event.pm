@@ -40,7 +40,7 @@ Coro::Event->main.
 
 package Coro::Event;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Carp;
 
@@ -54,6 +54,7 @@ use base 'Exporter';
 BEGIN {
    $VERSION = 0.45;
 
+   local $^W = 0; # avoid redefine warning for Coro::ready
    require XSLoader;
    XSLoader::load Coro::Event, $VERSION;
 }

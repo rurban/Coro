@@ -147,6 +147,7 @@ MODULE = Coro::Event                PACKAGE = Coro
 void
 ready(self)
 	SV *	self
+        PROTOTYPE: $
 	CODE:
         NEED_SCHEDULE;
         CORO_READY (self);

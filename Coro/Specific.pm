@@ -24,7 +24,7 @@ when no coroutines are used).
 
 package Coro::Specific;
 
-no warnings;
+no warnings qw(uninitialized);
 
 $VERSION = 0.5;
 

@@ -18,7 +18,7 @@ handle. L<Coro::Handle>.
 
 package Coro::Socket;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Errno ();
 use Carp qw(croak);

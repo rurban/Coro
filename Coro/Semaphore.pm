@@ -33,7 +33,7 @@ and decrement the count when resources are removed.
 
 package Coro::Semaphore;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Coro ();
 

@@ -17,7 +17,7 @@ functions by non-blocking counterparts.
 
 package Coro::Util;
 
-no warnings;
+no warnings qw(uninitialized);
 
 #use Carp qw(croak);
 

@@ -26,7 +26,7 @@ OR a single writer (but no readers).
 
 package Coro::RWLock;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Coro ();
 

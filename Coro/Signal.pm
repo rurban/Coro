@@ -27,7 +27,7 @@ waking up all waiters.
 
 package Coro::Signal;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Coro ();
 

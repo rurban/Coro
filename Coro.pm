@@ -34,6 +34,8 @@ important global variables.
 
 package Coro;
 
+no warnings qw(uninitialized);
+
 use Coro::State;
 
 use base Exporter;

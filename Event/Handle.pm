@@ -18,7 +18,7 @@ does NOT inherit from IO::Handle but uses tied objects.
 
 package Coro::Handle;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Errno ();
 use base 'Exporter';
@@ -132,15 +132,24 @@ Returns the "real" (non-blocking) filehandle. Use this if you want to
 do operations on the file handle you cannot do using the Coro::Handle
 interface.
 
+=item $fh->unsysread($data)
+
+Pushes the given data into the input buffer. The following calls to
+read/sysread will first return this data.
+
 =cut
 
 sub fh {
-   tied(${$_[0]})->{fh};
+   (tied ${$_[0]})->[0];
+}
+
+sub unsysread {
+   substr tied(${$_[0]})->[3], 0, 0, $_[1];
 }
 
 package Coro::Handle::FH;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Fcntl ();
 use Errno ();
@@ -156,7 +165,7 @@ use Event::Watcher qw(R W E);
 # 1 desc
 # 2 timeout
 # 3 rb
-# 4 wb
+# 4 wb # unused
 # 5 rw
 # 6 ww
 

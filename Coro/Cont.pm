@@ -29,7 +29,7 @@ Coro::Cont - schmorp's faked continuations
 
 package Coro::Cont;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Carp qw(croak);
 

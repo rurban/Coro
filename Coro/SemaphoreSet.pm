@@ -30,7 +30,7 @@ identifier.
 
 package Coro::SemaphoreSet;
 
-no warnings;
+no warnings qw(uninitialized);
 
 use Coro ();
 
