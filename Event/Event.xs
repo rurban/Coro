@@ -69,6 +69,7 @@ BOOT:
         /* create a fake idle handler (we only ever call now) */
         scheduler = GEventAPI->new_idle (0, 0);
         scheduler->base.callback = scheduler_cb;
+        scheduler->base.prio = 4; /* StarvePrio(?) */
         scheduler->min_interval = newSVnv (0);
         scheduler->max_interval = newSVnv (0);
         GEventAPI->stop ((pe_watcher *)scheduler, 0);

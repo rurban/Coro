@@ -109,7 +109,7 @@ for my $flavour (qw(idle var timer io signal)) {
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
       my $e = (&$coronew)->next;
-      $e->w->cancel;
+      $e->cancel; # $e = $e->w
       $e;
    };
 }
@@ -120,10 +120,10 @@ sub next($) {
    &Coro::schedule if &_next; $_[0];
 }
 
-sub Coro::Event::w    { $_[0]{Coro::Event}[2] }
+sub Coro::Event::w    { $_[0] }
 sub Coro::Event::got  { $_[0]{Coro::Event}[3] }
 sub Coro::Event::prio { croak "prio not supported yet, please mail to pcg\@goof.com" }
-sub Coro::Event::hits { croak "prio not supported yet, please mail to pcg\@goof.com" }
+sub Coro::Event::hits { croak "hits not supported yet, please mail to pcg\@goof.com" }
 
 =item sweep
 

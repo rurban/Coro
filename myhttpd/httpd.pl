@@ -80,7 +80,7 @@ Event->io(fd => Linux::AIO::poll_fileno,
           poll => 'r', async => 1,
           cb => \&Linux::AIO::poll_cb);
 my $scheduler = Event->idle(
-          max => 0, min => 0, prio => 6, parked => 1,
+          max => 0, min => 0, prio => 4, parked => 1,
           cb => \&Coro::schedule);
 
 our %conn; # $conn{ip}{fh} => connobj
