@@ -1,10 +1,10 @@
-$MAX_CONNECTS = 20;			# maximum simult. connects
+$MAX_CONNECTS = 100;			# maximum simult. connects
 $MAX_TRANSFERS_SMALL = 3;		# the maximum number of sim. file transfers
-$MAX_TRANSFERS_LARGE = 3;		# the maximum number of sim. file transfers
+$MAX_TRANSFERS_LARGE = 5;		# the maximum number of sim. file transfers
 $TRANSFER_SMALL = 1_000_000;		# size of a "small" file
 
-$MAX_CONN_IP  =   4;			# maximum simult. connects per ip
-$BLOCKTIME    = 7200;			# block time
+$MAX_CONN_IP  =   1;			# maximum simult. connects per ip
+$BLOCKTIME    = 86400;			# block time
 
 $NO_SEGMENTED =   1;			# allow segmented downloads?
 

@@ -207,6 +207,7 @@ sub ip_request {
 package netgeo;
 
 use Socket;
+use BerkeleyDB;
 
 sub ip2int($) {
    unpack "N", inet_aton $_[0];
