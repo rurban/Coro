@@ -60,7 +60,7 @@ $c1 = Coro::State::_newprocess [sub {
 transfer($main, $c0, 0);
 transfer($main, $c1, -1);
 
-timethese 100000, {
+timethese 1000000, {
    empty    => '&a; &a',
    method   => '$a->b(5); $a->b(6)',
    cede     => 'cede',

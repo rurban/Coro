@@ -18,12 +18,12 @@
 # endif
 #endif
 
-#define MAY_FLUSH /* increases codesize */
+#define MAY_FLUSH /* increases codesize and is rarely used */
 
 #define SUB_INIT    "Coro::State::initialize"
 #define UCORO_STATE "_coro_state"
 
-/* The next macro should delcare a variable stacklevel that contains and approximation
+/* The next macro should declare a variable stacklevel that contains and approximation
  * to the current C stack pointer. Its property is that it changes with each call
  * and should be unique. */
 #define dSTACKLEVEL void *stacklevel = &stacklevel
@@ -272,8 +272,8 @@ flush_padlist_cache ()
 #define SB do {
 #define SE } while (0)
 
-#define LOAD(state)       SB load_state(aTHX_ (state)); SPAGAIN;         SE
-#define SAVE(state,flags) SB PUTBACK; save_state(aTHX_ (state),(flags)); SE
+#define LOAD(state)       load_state(aTHX_ (state));
+#define SAVE(state,flags) save_state(aTHX_ (state),(flags));
 
 #define REPLACE_SV(sv,val) SB SvREFCNT_dec(sv); (sv) = (val); SE
 
@@ -409,11 +409,6 @@ save_state(pTHX_ Coro__State c, int flags)
   c->defav = flags & TRANSFER_SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
   c->defsv = flags & TRANSFER_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
   c->errsv = flags & TRANSFER_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
-
-  /* I have not the slightest idea of why av_reify is necessary */
-  /* but if it's missing the defav contents magically get replaced sometimes */
-  if (c->defav)
-    av_reify (c->defav);
 
   c->dowarn = PL_dowarn;
   c->in_eval = PL_in_eval;
@@ -570,6 +565,7 @@ deallocate_stack (Coro__State ctx)
 
   if (stack)
     {
+      printf ("deallocating stack %p %d\n", stack, stack->refcnt);/*D*/
       if (!--stack->refcnt)
         {
 #ifdef HAVE_MMAP
@@ -663,11 +659,14 @@ continue_coro (void *arg)
 STATIC void
 transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
 {
-  dSP;
   dSTACKLEVEL;
+  static struct coro *xnext;
 
+  printf ("%p => %p\n", prev, next);/*D*/
   if (prev != next)
     {
+      xnext = next;
+
       if (next->mainstack)
         {
           SAVE (prev, flags);
@@ -700,6 +699,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                 }
 
               coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
+              /* don't add any code here */
             }
 
         }
@@ -730,6 +730,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
                                setup_coro, (void *)next,
                                next->stack->sptr, labs (next->stack->ssize));
                   coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
+                  /* don't add any code here */
                 }
             }
           else
@@ -737,7 +738,7 @@ transfer(pTHX_ struct coro *prev, struct coro *next, int flags)
         }
     }
 
-  next->cursp = stacklevel;
+  xnext->cursp = stacklevel;
 }
 
 static struct coro *
@@ -922,12 +923,15 @@ DESTROY(coro)
           {
             struct coro temp;
 
+            PUTBACK;
             SAVE(aTHX_ (&temp), TRANSFER_SAVE_ALL);
             LOAD(aTHX_ coro);
+            SPAGAIN;
 
             destroy_stacks (aTHX);
 
             LOAD((&temp)); /* this will get rid of defsv etc.. */
+            SPAGAIN;
 
             coro->mainstack = 0;
           }

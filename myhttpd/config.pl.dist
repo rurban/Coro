@@ -1,4 +1,4 @@
-$MAX_CONNECTS = 500;			# maximum simult. connects
+$MAX_CONNECTS = 40;			# maximum simult. connects
 
 $MAX_CONN_IP  =   4000;			# maximum simult. connects per ip
 $BLOCKTIME    = 7200;			# block time
@@ -9,7 +9,7 @@ $REQ_TIMEOUT  =  60;			# request timeout
 $RES_TIMEOUT  = 180;			# response timeout
 $PER_TIMEOUT  = 120;			# persistent connection timeout
 
-$MAX_POOL     =  20;			# max. number of idle workers
+$MAX_POOL     =  3;			# max. number of idle workers
 
 $DOCROOT      = "/usr/www/htdocs";	# document root
 
