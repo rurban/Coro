@@ -18,7 +18,7 @@ sub shell {
          for (values %conn::conn) {
             for (values %$_) {
                next unless $_;
-               push @data, "$_: $_->{remote_addr} $_->{uri}\n";
+               push @data, "$_->{country}/$_->{remote_addr} $_->{method} $_->{uri}\n";
             }
          }
          print $fh sort @data;

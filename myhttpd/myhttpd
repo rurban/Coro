@@ -1,12 +1,17 @@
 #!/usr/bin/perl
 
+use PApp::SQL;
 use Coro::Event;
+
+$PApp::SQL::DBH = PApp::SQL::connect_cached __FILE__, "DBI:mysql:myhttpd"
+   or die "unable to connect to database";
 
 $SIG{CHLD} = 'IGNORE';
 
 require "config.pl";
 require "netgeo.pl";
 require "access.pl";
+require "diridx.pl";
 require "httpd.pl";
 require "shell.pl";
 

@@ -79,16 +79,18 @@ our %mimetype;
 
 sub read_mimetypes {
    local *M;
-   if (open M, "<mimetypes") {
+   if (open M, "<mime_types") {
       while (<M>) {
          if (/^([^#]\S+)\t+(\S+)$/) {
             $mimetype{lc $1} = $2;
          }
       }
    } else {
-      $self->slog(1, "cannot open mimetypes\n");
+      print "cannot open mime_types\n";
    }
 }
+
+read_mimetypes;
 
 sub new {
    my $class = shift;
@@ -127,8 +129,9 @@ sub response {
    while (my ($h, $v) = each %$hdr) {
       $res .= "$h: $v\015\012"
    }
+   $res .= "\015\012";
 
-   $res .= "\015\012$content" if defined $content;
+   $res .= $content if defined $content and $self->{method} eq "GET";
 
    print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";#d#
 
@@ -154,6 +157,9 @@ sub err_blocked {
    my $self = shift;
    my $ip = $self->{remote_addr};
    my $time = time2str $blocked{$ip} = $::NOW + $::BLOCKTIME;
+
+   Coro::Event::do_timer(after => 5);
+   
    $self->err(403, "too many connections",
               {
                  "Content-Type" => "text/html",
@@ -306,7 +312,7 @@ sub _cgi {
          $ENV{HTTP_HOST}       = $self->server_host;
          $ENV{HTTP_PORT}       = $self->{server_host};
          $ENV{SCRIPT_NAME}     = $self->{name};
-         exec $::INDEXPROG;
+         exec $path;
       }
       Coro::State::_exit(0);
    } else {
@@ -320,6 +326,8 @@ sub respond {
    stat $path
       or $self->err(404, "not found");
 
+   $self->{stat} = [stat _];
+
    # idiotic netscape sends idiotic headers AGAIN
    my $ims = $self->{h}{"if-modified-since"} =~ /^([^;]+)/
              ? str2time $1 : 0;
@@ -331,7 +339,7 @@ sub respond {
          my $host = $self->server_hostport;
          $self->err(301, "moved permanently", { Location =>  "http://$host$self->{uri}/" });
       } else {
-         $ims < (stat _)[9]
+         $ims < $self->{stat}[9]
             or $self->err(304, "not modified");
 
          if ($self->{method} eq "GET") {
@@ -353,7 +361,14 @@ sub respond {
 
 sub handle_dir {
    my $self = shift;
-   $self->_cgi($::INDEXPROG);
+   my $idx = $self->diridx;
+
+   $self->response(200, "ok",
+         {
+            "Content-Type"   => "text/html",
+            "Content-Length" => length $idx,
+         },
+         $idx);
 }
 
 sub handle_file {
@@ -383,7 +398,7 @@ sub handle_file {
 
 satisfiable:
       # check for segmented downloads
-      if ($l && $NO_SEGMENTED) {
+      if ($l && $::NO_SEGMENTED) {
          if (%{$uri{$self->{uri}}} > 1) {
             $self->slog("segmented download refused\n");
             $self->err(400, "segmented downloads are not allowed");

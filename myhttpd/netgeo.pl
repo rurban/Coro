@@ -17,8 +17,6 @@ $Event::DIED = sub {
    #Event::unloop_all();
 };
 
-$PApp::SQL::DBH = PApp::SQL::connect_cached __FILE__, "DBI:mysql:netgeo" or die;
-
 package Whois;
 
 use PApp::SQL;
@@ -49,8 +47,6 @@ sub whois_request {
                      "select id, whois from whois
                       where nic = ? and query = ?",
                      $self->{name}, $query;
-
-   Coro::cede;
 
    unless ($st->fetch) {
       my $guard = $self->{maxjobs}->guard;
@@ -236,8 +232,6 @@ sub ip_request {
                       limit 1",
                      $_ip, $_ip;
 
-   Coro::cede;
-  
    unless ($st->fetch) {
       my ($arin, $ripe, $apnic);
 

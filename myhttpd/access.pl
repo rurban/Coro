@@ -51,8 +51,13 @@ sub conn::access_check {
       $self->slog(9, "no country($whois)");
    }
 
+   $self->{country} = $country;
+
    if ($disallow{$country}) {
       $self->slog(6, "DISALLOW($uri,$country)");
+
+      Coro::Event::do_timer(after => 5);
+
       $whois =~ s/&/&amp;/g;
       $whois =~ s/</&lt;/g;
       $self->err(403, "forbidden", { "Content-Type" => "text/html" }, <<EOF);
