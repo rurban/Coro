@@ -11,7 +11,16 @@ use bytes;
 # and quite a bit slower than thttpd :(
 
 $SIG{PIPE} = 'IGNORE';
-   
+
+our $accesslog;
+
+if ($ACCESS_LOG) {
+   use IO::Handle;
+   open $accesslog, ">>$ACCESS_LOG"
+     or die "$ACCESS_LOG: $!";
+   $accesslog->autoflush(1);
+}
+
 sub slog {
    my $level = shift;
    my $format = shift;
@@ -153,7 +162,10 @@ sub response {
 
    $res .= $content if defined $content and $self->{method} ne "HEAD";
 
-   print STDERR "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";
+   my $log = "$self->{remote_addr} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}." \"$self->{h}{referer}\"\n";
+
+   print $accesslog $log if $accesslog;
+   print STDERR $log;
 
    $self->{written} +=
       print {$self->{fh}} $res;
@@ -190,15 +202,21 @@ sub err_blocked {
                  "WWW-Authenticate" => "Basic realm=\"Please do NOT retry, you have been blocked\"",
               },
               <<EOF);
-<html><p>
-You have been blocked because you opened too many connections. You
+<html>
+<head>
+<title>Too many connections</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
+
+<p>You have been blocked because you opened too many connections. You
 may retry at</p>
 
    <p><blockquote>$time.</blockquote></p>
    
 <p>Until then, each new access will renew the block. You might want to have a
 look at the <a href="http://www.goof.com/pcg/marc/animefaq.html">FAQ</a>.</p>
-</html>
+
+</body></html>
 EOF
 }
 

@@ -21,3 +21,5 @@ $CMDSHELL_PORT = 7262;			# open a command shell on this port
 $BUFSIZE       = 16*1024;		# buffer size
 
 $AIO_PARALLEL  = 1;			# how many reader threads for i/o?
+
+$ACCESS_LOG    = "logs/accesslog";	# access log

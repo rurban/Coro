@@ -1,12 +1,6 @@
 use PApp::SQL;
 use Storable ();
 
-sub escape_html {
-   local $_ = shift;
-   s/([()<>%&?,; ='"\x00-\x1f\x80-\xff])/sprintf "%%%02X", ord($1)/ge;
-   $_;
-}
-
 my $SD_VERSION = 1;
 
 my $ignore = qr/ ^(?:robots.txt$|\.) /x;
@@ -21,7 +15,7 @@ sub conn::gen_statdata {
 
       for ("http://".$self->server_hostport, split /\//, substr $self->{name}, 1) {
          next if $_ eq ".";
-         $path .= "<a href='".escape_html("$prefix$_")."/'>$_</a> / ";
+         $path .= "<a href='".escape_uri("$prefix$_")."/'>$_</a> / ";
          $prefix .= "$_/";
       }
       $data->{path} = $path;
@@ -75,7 +69,7 @@ sub conn::gen_statdata {
                $stat .= "<tr>";
                $col = 0;
             }
-            $stat .= "<td><a href='".escape_html($_)."'>$_</a> ";
+            $stat .= "<td><a href='".escape_uri($_)."'>$_</a> ";
          }
          $stat .= "</table>";
       }
@@ -90,7 +84,7 @@ sub conn::gen_statdata {
                $stat .= "<tr>";
                $col = 0;
             }
-            $stat .= "<td><a href='".escape_html($_->[0])."'>$_->[0]</a><td align='right'>$_->[1]<td>&nbsp;";
+            $stat .= "<td><a href='".escape_uri($_->[0])."'>$_->[0]</a><td align='right'>$_->[1]<td>&nbsp;";
          }
          $stat .= "</table>";
       }
@@ -181,7 +175,8 @@ Content-Type: text/html
 <large>
 This page has moved to $url.<br />
 <a href="$url">
-The automatic redirection has failed. Please try a <i>slightly</i> newer browser next time, and in the meantime <i>please</i> follow this link ;)
+The automatic redirection has failed. Please try a <i>slightly</i>
+newer browser next time, and in the meantime <i>please</i> follow this link ;)
 </a>
 </large>
 </body>
