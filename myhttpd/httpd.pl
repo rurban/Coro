@@ -273,8 +273,12 @@ sub handle {
 
       weaken ($uri{$self->{remote_addr}}{$self->{uri}}{$self*1} = $self);
 
-      $self->map_uri;
-      $self->respond;
+      eval {
+         $self->map_uri;
+         $self->respond;
+      };
+
+      die if $@ && !ref $@;
 
       $self->eoconn;
 
@@ -431,8 +435,9 @@ sub handle_file {
          goto satisfiable if $l >= 0 && $l < $length && $h >= 0 && $h > $l;
       }
       $hdr->{"Content-Range"} = "bytes */$length";
+      $hdr->{"Content-Length"} = $length;
       $self->slog(9, "not satisfiable($self->{h}{range}|".$self->{h}{"user-agent"}.")");
-      $self->err(416, "not satisfiable", $hdr);
+      $self->err(416, "not satisfiable", $hdr, "");
 
 satisfiable:
       # check for segmented downloads
