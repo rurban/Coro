@@ -17,6 +17,22 @@ use bytes;
 $SIG{PIPE} = 'IGNORE';
 
 our $accesslog;
+our $errorlog;
+
+our $NOW;
+our $HTTP_NOW;
+
+Event->timer(interval => 1, hard => 1, cb => sub {
+   $NOW = time;
+   $HTTP_NOW = time2str $NOW;
+})->now;
+
+if ($ERROR_LOG) {
+   use IO::Handle;
+   open $errorlog, ">>$ERROR_LOG"
+     or die "$ERROR_LOG: $!";
+   $errorlog->autoflush(1);
+}
 
 if ($ACCESS_LOG) {
    use IO::Handle;
@@ -28,17 +44,16 @@ if ($ACCESS_LOG) {
 sub slog {
    my $level = shift;
    my $format = shift;
-   printf "---: $format\n", @_;
+   my $NOW = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $::NOW);
+   printf "$NOW: $format\n", @_;
+   printf $errorlog "$NOW: $format\n", @_ if $errorlog;
 }
 
 our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
 our $httpevent   = new Coro::Signal;
 
-our $wait_factor = 0.95;
-
-our $queue_small = new transferqueue $MAX_TRANSFERS_SMALL;
-our $queue_large = new transferqueue $MAX_TRANSFERS_LARGE;
-our $queue_index = new transferqueue 5;
+our $queue_file  = new transferqueue $MAX_TRANSFERS;
+our $queue_index = new transferqueue 10;
 
 my @newcons;
 my @pool;
@@ -51,6 +66,9 @@ sub handler {
             conn->new(@{pop @newcons})->handle;
          };
          slog 1, "$@" if $@ && !ref $@;
+
+         $httpevent->broadcast; # only for testing, but doesn't matter much
+
          $connections->up;
       } else {
          last if @pool >= $MAX_POOL;
@@ -101,14 +119,6 @@ if ($SERVER_PORT2) {
 
    listen_on $http_port;
 }
-
-our $NOW;
-our $HTTP_NOW;
-
-Event->timer(interval => 1, hard => 1, cb => sub {
-   $NOW = time;
-   $HTTP_NOW = time2str $NOW;
-})->now;
 
 package conn;
 
@@ -164,20 +174,8 @@ sub new {
 }
 
 sub DESTROY {
-   my $self = shift;
+   #my $self = shift;
    $::conns--;
-   $self->eoconn;
-}
-
-# end of connection
-sub eoconn {
-   my $self = shift;
-
-   # clean up hints
-   delete $conn{$self->{remote_id}}{$self*1};
-   delete $uri{$self->{remote_id}}{$self->{uri}}{$self*1};
-
-   $httpevent->broadcast;
 }
 
 sub slog {
@@ -308,23 +306,13 @@ sub handle {
 
       $self->{remote_id} = $id;
 
+      weaken (local $conn{$id}{$self*1} = $self);
+
       if ($blocked{$id}) {
-         $self->err_blocked($blocked{$id})
-            if $blocked{$id} > $::NOW;
+         $self->err_blocked
+            if $blocked{$id}[0] > $::NOW;
 
          delete $blocked{$id};
-      }
-
-      if (%{$conn{$id}} >= $::MAX_CONN_IP) {
-         my $delay = $::PER_TIMEOUT + $::NOW + 15;
-         while (%{$conn{$id}} >= $::MAX_CONN_IP) {
-            if ($delay < $::NOW) {
-               $self->slog(2, "blocked ip $id");
-               $self->err_blocked;
-            } else {
-               $httpevent->wait;
-            }
-         }
       }
 
       # find out server name and port
@@ -345,25 +333,29 @@ sub handle {
 
       $self->{server_name} = $host;
 
-      # enter ourselves into various lists
-      weaken ($conn{$id}{$self*1} = $self);
-      weaken ($uri{$id}{$self->{uri}}{$self*1} = $self);
+      weaken (local $uri{$id}{$self->{uri}}{$self*1} = $self);
 
       eval {
          $self->map_uri;
          $self->respond;
       };
 
-      $self->eoconn;
-
       die if $@ && !ref $@;
 
-      last if $self->{h}{connection} =~ /close/;
+      last if $self->{h}{connection} =~ /close/i;
 
       $httpevent->broadcast;
 
       $fh->timeout($::PER_TIMEOUT);
    }
+}
+
+sub block {
+   my $self = shift;
+
+   $blocked{$self->{remote_id}} = [$::NOW + $_[0], $_[1]];
+   $self->slog(2, "blocked ip $self->{remote_id}");
+   $self->err_blocked;
 }
 
 # uri => path mapping
@@ -457,7 +449,19 @@ sub respond {
          }
       } elsif (-f _ && -r _) {
          -x _ and $self->err(403, "forbidden");
-         $self->handle_file(-s _ >= $::TRANSFER_SMALL ? $queue_large : $queue_small);
+
+         if (%{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
+            my $timeout = $::NOW + 10;
+            while (%{$conn{$self->{remote_id}}} >= $::MAX_TRANSFERS_IP) {
+               if ($timeout < $::NOW) {
+                  $self->block($::BLOCKTIME, "too many connections");
+               } else {
+                  $httpevent->wait;
+               }
+            }
+         }
+
+         $self->handle_file($queue_file);
       } else {
          $self->err(404, "not found");
       }
@@ -506,10 +510,11 @@ sub handle_file {
 satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
-         my $delay = $::NOW + $::PER_TIMEOUT + 15;
+         my $timeout = $::NOW + 15;
          while (%{$uri{$self->{remote_id}}{$self->{uri}}} > 1) {
-            if ($delay <= $::NOW) {
-               $self->err_segmented_download;
+            if ($timeout <= $::NOW) {
+               $self->block($::BLOCKTIME, "segmented downloads are forbidden");
+               #$self->err_segmented_download;
             } else {
                $httpevent->wait;
             }
@@ -549,7 +554,7 @@ ignore:
          }
       }
       
-      my $transfer = $queue->start_transfer;
+      my $transfer = $queue->start_transfer($h);
       my $locked;
       my $bufsize = $::WAIT_BUFSIZE; # initial buffer size
 
@@ -559,6 +564,11 @@ ignore:
                $bufsize = $::BUFSIZE;
                $self->{time} = $::NOW;
             }
+         }
+
+         if ($blocked{$self->{remote_id}}) {
+            $self->{h}{connection} = "close";
+            die bless {}, err:: 
          }
 
          if (0) { # !AIO

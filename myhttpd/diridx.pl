@@ -135,7 +135,7 @@ EOF
 }
 
 sub format_time {
-   sprintf "%02dd %02d:%02d:%02d",
+   sprintf "%02dd&#160;%02d:%02d:%02d",
            int ($_[0] / (60 * 60 * 24)),
            int ($_[0] / (60 * 60)) % 24,
            int ($_[0] / 60) % 60,
@@ -199,8 +199,8 @@ $data->{bot}
 EOF
 }
 
-$::internal{status} = sub {
-   my $self = shift;
+sub statuspage {
+   my ($self, $verbose) = @_;
 
    my $uptime = format_time ($::NOW - $::starttime);
    
@@ -210,43 +210,57 @@ $::internal{status} = sub {
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 <h1>Server Status Page</h1>
 <h2>Myhttpd</h2>
-version <b>$VERSION</b>; current/max connection count: <b>$::conns</b>:<b>$::maxconns</b>; uptime: <b>$uptime</b>;<br />
+version <b>$VERSION</b>; current:max connection count: <b>$::conns</b>:<b>$::maxconns</b>; uptime: <b>$uptime</b>;<br />
 client-id <b>$self->{remote_id}</b>, client country <b>$self->{country}</b>;<br />
 <h2>Queue Statistics</h2>
 <ul>
 EOF
 
    for (
-         ["small files queue", $queue_small],
-         ["large files queue", $queue_large],
-         ["misc files queue" , $queue_index],
+         ["download queue", $queue_file],
+         ["other queue",    $queue_index],
    ) {
       my ($name, $queue) = @$_;
-      if ($queue->waiters) {
-         if (0) {
-            $content .= "<li>$name<table border='1' width='100%'><tr><th>Remote ID</th><th>CN</th><th>Waiting</th><th>URI</th></tr>";
-            for ($queue->waiters) {
-               if (defined $queue) {
-                  my $conn = $queue->{conn};
-                  my $time = format_time ($::NOW - $conn->{time});
-                  $content .= "<tr>".
-                              "<td>$conn->{remote_id}</td>".
-                              "<td>$conn->{country}</td>".
-                              "<td>$time</td>".
-                              "<td>".escape_html($conn->{name})."</td>".
-                              "</tr>";
-               } else {
-                  $content .= "<tr><td colspan='4'>premature ejaculation</td></tr>";
-               }
+      my @waiters = $queue->waiters;
+      if (@waiters) {
+         $content .= "<li>$name<br />".(scalar @waiters)." client(s)";
+         
+         $content .= "<p>Waiting time until download starts, estimated:<ul>";
+         for (
+               ["by most recently started transfer", $queue->{lastspb}],
+               ["by next client in queue", $waiters[0]{spb}],
+         ) {
+            my ($by, $spb) = @$_;
+            $content .= "<li>$by<br />";
+            if ($spb) {
+               $content .= sprintf "100 KB file: <b>%s</b>; 1 MB file: <b>%s</b>; 100MB file: <b>%s</b>;",
+                                   format_time($spb*    100_000),
+                                   format_time($spb*  1_000_000),
+                                   format_time($spb*100_000_000);
+            } else {
+               $content .= "(unavailable)";
+            }
+            $content .= "</li>";
+         }
+         $content .= "</ul></p>";
+
+         if ($verbose) {
+            $content .= "<table border='1' width='100%'><tr><th>Remote ID</th><th>CN</th><th>Size</th><th>Waiting</th><th>SPB</th><th>URI</th></tr>";
+            for (@waiters) {
+               my $conn = $_->{coro}{conn};
+               my $time = format_time ($::NOW - $_->{time});
+               $content .= "<tr>".
+                           "<td>$conn->{remote_id}</td>".
+                           "<td>$conn->{country}</td>".
+                           "<td>$_->{size}</td>".
+                           "<td>$time</td>".
+                           "<td>$_->{spb}</td>".
+                           "<td>".escape_html($conn->{name})."</td>".
+                           "</tr>";
             }
             $content .= "</table></li>";
-         } else {
-            my @waiters = grep defined $_, $queue->waiters;
-            $content .= "<li>$name<br />(".(scalar @waiters).
-                        " client(s), waiting for "
-                        .(format_time $::NOW - ($waiters[0]{conn}{time} || $::NOW)).
-                        ")</li>";
          }
+         $content .= "</li>";
       } else {
          $content .= "<li>$name<br />(empty)</li>";
       }
@@ -265,5 +279,8 @@ EOF
          },
          $content);
 };
+
+$::internal{status} = sub { statuspage($_[0], 0) };
+$::internal{queue}  = sub { statuspage($_[0], 1) };
 
 1;

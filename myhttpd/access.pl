@@ -3,21 +3,26 @@ package transferqueue;
 sub new {
    my $class = shift;
    bless {
-      conns => $_[0],
+      slots   => $_[0],
+      lastspb => 0,
    }, $class;
 }
 
 sub start_transfer {
    my $self = shift;
+   my $size = $_[0];
 
-   my $trans = bless [ $self ], transfer::;
+   my $trans = bless {
+      queue => $self,
+      time  => $::NOW,
+      size  => $size,
+      coro  => $Coro::current,
+   }, transfer::;
 
    push @{$self->{wait}}, $trans;
    Scalar::Util::weaken($self->{wait}[-1]);
 
-   if (--$self->{conns} >= 0) {
-      $self->wake_next;
-   }
+   $self->wake_next;
 
    $trans;
 }
@@ -25,17 +30,29 @@ sub start_transfer {
 sub wake_next {
    my $self = shift;
 
-   while(@{$self->{wait}}) {
+   $self->sort;
+
+   while($self->{slots} && @{$self->{wait}}) {
       my $transfer = shift @{$self->{wait}};
       if ($transfer) {
+         $self->{lastspb} = $transfer->{spb};
          $transfer->wake;
          last;
       }
    }
 }
 
+sub sort {
+   $_[0]{wait} = [
+      sort { $b->{spb} <=> $a->{spb} }
+         grep { $_ && ($_->{spb} = ($::NOW-$_->{time})/($_->{size}||1)), $_ }
+            @{$_[0]{wait}}
+   ];
+}
+
 sub waiters {
-   map $_->[1], @{$_[0]{wait}};
+   $_[0]->sort;
+   @{$_[0]{wait}};
 }
 
 package transfer;
@@ -44,27 +61,32 @@ use Coro::Timer ();
 
 sub wake {
    my $self = shift;
-   $self->[2] = 1;
-   ref $self->[1] and $self->[1]->ready;
+
+   $self->{alloc} = 1;
+   $self->{queue}{slots}--;
+   $self->{wake} and $self->{wake}->ready;
 }
 
 sub try {
    my $self = shift;
 
-   unless ($self->[2]) {
+   $self->{alloc} || do {
       my $timeout = Coro::Timer::timeout $_[0];
-      local $self->[1] = $Coro::current;
+      local $self->{wake} = $self->{coro};
 
       Coro::schedule;
-   }
 
-   return $self->[2];
+      $self->{alloc};
+   }
 }
 
 sub DESTROY {
    my $self = shift;
-   $self->[0]{conns}++;
-   $self->[0]->wake_next if $self->[2];
+
+   if ($self->{alloc}) {
+      $self->{queue}{slots}++;
+      $self->{queue}->wake_next;
+   }
 }
 
 package conn;

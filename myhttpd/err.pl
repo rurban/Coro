@@ -94,37 +94,60 @@ EOF
 sub conn::err_blocked {
    my $self = shift;
    my $id = $self->{remote_id};
+   my $block = $conn::blocked{$id};
+
+   $block->[2]++;
+   
+   if ($block->[0] < $::NOW + $::BLOCKTIME) {
+      $block->[0] = $::NOW + $::BLOCKTIME;
+   }
+
+   my $status = 403;
+   my $hdr = {
+      "Content-Type" => "text/html",
+      "Retry-After" => $block->[0] - $::NOW,
+      "Connection" => "close",
+   };
+
    my $ctime = $HTTP_NOW;
-   my $etime = time2str $conn::blocked{$ip} = $::NOW + $::BLOCKTIME;
+   my $etime = time2str $block->[0];
 
-   Coro::Event::do_timer(after => 20*rand);
+   my $limit = $block->[3];
+   $block->[3] = $::NOW + 10;
 
-   $self->err(401, "too many connections",
-              {
-                 "Content-Type" => "text/html",
-                 "Retry-After" => $::BLOCKTIME,
-                 "Warning" => "Please do NOT retry, you have been blocked. Press Cancel instead.",
-                 "WWW-Authenticate" => "Basic realm=\"Please do NOT retry, you have been blocked. Press Cancel instead.\"",
-                 "Connection" => "close",
-              },
+   if ($limit > $::NOW) {
+      Coro::Event::do_timer(after => $limit - $::NOW);
+
+      if ($block->[2] > 30) {
+         $status = 401;
+         $hdr->{Warning} = "Please do NOT retry, you have been blocked. Press Cancel instead.";
+         $hdr->{"WWW-Authenticate"} = "Basic realm=\"Please do NOT retry, you have been blocked. Press Cancel instead.\"";
+      }
+   }
+
+   $self->err($status, $block->[1], $hdr,
               <<EOF);
 <html>
 <head>
-<title>Too many connections</title>
+<title>$block->[1]</title>
 </head>
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 
-<p>You have been blocked because you didn't behave. You may retry at</p>
+<p>You have been blocked because you didn't behave. The exact reason was:</p>
+
+   <h1><blockquote>"$block->[1]"</blockquote></h1>
+
+<p>You may retry not earlier than:</p>
 
    <p><blockquote>$etime.</blockquote></p>
 
-<p>For your reference, the current time and your identifier is:</p>
-   
-   <p><blockquote>$ctime | $id</blockquote></p>
-   
 <p>Until then, each access will renew the block. This should give
 you ample time to look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#blocked">FAQ</a>.</p>
 
+<p>For your reference, the current time and your connection ID is:</p>
+   
+   <p><blockquote>$ctime | $id</blockquote></p>
+   
 </body></html>
 EOF
 }

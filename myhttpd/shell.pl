@@ -34,7 +34,7 @@ sub shell {
             print $fh "RES = ", (join " : ", @res), "\n";
          } elsif ($cmd eq "block") {
             print "blocked '$_'\n";#d#
-            $conn::blocked{$_} = time + $::BLOCKTIME;
+            $conn::blocked{$_} = [time + $::BLOCKTIME, "blocked by operator"];
          } elsif ($cmd eq "info") {
             $::NOW = time+1e-6;
             my @data;
