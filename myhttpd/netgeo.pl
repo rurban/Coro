@@ -11,6 +11,8 @@ use Coro::Semaphore;
 use Coro::SemaphoreSet;
 use Coro::Socket;
 
+use BerkeleyDB;
+
 $Event::DIED = sub {
    Event::verbose_exception_handler(@_);
    #Event::unloop_all();
@@ -204,7 +206,6 @@ sub ip_request {
 
 package netgeo;
 
-use BerkeleyDB;
 use Socket;
 
 sub ip2int($) {
