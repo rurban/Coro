@@ -16,6 +16,11 @@ Coro::Signal - coroutine signals (binary semaphores)
 
 =head1 DESCRIPTION
 
+This module implements signal/binary semaphores/condition variables
+(basically all the same thing). You can wait for a signal to occur or send
+it, in which case it will wake up one waiter, or it can be broadcast,
+waking up all waiters.
+
 =over 4
 
 =cut
