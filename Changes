@@ -5,6 +5,8 @@ Revision history for Perl extension Coro.
         - added eg/lwp and Coro::Handle::autoflush, to make lwp work.
         - renamed Coro::Socket::new_inet to new.
         - added Coro::Util, some utility functions.
+        - die/eval now works better (still get annoying (but true ;)
+          "Callback called exit" messages).
 
 0.12  Fri Jul 27 04:19:01 CEST 2001
 	- do not use mmap if neither MAP_ANON nor MAP_ANONYMOUS is defined.

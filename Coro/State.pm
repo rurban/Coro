@@ -70,6 +70,9 @@ to save the current coroutine in.
 
 =cut
 
+# this is called (or rather: goto'ed) for each and every
+# new coroutine. IT MUST NEVER RETURN and should not call
+# anything that changes the stacklevel (like eval).
 sub initialize {
    my $proc = shift;
    &$proc while 1;
@@ -123,19 +126,6 @@ contains the real Coro::State object. That is, you can do:
 This exists mainly to ease subclassing (wether through @ISA or not).
 
 =cut
-
-=item $error->($error_coro, $error_msg)
-
-This function will be called on fatal errors. C<$error_msg> and
-C<$error_coro> return the error message and the error-causing coroutine
-(NOT an object) respectively. This API might change.
-
-=cut
-
-$error = sub {
-   print STDERR "FATAL: $_[1]\n";
-   exit 51;
-};
 
 =item Coro::State::flush
 

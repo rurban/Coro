@@ -145,9 +145,7 @@ into the Event dispatcher.
 =cut
 
 sub sweep {
-   die "sweep NYI";#d#
-   $Coro::idle->ready;
-   Coro::cede;
+   one_event(0); # for now
 }
 
 =item $result = loop([$timeout])

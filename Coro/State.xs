@@ -68,6 +68,7 @@ struct coro {
   
   /* saved global state not related to stacks */
   U8 dowarn;
+  I32 in_eval;
 
   /* the stacks and related info (callchain etc..) */
   PERL_SI *curstackinfo;
@@ -95,7 +96,6 @@ struct coro {
   I32 retstack_ix;
   I32 retstack_max;
   COP *curcop;
-  JMPENV start_env;
   JMPENV *top_env;
 
   /* data associated with this coroutine (initial args) */
@@ -290,6 +290,7 @@ static void
 load_state(pTHX_ Coro__State c)
 {
   PL_dowarn = c->dowarn;
+  PL_in_eval = c->in_eval;
 
   PL_curstackinfo = c->curstackinfo;
   PL_curstack = c->curstack;
@@ -316,7 +317,6 @@ load_state(pTHX_ Coro__State c)
   PL_retstack_ix = c->retstack_ix;
   PL_retstack_max = c->retstack_max;
   PL_curcop = c->curcop;
-  PL_start_env = c->start_env;
   PL_top_env = c->top_env;
 
   if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
@@ -425,6 +425,7 @@ save_state(pTHX_ Coro__State c, int flags)
     av_reify (c->defav);
 
   c->dowarn = PL_dowarn;
+  c->in_eval = PL_in_eval;
 
   c->curstackinfo = PL_curstackinfo;
   c->curstack = PL_curstack;
@@ -451,7 +452,6 @@ save_state(pTHX_ Coro__State c, int flags)
   c->retstack_ix = PL_retstack_ix;
   c->retstack_max = PL_retstack_max;
   c->curcop = PL_curcop;
-  c->start_env = PL_start_env;
   c->top_env = PL_top_env;
 }
 
@@ -605,12 +605,12 @@ setup_coro (void *arg)
   SV *sub_init = (SV*)get_cv(SUB_INIT, FALSE);
 
   coro_init_stacks (aTHX);
-  JMPENV_BOOTSTRAP;
-  SPAGAIN;
-
   /*PL_curcop = 0;*/
+  /*PL_in_eval = PL_in_eval;*/ /* inherit */
   SvREFCNT_dec (GvAV (PL_defgv));
   GvAV (PL_defgv) = ctx->args;
+
+  SPAGAIN;
 
   if (ctx->stack)
     {
@@ -618,8 +618,12 @@ setup_coro (void *arg)
 
       PUSHMARK(SP);
       PUTBACK;
-      (void) call_sv (sub_init, G_VOID|G_NOARGS);
-      croak ("FATAL: CCTXT coroutine returned!");
+      (void) call_sv (sub_init, G_VOID|G_NOARGS|G_EVAL);
+
+      if (SvTRUE (ERRSV))
+        croak (NULL);
+      else
+        croak ("FATAL: CCTXT coroutine returned!");
     }
   else
     {
@@ -656,10 +660,11 @@ continue_coro (void *arg)
    */
   Coro__State ctx = (Coro__State)arg;
 
+  /*FIXME*//* must set up top_env here */
   ctx->cursp = 0;
   PL_op = PL_op->op_next;
   CALLRUNOPS(aTHX);
-  /*NORETURN*/
+
   abort ();
 }
 
