@@ -8,37 +8,56 @@ GROUP de DE AT CH
 !./pokemon				FR eur usa de
 !/eps/.*creamy mami			eur usa
 !/eps/amazing nurse nanako		usa
+!/eps/ancient books of ys		usa
 !/eps/angel sanctuary			usa
 !/eps/arc the lad			usa
+!/eps/armitage				usa
 !/eps/bastard				usa
+!/eps/berserk				usa
 !/eps/berserk				usa
 !/eps/biohunter				usa
 !/eps/blue sabmarine			usa
 !/eps/blue seed				usa
 !/eps/blue submarine			IT
+!/eps/boogiepop phantom			usa
 !/eps/bubblegum crisis			usa
 !/eps/bubblegum crisis			usa
+!/eps/burn up				usa
+!/eps/candidate for goddess		usa
 !/eps/card captor sakura		FR IT usa de
 !/eps/cowboy be				IT
 !/eps/digimon				FR de
 !/eps/dilbert				usa de
 !/eps/dual				usa
 !/eps/el hazard				FR IT
+!/eps/ellcia				usa
 !/eps/escaflowne			IT usa
-!/eps/excel saga			IT
+!/eps/excel saga			IT usa
+!/eps/flcl				usa
+!/eps/fushigi yuugi			usa
 !/eps/gasaraki				usa
 !/eps/gatekeepers			usa
+!/eps/gestalt				usa
+!/eps/golden boy			usa
 !/eps/golden boy			usa IT
 !/eps/gundam wing			usa
 !/eps/hand maid may			usa IT
+!/eps/haunted junction			usa
+!/eps/himiko-den			usa
 !/eps/i my me				usa
+!/eps/i my me				usa
+!/eps/i will become an angel		usa
 !/eps/inu yasha				usa
 !/eps/jubei chan			usa
 !/eps/kareshi kanojo no jijou		IT
+!/eps/kareshi kanojo no jijou		usa
+!/eps/kasemakase tsukikage ran		usa
 !/eps/lost universe			usa
 !/eps/love hina				IT
 !/eps/macross				FR
 !/eps/magic knight			usa IT
+!/eps/magic knight rayearth		usa
+!/eps/mahou senshi riui			usa
 !/eps/mahou senshi riui			usa
 !/eps/maison ikkoku			usa
 !/eps/martian successor nadesico	usa
@@ -46,53 +65,82 @@ GROUP de DE AT CH
 !/eps/miracle girls			IT
 !/eps/miyuki-chan in wonderland		AU
 !/eps/nadia				usa
+!/eps/nazca				usa
+!/eps/neo ranga				usa
 !/eps/niea 7				usa
 !/eps/nightwalker			usa
 !/eps/now and then			usa
+!/eps/now and then			usa
+!/eps/orguss 2				usa
 !/eps/orphen				usa
+!/eps/outlaw star			usa
 !/eps/ranma				usa FR IT
 !/eps/rev.*utena			IT
 !/eps/robotech				usa
 !/eps/robotech				usa
 !/eps/rurouni kenshin			usa
+!/eps/saber marionette j to x		usa
+!/eps/saint tail			usa
 !/eps/saiyuki				usa
 !/eps/sakura diaries			usa
-!/eps/serial experiment			usa IT FR
+!/eps/sakura wars			usa
+!/eps/serial experiments		usa IT FR
+!/eps/shin hakkenden			usa
+!/eps/silent moebius			usa
 !/eps/silent service			usa
 !/eps/slayers				usa
 !/eps/sol bianca			usa
 !/eps/sorcerer hunters			usa
+!/eps/starship girl yamamoto yohko	usa
+!/eps/steel angel kurumi		usa
+!/eps/strange dawn			usa
 !/eps/tenchi muyo			usa FR IT
 !/eps/the irresponsible captain tylor	usa
 !/eps/trigun				usa
 !/eps/urusei yatsura			usa
+!/eps/vandread				usa
 !/eps/wedding peach			IT de
 !/eps/yu yu hakusho			usa
 !/manga/angelic layer			de
+!/manga/ayashi no ceres			usa
 !/manga/battle angel			de
+!/manga/card captor sakura		usa de FR IT
+!/manga/ghost in the shell		usa de
+!/manga/love hina			usa
+!/manga/neon genesis evangelion		usa
 !/manga/one piece			de
 !/manga/plastic little			de
-!/manga/ranma				usa de
 !/manga/ranma				usa de IT
+!/manga/record of the lodoss war	usa de
 !/manga/slayers				de
 !/manga/vampire princess miyu		de
-!/manga/video girl ai			de
+!/manga/video girl ai			de usa
+!/movies/adolescence of utena		usa
 !/movies/akira				eur usa
+!/movies/angel's egg			usa
 !/movies/armitage iii			FR
 !/movies/blood				usa
 !/movies/blood the last vamp		usa
+!/movies/card captor sakura		usa
 !/movies/final fantasy			usa eur
 !/movies/ghost in the shell		eur usa
 !/movies/kiki's delivery service	usa
+!/movies/laputa				usa
+!/movies/neon genesis evangelion	usa
 !/movies/ninja scroll			FR AU usa
 !/movies/perfect blue			FR de
 !/movies/princess mononoke		eur usa
+!/movies/tekken				usa
+!/movies/vampire hunter d		usa
+!/movies/whisper of the heart		usa
+!/movies/zone of enders			usa
 !hentai//urotsukidoji			eur usa
 !hentai/Tokyo Private Police		usa
 !hentai/advanturekid			usa
+!hentai/area 88				usa
 !hentai/cool devices			eur usa
 !hentai/la blue girl			AU
-
-
+!movies/nausicaa of the valley		usa
+!series/midnight_panter			usa
 
 
