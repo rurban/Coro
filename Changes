@@ -1,6 +1,8 @@
 Revision history for Perl extension Coro.
 
 0.10
+        - added Coro/libcoro, a portable coroutine implementation for C
+          (not even perl-dependent!!!), which can be used by Coro::State.
 	- renamed SAVE_DEFSV (on xs-level only) to avoid symbol clash in
           perl-5.6.
 	- new function Coro::Event::idle.
@@ -10,8 +12,6 @@ Revision history for Perl extension Coro.
         - canceling events now works in all cases.
         - Coro state now include $_ and $@.
         - yet another bug workaround that I do not really understand :(
-        - added Coro/libcoro, a portable coroutine implementation for c,
-          which can be used by Coro::State.
         - new module Coro::Event::IO (very undocumented) to do
           non-blocking i/o.
 

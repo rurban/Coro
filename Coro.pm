@@ -26,25 +26,9 @@ Threads but don't run in parallel.
 This module is still experimental, see the BUGS section below.
 
 In this module, coroutines are defined as "callchain + lexical variables
-+ @_ + $_ + $@ + $^W), that is, a coroutine has it's own callchain, it's
-own set of lexicals and it's own set of perl's most important global
-variables.
-
-WARNING: When using this module, make sure that, at program end, no
-coroutines are still running OR just call exit before falling off the
-end. The reason for this is that some coroutine of yours might have called
-into a C function, and falling off the end of main:: results in returning
-to that C function instead if to the main C interpreter.
-
-WARNING: Unless you really know what you are doing, do NOT do context
-switches inside callbacks from the XS level. The reason for this is
-similar to the reason above:  A callback calls a perl function, this
-perl function does a context switch, some other callback is called, the
-original function returns from it - to what? To the wrong XS function,
-with totally different return values. Unfortunately, this includes
-callbacks done by perl itself (tie'd variables!).
-
-The only workaround for this is to do coroutines on C level.
++ @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
+callchain, it's own set of lexicals and it's own set of perl's most
+important global variables.
 
 =cut
 
@@ -191,13 +175,21 @@ Future versions of this function will allow result arguments.
 
 =cut
 
+# this coroutine is necessary because a coroutine
+# cannot destroy itself.
+my @destroy;
+my $terminate = new Coro sub {
+   while() {
+      delete ((pop @destroy)->{_coro_state}) while @destroy;
+      &schedule;
+   }
+};
+
 sub terminate {
-   my $self = $current;
-   $self->{_results} = [@_];
-   $current = shift @ready || $idle;
-   Coro::State::transfer(delete $self->{_coro_state}, $current);
-   # cannot return
-   die;
+   push @destroy, $current;
+   $terminate->ready;
+   &schedule;
+   # NORETURN
 }
 
 =back
