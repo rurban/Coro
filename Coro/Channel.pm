@@ -29,7 +29,7 @@ package Coro::Channel;
 use Coro ();
 BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
-$VERSION = 0.97;
+$VERSION = 1.0;
 
 =item $q = new Coro:Channel $maxsize
 

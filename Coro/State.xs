@@ -272,6 +272,8 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
   /* casting is fun. */
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
     free_padlist (aTHX_ padlist);
+
+  SvREFCNT_dec (av);
 }
 
 #define PERL_MAGIC_coro PERL_MAGIC_ext
@@ -981,12 +983,12 @@ _newprocess(args)
         Newz (0, coro, 1, struct coro);
 
         coro->args = (AV *)SvREFCNT_inc (SvRV (args));
-        coro->mainstack = 0; /* actual work is done inside transfer */
-        coro->stack = 0;
+        /*coro->mainstack = 0; *//*actual work is done inside transfer */
+        /*coro->stack = 0;*/
 
         /* same as JMPENV_BOOTSTRAP */
         /* we might be able to recycle start_env, but safe is safe */
-        //Zero(&coro->start_env, 1, JMPENV);
+        /*Zero(&coro->start_env, 1, JMPENV);*/
         coro->start_env.je_ret = -1;
         coro->start_env.je_mustcatch = TRUE;
 

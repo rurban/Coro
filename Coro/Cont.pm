@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Cont - schmorp's faked continuations
+Coro::Cont - continuations in perl
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ use vars qw($return);
 
 use base 'Exporter';
 
-$VERSION = 0.97;
+$VERSION = 1.0;
 @EXPORT = qw(csub yield);
 
 {

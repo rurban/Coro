@@ -130,8 +130,8 @@ BUGS/LIMITATIONS
 
 SEE ALSO
     Coro::Channel, Coro::Cont, Coro::Specific, Coro::Semaphore,
-    Coro::Signal, Coro::State, Coro::Timer, Coro::Event,
-    "Coro::Coro::RWLock, Handle", Coro::Socket.
+    Coro::Signal, Coro::State, Coro::Timer, Coro::Event, Coro::Handle,
+    Coro::RWLock, Coro::Socket.
 
 AUTHOR
      Marc Lehmann <pcg@goof.com>
