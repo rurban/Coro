@@ -324,6 +324,7 @@ sub READ {
       if ($l <= $len) {
          substr($_[1], $ofs) = $_[0][3]; $_[0][3] = "";
          $len -= $l;
+         $ofs += $l;
          $res += $l;
          return $res unless $len;
       } else {
