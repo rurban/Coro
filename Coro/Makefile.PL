@@ -6,6 +6,8 @@ use Config;
 
 $DEFINE = "";
 
+$DEFINE .= " -DCORO_LAZY_STACK"; # experimental
+
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
 if ($^O =~ /windows/) {

@@ -20,7 +20,7 @@ package Coro::Handle;
 
 use Errno ();
 
-$VERSION = 0.10;
+$VERSION = 0.12;
 
 =item $fh = new_from_fh Coro::Handle $fhandle
 

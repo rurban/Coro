@@ -38,7 +38,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.10;
+$VERSION = 0.12;
 
 @EXPORT = qw(async cede schedule terminate current);
 @EXPORT_OK = qw($current);
@@ -105,6 +105,16 @@ our $idle = new Coro sub {
    exit(51);
 };
 
+# this coroutine is necessary because a coroutine
+# cannot destroy itself.
+my @destroy;
+my $manager = new Coro sub {
+   while() {
+      delete ((pop @destroy)->{_coro_state}) while @destroy;
+      &schedule;
+   }
+};
+
 # we really need priorities...
 my @ready; # the ready queue. hehe, rather broken ;)
 
@@ -134,6 +144,7 @@ in an outer scope. This does NOT work. Pass arguments into it instead.
 
 sub async(&@) {
    my $pid = new Coro @_;
+   $manager->ready; # this ensures that the stack is cloned from the manager
    $pid->ready;
    $pid;
 }
@@ -175,19 +186,9 @@ Future versions of this function will allow result arguments.
 
 =cut
 
-# this coroutine is necessary because a coroutine
-# cannot destroy itself.
-my @destroy;
-my $terminate = new Coro sub {
-   while() {
-      delete ((pop @destroy)->{_coro_state}) while @destroy;
-      &schedule;
-   }
-};
-
 sub terminate {
    push @destroy, $current;
-   $terminate->ready;
+   $manager->ready;
    &schedule;
    # NORETURN
 }
