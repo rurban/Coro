@@ -93,7 +93,7 @@ EOF
 
 sub conn::err_blocked {
    my $self = shift;
-   my $ip = $self->{remote_id};
+   my $id = $self->{remote_id};
    my $ctime = $HTTP_NOW;
    my $etime = time2str $conn::blocked{$ip} = $::NOW + $::BLOCKTIME;
 
@@ -114,8 +114,7 @@ sub conn::err_blocked {
 </head>
 <body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#000080" alink="#ff0000">
 
-<p>You have been blocked because you opened too many connections. You
-may retry at</p>
+<p>You have been blocked because you didn't behave. You may retry at</p>
 
    <p><blockquote>$etime.</blockquote></p>
 
@@ -123,8 +122,8 @@ may retry at</p>
    
    <p><blockquote>$ctime | $id</blockquote></p>
    
-<p>Until then, each new access will renew the block. You might want to have a
-look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#blocked">FAQ</a>.</p>
+<p>Until then, each access will renew the block. This should give
+you ample time to look at the <a href="http://www.goof.com/pcg/marc/animefaq.html#blocked">FAQ</a>.</p>
 
 </body></html>
 EOF

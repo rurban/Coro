@@ -449,7 +449,7 @@ sub respond {
 
             if (-r "$path/index.html") {
                # replace directory "size" by index.html filesize
-               $self->{stat}[7] = (stat ($self->{path} .= "/index.html"))[7];
+               $self->{stat} = [stat ($self->{path} .= "/index.html")];
                $self->handle_file($queue_index);
             } else {
                $self->handle_dir;
@@ -472,7 +472,7 @@ sub handle_dir {
          {
             "Content-Type"   => "text/html",
             "Content-Length" => length $idx,
-            "Last-Modified"  => time2str ((stat _)[9]),
+            "Last-Modified"  => time2str ($self->{stat}[9]),
          },
          $idx);
 }
