@@ -256,17 +256,23 @@ EOF
 
          @waiters = grep { $verbose || $_->{coro}{conn}{remote_id} eq $self->{remote_id} } @waiters;
          if (@waiters) {
-            $content .= "<table border='1' width='100%'><tr><th>Remote ID</th><th>CN</th><th>Size</th><th>Waiting</th><th>ETA</th><th>URI</th></tr>";
+            $content .= "<table border='1' width='100%'><tr><th>#</th><th>Remote ID</th>".
+                        "<th>CN</th><th>Size</th><th>Waiting</th><th>ETA</th><th>URI</th></tr>";
+            my $idx = 0;
             for (@waiters) {
                my $conn = $_->{coro}{conn};
                my $time = format_time ($::NOW - $_->{time});
                my $eta  = format_time ($queue->{avgspb} * $_->{size} - ($::NOW - $_->{time}));
+
+               $idx++;
+
                $content .= "<tr>".
+                           "<td align='right'>$idx</td>".
                            "<td>$conn->{remote_id}</td>".
                            "<td>$conn->{country}</td>".
-                           "<td>$_->{size}</td>".
-                           "<td>$time</td>".
-                           "<td>$eta</td>".
+                           "<td align='right'>$_->{size}</td>".
+                           "<td align='right'>$time</td>".
+                           "<td align='right'>$eta</td>".
                            "<td>".escape_html($conn->{name})."</td>".
                            "</tr>";
             }
