@@ -28,9 +28,8 @@ $b->resume; # the first resume is slow because it allocates all the memory
 
 $main = $Coro::main;
 
-sub transfer {
-   Coro::_transfer($_[0], $_[1]);
-}
+#*transfer = \&Coro::_transfer;
+sub transfer { Coro::_transfer($_[0], $_[1]) }
 
 $c = Coro::_newprocess {
    while() {

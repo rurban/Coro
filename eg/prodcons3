@@ -7,31 +7,33 @@
 
 use Coro;
 use Coro::Process;
-use Coro::Semaphore;
+use Coro::Channel;
+use Coro::Signal;
 
-my $produced = new Coro::Semaphore 0;
-my $finished = new Coro::Semaphore 0;
+my $work = new Coro::Channel 3;
+my $finished = new Coro::Signal;
 
 async {
    for my $i (0..9) {
       print "produced $i\n";
-      push @buffer, $i;
-      $produced->up;
-      yield if @buffer > 5; # simulate memory pressure ;)
+      $work->put($i);
    }
    print "work done\n";
-   $finished->up;
+   $finished->send;
 };
 
 async {
    while () {
-      $produced->down;
-      my $i = shift @buffer;
+      my $i = $work->get;
       print "consumed $i\n";
    }
 };
 
-$finished->down;
+$finished->wait;
+
+print "producer finished\n";
+
+yield while $work->size;
 
 print "job finished\n";
 

@@ -37,7 +37,7 @@ more useful process abstraction including scheduling.
 package Coro;
 
 BEGIN {
-   $VERSION = 0.01;
+   $VERSION = 0.03;
 
    require XSLoader;
    XSLoader::load Coro, $VERSION;
@@ -104,6 +104,9 @@ Resume execution at the given coroutine.
 
 my $prev;
 
+# I call the _transfer function from a pelr function
+# because that way perl saves all important things on
+# the stack.
 sub resume {
    $prev = $current; $current = $_[0];
    _transfer($prev, $current);
