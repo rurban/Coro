@@ -47,7 +47,7 @@ sub wait {
    if ($_[0][0]) {
       $_[0][0] = 0;
    } else {
-      push @{$_[0][1]}, $Coro::current;
+      push @{$_[0][1]}, $Coro::Process::current;
       Coro::Process::schedule;
    }
 }

@@ -58,7 +58,7 @@ Return the next element from the queue, waiting if necessary.
 
 sub get {
    while (!@{$_[0][0]}) {
-      push @{$_[0][1]}, $Coro::current;
+      push @{$_[0][1]}, $Coro::Process::current;
       &Coro::Process::schedule;
    }
    shift @{$_[0][0]};

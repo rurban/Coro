@@ -47,7 +47,7 @@ waits until the semaphore is available if the counter is zero.
 sub down {
    my $self = shift;
    while ($self->[0] <= 0) {
-      push @{$self->[1]}, $Coro::current;
+      push @{$self->[1]}, $Coro::Process::current;
       Coro::Process::schedule;
    }
    --$self->[0];

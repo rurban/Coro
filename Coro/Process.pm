@@ -30,6 +30,7 @@ use base Exporter;
 $VERSION = 0.01;
 
 @EXPORT = qw(async yield schedule);
+@EXPORT_OK = qw($current);
 
 {
    use subs 'async';
@@ -58,12 +59,28 @@ $VERSION = 0.01;
    }
 }
 
-my $idle = Coro::_newprocess {
+my $idle = new Coro::Process sub {
    &yield while 1;
 };
 
+=item $main
+
+This coroutine represents the main program.
+
+=cut
+
+$main = new Coro::Process;
+
+=item $current
+
+The current coroutine (the last coroutine switched to). The initial value is C<$main> (of course).
+
+=cut
+
+$current = $main;
+
 # we really need priorities...
-my @ready = ($idle); # the ready queue. hehe, rather broken ;)
+my @ready = (); # the ready queue. hehe, rather broken ;)
 
 # static methods. not really.
 
@@ -93,8 +110,11 @@ never be called again.
 
 =cut
 
+my $prev;
+
 sub schedule {
-   shift(@ready)->resume;
+   ($prev, $current) = ($current, shift @ready);
+   Coro::transfer($prev, $current);
 }
 
 =item yield
@@ -105,7 +125,7 @@ ready queue and calls C<schedule>.
 =cut
 
 sub yield {
-   $Coro::current->ready;
+   $current->ready;
    &schedule;
 }
 
@@ -131,15 +151,16 @@ These are the methods you can call on process objects.
 
 =item new Coro::Process \&sub;
 
-Create a new process and return it. Whent he sub returns the process automatically terminates.
+Create a new process, put it into the ready queue and return it. When the
+sub returns the process automatically terminates.
 
 =cut
 
 sub new {
    my $class = shift;
    my $proc = shift;
-   my $self = $class->SUPER::new(sub { &$proc; &terminate });
-   push @ready, $self;
+   my $self = $class->SUPER::new($proc ? sub { &$proc; &terminate } : $proc);
+   $self->ready;
    $self;
 }
 
@@ -149,12 +170,13 @@ Put the current process into the ready queue.
 
 =cut
 
-# supplement the base class, this really is a bug!
-sub Coro::ready {
+sub ready {
    push @ready, $_[0];
 }
 
 =back
+
+=cut
 
 1;
 

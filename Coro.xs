@@ -132,17 +132,17 @@ _newprocess(proc)
         RETVAL
 
 void
-_transfer(old,new)
-	Coro	old
-	Coro	new
+_transfer(prev,next)
+	Coro	prev
+	Coro	next
         CODE:
 
         PUTBACK;
-        SAVE (old);
+        SAVE (prev);
 
-        if (new->mainstack) /* this is, in theory, unnecessary overhead */
+        if (next->mainstack) /* this is, in theory, unnecessary overhead */
           {
-            LOAD (new);
+            LOAD (next);
             SPAGAIN;
           }
         else
@@ -155,14 +155,14 @@ _transfer(old,new)
             SPAGAIN;
             PUSHMARK(SP);
             PUTBACK;
-            call_sv (new->proc, G_VOID | G_DISCARD | G_EVAL);
+            call_sv (next->proc, G_VOID | G_DISCARD | G_EVAL);
 
             exit (0);
 
             /*SPAGAIN;
-            SAVE (new);
+            SAVE (next);
 
-            LOAD (old);
+            LOAD (prev);
             SPAGAIN;*/
           }
 

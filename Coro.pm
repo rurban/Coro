@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro - create and manage coroutines
+Coro - create and manage simple coroutines
 
 =head1 SYNOPSIS
 
@@ -8,15 +8,17 @@ Coro - create and manage coroutines
 
  $new = new Coro sub {
     print "in coroutine, switching back\n";
-    $Coro::main->resume;
+    $new->transfer($main);
     print "in coroutine again, switching back\n";
-    $Coro::main->resume;
+    $new->transfer($main);
  };
 
+ $main = new Coro;
+
  print "in main, switching to coroutine\n";
- $new->resume;
+ $main->transfer($new);
  print "back in main, switch to coroutine again\n";
- $new->resume;
+ $main->transfer($new);
  print "back in main\n";
 
 =head1 DESCRIPTION
@@ -43,25 +45,52 @@ BEGIN {
    XSLoader::load Coro, $VERSION;
 }
 
-=item $main
+=item $coro = new [$coderef [, @args]]
 
-This coroutine represents the main program.
+Create a new coroutine and return it. The first C<transfer> call to this
+coroutine will start execution at the given coderef. If, the subroutine
+returns it will be executed again.
 
-=item $current
-
-The current coroutine (the last coroutine switched to). The initial value is C<$main> (of course).
+If the coderef is omitted this function will create a new "empty"
+coroutine, i.e. a coroutine that cannot be transfered to but can be used
+to save the current coroutine in.
 
 =cut
 
-$main = $current = _newprocess { 
-   # never being called
-};
+sub new {
+   my $class = $_[0];
+   my $proc = $_[1] || sub { die "tried to transfer to an empty coroutine" };
+   bless _newprocess {
+      do {
+         eval { &$proc };
+         if ($@) {
+            $error_msg  = $@;
+            $error_coro = _newprocess { };
+            &transfer($error_coro, $error);
+         }
+      } while (1);
+   }, $class;
+}
+
+=item $prev->transfer($next)
+
+Save the state of the current subroutine in $prev and switch to the
+coroutine saved in $next.
+
+=cut
+
+# I call the _transfer function from a perl function
+# because that way perl saves all important things on
+# the stack.
+sub transfer {
+   _transfer($_[0], $_[1]);
+}
 
 =item $error, $error_msg, $error_coro
 
 This coroutine will be called on fatal errors. C<$error_msg> and
-C<$error_coro> return the error message and the error-causing coroutine,
-respectively.
+C<$error_coro> return the error message and the error-causing coroutine
+(NOT an object) respectively. This API might change.
 
 =cut
 
@@ -70,47 +99,8 @@ $error_coro = undef;
 
 $error = _newprocess {
    print STDERR "FATAL: $error_msg\nprogram aborted\n";
-   exit 250;
+   exit 50;
 };
-
-=item $coro = new $coderef [, @args]
-
-Create a new coroutine and return it. The first C<resume> call to this
-coroutine will start execution at the given coderef. If it returns it
-should return a coroutine to switch to. If, after returning, the coroutine
-is C<resume>d again it starts execution again at the givne coderef.
-
-=cut
-
-sub new {
-   my $class = $_[0];
-   my $proc = $_[1];
-   bless _newprocess {
-      do {
-         eval { &$proc->resume };
-         if ($@) {
-            ($error_msg, $error_coro) = ($@, $current);
-            $error->resume;
-         }
-      } while (1);
-   }, $class;
-}
-
-=item $coro->resume
-
-Resume execution at the given coroutine.
-
-=cut
-
-my $prev;
-
-# I call the _transfer function from a pelr function
-# because that way perl saves all important things on
-# the stack.
-sub resume {
-   $prev = $current; $current = $_[0];
-   _transfer($prev, $current);
-}
 
 1;
 
