@@ -5,7 +5,7 @@ use Time::HiRes 'time';
 
 $starttime = time;
 
-$VERSION = 0.0714;
+$VERSION = 0.08;
 
 $SIG{CHLD} = 'IGNORE';
 

@@ -7,6 +7,8 @@ use Coro::Signal;
 use HTTP::Date;
 use POSIX ();
 
+use Compress::Zlib ();
+
 no utf8;
 use bytes;
 
@@ -52,10 +54,8 @@ sub slog {
 our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
 our $httpevent   = new Coro::Signal;
 
-our $queue_file  = new transferqueue slots => $MAX_TRANSFERS, maxsize => 250_000_000;
-our $queue_index = new transferqueue slots => 10;
-
-our $requests;
+our $queue_file  = new transferqueue $MAX_TRANSFERS;
+our $queue_index = new transferqueue 10;
 
 my @newcons;
 my @pool;
@@ -189,6 +189,7 @@ sub slog {
 sub response {
    my ($self, $code, $msg, $hdr, $content) = @_;
    my $res = "HTTP/1.1 $code $msg\015\012";
+   my $GZ = "";
 
    if (exists $hdr->{Connection}) {
       if ($hdr->{Connection} =~ /close/) {
@@ -204,6 +205,18 @@ sub response {
       }
    }
 
+   if ($self->{method} ne "HEAD"
+       && $self->{h}{"accept-encoding"} =~ /\bgzip\b/
+       && $hdr->{"Content-Length"} == length $content
+       && !exists $hdr->{"Content-Encoding"}
+   ) {
+      my $orig = length $content;
+      $hdr->{"Content-Encoding"} = "gzip";
+      $content = Compress::Zlib::memGzip(\$content);
+      $hdr->{"Content-Length"} = length $content;
+      $GZ = sprintf "GZ%02d", 100 - 100*((length $content) / $orig);
+   }
+
    $res .= "Date: $HTTP_NOW\015\012";
 
    while (my ($h, $v) = each %$hdr) {
@@ -214,7 +227,7 @@ sub response {
    $res .= $content if defined $content and $self->{method} ne "HEAD";
 
    my $log = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $NOW).
-             " $self->{remote_id} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}.
+             " $self->{remote_id} \"$self->{uri}\" $code ".$hdr->{"Content-Length"}.$GZ.
              " \"$self->{h}{referer}\"\n";
 
    print $accesslog $log if $accesslog;
@@ -286,8 +299,8 @@ sub handle {
          $hdr{lc $1} .= ",$2"
             while $req =~ /\G
                   ([^:\000-\040]+):
-                  [\008\040]*
-                  ((?: [^\015\012]+ | \015\012[\008\040] )*)
+                  [\010\040]*
+                  ((?: [^\015\012]+ | \015\012[\010\040] )*)
                   \015\012
                /gxc;
 
@@ -297,8 +310,6 @@ sub handle {
          $self->{h}{$h} = substr $v, 1
             while ($h, $v) = each %hdr;
       }
-
-      $requests++;
 
       # remote id should be unique per user
       my $id = $self->{remote_addr};
