@@ -21,7 +21,7 @@ package Coro::Handle;
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 0.13;
+$VERSION = 0.45;
 
 @EXPORT = qw(unblock);
 

@@ -5,8 +5,9 @@ use Coro::Event;
 $SIG{CHLD} = 'IGNORE';
 
 require "config.pl";
-require "shell.pl";
+require "netgeo.pl";
 require "httpd.pl";
+require "shell.pl";
 
 loop;
 

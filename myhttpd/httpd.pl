@@ -83,6 +83,7 @@ sub new {
    my $self = bless { fh => $fh }, $class;
    my (undef, $iaddr) = unpack_sockaddr_in $peername
       or $self->err(500, "unable to decode peername");
+
    $self->{remote_addr} = inet_ntoa $iaddr;
 
    # enter ourselves into various lists
@@ -246,6 +247,8 @@ sub map_uri {
 
    # now do the path mapping
    $self->{path} = "$::DOCROOT/$host$uri";
+
+   $self->access_check;
 }
 
 sub server_address {
@@ -412,6 +415,17 @@ ignore:
    }
 
    close $fh;
+}
+
+sub access_check {
+   my $self = shift;
+   my $whois = ::ip_request($self->{remote_addr});
+
+   if ($whois =~ /^\*cy: (\S+)/m) {
+      $self->slog(9, "COUNTRY($1)");
+   } else {
+      $self->slog(9, "no country($whois)");
+   }
 }
 
 1;
