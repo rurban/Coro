@@ -770,7 +770,8 @@ sv_to_coro (SV *arg, const char *funcname, const char *varname)
     }
      
   /* must also be changed inside Coro::Cont::yield */
-  if (SvROK(arg) && SvSTASH(SvRV(arg)) == coro_state_stash)
+  if (SvROK(arg) && SvOBJECT(SvRV(arg))
+      && SvSTASH(SvRV(arg)) == coro_state_stash)
     return (struct coro *) SvIV((SV*)SvRV(arg));
 
   croak ("%s() -- %s is not (and contains not) a Coro::State object", funcname, varname);
