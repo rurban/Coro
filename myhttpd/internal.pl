@@ -104,7 +104,7 @@ EOF
                 . "</table>";
    }
 
-   $content .= "<p>$count active downloads, $fullrate bytes/s amortized.</p>";
+   $content .= "<p>$count active connections, $fullrate bytes/s amortized.</p>";
 
    $content .= <<EOF;
 </ul>
