@@ -2,6 +2,7 @@ Revision history for Perl extension Coro.
 
 	- included libcoro.c earlier in State.xs, might improve portability.
         - use a faster and possibly more stable Coro::Cont implementation.
+        - accept x86_64 in addition to amd64 for optimized linux-amd64 support.
 
 1.11 Thu Mar  3 18:00:52 CET 2005
 	- change of contact address.
