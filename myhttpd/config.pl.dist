@@ -1,12 +1,10 @@
 $MAX_CONNECTS = 100;			# maximum simult. connects
-$MAX_TRANSFERS_SMALL = 1;		# the maximum number of sim. file transfers
-$MAX_TRANSFERS_LARGE = 1;		# the maximum number of sim. file transfers
-$TRANSFER_SMALL = 1_000_000;		# size of a "small" file
+$MAX_TRANSFERS = 10;			# the maximum number of sim. file transfers
 
 $MAX_TRANSFERS_IP  =   4;		# maximum simult. connects per ip
 $BLOCKTIME    = 60*60*2;		# block time
 
-$NO_SEGMENTED =   0;			# allow segmented downloads?
+$NO_SEGMENTED =   0;			# disallow segmented downloads?
 
 $REQ_TIMEOUT  =  60;			# request timeout
 $RES_TIMEOUT  = 180;			# response timeout
@@ -23,13 +21,13 @@ $SERVER_PORT  = 88;			# port to listen on
 
 $CMDSHELL_PORT = 7262;			# open a command shell on this port
 
-$WAIT_INTERVAL = 1;                  # check for free slot this often
-$WAIT_BUFSIZE  = 5;                   # send this much data while waiting
+$WAIT_INTERVAL = 60*5;			# check for free slot this often
+$WAIT_BUFSIZE  = 512;			# send this much data while waiting
 
 $BUFSIZE       = 32*1024;		# buffer size
 
 $AIO_PARALLEL  = 1;			# how many reader threads for i/o?
 
 $ACCESS_LOG    = "logs/accesslog";	# access log
-$ERROR_LOG     = "logs/errorlog";	# access log
+$ERROR_LOG     = "logs/errorlog";	# error log
 
