@@ -1,9 +1,18 @@
 #!/usr/bin/perl
 
+<<EOF;
+finger
+localhost
+root
+finger
+localhost
+root
+EOF
+
 use Coro;
 use Coro::Event;
 
-$Event::DebugLevel = 4;
+#$Event::DebugLevel = 4;
 
 my $stdin = Coro::Event->io(fd => \*STDIN, poll => 'r');
 
@@ -14,8 +23,8 @@ sub finger {
    # is there ANY way to do non-blocking connects with IO::Socket::INET?
    # I don't see how...
    my $io = new IO::Socket::INET PeerAddr => "$host:finger";
+   $io or die;
    syswrite $io, "$user\n";
-   #do_timer(after => 5);
    my $r = Coro::Event->io(fd => $io, poll => 'r');
    my $buf;
    $r->next while 0 != sysread $io, $buf, 8192, length $buf;
@@ -35,7 +44,7 @@ sub keyboard : Coro {
       if ($cmd eq "finger") {
          print "user> "; my $user = kbdline;
          print "host> "; my $host = kbdline;
-         async sub { finger($host, $user) };
+         async { finger(@_) } $user, $host;
       } elsif ($cmd eq "quit") {
          unloop(777);
          terminate;
@@ -46,7 +55,7 @@ sub keyboard : Coro {
 }
 
 sub timer : Coro {
-   my $w = Coro::Event->timer(interval => 0.1, hard => 1);
+   my $w = Coro::Event->timer(interval => 0.001, hard => 1);
    use Time::HiRes qw(time);
    while () {
       $w->next;

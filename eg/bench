@@ -14,8 +14,9 @@ $a = bless {}, main::;
 sub a {
    $n++; # do something to taint the benchmark results ;)
 }
+$|=1;
 
-$b = new Coro sub {
+$b = async {
    # do a little unrolling...
    while() {
       yield; yield; yield; yield; yield;
@@ -28,12 +29,12 @@ $main = $Coro::main;
 
 *transfer = \&Coro::State::transfer;
 
-$c = Coro::State::newprocess {
+$c = Coro::State::_newprocess [sub {
    while() {
       transfer($c, $main); transfer($c, $main);
       transfer($c, $main); transfer($c, $main);
    }
-};
+}];
 
 transfer($main, $c);
 
