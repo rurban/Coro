@@ -38,7 +38,7 @@ use Coro::State;
 
 use base Exporter;
 
-$VERSION = 0.651;
+$VERSION = 0.652;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (

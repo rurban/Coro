@@ -61,3 +61,4 @@ eg/dns
 eg/myhttpd
 eg/readline
 
+META.yml                                Module meta-data in YAML

@@ -1,0 +1,11 @@
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         Coro
+version:      0.652
+version_from: Coro.pm
+installdirs:  site
+requires:
+    Scalar::Util:                  0
+    Event:                         0.86
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.10_03

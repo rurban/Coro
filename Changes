@@ -1,5 +1,11 @@
 Revision history for Perl extension Coro.
 
+0.652 Thu May  8 02:54:46 CEST 2003
+	- Applied patch by Slaven Rezic to set default to "s" on FreeBSD,
+          cause version 4 doesn't have ucontext.
+	- Benjamin Reed reported that setjmp works fine on darwin,
+          so preselect it.
+
 0.651 Sat Mar 29 15:00:23 CET 2003
 	- fix a bug in Coro::Handle where some bytes could get lost
           on reading, reported by jason@nichego.net.

@@ -17,7 +17,13 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/) {
 } elsif ($^O =~ /linux/) {
    # default to setjmp/longjmp on non-x86...
    $iface = $Config{archname} =~ /^i[3456]86-/ ? "l" : "s";
+} elsif ($^O =~ /(free|net|open)bsd/) {
+   # FreeBSD 4.x has ucontext.h but no makecontext et al (see BUGS section of
+   # man context). Assume the same problem for all other BSDs.
+   $iface = "s";
 } elsif ($^O =~ /solaris/) {
+   $iface = "s";
+} elsif ($^O =~ /darwin/) {
    $iface = "s";
 } elsif (-e "/usr/include/ucontext.h") {
    $iface = "u";
@@ -133,4 +139,14 @@ sub conftest {
    unlink "conftestval";
 }
 
+print <<EOF if $^O =~ /linux/;
+
+*****************************************************************************
+*                                                                           *
+*  HEY!! You are using Linux! That's not at all bad, but if you get seg-    *
+*  faults with Coro almost all the time please refer to README.linux-glibc  *
+*                                                                           *
+*****************************************************************************
+
+EOF
 
