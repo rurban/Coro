@@ -6,6 +6,7 @@ Revision history for Perl extension Coro.
         - Coro::Cont now coroutine-aware.
         - Coro::Specific is a low-overhead module to create
           coroutine-specific vars.
+        - Coro::Event provides a simple interface to Event.
 
 0.03  Fri Jul 13 14:51:52 CEST 2001
 	- transfer() now implemented in XS (beware).

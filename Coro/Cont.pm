@@ -41,9 +41,7 @@ our @result;
 
 sub cont(&) {
    my $code = $_[0];
-   my $coro = new Coro::State sub {
-      &$code while 1;
-   };
+   my $coro = new Coro::State sub { &$code while 1 };
    my $prev = new Coro::State;
    sub {
       push @$$curr, [$coro, $prev];

@@ -201,7 +201,7 @@ sub ready {
 =head1 SEE ALSO
 
 L<Coro::Channel>, L<Coro::Cont>, L<Coro::Specific>, L<Coro::Semaphore>,
-L<Coro::Signal>, L<Coro::State>.
+L<Coro::Signal>, L<Coro::State>, L<Coro::Event>.
 
 =head1 AUTHOR
 

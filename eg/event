@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+use Coro;
+use Coro::Event;
+
+sub keyboard : Coro {
+ my $w = Coro::Event->io(fd => *STDIN, poll => 'r');
+ while() {
+    print "cmd> ";
+    my $ev = $w->next; my $cmd = <STDIN>;
+    print "data> ";
+    my $ev = $w->next; my $data = <STDIN>;
+ }
+}
+

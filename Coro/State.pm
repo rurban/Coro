@@ -76,13 +76,17 @@ sub new {
 Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
 
-The "state" of a subroutine only ever includes scope, i.e. lexical
-variables and the current execution state. It does not save/restore any
-global variables such as C<$_> or C<$@> or any other special or non
-special variables. So remember that every function call that might call
-C<transfer> (such as C<Coro::Channel::put>) might clobber any global
-and/or special variables. Yes, this is by design ;) You cna always create
-your own process abstraction model that saves these variables.
+The "state" of a subroutine includes the scope, i.e. lexical variables
+and the current execution state as well as the following global
+variables:
+
+  @_
+
+If you feel that something important is missing tell me.  Also
+remember that every function call that might call C<transfer> (such
+as C<Coro::Channel::put>) might clobber any global and/or special
+variables. Yes, this is by design ;) You can always create your own
+process abstraction model that saves these variables.
 
 The easiest way to do this is to create your own scheduling primitive like this:
 

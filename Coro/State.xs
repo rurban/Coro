@@ -31,6 +31,8 @@ struct coro {
   I32 retstack_max;
   COP *curcop;
 
+  AV *defav;
+
   SV *proc;
 };
 
@@ -63,7 +65,8 @@ typedef struct coro *Coro__State_or_hashref;
   c->retstack = PL_retstack;		\
   c->retstack_ix = PL_retstack_ix;	\
   c->retstack_max = PL_retstack_max;	\
-  c->curcop = PL_curcop;
+  c->curcop = PL_curcop;		\
+  c->defav = GvAV (PL_defgv);
 
 #define LOAD(c)	\
   PL_dowarn = c->dowarn;		\
@@ -91,7 +94,8 @@ typedef struct coro *Coro__State_or_hashref;
   PL_retstack = c->retstack;		\
   PL_retstack_ix = c->retstack_ix;	\
   PL_retstack_max = c->retstack_max;	\
-  PL_curcop = c->curcop;
+  PL_curcop = c->curcop;		\
+  GvAV (PL_defgv) = c->defav;
 
 /* this is an EXACT copy of S_nuke_stacks in perl.c, which is unfortunately static */
 STATIC void
@@ -139,51 +143,55 @@ transfer(prev,next)
 	Coro::State_or_hashref	next
         CODE:
 
-        PUTBACK;
-        SAVE (prev);
-
-        /*
-         * this could be done in newprocess which would to
-         * extremely elegant and fast (just PUTBACK/SAVE/LOAD/SPAGAIN)
-         * code here, but lazy allocation of stacks has also
-         * some virtues and the overhead of the if() is nil.
-         */
-        if (next->mainstack)
+        if (prev != next)
           {
-            LOAD (next);
-            next->mainstack = 0; /* unnecessary but much cleaner */
-            SPAGAIN;
-          }
-        else
-          {
-            /*
-             * emulate part of the perl startup here.
-             */
-            UNOP myop;
-
-            init_stacks ();
-            PL_op = (OP *)&myop;
-            /*PL_curcop = 0;*/
-
-            SPAGAIN;
-            Zero(&myop, 1, UNOP);
-            myop.op_next = Nullop;
-            myop.op_flags = OPf_WANT_VOID;
-
-            EXTEND (SP,1);
-            PUSHs (next->proc);
-            
             PUTBACK;
-            /*
-             * the next line is slightly wrong, as PL_op->op_next
-             * is actually being executed so we skip the first op
-             * that doens't matter, though, since it is only
-             * pp_nextstate and we never return...
-             */
-            PL_op = Perl_pp_entersub(aTHX);
-            SPAGAIN;
+            SAVE (prev);
 
-            ENTER;
+            /*
+             * this could be done in newprocess which would to
+             * extremely elegant and fast (just PUTBACK/SAVE/LOAD/SPAGAIN)
+             * code here, but lazy allocation of stacks has also
+             * some virtues and the overhead of the if() is nil.
+             */
+            if (next->mainstack)
+              {
+                LOAD (next);
+                next->mainstack = 0; /* unnecessary but much cleaner */
+                SPAGAIN;
+              }
+            else
+              {
+                /*
+                 * emulate part of the perl startup here.
+                 */
+                UNOP myop;
+
+                init_stacks ();
+                PL_op = (OP *)&myop;
+                /*PL_curcop = 0;*/
+                GvAV (PL_defgv) = newAV ();
+
+                SPAGAIN;
+                Zero(&myop, 1, UNOP);
+                myop.op_next = Nullop;
+                myop.op_flags = OPf_WANT_VOID;
+
+                EXTEND (SP,1);
+                PUSHs (next->proc);
+                
+                PUTBACK;
+                /*
+                 * the next line is slightly wrong, as PL_op->op_next
+                 * is actually being executed so we skip the first op
+                 * that doens't matter, though, since it is only
+                 * pp_nextstate and we never return...
+                 */
+                PL_op = Perl_pp_entersub(aTHX);
+                SPAGAIN;
+
+                ENTER;
+              }
           }
 
 void
@@ -200,6 +208,7 @@ DESTROY(coro)
             LOAD(coro);
 
             S_nuke_stacks ();
+            SvREFCNT_dec ((SV *)GvAV (PL_defgv));
 
             LOAD((&temp));
             SPAGAIN;
