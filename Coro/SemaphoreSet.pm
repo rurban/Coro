@@ -47,12 +47,12 @@ sub new {
    bless [defined $_[1] ? $_[1] : 1], $_[0];
 }
 
-=item $sem->down($id)
+=item $sem->down ($id)
 
 Decrement the counter, therefore "locking" the named semaphore. This
 method waits until the semaphore is available if the counter is zero.
 
-=item $status = $sem->timed_down($id, $timeout)
+=item $status = $sem->timed_down ($id, $timeout)
 
 Like C<down>, but returns false if semaphore couldn't be acquired within
 $timeout seconds, otherwise true.
@@ -62,10 +62,12 @@ $timeout seconds, otherwise true.
 sub down {
    while () {
       my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
+
       if ($sem->[0] > 0) {
          --$sem->[0];
-         return;
+         return 1;
       }
+
       push @{$sem->[1]}, $Coro::current;
       Coro::schedule;
    }
@@ -73,28 +75,33 @@ sub down {
 
 sub timed_down {
    require Coro::Timer;
-   my $timeout = Coro::Timer::timeout($_[2]);
+   my $timeout = Coro::Timer::timeout ($_[2]);
 
-   my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
-   while ($sem->[0] <= 0) {
-      push @{$sem->[1]}, $Coro::current;
-      Coro::schedule;
+   while () {
+      my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
+
+      if ($sem->[0] > 0) {
+         --$sem->[0];
+         return 1;
+      }
+
       if ($timeout) {
          # ugly as hell.
          for (0..$#{$sem->[1]}) {
             if ($sem->[1][$_] == $Coro::current) {
                splice @{$sem->[1]}, $_, 1;
-               return;
+               return 0;
             }
          }
          die;
       }
+
+      push @{$sem->[1]}, $Coro::current;
+      Coro::schedule;
    }
-   --$sem->[0];
-   return 1;
 }
 
-=item $sem->up($id)
+=item $sem->up ($id)
 
 Unlock the semaphore again.
 
@@ -125,7 +132,7 @@ sub try {
    }
 }
 
-=item $sem->waiters($id)
+=item $sem->waiters ($id)
 
 In scalar context, returns the number of coroutines waiting for this
 semaphore.
@@ -133,15 +140,15 @@ semaphore.
 =cut
 
 sub waiters {
-   @{ ${$_[0][1]{$_[1]}}[1] || []};
+   @{ $_[0][1]{$_[1]}[1] || []};
 }
 
-=item $guard = $sem->guard($id)
+=item $guard = $sem->guard ($id)
 
 This method calls C<down> and then creates a guard object. When the guard
 object is destroyed it automatically calls C<up>.
 
-=item $guard = $sem->timed_guard($id, $timeout)
+=item $guard = $sem->timed_guard ($id, $timeout)
 
 Like C<guard>, but returns undef if semaphore couldn't be acquired within
 $timeout seconds, otherwise the guard object.
