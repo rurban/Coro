@@ -140,9 +140,9 @@ semaphore.
 =cut
 
 sub waiters {
-   my $sem = $_[0][1]{$_[1]
+   my $sem = $_[0][1]{$_[1]}
       or return;
-   @{ $_[0][1]{$_[1]}[1] || []};
+   @{ $_[0][1]{$_[1]}[1] || []}
 }
 
 =item $guard = $sem->guard ($id)
