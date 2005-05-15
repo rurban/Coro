@@ -38,7 +38,7 @@ $VERSION = 1.11;
 
 =item new [inital count]
 
-Creates a new sempahore set with the given initial lock count for each
+Creates a new semaphore set with the given initial lock count for each
 individual semaphore. See L<Coro::Semaphore>.
 
 =cut
@@ -109,10 +109,12 @@ Unlock the semaphore again.
 
 sub up {
    my $sem = $_[0][1]{$_[1]};
+
    if (++$sem->[0] > 0) {
       (shift @{$sem->[1]})->ready if @{$sem->[1]};
    }
-   delete $_[0][1]{$_[1]} if $sem->[0] == $_[0][0] && !@{$sem->[1] || []}
+
+   delete $_[0][1]{$_[1]} if $sem->[0] == $_[0][0] && !@{$sem->[1] || []};
 }
 
 =item $sem->try
