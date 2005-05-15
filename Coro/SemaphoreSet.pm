@@ -60,8 +60,9 @@ $timeout seconds, otherwise true.
 =cut
 
 sub down {
-   my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
-   while ($sem->[0] <= 0) {
+   while () {
+      my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
+      last if $sem->[0] > 0;
       push @{$sem->[1]}, $Coro::current;
       Coro::schedule;
    }
@@ -130,7 +131,7 @@ semaphore.
 =cut
 
 sub waiters {
-   @{$_[0][1]{$_[1]}};
+   @{ ${$_[0][1]{$_[1]}}[1] || []};
 }
 
 =item $guard = $sem->guard($id)
