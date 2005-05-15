@@ -112,7 +112,7 @@ sub up {
    if (++$sem->[0] > 0) {
       (shift @{$sem->[1]})->ready if @{$sem->[1]};
    }
-   delete $_[0][1]{$_[1]} if $sem->[0] == $_[0][0];
+   delete $_[0][1]{$_[1]} if $sem->[0] == $_[0][0] && !@{$sem->[1] || []}
 }
 
 =item $sem->try
