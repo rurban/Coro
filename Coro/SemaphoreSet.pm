@@ -38,7 +38,7 @@ $VERSION = 1.11;
 
 =item new [inital count]
 
-Creates a new semaphore set with the given initial lock count for each
+Creates a new sempahore set with the given initial lock count for each
 individual semaphore. See L<Coro::Semaphore>.
 
 =cut
