@@ -62,11 +62,13 @@ $timeout seconds, otherwise true.
 sub down {
    while () {
       my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
-      last if $sem->[0] > 0;
+      if ($sem->[0] > 0) {
+         --$sem->[0];
+         return;
+      }
       push @{$sem->[1]}, $Coro::current;
       Coro::schedule;
    }
-   --$sem->[0];
 }
 
 sub timed_down {
