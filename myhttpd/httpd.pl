@@ -531,7 +531,7 @@ sub handle_dir {
 
    $self->response(200, "ok",
          {
-            "Content-Type"   => "text/html",
+            "Content-Type"   => "text/html; charset=utf-8",
             "Content-Length" => length $idx,
             "Last-Modified"  => time2str ($self->{stat}[9]),
          },
