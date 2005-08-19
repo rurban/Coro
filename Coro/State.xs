@@ -1,5 +1,7 @@
 #define PERL_NO_GET_CONTEXT
 
+#include "libcoro/coro.c"
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -26,8 +28,6 @@
 #  define IS_PADCONST(v) 0
 # endif
 #endif
-
-#include "libcoro/coro.c"
 
 #include <signal.h>
 
@@ -1053,13 +1053,16 @@ void
 yield(...)
 	PROTOTYPE: @
         CODE:
-        static SV *returnstk;
+        SV *yieldstack;
         SV *sv;
         AV *defav = GvAV (PL_defgv);
         struct coro *prev, *next;
 
-        if (!returnstk)
-          returnstk = SvRV ((SV *)get_sv ("Coro::Cont::return", FALSE));
+        yieldstack = *hv_fetch (
+           (HV *)SvRV (GvSV (coro_current)),
+           "yieldstack", sizeof ("yieldstack") - 1,
+           0
+        );
 
         /* set up @_ -- ugly */
         av_clear (defav);
@@ -1067,8 +1070,7 @@ yield(...)
         while (items--)
           av_store (defav, items, SvREFCNT_inc (ST(items)));
 
-        SvGETMAGIC (returnstk); /* isn't documentation wrong for mg_get? */
-        sv = av_pop ((AV *)SvRV (returnstk));
+        sv = av_pop ((AV *)SvRV (yieldstack));
         prev = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
         next = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
         SvREFCNT_dec (sv);

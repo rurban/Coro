@@ -8,28 +8,31 @@ Coro::State - create and manage simple coroutines
 
  $new = new Coro::State sub {
     print "in coroutine (called with @_), switching back\n";
-    $new->transfer($main);
+    $new->transfer ($main);
     print "in coroutine again, switching back\n";
-    $new->transfer($main);
+    $new->transfer ($main);
  }, 5;
 
  $main = new Coro::State;
 
  print "in main, switching to coroutine\n";
- $main->transfer($new);
+ $main->transfer ($new);
  print "back in main, switch to coroutine again\n";
- $main->transfer($new);
+ $main->transfer ($new);
  print "back in main\n";
 
 =head1 DESCRIPTION
 
 This module implements coroutines. Coroutines, similar to continuations,
 allow you to run more than one "thread of execution" in parallel. Unlike
-threads this, only voluntary switching is used so locking problems are
-greatly reduced.
+threads, there is no parallelism and only voluntary switching is used so
+locking problems are greatly reduced.
+
+This can be used to implement non-local jumps, exception handling,
+continuations and more.
 
 This module provides only low-level functionality. See L<Coro> and related
-modules for a more useful process abstraction including scheduling.
+modules for a higher level process abstraction including scheduling.
 
 =head2 MEMORY CONSUMPTION
 
@@ -41,6 +44,8 @@ assumption that the OS has on-demand virtual memory. All this is very
 system-dependent. On my i686-pc-linux-gnu system this amounts to about 10k
 per coroutine, 5k when the experimental context sharing is enabled.
 
+=head2 FUNCTIONS
+
 =over 4
 
 =cut
@@ -50,7 +55,7 @@ package Coro::State;
 BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 BEGIN {
-   $VERSION = 1.11;
+   $VERSION = 1.3;
 
    require DynaLoader;
    push @ISA, 'DynaLoader';
@@ -74,8 +79,7 @@ to save the current coroutine in.
 =cut
 
 # this is called (or rather: goto'ed) for each and every
-# new coroutine. IT MUST NEVER RETURN and should not call
-# anything that changes the stacklevel (like eval).
+# new coroutine. IT MUST NEVER RETURN!
 sub initialize {
    my $proc = shift;
    eval {
@@ -93,24 +97,24 @@ sub new {
    bless _newprocess [$proc, @_], $class;
 }
 
-=item $prev->transfer($next,$flags)
+=item $prev->transfer ($next, $flags)
 
 Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
 
 The "state" of a subroutine includes the scope, i.e. lexical variables and
 the current execution state (subroutine, stack). The C<$flags> value can
-be used to specify that additional state be saved (and later restored), by
-C<||>-ing the following constants together:
+be used to specify that additional state to be saved (and later restored), by
+oring the following constants together:
 
    Constant    Effect
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
-   SAVE_CCTXT  save/restore C-stack (you usually want this)
+   SAVE_CCTXT  save/restore C-stack (you usually want this for coroutines)
 
 These constants are not exported by default. If you don't need any extra
-additional state saved use C<0> as the flags value.
+additional state saved, use C<0> as the flags value.
 
 If you feel that something important is missing then tell me.  Also
 remember that every function call that might call C<transfer> (such
@@ -123,7 +127,7 @@ this:
 
   sub schedule {
      local ($_, $@, ...);
-     $old->transfer($new);
+     $old->transfer ($new);
   }
 
 IMPLEMENTORS NOTE: all Coro::State functions/methods expect either the
@@ -131,20 +135,9 @@ usual Coro::State object or a hashref with a key named "_coro_state" that
 contains the real Coro::State object. That is, you can do:
 
   $obj->{_coro_state} = new Coro::State ...;
-  Coro::State::transfer(..., $obj);
+  Coro::State::transfer (..., $obj);
 
 This exists mainly to ease subclassing (wether through @ISA or not).
-
-=cut
-
-=item Coro::State::flush
-
-To be efficient (actually, to not be abysmaly slow), this module does
-some fair amount of caching (a possibly complex structure for every
-subroutine in use). If you don't use coroutines anymore or you want to
-reclaim some memory then you can call this function which will flush all
-internal caches. The caches will be rebuilt when needed so this is a safe
-operation.
 
 =cut
 
@@ -154,11 +147,12 @@ operation.
 
 =head1 BUGS
 
-This module has not yet been extensively tested. Expect segfaults and
-specially memleaks.
+This module has not yet been extensively tested, but works on most
+platforms. Expect segfaults and memleaks (but please don't be surprised if
+it works...)
 
 This module is not thread-safe. You must only ever use this module from
-the same thread (this requirenmnt might be loosened in the future).
+the same thread (this requirement might be loosened in the future).
 
 =head1 SEE ALSO
 

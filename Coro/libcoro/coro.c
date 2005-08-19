@@ -46,9 +46,12 @@
 # endif
 #endif
 
-#if CORO_SJLJ || CORO_LOOSE || CORO_LINUX || CORO_IRIX
+#if CORO_SJLJ || CORO_LOSER || CORO_LINUX || CORO_IRIX
 
-#include <signal.h>
+#if CORO_SJLJ
+# include <stdio.h>
+# include <signal.h>
+#endif
 
 static volatile coro_func coro_init_func;
 static volatile void *coro_init_arg;
@@ -74,7 +77,7 @@ static volatile int trampoline_count;
 
 /* trampoline signal handler */
 static void
-trampoline(int sig)
+trampoline (int sig)
 {
   if (setjmp (((coro_context *)new_coro)->env))
     coro_init (); /* start it */
@@ -102,7 +105,7 @@ void coro_create(coro_context *ctx,
 
   makecontext (&(ctx->uc), (void (*)()) coro, 1, arg);
 
-#elif CORO_SJLJ || CORO_LOOSE || CORO_LINUX || CORO_IRIX
+#elif CORO_SJLJ || CORO_LOSER || CORO_LINUX || CORO_IRIX
 
 # if CORO_SJLJ
   stack_t ostk, nstk;
@@ -162,7 +165,7 @@ void coro_create(coro_context *ctx,
 
   sigprocmask (SIG_SETMASK, &osig, 0);
 
-# elif CORO_LOOSE
+# elif CORO_LOSER
 
   setjmp (ctx->env);
   ctx->env[7] = (long)((char *)sptr + ssize);

@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Specific - manage coroutone-specific variables.
+Coro::Specific - manage coroutine-specific variables.
 
 =head1 SYNOPSIS
 
@@ -26,7 +26,7 @@ package Coro::Specific;
 
 BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
-$VERSION = 1.11;
+$VERSION = 1.3;
 
 =item new
 

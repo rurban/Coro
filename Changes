@@ -1,5 +1,18 @@
 Revision history for Perl extension Coro.
 
+1.3  Sat Aug 20 03:08:56 CEST 2005
+	- no code changes. module seems to work fine.
+	- improve Coro::State docs, remove reference to nonexisting
+          Coro::State::flush method.
+        - no longer autodetect windows, present it as an option instead.
+
+1.2  Mon May 16 02:00:55 CEST 2005
+	- included libcoro.c earlier in State.xs, might improve portability.
+        - use a faster and possibly more stable Coro::Cont implementation.
+        - accept x86_64 in addition to amd64 for optimized linux-amd64 support.
+        - fix bugs Coro::SemaphoreSet that could cause locks never to be freed.
+        - fix bugs in CoroAPI.h and document it in Coro::MakeMaker.
+
 1.11 Thu Mar  3 18:00:52 CET 2005
 	- change of contact address.
 
@@ -16,7 +29,7 @@ Revision history for Perl extension Coro.
 	- remove stupid gcc extension that was an experiment only anyway.
 
 0.96 Thu May 13 18:09:29 CEST 2004
-	- tell people if they have yet anothe rbroken Event variant.
+	- tell people if they have yet another broken Event variant.
 	- made Coro to work _better_ with threads (it seems that, as long
           as you use Coros in one thread only everything will work fine.
           Looking at the perl source the problem might be missing locking

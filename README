@@ -129,9 +129,15 @@ BUGS/LIMITATIONS
        this).
 
 SEE ALSO
-    Coro::Channel, Coro::Cont, Coro::Specific, Coro::Semaphore,
-    Coro::Signal, Coro::State, Coro::Timer, Coro::Event, Coro::Handle,
-    Coro::RWLock, Coro::Socket.
+    Support/Utility: Coro::Cont, Coro::Specific, Coro::State, Coro::Util.
+
+    Locking/IPC: Coro::Signal, Coro::Channel, Coro::Semaphore,
+    Coro::SemaphoreSet, Coro::RWLock.
+
+    Event/IO: Coro::Timer, Coro::Event, Coro::Handle, Coro::Socket,
+    Coro::Select.
+
+    Embedding: <Coro:MakeMaker>
 
 AUTHOR
      Marc Lehmann <schmorp@schmorp.de>

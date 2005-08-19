@@ -10,13 +10,13 @@ $DEFINE = "";
 
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
-if ($^O =~ /win32/i or $^O =~ /cygwin/) {
-   $DEFINE = " -DCORO_LOOSE";
+if ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
+   $iface = 'w';
 } elsif ($^O =~ /irix/) {
    $iface = "i";
 } elsif ($^O =~ /linux/) {
    # default to setjmp/longjmp on non-x86...
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64)-/ ? "l" : "s";
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "l" : "s";
 } elsif ($^O =~ /(free|net|open)bsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
@@ -33,50 +33,57 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/) {
 
 print <<EOF;
 
-Version 0.12 introduced C context sharing. This makes it possible to share
-the C stack and context between many coroutines, resulting in memory
-savings and slight speed gains, at the cost of potential (but mostly
-theoretical) segfaults. On my Linux/x86 machine this decreased the size
-of a new coroutine from 9k to 5k, but the savings are much more apparent
-on machines without mmap or good memory management. This algorithm relies
-on the non-fact that the same machine stack pointer indicates the same
-function call nesting level, which usually works good enough but might
-fail...
+C context sharing: This option makes it possible to share the C stack and
+context between many coroutines, resulting in large memory savings and
+slight speed gains, at the cost of potential (but mostly theoretical)
+segfaults. On my Linux/x86 machine this decreased the size of a new
+coroutine from 9k to 5k, but the savings are much more apparent on
+machines without mmap or good memory management.
 
-The default (enabled) has been in-use on productions servers for some time
-now, without any problem reports so far.
+This algorithm relies on the non-fact that the same machine stack pointer
+indicates the same function call nesting level, which usually works good
+enough (no known cases of it failing are known) but might fail.
+
+The default (enabled) has been in-use on productions servers for some
+time now, without any problem reports, so you are encouraged to use the
+default.
 
 EOF
 
 if (prompt ("Do you want to enable C context sharing (y/n)", "y") !~ /^\s*n/i) {
-   print "\nExperimental context sharing enabled.\n\n";
+   print "\nC context sharing enabled.\n\n";
    $DEFINE .= " -DCORO_LAZY_STACK";
 }
 
 if ($iface) {
    print <<EOF;
 
-Coro can use various ways to implement coroutines at the C level:
+Coro can use various ways to implement coroutines at C level. The
+default is correct in most cases, but you still can chose between these
+alternatives:
 
-u  The unix ucontext functions are newer and not implemented in older
-   unices (or broken libc's like glibc-2.2.2 and below). They allow very
-   fast coroutine creation and fast switching, and, most importantly, are
-   very stable.
+u  The unix 'ucontext.h' functions are relatively new and not implemented
+   or well-tested in older unices. They allow very fast coroutine creation
+   and reasonably fast switching, and, most importantly, are very stable.
 
 s  If the ucontext functions are not working or you don't want
    to use them for other reasons you can try a workaround using
-   setjmp/longjmp/sigaltstack (also standard unix functions).  Coroutine
+   setjmp/longjmp/sigaltstack (also standard unix functions). Coroutine
    creation is rather slow, but switching is very fast as well (often much
    faster than with the ucontext functions). Unfortunately, glibc-2.1 and
    below don't even feature a working sigaltstack.
 
-l  Older GNU/Linux systems (glibc-2.1 and below) need this hack. Since it is
-   very linux-specific it is also quite fast for newer versions; when it
-   works, that is (currently x86 only)...
+l  GNU/Linux. Older GNU/Linux systems (glibc-2.1 and below) need this
+   hack. Since it is very linux-specific it is also quite fast for newer
+   versions; when it works, that is (currently x86 only)...
 
 i  IRIX. For some reason, SGI really does not like to follow the unix
    standard (does that surprise you?), so this workaround might be needed
    (it's fast), although s and u should also work now.
+
+w  Microsoft Windows. Try this on Microsoft Windows, although, as there is
+   no standard on how to do this under windows, this might work only on
+   cygwin or specific versions of msvc. Your problem.
 
 For most systems, the default chosen should be OK. If you experience
 problems then you should experiment with this setting and/or turn off
@@ -87,7 +94,7 @@ EOF
 retry:
 
    my $r = prompt "Use which implementation,\n" .
-                  "<s>etjmp/longjump, <u>context, <i>rix or <l>inux?",
+                  "<s>etjmp/longjump, <u>context, <i>rix, <l>inux or <w>indows?",
                   $iface;
    $iface = lc $1 if $r =~ /(\S)/;
 
@@ -105,6 +112,9 @@ retry:
    } elsif ($iface eq "i") {
       $DEFINE .= " -DCORO_IRIX";
       print "\nUsing irix-specific implementation\n\n";
+   } elsif ($iface eq "w") {
+      $DEFINE .= " -DCORO_LOSER";
+      print "\nUsing windows-specific implementation\n\n";
    } else {
       print "\nUnknown implementation \"$iface\"\n";
       goto retry;

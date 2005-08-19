@@ -13,7 +13,7 @@ Coro::Cont - continuations in perl
  };
  my %hash2 = map &$csub, &hash1;
 
- # dasselbe in grün (as we germans say)
+ # dasselbe in grün (as the germans say)
  sub mul2 : Cont {
     yield $_[0]*2;
     yield $_[0];
@@ -34,13 +34,12 @@ BEGIN { eval { require warnings } && warnings->unimport }
 use Carp qw(croak);
 
 use Coro::State;
-use Coro::Specific;
 
 use vars qw($return);
 
 use base 'Exporter';
 
-$VERSION = 1.11;
+$VERSION = 1.3;
 @EXPORT = qw(csub yield);
 
 {
@@ -91,8 +90,6 @@ terminated).
 
 =cut
 
-$return = new Coro::Specific;
-
 sub csub(&) {
    my $code = $_[0];
    my $prev = new Coro::State;
@@ -106,11 +103,11 @@ sub csub(&) {
    };
 
    # call it once
-   push @$$return, [$coro, $prev];
+   push @{ $Coro::current->{yieldstack} }, [$coro, $prev];
    &Coro::State::transfer($prev, $coro, 0);
 
    sub {
-      push @$$return, [$coro, $prev];
+      push @{ $Coro::current->{yieldstack} }, [$coro, $prev];
       &Coro::State::transfer($prev, $coro, 0);
       wantarray ? @_ : $_[0];
    };

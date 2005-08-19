@@ -40,7 +40,7 @@ use vars qw($idle $main $current);
 
 use base Exporter;
 
-$VERSION = 1.11;
+$VERSION = 1.3;
 
 @EXPORT = qw(async cede schedule terminate current);
 %EXPORT_TAGS = (
@@ -339,9 +339,13 @@ sub desc {
 
 =head1 SEE ALSO
 
-L<Coro::Channel>, L<Coro::Cont>, L<Coro::Specific>, L<Coro::Semaphore>,
-L<Coro::Signal>, L<Coro::State>, L<Coro::Timer>, L<Coro::Event>,
-L<Coro::Handle>, L<Coro::RWLock>, L<Coro::Socket>.
+Support/Utility: L<Coro::Cont>, L<Coro::Specific>, L<Coro::State>, L<Coro::Util>.
+
+Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>, L<Coro::SemaphoreSet>, L<Coro::RWLock>.
+
+Event/IO: L<Coro::Timer>, L<Coro::Event>, L<Coro::Handle>, L<Coro::Socket>, L<Coro::Select>.
+
+Embedding: L<Coro:MakeMaker>
 
 =head1 AUTHOR
 
