@@ -73,9 +73,9 @@ s  If the ucontext functions are not working or you don't want
    faster than with the ucontext functions). Unfortunately, glibc-2.1 and
    below don't even feature a working sigaltstack.
 
-l  Older GNU/Linux systems (glibc-2.1 and below) need this hack. Since it is
-   very linux-specific it is also quite fast for newer versions; when it
-   works, that is (currently x86 only)...
+l  GNU/Linux. Older GNU/Linux systems (glibc-2.1 and below) need this
+   hack. Since it is very linux-specific it is also quite fast for newer
+   versions; when it works, that is (currently x86 only)...
 
 i  IRIX. For some reason, SGI really does not like to follow the unix
    standard (does that surprise you?), so this workaround might be needed

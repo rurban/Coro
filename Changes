@@ -1,6 +1,7 @@
 Revision history for Perl extension Coro.
 
 1.3  Sat Aug 20 03:08:56 CEST 2005
+	- no code changes. module seems to work fine.
 	- improve Coro::State docs, remove reference to nonexisting
           Coro::State::flush method.
         - no longer autodetect windows, present it as an option instead.

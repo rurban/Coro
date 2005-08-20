@@ -34,11 +34,11 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 1.11;
+$VERSION = 1.3;
 
 =item new [inital count]
 
-Creates a new sempahore set with the given initial lock count for each
+Creates a new semaphore set with the given initial lock count for each
 individual semaphore. See L<Coro::Semaphore>.
 
 =cut
