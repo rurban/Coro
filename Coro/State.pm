@@ -25,11 +25,14 @@ Coro::State - create and manage simple coroutines
 
 This module implements coroutines. Coroutines, similar to continuations,
 allow you to run more than one "thread of execution" in parallel. Unlike
-threads this, only voluntary switching is used so locking problems are
-greatly reduced.
+threads, there is no parallelism and only voluntary switching is used so
+locking problems are greatly reduced.
+
+This can be used to implement non-local jumps, exception handling,
+continuations and more.
 
 This module provides only low-level functionality. See L<Coro> and related
-modules for a more useful process abstraction including scheduling.
+modules for a higher level process abstraction including scheduling.
 
 =head2 MEMORY CONSUMPTION
 
@@ -40,6 +43,8 @@ allocated. On systems supporting mmap a 128k stack is allocated, on the
 assumption that the OS has on-demand virtual memory. All this is very
 system-dependent. On my i686-pc-linux-gnu system this amounts to about 10k
 per coroutine, 5k when the experimental context sharing is enabled.
+
+=head2 FUNCTIONS
 
 =over 4
 
@@ -93,7 +98,7 @@ sub new {
    bless _newprocess [$proc, @_], $class;
 }
 
-=item $prev->transfer($next,$flags)
+=item $prev->transfer ($next,$flags)
 
 Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
@@ -123,7 +128,7 @@ this:
 
   sub schedule {
      local ($_, $@, ...);
-     $old->transfer($new);
+     $old->transfer ($new);
   }
 
 IMPLEMENTORS NOTE: all Coro::State functions/methods expect either the
@@ -131,7 +136,7 @@ usual Coro::State object or a hashref with a key named "_coro_state" that
 contains the real Coro::State object. That is, you can do:
 
   $obj->{_coro_state} = new Coro::State ...;
-  Coro::State::transfer(..., $obj);
+  Coro::State::transfer (..., $obj);
 
 This exists mainly to ease subclassing (wether through @ISA or not).
 
@@ -154,11 +159,12 @@ operation.
 
 =head1 BUGS
 
-This module has not yet been extensively tested. Expect segfaults and
-specially memleaks.
+This module has not yet been extensively tested, but works on most
+platforms. Expect segfaults and memleaks (but please don't be surprised if
+it works...)
 
 This module is not thread-safe. You must only ever use this module from
-the same thread (this requirenmnt might be loosened in the future).
+the same thread (this requirement might be loosened in the future).
 
 =head1 SEE ALSO
 
