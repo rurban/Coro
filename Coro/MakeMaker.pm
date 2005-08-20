@@ -73,11 +73,24 @@ problem.  Just be aware, and set your expectations accordingly.
   BOOT:
     I_CORO_API("YourModule");
 
-=head2 API (v21)
+=head2 API
 
- struct CoroAPI {
-    I32 Ver;
+ /* perl-related */
+ #define TRANSFER_SAVE_DEFAV      /* save @_ */
+ #define TRANSFER_SAVE_DEFSV      /* save $_ */
+ #define TRANSFER_SAVE_ERRSV      /* save $@ */
+ /* c-related */
+ #define TRANSFER_SAVE_CCTXT      /* save C context (stack) */
+ #define TRANSFER_LAZY_STACK      /* try to allocate stacks lazily */
 
- };
+ #define TRANSFER_SAVE_ALL        (TRANSFER_SAVE_DEFAV | TRANSFER_SAVE_DEFSV \
+                                   | TRANSFER_SAVE_ERRSV | TRANSFER_SAVE_CCTXT)
+
+ #define CORO_TRANSFER(prev,next,flags) /* transfer from prev to next */
+ #define CORO_SCHEDULE            /* like Coro::schedule */
+ #define CORO_CEDE                /* like Coro::cede */
+ #define CORO_READY(coro)         /* like $coro->ready */
+ #define CORO_NREADY              /* # of procs in runqueue */
+ #define CORO_CURRENT             /* returns $Coro::current */
 
 =cut

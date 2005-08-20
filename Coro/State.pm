@@ -79,8 +79,7 @@ to save the current coroutine in.
 =cut
 
 # this is called (or rather: goto'ed) for each and every
-# new coroutine. IT MUST NEVER RETURN and should not call
-# anything that changes the stacklevel (like eval).
+# new coroutine. IT MUST NEVER RETURN!
 sub initialize {
    my $proc = shift;
    eval {
@@ -105,17 +104,17 @@ coroutine saved in C<$next>.
 
 The "state" of a subroutine includes the scope, i.e. lexical variables and
 the current execution state (subroutine, stack). The C<$flags> value can
-be used to specify that additional state be saved (and later restored), by
-C<||>-ing the following constants together:
+be used to specify that additional state to be saved (and later restored), by
+oring the following constants together:
 
    Constant    Effect
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
-   SAVE_CCTXT  save/restore C-stack (you usually want this)
+   SAVE_CCTXT  save/restore C-stack (you usually want this for coroutines)
 
 These constants are not exported by default. If you don't need any extra
-additional state saved use C<0> as the flags value.
+additional state saved, use C<0> as the flags value.
 
 If you feel that something important is missing then tell me.  Also
 remember that every function call that might call C<transfer> (such

@@ -49,10 +49,10 @@ struct CoroAPI {
 
 static struct CoroAPI *GCoroAPI;
 
-#define CORO_TRANSFER(prev,next) GCoroAPI->transfer(aTHX_ (prev),(next))
-#define CORO_SCHEDULE            GCoroAPI->schedule()
-#define CORO_CEDE                GCoroAPI->cede()
-#define CORO_READY(coro)         GCoroAPI->ready(coro)
+#define CORO_TRANSFER(prev,next,flags) GCoroAPI->transfer(aTHX_ (prev), (next), (flags))
+#define CORO_SCHEDULE            GCoroAPI->schedule ()
+#define CORO_CEDE                GCoroAPI->cede ()
+#define CORO_READY(coro)         GCoroAPI->ready (coro)
 #define CORO_NREADY              (*GCoroAPI->nready)
 #define CORO_CURRENT             SvRV(GvSV(GCoroAPI->current))
 

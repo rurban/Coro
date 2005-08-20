@@ -1,5 +1,8 @@
 Revision history for Perl extension Coro.
 
+	- improve Coro::State docs, remove reference to nonexisting
+          Coro::State::flush method.
+
 1.2  Mon May 16 02:00:55 CEST 2005
 	- included libcoro.c earlier in State.xs, might improve portability.
         - use a faster and possibly more stable Coro::Cont implementation.
