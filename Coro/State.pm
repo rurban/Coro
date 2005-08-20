@@ -8,17 +8,17 @@ Coro::State - create and manage simple coroutines
 
  $new = new Coro::State sub {
     print "in coroutine (called with @_), switching back\n";
-    $new->transfer($main);
+    $new->transfer ($main);
     print "in coroutine again, switching back\n";
-    $new->transfer($main);
+    $new->transfer ($main);
  }, 5;
 
  $main = new Coro::State;
 
  print "in main, switching to coroutine\n";
- $main->transfer($new);
+ $main->transfer ($new);
  print "back in main, switch to coroutine again\n";
- $main->transfer($new);
+ $main->transfer ($new);
  print "back in main\n";
 
 =head1 DESCRIPTION
@@ -98,7 +98,7 @@ sub new {
    bless _newprocess [$proc, @_], $class;
 }
 
-=item $prev->transfer ($next,$flags)
+=item $prev->transfer ($next, $flags)
 
 Save the state of the current subroutine in C<$prev> and switch to the
 coroutine saved in C<$next>.
@@ -139,17 +139,6 @@ contains the real Coro::State object. That is, you can do:
   Coro::State::transfer (..., $obj);
 
 This exists mainly to ease subclassing (wether through @ISA or not).
-
-=cut
-
-=item Coro::State::flush
-
-To be efficient (actually, to not be abysmaly slow), this module does
-some fair amount of caching (a possibly complex structure for every
-subroutine in use). If you don't use coroutines anymore or you want to
-reclaim some memory then you can call this function which will flush all
-internal caches. The caches will be rebuilt when needed so this is a safe
-operation.
 
 =cut
 

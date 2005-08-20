@@ -1,9 +1,11 @@
 Revision history for Perl extension Coro.
 
+1.2  Mon May 16 02:00:55 CEST 2005
 	- included libcoro.c earlier in State.xs, might improve portability.
         - use a faster and possibly more stable Coro::Cont implementation.
         - accept x86_64 in addition to amd64 for optimized linux-amd64 support.
         - fix bugs Coro::SemaphoreSet that could cause locks never to be freed.
+        - fix bugs in CoroAPI.h and document it in Coro::MakeMaker.
 
 1.11 Thu Mar  3 18:00:52 CET 2005
 	- change of contact address.
