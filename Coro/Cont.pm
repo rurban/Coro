@@ -11,7 +11,7 @@ Coro::Cont - continuations in perl
     yield $_*2;
     yield $_;
  };
- my %hash2 = map &$csub, &hash1;
+ my %hash2 = map &$cont, %hash1;
 
  # dasselbe in grün (as the germans say)
  sub mul2 : Cont {
@@ -19,7 +19,7 @@ Coro::Cont - continuations in perl
     yield $_[0];
  }
 
- my %hash2 = map mul2($_), &hash1;
+ my %hash2 = map mul2($_), %hash1;
 
 =head1 DESCRIPTION
 
@@ -39,7 +39,7 @@ use vars qw($return);
 
 use base 'Exporter';
 
-$VERSION = 1.3;
+$VERSION = 1.31;
 @EXPORT = qw(csub yield);
 
 {

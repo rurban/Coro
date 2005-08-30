@@ -52,7 +52,7 @@ use base 'Exporter';
 @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = 1.3;
+   $VERSION = 1.31;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
 
