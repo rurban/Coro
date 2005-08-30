@@ -55,7 +55,7 @@ package Coro::State;
 BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 BEGIN {
-   $VERSION = 1.3;
+   $VERSION = 1.31;
 
    require DynaLoader;
    push @ISA, 'DynaLoader';
