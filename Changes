@@ -1,5 +1,9 @@
 Revision history for Perl extension Coro.
 
+1.4  Tue Sep  6 00:11:05 CEST 2005
+	- libcoro did not take into account the trampoline on amd64,
+          when 'l'inux method was used.
+
 1.31 Tue Aug 30 23:31:33 CEST 2005
 	- some portability fixes/workarounds.
 
