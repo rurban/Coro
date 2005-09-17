@@ -123,7 +123,6 @@ sub ip_request {
    my $whois = $self->whois_request($ip);
    
    return if $whois =~ /^No match/;
-   return if $whois =~ /^\*de: This network range is not allocated to /; # APINIC e.g. 24.0.0.0
 
    if ($whois =~ /^To single out one record/m) {
       my $handle;
@@ -231,6 +230,9 @@ sub ip_request {
    }gex;
 
    $whois =~ /^\*in: 0\.0\.0\.0 - 255\.255\.255\.255/
+      and return;
+
+   $whois =~ /^\*de: This network range is not allocated to /m # APINIC e.g. 24.0.0.0
       and return;
 
    $whois =~ /^\*ac: XXX0/m # 192.0.0.0
