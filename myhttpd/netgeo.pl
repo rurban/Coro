@@ -122,13 +122,14 @@ sub ip_request {
 
    my $whois = $self->whois_request($ip);
    
-   return () if $whois =~ /^No match/;
+   return if $whois =~ /^No match/;
+   return if $whois =~ /^\*de: This network range is not allocated to /; # APINIC e.g. 24.0.0.0
 
    if ($whois =~ /^To single out one record/m) {
       my $handle;
       while ($whois =~ /\G\S.*\(([A-Z0-9\-]+)\).*\n/mg) {
          $handle = $1;
-         #return if $handle =~ /-(RIPE|APNIC)/; # heuristic, bbut bad because ripe might not have better info
+         #return if $handle =~ /-(RIPE|APNIC)/; # heuristic, but bad because ripe might not have better info
       }
       $handle or die "$whois ($ip): unparseable multimatch\n";
       $whois = $self->whois_request("!$handle");

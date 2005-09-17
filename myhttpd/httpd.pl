@@ -141,13 +141,13 @@ package conn;
 use Socket;
 use HTTP::Date;
 use Convert::Scalar 'weaken';
-use Linux::AIO;
+use IO::AIO;
 
-Linux::AIO::min_parallel $::AIO_PARALLEL;
+IO::AIO::min_parallel $::AIO_PARALLEL;
 
-Event->io(fd => Linux::AIO::poll_fileno,
+Event->io(fd => IO::AIO::poll_fileno,
           poll => 'r', async => 1,
-          cb => \&Linux::AIO::poll_cb);
+          cb => \&IO::AIO::poll_cb);
 
 our %conn; # $conn{ip}{self} => connobj
 our %uri;  # $uri{ip}{uri}{self}
