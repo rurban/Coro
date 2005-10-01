@@ -118,6 +118,11 @@ sub awaited {
 
 =back
 
+=head1 BUGS
+
+This implementation is not currently very robust when the process is woken
+up by other sources, i.e. C<wait> might return early.
+
 =head1 AUTHOR
 
  Marc Lehmann <schmorp@schmorp.de>
