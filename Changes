@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+	- libcoro errornously restored the SIGUSR2 handler to SIGUSR1.
+
 1.4  Tue Sep  6 00:11:05 CEST 2005
 	- libcoro did not take into account the trampoline on amd64,
           when 'l'inux method was used.
