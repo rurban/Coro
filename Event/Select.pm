@@ -4,8 +4,9 @@ Coro::Select - a (slow but event-aware) replacement for CORE::select
 
 =head1 SYNOPSIS
 
- use Coro::Select; # replace select globally
+ use Coro::Select;          # replace select globally
  use Core::Select 'select'; # only in this module
+ use Coro::Select ();       # use Coro::Select::select
 
 =head1 DESCRIPTION
 
@@ -25,28 +26,29 @@ You can also invoke it from the commandline as C<perl -MCoro::Select>.
 
 package Coro::Select;
 
-use base Exporter;
+use strict;
+
+use Event;
 
 use Coro;
 use Coro::Event;
-use Event;
 
-$VERSION = 1.31;
+use base Exporter::;
 
-BEGIN {
-   @EXPORT_OK = qw(select);
-}
+our $VERSION = 1.5;
+our @EXPORT_OK = "select";
 
 sub import {
    my $pkg = shift;
    if (@_) {
-      $pkg->export (caller (0), @_);
+      $pkg->export (scalar caller 0, @_);
    } else {
       $pkg->export ("CORE::GLOBAL", "select");
    }
 }
 
 sub select(;*$$$) { # not the correct prototype, but well... :()
+   warn "select<@_>\n";#d#
    if (@_ == 0) {
       return CORE::select;
    } elsif (@_ == 1) {

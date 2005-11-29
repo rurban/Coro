@@ -52,19 +52,20 @@ per coroutine, 5k when the experimental context sharing is enabled.
 
 package Coro::State;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+use strict;
+no warnings "uninitialized";
+
+use XSLoader;
 
 BEGIN {
-   $VERSION = 1.31;
+   our $VERSION = 1.5;
 
-   require DynaLoader;
-   push @ISA, 'DynaLoader';
-   bootstrap Coro::State $VERSION;
+   XSLoader::load __PACKAGE__, $VERSION;
 }
 
-use base 'Exporter';
+use base Exporter::;
 
-@EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);
+our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);
 
 =item $coro = new [$coderef] [, @args...]
 
