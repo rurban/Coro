@@ -31,7 +31,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 1.31;
+$VERSION = 1.5;
 
 =item $s = new Coro::Signal;
 
@@ -117,6 +117,11 @@ sub awaited {
 1;
 
 =back
+
+=head1 BUGS
+
+This implementation is not currently very robust when the process is woken
+up by other sources, i.e. C<wait> might return early.
 
 =head1 AUTHOR
 

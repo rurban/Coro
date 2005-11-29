@@ -1,5 +1,13 @@
 Revision history for Perl extension Coro.
 
+1.5  Tue Nov 29 13:32:44 CET 2005
+	- use Coro::Event inside Coro::Select to avoid spurious deadlocks.
+        - fix Coro::Select 'select'.
+        - strict'ify some modules.
+	- libcoro errornously restored the SIGUSR2 handler to SIGUSR1.
+        - use XSLoader in selected modules.
+        - remove some 5.6 compatibility cruft.
+
 1.4  Tue Sep  6 00:11:05 CEST 2005
 	- libcoro did not take into account the trampoline on amd64,
           when 'l'inux method was used.

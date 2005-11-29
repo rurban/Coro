@@ -32,21 +32,24 @@ important global variables.
 
 package Coro;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+use strict;
+no warnings "uninitialized";
 
 use Coro::State;
 
-use vars qw($idle $main $current);
+use base Exporter::;
 
-use base Exporter;
+our $idle;    # idle coroutine
+our $main;    # main coroutine
+our $current; # current coroutine
 
-$VERSION = '1.4';
+our $VERSION = 1.5;
 
-@EXPORT = qw(async cede schedule terminate current);
-%EXPORT_TAGS = (
+our @EXPORT = qw(async cede schedule terminate current);
+our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
-@EXPORT_OK = @{$EXPORT_TAGS{prio}};
+our @EXPORT_OK = @{$EXPORT_TAGS{prio}};
 
 {
    my @async;
@@ -54,7 +57,10 @@ $VERSION = '1.4';
 
    # this way of handling attributes simply is NOT scalable ;()
    sub import {
+      no strict 'refs';
+
       Coro->export_to_level(1, @_);
+
       my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
       *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
          my ($package, $ref) = (shift, shift);

@@ -4,8 +4,9 @@ Coro::Select - a (slow but event-aware) replacement for CORE::select
 
 =head1 SYNOPSIS
 
- use Coro::Select; # replace select globally
+ use Coro::Select;          # replace select globally
  use Core::Select 'select'; # only in this module
+ use Coro::Select ();       # use Coro::Select::select
 
 =head1 DESCRIPTION
 
@@ -25,33 +26,35 @@ You can also invoke it from the commandline as C<perl -MCoro::Select>.
 
 package Coro::Select;
 
-use base Exporter;
+use strict;
 
-use Coro;
 use Event;
 
-$VERSION = 1.31;
+use Coro;
+use Coro::Event;
 
-BEGIN {
-   @EXPORT_OK = qw(select);
-}
+use base Exporter::;
+
+our $VERSION = 1.5;
+our @EXPORT_OK = "select";
 
 sub import {
    my $pkg = shift;
    if (@_) {
-      $pkg->export(caller(0), @_);
+      $pkg->export (scalar caller 0, @_);
    } else {
-      $pkg->export("CORE::GLOBAL", "select");
+      $pkg->export ("CORE::GLOBAL", "select");
    }
 }
 
 sub select(;*$$$) { # not the correct prototype, but well... :()
+   warn "select<@_>\n";#d#
    if (@_ == 0) {
       return CORE::select;
    } elsif (@_ == 1) {
       return CORE::select $_[0];
    } elsif (defined $_[3] && !$_[3]) {
-      return CORE::select(@_);
+      return CORE::select (@_);
    } else {
       my $current = $Coro::current;
       my $nfound = 0;
@@ -64,7 +67,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
                if (vec $vec, $b, 1) {
                   (vec $$rvec, $b, 1) = 0;
                   push @w,
-                     Event->io(fd => $b, poll => $poll, cb => sub {
+                     Event->io (fd => $b, poll => $poll, cb => sub {
                         (vec $$rvec, $b, 1) = 1;
                         $nfound++;
                         $current->ready;
@@ -75,7 +78,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       }
 
       push @w,
-         Event->timer(after => $_[3], cb => sub {
+         Event->timer (after => $_[3], cb => sub {
             $current->ready;
          });
 

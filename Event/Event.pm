@@ -43,22 +43,22 @@ package Coro::Event;
 BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Carp;
+no warnings;
 
 use Coro;
 use Event qw(loop unloop); # we are re-exporting this, cooool!
 
-use base 'Exporter';
+use XSLoader;
 
-@EXPORT = qw(loop unloop sweep reschedule);
+use base Exporter::;
+
+our @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   $VERSION = 1.31;
+   our $VERSION = 1.5;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
-
-   require DynaLoader;
-   push @ISA, 'DynaLoader';
-   bootstrap Coro::Event $VERSION;
+   XSLoader::load __PACKAGE__, $VERSION;
 }
 
 =item $w = Coro::Event->flavour(args...)
