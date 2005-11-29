@@ -28,6 +28,7 @@ package Coro::Select;
 use base Exporter;
 
 use Coro;
+use Coro::Event;
 use Event;
 
 $VERSION = 1.31;
@@ -39,9 +40,9 @@ BEGIN {
 sub import {
    my $pkg = shift;
    if (@_) {
-      $pkg->export(caller(0), @_);
+      $pkg->export (caller (0), @_);
    } else {
-      $pkg->export("CORE::GLOBAL", "select");
+      $pkg->export ("CORE::GLOBAL", "select");
    }
 }
 
@@ -51,7 +52,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
    } elsif (@_ == 1) {
       return CORE::select $_[0];
    } elsif (defined $_[3] && !$_[3]) {
-      return CORE::select(@_);
+      return CORE::select (@_);
    } else {
       my $current = $Coro::current;
       my $nfound = 0;
@@ -64,7 +65,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
                if (vec $vec, $b, 1) {
                   (vec $$rvec, $b, 1) = 0;
                   push @w,
-                     Event->io(fd => $b, poll => $poll, cb => sub {
+                     Event->io (fd => $b, poll => $poll, cb => sub {
                         (vec $$rvec, $b, 1) = 1;
                         $nfound++;
                         $current->ready;
@@ -75,7 +76,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       }
 
       push @w,
-         Event->timer(after => $_[3], cb => sub {
+         Event->timer (after => $_[3], cb => sub {
             $current->ready;
          });
 

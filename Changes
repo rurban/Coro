@@ -1,7 +1,7 @@
 Revision history for Perl extension Coro.
-
 TODO: Coro::Select (select) and "" both don'T work
 
+	- use Coro::Event inside Coro::Select to avoid spurious deadlocks.
 	- libcoro errornously restored the SIGUSR2 handler to SIGUSR1.
 
 1.4  Tue Sep  6 00:11:05 CEST 2005
