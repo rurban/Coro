@@ -67,7 +67,7 @@ sub wake_next {
       last unless $self->{slots} > $min;
       my $transfer = shift @{$self->{wait}};
       $self->{lastspb} = $transfer->{spb};
-      $self->{avgspb} = $self->{avgspb} * 0.99 + $transfer->{spb} * 0.01;
+      $self->{avgspb} = $self->{avgspb} * 0.999 + $transfer->{spb} * 0.001;
       $self->{started}++;
       $transfer->wake;
       last;
