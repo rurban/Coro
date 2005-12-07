@@ -6,6 +6,17 @@ Coro::Socket - non-blocking socket-io
 
  use Coro::Socket;
 
+ # listen on an ipv4 socket
+ my $socket = new Coro::Socket PeerHost => "localhost",
+                               PeerPort => 'finger';
+
+ # listen on any other type of socket
+ my $socket = Coro::Socket->new_from_fh
+                 (IO::Socket::UNIX->new
+                     Local  => "/tmp/socket",
+                     Type   => SOCK_STREAM,
+                 );
+
 =head1 DESCRIPTION
 
 This module implements socket-handles in a coroutine-compatible way,
