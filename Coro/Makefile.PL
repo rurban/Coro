@@ -33,6 +33,8 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
 
 print <<EOF;
 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
 C context sharing: This option makes it possible to share the C stack and
 context between many coroutines, resulting in large memory savings and
 slight speed gains, at the cost of potential (but mostly theoretical)
@@ -58,9 +60,11 @@ if (prompt ("Do you want to enable C context sharing (y/n)", "y") !~ /^\s*n/i) {
 if ($iface) {
    print <<EOF;
 
-Coro can use various ways to implement coroutines at C level. The
-default is correct in most cases, but you still can chose between these
-alternatives:
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
+Coro can use various ways to implement coroutines at C level. The default
+chosen is based on your current confguration and is correct in most cases,
+but you still can chose between these alternatives:
 
 u  The unix 'ucontext.h' functions are relatively new and not implemented
    or well-tested in older unices. They allow very fast coroutine creation
@@ -73,13 +77,14 @@ s  If the ucontext functions are not working or you don't want
    faster than with the ucontext functions). Unfortunately, glibc-2.1 and
    below don't even feature a working sigaltstack.
 
-l  GNU/Linux. Older GNU/Linux systems (glibc-2.1 and below) need this
-   hack. Since it is very linux-specific it is also quite fast for newer
-   versions; when it works, that is (currently x86 only)...
+l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
+   this hack. Since it is very linux-specific it is also quite fast and
+   recommended for newer versions; when it works, that is (currently x86
+   and a few others only. If it compiles, it's usually ok).
 
 i  IRIX. For some reason, SGI really does not like to follow the unix
    standard (does that surprise you?), so this workaround might be needed
-   (it's fast), although s and u should also work now.
+   (it's fast), although [s] and [u] should also work now.
 
 w  Microsoft Windows. Try this on Microsoft Windows, although, as there is
    no standard on how to do this under windows, this might work only on
@@ -122,6 +127,40 @@ retry:
 } else {
    print "\nUsing microsoft compatible coroutines\n\n";
 }
+
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
+Per-context stack size factor: Depending on your settings, Coro tries to
+share the C stack as much as possible, but sometimes it needs to allocate
+a new one. This setting controls the maximum size that gets allocated,
+and should not be set too high, as memory and address space still gets
+wasted even if it's not fully used. The value entered will be multiplied
+by sizeof(long), which is usually 4 on 32-bit systems, and 8 on 64-bit
+systems.
+
+A setting of 16384 (the default) therefore corresponds to a 64k..128k
+stack, which usually is ample enough space (you might want to try 8192 or
+lower if your program creates many coroutines).
+
+Some perls (mostly threaded ones) may need much, much more: If Coro
+segfaults with weird backtraces (e.g. in a function prologue) or in
+t/10_bugs.t, you might want to increase this to 65536 or more (debian
+perls might require this).
+
+EOF
+
+my $stacksize = prompt ("C stack size factor", "16384");
+$DEFINE .= " -DSTACKSIZE=$stacksize";
+
+print "using a stacksize of $stacksize * sizeof(long)\n";
+
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
+EOF
 
 WriteMakefile(
   NAME         => "Coro::State",

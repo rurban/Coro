@@ -39,7 +39,7 @@ use vars qw($return);
 
 use base 'Exporter';
 
-$VERSION = 1.51;
+$VERSION = 1.6;
 @EXPORT = qw(csub yield);
 
 {
