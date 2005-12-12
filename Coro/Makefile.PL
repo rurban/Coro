@@ -144,10 +144,11 @@ A setting of 16384 (the default) therefore corresponds to a 64k..128k
 stack, which usually is ample enough space (you might want to try 8192 or
 lower if your program creates many coroutines).
 
-Some perls (mostly threaded ones) may need much, much more: If Coro
-segfaults with weird backtraces (e.g. in a function prologue) or in
-t/10_bugs.t, you might want to increase this to 65536 or more (debian
-perls might require this).
+Some perls (mostly threaded ones) and some programs (inefficient regexes
+can use a lot of stack space) may need much, much more: If Coro segfaults
+with weird backtraces (e.g. in a function prologue) or in t/10_bugs.t, you
+might want to increase this to 65536 or more (debian perls might require
+this).
 
 EOF
 
