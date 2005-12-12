@@ -24,7 +24,7 @@ if (eval { require Event }) {
 *** WARNING: Event version $Event::VERSION found, NOT building Event support.
 ***
 *** This version of Event is broken. The only currently known non-broken
-*** versions of Event are 0.87 and 0.89+. Please install one of these
+*** versions of Event are 0.87 and 0.89+. Please install one of those
 *** versions.
 ***
 
