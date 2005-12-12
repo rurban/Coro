@@ -1,5 +1,9 @@
 Revision history for Perl extension Coro.
 
+	- additionally save PM_curpm might fix as-of-yet
+          unseen problems with regex matches being attributes to the
+          wrong package.
+
 1.51 Mon Dec 12 18:48:36 CET 2005
 	- remove debugging warn() accidentally left in Coro::Select.
 

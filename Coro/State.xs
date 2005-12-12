@@ -130,6 +130,7 @@ struct coro {
   OP **retstack;
   I32 retstack_ix;
   I32 retstack_max;
+  PMOP *curpm;
   COP *curcop;
   JMPENV *top_env;
 
@@ -349,6 +350,7 @@ load_state(pTHX_ Coro__State c)
   PL_retstack = c->retstack;
   PL_retstack_ix = c->retstack_ix;
   PL_retstack_max = c->retstack_max;
+  PL_curpm = c->curpm;
   PL_curcop = c->curcop;
   PL_top_env = c->top_env;
 
@@ -474,6 +476,7 @@ save_state(pTHX_ Coro__State c, int flags)
   c->retstack = PL_retstack;
   c->retstack_ix = PL_retstack_ix;
   c->retstack_max = PL_retstack_max;
+  c->curpm = PL_curpm;
   c->curcop = PL_curcop;
   c->top_env = PL_top_env;
 }
