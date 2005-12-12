@@ -123,6 +123,31 @@ retry:
    print "\nUsing microsoft compatible coroutines\n\n";
 }
 
+print <<EOF;
+
+Per-context stack size: Depending on your settings, Coro tries to share
+the C stack as much as possible, but sometimes it needs to allocate a
+new one. This setting controls the maximum size that gets allocated, and
+should not be too high, memory and address space still gets wasted even if
+it's not fully used.
+
+The value entered will be multiplied by sizeof(long), which is usually
+4 on 32-bit systems, and 8 on 64-bit systems. A setting of 16384 (the
+default) therefore corresponds to a 64k to 128k stack, which usually
+is ample space. Some perls (mostly threaded ones) may need much, much
+more: If Coro segfaults with weird backtraces (e.g. in a function
+prologue) or in t/10_bugs.t, you might want to increase this to 65536 or
+more (debian might require this).
+
+EOF
+
+my $stacksize = prompt ("C Stack Size", "16384");
+$DEFINE .= " -DSTACKSIZE=$stacksize";
+
+print "using a stacksize of $stacksize * sizeof(long)\n";
+
+print "\n";
+
 WriteMakefile(
   NAME         => "Coro::State",
   VERSION_FROM => "State.pm",
