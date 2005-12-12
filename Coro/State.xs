@@ -8,10 +8,6 @@
 
 #include "patchlevel.h"
 
-// threaded perls might need much more, 65536 or more,
-// which is 0.5 to 1MB
-#define STACKSIZE 16384
-
 #if PERL_VERSION < 6
 # ifndef PL_ppaddr
 #  define PL_ppaddr ppaddr

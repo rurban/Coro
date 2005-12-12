@@ -30,7 +30,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 1.51;
+$VERSION = 1.6;
 
 =item $l = new Coro::RWLock;
 
