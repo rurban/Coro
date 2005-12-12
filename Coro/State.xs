@@ -8,6 +8,10 @@
 
 #include "patchlevel.h"
 
+// threaded perls might need much more, 65536 or more,
+// which is 0.5 to 1MB
+#define STACKSIZE 16384
+
 #if PERL_VERSION < 6
 # ifndef PL_ppaddr
 #  define PL_ppaddr ppaddr
@@ -591,14 +595,14 @@ allocate_stack (Coro__State ctx, int alloc)
   if (alloc)
     {
 #if HAVE_MMAP
-      stack->ssize = 16384 * sizeof (long); /* mmap should do allocate-on-write for us */
+      stack->ssize = STACKSIZE * sizeof (long); /* mmap should do allocate-on-write for us */
       stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
       if (stack->sptr == (void *)-1)
 #endif
         {
           /*FIXME*//*D*//* reasonable stack size! */
-          stack->ssize = - (8192 * sizeof (long));
-          New (0, stack->sptr, 8192, long);
+          stack->ssize = - (STACKSIZE * sizeof (long));
+          New (0, stack->sptr, STACKSIZE, long);
         }
     }
   else
