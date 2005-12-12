@@ -8,7 +8,7 @@ Revision history for Perl extension Coro.
           perls that use 0.26MB of stack space per Perl_magic_get
           invocation (debian) as opposed ot the 0.0002MB normal
           perls use.
-        - make stacksize configurable for ultimate debian experience.
+        - make stacksize configurable for the ultimate debian experience.
 
 1.51 Mon Dec 12 18:48:36 CET 2005
 	- remove debugging warn() accidentally left in Coro::Select.
