@@ -58,7 +58,7 @@ no warnings "uninitialized";
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 1.5;
+   our $VERSION = 1.51;
 
    XSLoader::load __PACKAGE__, $VERSION;
 }

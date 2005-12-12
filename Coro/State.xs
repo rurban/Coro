@@ -8,7 +8,7 @@
 
 #include "patchlevel.h"
 
-#if PATCHLEVEL < 6
+#if PERL_VERSION < 6
 # ifndef PL_ppaddr
 #  define PL_ppaddr ppaddr
 # endif

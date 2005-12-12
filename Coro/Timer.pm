@@ -35,7 +35,7 @@ BEGIN {
    eval "use Time::HiRes 'time'";
 }
 
-$VERSION = 1.5;
+$VERSION = 1.51;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
