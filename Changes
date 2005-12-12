@@ -1,5 +1,8 @@
 Revision history for Perl extension Coro.
 
+1.51 Mon Dec 12 18:48:36 CET 2005
+	- remove debugging warn() accidentally left in Coro::Select.
+
 1.5  Tue Nov 29 13:32:44 CET 2005
 	- use Coro::Event inside Coro::Select to avoid spurious deadlocks.
         - fix Coro::Select 'select'.
