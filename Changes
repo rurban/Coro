@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+	- improved Makefile.PL explanations.
+
 1.6  Mon Dec 12 21:30:05 CET 2005
 	- additionally save PM_curpm might fix as-of-yet
           unseen problems with regex matches being attributed to the
