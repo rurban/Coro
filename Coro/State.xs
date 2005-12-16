@@ -59,11 +59,11 @@
 
 #ifdef USE_ITHREADS
 static perl_mutex coro_mutex;
-# define LOCK   do { MUTEX_LOCK (&coro_mutex);   } while (0)
+# define LOCK   do { MUTEX_LOCK   (&coro_mutex); } while (0)
 # define UNLOCK do { MUTEX_UNLOCK (&coro_mutex); } while (0)
 #else
-# define LOCK   0
-# define UNLOCK 0
+# define LOCK   (void)0
+# define UNLOCK (void)0
 #endif
 
 static struct CoroAPI coroapi;
