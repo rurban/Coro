@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+1.7
+	- added Coro::AIO, a thin wrapper around IO::AIO.
 	- improved Makefile.PL explanations.
 
 1.6  Mon Dec 12 21:30:05 CET 2005

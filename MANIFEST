@@ -21,6 +21,7 @@ Coro/RWLock.pm
 Coro/Timer.pm
 Coro/MakeMaker.pm
 Coro/CoroAPI.h
+Coro/AIO.pm
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
