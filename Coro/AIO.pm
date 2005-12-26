@@ -1,13 +1,13 @@
 =head1 NAME
 
-Coro::AIO - truely asynchronous file access
+Coro::AIO - truly asynchronous file and directrory I/O
 
 =head1 SYNOPSIS
 
    use Coro::AIO;
 
-   # can now use any of:
-   # aio_sendfile aio_read aio_write aio_open aio_close
+   # can now use any of
+   # aio_sendfile aio_read aio_write aio_open aio_close aio_stat aio_lstat
    # aio_unlink aio_rmdir aio_readdir aio_scandir aio_symlink aio_fsync
    # aio_fdatasync aio_readahead
 
@@ -21,14 +21,14 @@ Coro::AIO - truely asynchronous file access
 =head1 DESCRIPTION
 
 This module implements a thin wrapper around L<IO::AIO|IO::AIO>. All of
-the functions (except C<aio_lstat> and C<aio_stat>) that expect a callback
-are being wrapped by this module.
+the functions that expect a callback are being wrapped by this module.
 
 The API is exactly the same as that of the corresponding IO::AIO routines,
 except that you have to specify I<all> arguments I<except> the callback
 argument. Instead the routines return the values normally passed to the
 callback. They also all have a prototype of C<@> currently, but that might
-change.
+change. Everything else, including C<$!> and perls stat cache, are set as
+expected after these functions return.
 
 You can mix calls to C<IO::AIO> functions with calls to this module. You
 also can, but do not need to, call C<IO::AIO::poll_cb>, as this module
@@ -46,6 +46,8 @@ IO::AIO manual>.
 
 package Coro::AIO;
 
+use strict;
+
 use Coro ();
 use AnyEvent;
 use IO::AIO ();
@@ -59,6 +61,8 @@ our @EXPORT;
 
 sub wrap($) {
    my ($sub) = @_;
+
+   no strict 'refs';
    
    push @EXPORT, $sub;
    
@@ -66,11 +70,11 @@ sub wrap($) {
 
    *$sub = sub {
       my $current = $Coro::current;
-      my $errno;
+      my $stat;
       my @res;
 
       $iosub->(@_, sub {
-         $errno = $!;
+         $stat = Coro::_aio_get_state;
          @res = @_;
          $current->ready;
          undef $current;
@@ -78,14 +82,14 @@ sub wrap($) {
 
       Coro::schedule while $current;
 
-      $! = $errno;
+      Coro::_aio_set_state $stat;
       wantarray ? @res : $res[0]
    };
 }
 
-wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close
-               aio_unlink aio_rmdir aio_readdir aio_scandir aio_symlink
-               aio_fsync aio_fdatasync aio_readahead);
+wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close aio_stat
+               aio_lstat aio_unlink aio_rmdir aio_readdir aio_scandir
+               aio_symlink aio_fsync aio_fdatasync aio_readahead);
 
 =item $fh = aio_open $pathname, $flags, $mode
 
@@ -98,6 +102,10 @@ wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close
 =item $retval = aio_sendfile $out_fh, $in_fh, $in_offset, $length
 
 =item $retval = aio_readahead $fh,$offset,$length
+
+=item $status = aio_stat $fh_or_path
+      
+=item $status = aio_lstat $fh
 
 =item $status = aio_unlink $pathname
 
@@ -112,6 +120,10 @@ wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close
 =item $status = aio_fdatasync $fh
 
 =back
+
+=head1 SEE ALSO
+
+L<Coro::Socket> and L<Coro::Handle> for non-blocking file operation.
 
 =head1 AUTHOR
 
