@@ -26,13 +26,15 @@ the functions that expect a callback are being wrapped by this module.
 The API is exactly the same as that of the corresponding IO::AIO routines,
 except that you have to specify I<all> arguments I<except> the callback
 argument. Instead the routines return the values normally passed to the
-callback. They also all have a prototype of C<@> currently, but that might
-change. Everything else, including C<$!> and perls stat cache, are set as
-expected after these functions return.
+callback. Everything else, including C<$!> and perls stat cache, are set
+as expected after these functions return.
 
 You can mix calls to C<IO::AIO> functions with calls to this module. You
-also can, but do not need to, call C<IO::AIO::poll_cb>, as this module
-automatically installs an event watcher for the C<IO::AIO> file
+I<must not>, however, call these routines from within IO::AIO callbacks,
+as this causes a deadlock. Start a coro inside the callback instead.
+
+You also can, but do not need to, call C<IO::AIO::poll_cb>, as this
+module automatically installs an event watcher for the C<IO::AIO> file
 descriptor. It uses the L<AnyEvent|AnyEvent> module for this, so please
 refer to its documentation on how it selects an appropriate Event module.
 
@@ -67,24 +69,33 @@ sub wrap($) {
    push @EXPORT, $sub;
    
    my $iosub = "IO::AIO::$sub";
+   my $proto = prototype $iosub;
 
-   *$sub = sub {
-      my $current = $Coro::current;
-      my $stat;
-      my @res;
+   $proto =~ s/;?\$$// or die "$iosub: unable to remove callback slot from prototype";
 
-      $iosub->(@_, sub {
-         $stat = Coro::_aio_get_state;
-         @res = @_;
-         $current->ready;
-         undef $current;
-      });
+   eval qq{
+#line 1 "Coro::AIO::$sub($proto)"
+      sub $sub($proto) {
+         my \$current = \$Coro::current;
+         my \$stat;
+         my \@res;
 
-      Coro::schedule while $current;
+         push \@_, sub {
+            \$stat = Coro::_aio_get_state;
+            \@res = \@_;
+            \$current->ready;
+            undef \$current;
+         };
 
-      Coro::_aio_set_state $stat;
-      wantarray ? @res : $res[0]
+         &$iosub;
+
+         Coro::schedule while \$current;
+
+         Coro::_aio_set_state \$stat;
+         wantarray ? \@res : \$res[0]
+      }
    };
+   die if $@;
 }
 
 wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close aio_stat
@@ -111,7 +122,7 @@ wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close aio_stat
 
 =item $status = aio_rmdir $pathname
 
-=item $entries = aio_readdir $pathname $callback->($entries)
+=item $entries = aio_readdir $pathname
 
 =item ($dirs, $nondirs) = aio_scandir $path, $maxreq
 
