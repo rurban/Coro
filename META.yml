@@ -1,11 +1,13 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Coro
-version:      1.6
+version:      1.7
 version_from: Coro.pm
 installdirs:  site
 requires:
+    AnyEvent:                      0
     Event:                         0.86
+    IO::AIO:                       1.6
     Scalar::Util:                  0
 
 distribution_type: module

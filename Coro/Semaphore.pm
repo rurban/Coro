@@ -37,7 +37,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 1.6;
+$VERSION = 1.7;
 
 =item new [inital count]
 
@@ -163,8 +163,6 @@ sub Coro::Semaphore::guard::DESTROY {
    &up(${${$_[0]}});
 }
 
-1;
-
 =back
 
 =head1 AUTHOR
@@ -173,4 +171,6 @@ sub Coro::Semaphore::guard::DESTROY {
  http://home.schmorp.de/
 
 =cut
+
+1
 

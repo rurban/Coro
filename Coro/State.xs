@@ -29,6 +29,7 @@
 # endif
 #endif
 
+#include <errno.h>
 #include <signal.h>
 
 #ifdef HAVE_MMAP
@@ -59,11 +60,11 @@
 
 #ifdef USE_ITHREADS
 static perl_mutex coro_mutex;
-# define LOCK   do { MUTEX_LOCK (&coro_mutex);   } while (0)
+# define LOCK   do { MUTEX_LOCK   (&coro_mutex); } while (0)
 # define UNLOCK do { MUTEX_UNLOCK (&coro_mutex); } while (0)
 #else
-# define LOCK   0
-# define UNLOCK 0
+# define LOCK   (void)0
+# define UNLOCK (void)0
 #endif
 
 static struct CoroAPI coroapi;
@@ -1148,3 +1149,42 @@ cede(...)
 	CODE:
         api_cede ();
 
+# and these are hacks
+SV *
+_aio_get_state ()
+	CODE:
+{
+	struct {
+          int errorno;
+          int laststype;
+          int laststatval;
+          Stat_t statcache;
+        } data;
+
+        data.errorno = errno;
+        data.laststype = PL_laststype;
+        data.laststatval = PL_laststatval;
+        data.statcache = PL_statcache;
+
+        RETVAL = newSVpvn ((char *)&data, sizeof data);
+}
+	OUTPUT:
+        RETVAL
+
+void
+_aio_set_state (char *data_)
+	PROTOTYPE: $
+	CODE:
+{
+	struct {
+          int errorno;
+          int laststype;
+          int laststatval;
+          Stat_t statcache;
+        } *data = (void *)data_;
+
+        errno = data->errorno;
+        PL_laststype = data->laststype;
+        PL_laststatval = data->laststatval;
+        PL_statcache = data->statcache;
+}

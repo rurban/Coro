@@ -49,8 +49,14 @@ WriteMakefile(
     VERSION_FROM => "Coro.pm",
     DIR          => ['Coro', ($EVENT ? 'Event' : ())],
     PREREQ_PM    => {
-       Event		=> 0.86,
        Scalar::Util	=> 0.00,
+
+       # for Coro::Event
+       Event		=> 0.86,
+
+       # for Coro::AIO
+       IO::AIO          => 1.6,
+       AnyEvent         => 0,
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
@@ -70,6 +76,8 @@ WriteMakefile(
     		    'Coro/Semaphore.pm'	=> '$(INST_LIBDIR)/Coro/Semaphore.pm',
     		    'Coro/SemaphoreSet.pm'=> '$(INST_LIBDIR)/Coro/SemaphoreSet.pm',
     		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
+
+    		    'Coro/AIO.pm'	=> '$(INST_LIBDIR)/Coro/AIO.pm',
                     },
 );
 

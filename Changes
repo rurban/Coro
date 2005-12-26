@@ -1,13 +1,17 @@
 Revision history for Perl extension Coro.
 
+1.7  Tue Dec 27 01:41:58 CET 2005
+	- added Coro::AIO, a thin wrapper around IO::AIO.
+	- improved Makefile.PL explanations.
+
 1.6  Mon Dec 12 21:30:05 CET 2005
 	- additionally save PM_curpm might fix as-of-yet
-          unseen problems with regex matches being attributes to the
+          unseen problems with regex matches being attributed to the
           wrong package.
         - add t/10_bugs.t, which currently checks against imho broken
           perls that use 0.26MB of stack space per Perl_magic_get
-          invocation (debian) as opposed ot the 0.0002MB normal
-          perls use.
+          invocation (newer linuxes) as opposed to the 0.0002MB perl
+          normally uses.
         - make stacksize configurable for the ultimate debian experience.
 
 1.51 Mon Dec 12 18:48:36 CET 2005
