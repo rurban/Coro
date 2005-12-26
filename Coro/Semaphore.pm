@@ -163,8 +163,6 @@ sub Coro::Semaphore::guard::DESTROY {
    &up(${${$_[0]}});
 }
 
-1
-
 =back
 
 =head1 AUTHOR
@@ -173,4 +171,6 @@ sub Coro::Semaphore::guard::DESTROY {
  http://home.schmorp.de/
 
 =cut
+
+1
 
