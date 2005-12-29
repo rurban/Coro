@@ -75,7 +75,7 @@ sub bool    {
 }
 
 sub DESTROY { 
-   ${${$_[0]}}->cancel;
+   ${${$_[0]}}->cancel if ${${$_[0]}};
    undef ${${$_[0]}}; # without this it leaks like hell. breaks the circular reference inside the closure
 }
 
