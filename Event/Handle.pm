@@ -23,7 +23,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 1.7;
+$VERSION = 1.8;
 
 @EXPORT = qw(unblock);
 
