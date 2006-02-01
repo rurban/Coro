@@ -348,7 +348,7 @@ load_state(pTHX_ Coro__State c)
   PL_savestack = c->savestack;
   PL_savestack_ix = c->savestack_ix;
   PL_savestack_max = c->savestack_max;
-#ifdef PL_retstack
+#if PERL_VERSION < 9
   PL_retstack = c->retstack;
   PL_retstack_ix = c->retstack_ix;
   PL_retstack_max = c->retstack_max;
@@ -476,7 +476,7 @@ save_state(pTHX_ Coro__State c, int flags)
   c->savestack = PL_savestack;
   c->savestack_ix = PL_savestack_ix;
   c->savestack_max = PL_savestack_max;
-#ifdef PL_retstack
+#if PERL_VERSION < 9
   c->retstack = PL_retstack;
   c->retstack_ix = PL_retstack_ix;
   c->retstack_max = PL_retstack_max;
@@ -527,7 +527,7 @@ coro_init_stacks (pTHX)
     PL_savestack_ix = 0;
     PL_savestack_max = 96;
 
-#ifdef PL_retstack
+#if PERL_VERSION < 9
     New(54,PL_retstack,8,OP*);
     PL_retstack_ix = 0;
     PL_retstack_max = 8;
@@ -581,7 +581,7 @@ destroy_stacks(pTHX)
   Safefree (PL_markstack);
   Safefree (PL_scopestack);
   Safefree (PL_savestack);
-#ifdef PL_retstack
+#if PERL_VERSION < 9
   Safefree (PL_retstack);
 #endif
 }

@@ -1,6 +1,6 @@
 Revision history for Perl extension Coro.
 
-1.8
+1.8  Thu Feb  2 00:59:06 CET 2006
 	- applied suggested patch by SAMV to avoid problems during stupid
           mark & sweep gc run.
         - applied patch by Scott Walters for 5.9.3 compatibility.

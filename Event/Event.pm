@@ -55,7 +55,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep reschedule);
 
 BEGIN {
-   our $VERSION = 1.8;
+   our $VERSION = 1.9;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
