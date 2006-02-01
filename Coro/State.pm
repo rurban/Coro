@@ -58,11 +58,12 @@ no warnings "uninitialized";
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 1.7;
+   our $VERSION = 1.9;
 
    XSLoader::load __PACKAGE__, $VERSION;
 }
 
+use Exporter;
 use base Exporter::;
 
 our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);

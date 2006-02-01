@@ -173,7 +173,7 @@ clone_padlist (pTHX_ AV *protopadlist)
   av = newAV ();                /* will be @_ */
   av_extend (av, 0);
   av_store (newpad, 0, (SV *) av);
-  AvFLAGS (av) = AVf_REIFY;
+  AvREIFY_on (av);
 
   for (ix = fpad; ix > 0; ix--)
     {
@@ -348,9 +348,11 @@ load_state(pTHX_ Coro__State c)
   PL_savestack = c->savestack;
   PL_savestack_ix = c->savestack_ix;
   PL_savestack_max = c->savestack_max;
+#if PERL_VERSION < 9
   PL_retstack = c->retstack;
   PL_retstack_ix = c->retstack_ix;
   PL_retstack_max = c->retstack_max;
+#endif
   PL_curpm = c->curpm;
   PL_curcop = c->curcop;
   PL_top_env = c->top_env;
@@ -474,9 +476,11 @@ save_state(pTHX_ Coro__State c, int flags)
   c->savestack = PL_savestack;
   c->savestack_ix = PL_savestack_ix;
   c->savestack_max = PL_savestack_max;
+#if PERL_VERSION < 9
   c->retstack = PL_retstack;
   c->retstack_ix = PL_retstack_ix;
   c->retstack_max = PL_retstack_max;
+#endif
   c->curpm = PL_curpm;
   c->curcop = PL_curcop;
   c->top_env = PL_top_env;
@@ -523,9 +527,11 @@ coro_init_stacks (pTHX)
     PL_savestack_ix = 0;
     PL_savestack_max = 96;
 
+#if PERL_VERSION < 9
     New(54,PL_retstack,8,OP*);
     PL_retstack_ix = 0;
     PL_retstack_max = 8;
+#endif
 
     UNLOCK;
 }
@@ -575,7 +581,9 @@ destroy_stacks(pTHX)
   Safefree (PL_markstack);
   Safefree (PL_scopestack);
   Safefree (PL_savestack);
+#if PERL_VERSION < 9
   Safefree (PL_retstack);
+#endif
 }
 
 static void

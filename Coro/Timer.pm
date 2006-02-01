@@ -35,7 +35,7 @@ BEGIN {
    eval "use Time::HiRes 'time'";
 }
 
-$VERSION = 1.7;
+$VERSION = 1.9;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
@@ -65,7 +65,7 @@ sub timeout($) {
       undef $timer; # set flag
       $current->ready;
    });
-   bless $self, Coro::timeout::;
+   bless $self, 'Coro::timeout'; # weird quoting required by 5.9.3, it seems
 }
 
 package Coro::timeout;
@@ -75,7 +75,7 @@ sub bool    {
 }
 
 sub DESTROY { 
-   ${${$_[0]}}->cancel;
+   ${${$_[0]}}->cancel if ${${$_[0]}};
    undef ${${$_[0]}}; # without this it leaks like hell. breaks the circular reference inside the closure
 }
 
