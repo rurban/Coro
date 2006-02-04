@@ -869,22 +869,18 @@ static int coro_nready;
 static void
 coro_enq (pTHX_ SV *sv)
 {
-  if (SvTYPE (sv) == SVt_PVHV)
-    {
-      SV **xprio = hv_fetch ((HV *)sv, "prio", 4, 0);
-      int prio = xprio ? SvIV (*xprio) : PRIO_NORMAL;
+  if (SvTYPE (sv) != SVt_PVHV)
+    croak ("Coro::ready tried to enqueue something that is not a coroutine");
 
-      prio = prio > PRIO_MAX ? PRIO_MAX
-           : prio < PRIO_MIN ? PRIO_MIN
-           : prio;
+  SV **xprio = hv_fetch ((HV *)sv, "prio", 4, 0);
+  int prio = xprio ? SvIV (*xprio) : PRIO_NORMAL;
 
-      av_push (coro_ready [prio - PRIO_MIN], sv);
-      coro_nready++;
+  prio = prio > PRIO_MAX ? PRIO_MAX
+       : prio < PRIO_MIN ? PRIO_MIN
+       : prio;
 
-      return;
-    }
-
-  croak ("Coro::ready tried to enqueue something that is not a coroutine");
+  av_push (coro_ready [prio - PRIO_MIN], sv);
+  coro_nready++;
 }
 
 static SV *
