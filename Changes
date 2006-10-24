@@ -1,5 +1,10 @@
 Revision history for Perl extension Coro.
 
+2.0  Tue Oct 24 05:47:17 CEST 2006
+	- support additional aio requests in Coro::AIO.
+
+1.9  (never properly released due to a glitch)
+
 1.8  Thu Feb  2 00:59:06 CET 2006
 	- applied suggested patch by SAMV to avoid problems during stupid
           mark & sweep gc run.
