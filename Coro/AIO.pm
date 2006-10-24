@@ -6,10 +6,7 @@ Coro::AIO - truly asynchronous file and directrory I/O
 
    use Coro::AIO;
 
-   # can now use any of
-   # aio_sendfile aio_read aio_write aio_open aio_close aio_stat aio_lstat
-   # aio_unlink aio_rmdir aio_readdir aio_scandir aio_symlink aio_fsync
-   # aio_fdatasync aio_readahead
+   # can now use any of the aio requests your IO::AIO module supports.
 
    # read 1MB of /etc/passwd, without blocking other coroutines
    my $fh = aio_open "/etc/passwd", O_RDONLY, 0
@@ -98,9 +95,9 @@ sub wrap($) {
    die if $@;
 }
 
-wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close aio_stat
-               aio_lstat aio_unlink aio_rmdir aio_readdir aio_scandir
-               aio_symlink aio_fsync aio_fdatasync aio_readahead);
+wrap $_ for @IO::AIO::AIO_REQ
+               ? @IO::AIO::AIO_REQ
+               : @IO::AIO::EXPORT;
 
 =item $fh = aio_open $pathname, $flags, $mode
 
@@ -130,11 +127,17 @@ wrap $_ for qw(aio_sendfile aio_read aio_write aio_open aio_close aio_stat
 
 =item $status = aio_fdatasync $fh
 
+=item ... = aio_xxx ...
+
+Any additional aio requests follow the same scheme: same parameters except
+you must not specify a callback but instead get the callback arguments as
+return values.
+
 =back
 
 =head1 SEE ALSO
 
-L<Coro::Socket> and L<Coro::Handle> for non-blocking file operation.
+L<Coro::Socket> and L<Coro::Handle> for non-blocking socket operation.
 
 =head1 AUTHOR
 
