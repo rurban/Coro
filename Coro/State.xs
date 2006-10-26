@@ -30,7 +30,6 @@
 #endif
 
 #include <errno.h>
-#include <signal.h>
 
 #ifdef HAVE_MMAP
 # include <unistd.h>
@@ -277,6 +276,8 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
     free_padlist (aTHX_ padlist);
 
   SvREFCNT_dec (av);
+
+  return 0;
 }
 
 #define PERL_MAGIC_coro PERL_MAGIC_ext
@@ -605,8 +606,7 @@ allocate_stack (Coro__State ctx, int alloc)
       if (stack->sptr == (void *)-1)
 #endif
         {
-          /*FIXME*//*D*//* reasonable stack size! */
-          stack->ssize = - (STACKSIZE * sizeof (long));
+          stack->ssize = - (STACKSIZE * (long)sizeof (long));
           New (0, stack->sptr, STACKSIZE, long);
         }
     }
@@ -708,7 +708,6 @@ continue_coro (void *arg)
    */
   dTHX;
   Coro__State ctx = (Coro__State)arg;
-  JMPENV coro_start_env;
 
   PL_top_env = &ctx->start_env;
 
