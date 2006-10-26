@@ -841,7 +841,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
 												\
   } while(0)
 
-#define SvSTATE(sv) (struct coro *)SvIV (sv)
+#define SvSTATE(sv) INT2PTR (struct coro *, SvIV (sv))
 
 static void
 api_transfer(pTHX_ SV *prev, SV *next, int flags)
@@ -1082,8 +1082,8 @@ yield(...)
           av_store (defav, items, SvREFCNT_inc (ST(items)));
 
         sv = av_pop ((AV *)SvRV (yieldstack));
-        prev = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
-        next = (struct coro *)SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
+        prev = INT2PTR (struct coro *, SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0))));
+        next = INT2PTR (struct coro *, SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0))));
         SvREFCNT_dec (sv);
 
         transfer (aTHX_ prev, next, 0);
