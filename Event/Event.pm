@@ -193,6 +193,8 @@ unless ($override) {
 
 1;
 
+=back
+
 =head1 AUTHOR
 
  Marc Lehmann <schmorp@schmorp.de>
