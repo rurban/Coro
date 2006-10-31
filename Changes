@@ -1,6 +1,9 @@
 Revision history for Perl extension Coro.
 
 	- updated libcoro with a workaround for OS X.
+	- use a simpler and hopefully more robust
+          way to clone padlists (uses less memory and
+          a perl function instead of our own).
 
 2.0  Tue Oct 24 05:47:17 CEST 2006
 	- support additional aio requests in Coro::AIO.

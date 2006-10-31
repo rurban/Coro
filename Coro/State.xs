@@ -141,107 +141,25 @@ struct coro {
 typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
 
-/* mostly copied from op.c:cv_clone2 */
-STATIC AV *
-clone_padlist (pTHX_ AV *protopadlist)
+static AV *
+coro_clone_padlist (pTHX_ CV *cv)
 {
-  AV *av;
-  I32 ix;
-  AV *protopad_name = (AV *) * av_fetch (protopadlist, 0, FALSE);
-  AV *protopad = (AV *) * av_fetch (protopadlist, 1, FALSE);
-  SV **pname = AvARRAY (protopad_name);
-  SV **ppad = AvARRAY (protopad);
-  I32 fname = AvFILLp (protopad_name);
-  I32 fpad = AvFILLp (protopad);
-  AV *newpadlist, *newpad_name, *newpad;
-  SV **npad;
-
-  newpad_name = newAV ();
-  for (ix = fname; ix >= 0; ix--)
-    av_store (newpad_name, ix, SvREFCNT_inc (pname[ix]));
-
-  newpad = newAV ();
-  av_fill (newpad, AvFILLp (protopad));
-  npad = AvARRAY (newpad);
+  AV *padlist = CvPADLIST (cv);
+  AV *newpadlist, *newpad;
 
   newpadlist = newAV ();
   AvREAL_off (newpadlist);
-  av_store (newpadlist, 0, (SV *) newpad_name);
-  av_store (newpadlist, 1, (SV *) newpad);
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
+  newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
+  --AvFILLp (padlist);
 
-  av = newAV ();                /* will be @_ */
-  av_extend (av, 0);
-  av_store (newpad, 0, (SV *) av);
-  AvREIFY_on (av);
-
-  for (ix = fpad; ix > 0; ix--)
-    {
-      SV *namesv = (ix <= fname) ? pname[ix] : Nullsv;
-
-      if (namesv && namesv != &PL_sv_undef)
-        {
-          char *name = SvPVX (namesv);        /* XXX */
-
-          if (SvFLAGS (namesv) & SVf_FAKE || *name == '&')
-            {                        /* lexical from outside? */
-              npad[ix] = SvREFCNT_inc (ppad[ix]);
-            }
-          else
-            {                        /* our own lexical */
-              SV *sv;
-              if (*name == '&')
-                sv = SvREFCNT_inc (ppad[ix]);
-              else if (*name == '@')
-                sv = (SV *) newAV ();
-              else if (*name == '%')
-                sv = (SV *) newHV ();
-              else
-                sv = NEWSV (0, 0);
-
-#ifdef SvPADBUSY
-              if (!SvPADBUSY (sv))
-#endif
-                SvPADMY_on (sv);
-
-              npad[ix] = sv;
-            }
-        }
-      else if (IS_PADGV (ppad[ix]) || IS_PADCONST (ppad[ix]))
-        {
-          npad[ix] = SvREFCNT_inc (ppad[ix]);
-        }
-      else
-        {
-          SV *sv = NEWSV (0, 0);
-          SvPADTMP_on (sv);
-          npad[ix] = sv;
-        }
-    }
-
-#if 0 /* return -ENOTUNDERSTOOD */
-    /* Now that vars are all in place, clone nested closures. */
-
-    for (ix = fpad; ix > 0; ix--) {
-        SV* namesv = (ix <= fname) ? pname[ix] : Nullsv;
-        if (namesv
-            && namesv != &PL_sv_undef
-            && !(SvFLAGS(namesv) & SVf_FAKE)
-            && *SvPVX(namesv) == '&'
-            && CvCLONE(ppad[ix]))
-        {
-            CV *kid = cv_clone((CV*)ppad[ix]);
-            SvREFCNT_dec(ppad[ix]);
-            CvCLONE_on(kid);
-            SvPADMY_on(kid);
-            npad[ix] = (SV*)kid;
-        }
-    }
-#endif
+  av_store (newpadlist, 0, SvREFCNT_inc (*av_fetch (padlist, 0, FALSE)));
+  av_store (newpadlist, 1, (SV *)newpad);
 
   return newpadlist;
 }
 
-STATIC void
+static void
 free_padlist (pTHX_ AV *padlist)
 {
   /* may be during global destruction */
@@ -265,7 +183,7 @@ free_padlist (pTHX_ AV *padlist)
     }
 }
 
-STATIC int
+static int
 coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 {
   AV *padlist;
@@ -285,7 +203,7 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
 
 /* the next two functions merely cache the padlists */
-STATIC void
+static void
 get_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
@@ -293,10 +211,20 @@ get_padlist (pTHX_ CV *cv)
   if (mg && AvFILLp ((AV *)mg->mg_obj) >= 0)
     CvPADLIST (cv) = (AV *)av_pop ((AV *)mg->mg_obj);
   else
-    CvPADLIST (cv) = clone_padlist (aTHX_ CvPADLIST (cv));
+   {
+#if 0
+     /* this should work - but it doesn't :( */
+     CV *cp = Perl_cv_clone (aTHX_ cv);
+     CvPADLIST (cv) = CvPADLIST (cp);
+     CvPADLIST (cp) = 0;
+     SvREFCNT_dec (cp);
+#else
+     CvPADLIST (cv) = coro_clone_padlist (aTHX_ cv);
+#endif
+   }
 }
 
-STATIC void
+static void
 put_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
@@ -423,7 +351,7 @@ save_state(pTHX_ Coro__State c, int flags)
                     PUSHs ((SV *)CvPADLIST(cv));
                     PUSHs ((SV *)cv);
 
-                    get_padlist (aTHX_ cv); /* this is a monster */
+                    get_padlist (aTHX_ cv);
                   }
               }
 #ifdef CXt_FORMAT
@@ -493,7 +421,7 @@ save_state(pTHX_ Coro__State c, int flags)
  * on the (sometimes correct) assumption that coroutines do
  * not usually need a lot of stackspace.
  */
-STATIC void
+static void
 coro_init_stacks (pTHX)
 {
     LOCK;
@@ -540,7 +468,7 @@ coro_init_stacks (pTHX)
 /*
  * destroy the stacks, the callchain etc...
  */
-STATIC void
+static void
 destroy_stacks(pTHX)
 {
   if (!IN_DESTRUCT)
@@ -718,7 +646,7 @@ continue_coro (void *arg)
   abort ();
 }
 
-STATIC void
+static void
 transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
 {
   dSTACKLEVEL;
