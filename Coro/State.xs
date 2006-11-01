@@ -31,6 +31,14 @@
 
 #include <errno.h>
 
+#if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
+# undef STACKGUARD
+#endif
+
+#ifndef STACKGUARD
+# define STACKGUARD 0
+#endif
+
 #ifdef HAVE_MMAP
 # include <unistd.h>
 # include <sys/mman.h>
@@ -40,6 +48,14 @@
 #  else
 #   undef HAVE_MMAP
 #  endif
+# endif
+# include <limits.h>
+# ifndef PAGESIZE
+#  define PAGESIZE pagesize
+#  define BOOT_PAGESIZE pagesize = sysconf (_SC_PAGESIZE)
+static long pagesize;
+# else
+#  define BOOT_PAGESIZE
 # endif
 #endif
 
@@ -529,9 +545,15 @@ allocate_stack (Coro__State ctx, int alloc)
   if (alloc)
     {
 #if HAVE_MMAP
-      stack->ssize = STACKSIZE * sizeof (long); /* mmap should do allocate-on-write for us */
+      stack->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE; /* mmap should do allocate-on-write for us */
       stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
-      if (stack->sptr == (void *)-1)
+      if (stack->sptr != (void *)-1)
+        {
+# if STACKGUARD
+          mprotect (stack->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
+# endif
+        }
+      else
 #endif
         {
           stack->ssize = - (STACKSIZE * (long)sizeof (long));
@@ -895,6 +917,7 @@ BOOT:
 #ifdef USE_ITHREADS
         MUTEX_INIT (&coro_mutex);
 #endif
+        BOOT_PAGESIZE;
 
         ucoro_state_sv = newSVpv (UCORO_STATE, sizeof(UCORO_STATE) - 1);
         PERL_HASH(ucoro_state_hash, UCORO_STATE, sizeof(UCORO_STATE) - 1);

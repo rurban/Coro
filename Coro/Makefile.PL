@@ -144,11 +144,17 @@ A setting of 16384 (the default) therefore corresponds to a 64k..128k
 stack, which usually is ample space (you might even want to try 8192 or
 lower if your program creates many coroutines).
 
+On systems supporting mmap and dynamic memory management, the actual
+memory usually gets allocated on demand, but with many large stacks you
+can still run out of address space on your typical 32 bit platform.
+
 Some perls (mostly threaded ones and perl compiled under linux 2.6) and
 some programs (inefficient regexes can use a lot of stack space) may
 need much, much more: If Coro segfaults with weird backtraces (e.g. in a
 function prologue) or in t/10_bugs.t, you might want to increase this to
 65536 or more.
+
+The default should be fine.
 
 EOF
 
@@ -156,6 +162,31 @@ my $stacksize = prompt ("C stack size factor", "16384");
 $DEFINE .= " -DSTACKSIZE=$stacksize";
 
 print "using a stacksize of $stacksize * sizeof(long)\n";
+
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
+Coro can optionally put a guard area before each stack segment. When the
+stack is too small and the access is not too far outside the stack (i.e.
+within the guard area), then the program will safely segfault instead of
+running into other data. The cost is some additional overhead with is
+usually negligible, and extra use of address space.
+
+The guard area size currently needs to be specified in pages (typical
+pagesizes are 4k and 8k). The guard area is only enabled on a few
+hardcoded architectures and is ignored on others. The actual preprocessor
+expression disables this feature if:
+
+   !__i386 && !__x86_64 && !__powerpc && !__m68k \
+   && !__alpha && !__mips && !__sparc64
+
+The default, as usual, should be just fine.
+
+EOF
+
+my $stackguard = prompt ("Number of guard pages (0 disables)", "4");
+$DEFINE .= " -DSTACKGUARD=$stackguard";
 
 print <<EOF;
 
