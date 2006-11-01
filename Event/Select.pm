@@ -35,7 +35,7 @@ use Coro::Event;
 
 use base Exporter::;
 
-our $VERSION = 1.9;
+our $VERSION = 2.0;
 our @EXPORT_OK = "select";
 
 sub import {
@@ -53,7 +53,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
    } elsif (@_ == 1) {
       return CORE::select $_[0];
    } elsif (defined $_[3] && !$_[3]) {
-      return CORE::select (@_);
+      return &CORE::select (@_);
    } else {
       my $current = $Coro::current;
       my $nfound = 0;
