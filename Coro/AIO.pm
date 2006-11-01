@@ -35,9 +35,15 @@ module automatically installs an event watcher for the C<IO::AIO> file
 descriptor. It uses the L<AnyEvent|AnyEvent> module for this, so please
 refer to its documentation on how it selects an appropriate Event module.
 
-For your convienience, here are the changed function signatures, for
-documentation of these functions please have a look at L<IO::AIO|the
-IO::AIO manual>.
+All other functions exported by default by IO::AIO (e.g. C<aioreq_pri>)
+will be exported by default by Coro::AIO, too.
+
+Functions that can be optionally imported from IO::AIO can be imported
+from Coro::AIO or can be called directly, e.g. C<Coro::AIO::nreqs>.
+
+For your convienience, here are the changed function signatures for most
+of the requests, for documentation of these functions please have a look
+at L<IO::AIO|the IO::AIO manual>.
 
 =over 4
 
@@ -45,7 +51,7 @@ IO::AIO manual>.
 
 package Coro::AIO;
 
-use strict;
+use strict 'subs';
 
 use Coro ();
 use AnyEvent;
@@ -56,48 +62,59 @@ use base Exporter::;
 our $FH; open $FH, "<&=" . IO::AIO::poll_fileno;
 our $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => sub { IO::AIO::poll_cb });
 
-our @EXPORT;
+our @EXPORT    = @IO::AIO::EXPORT;
+our @EXPORT_OK = @IO::AIO::EXPORT_OK;
+our $AUTOLOAD;
 
-sub wrap($) {
-   my ($sub) = @_;
+{
+   my @reqs = @IO::AIO::AIO_REQ ? @IO::AIO::AIO_REQ : @EXPORT;
+   my %reqs = map +($_ => 1), @reqs;
 
-   no strict 'refs';
-   
-   push @EXPORT, $sub;
-   
-   my $iosub = "IO::AIO::$sub";
-   my $proto = prototype $iosub;
+   eval
+      join "",
+         map "sub $_(" . (prototype "IO::AIO::$_") . ");",
+            grep !$reqs{$_},
+                @EXPORT, @EXPORT_OK;
 
-   $proto =~ s/;?\$$// or die "$iosub: unable to remove callback slot from prototype";
+   for my $sub (@reqs) {
+      push @EXPORT, $sub;
+      
+      my $iosub = "IO::AIO::$sub";
+      my $proto = prototype $iosub;
 
-   eval qq{
+      $proto =~ s/;?\$$// or die "$iosub: unable to remove callback slot from prototype";
+
+      eval qq{
 #line 1 "Coro::AIO::$sub($proto)"
-      sub $sub($proto) {
-         my \$current = \$Coro::current;
-         my \$stat;
-         my \@res;
+         sub $sub($proto) {
+            my \$current = \$Coro::current;
+            my \$stat;
+            my \@res;
 
-         push \@_, sub {
-            \$stat = Coro::_aio_get_state;
-            \@res = \@_;
-            \$current->ready;
-            undef \$current;
-         };
+            push \@_, sub {
+               \$stat = Coro::_aio_get_state;
+               \@res = \@_;
+               \$current->ready;
+               undef \$current;
+            };
 
-         &$iosub;
+            &$iosub;
 
-         Coro::schedule while \$current;
+            Coro::schedule while \$current;
 
-         Coro::_aio_set_state \$stat;
-         wantarray ? \@res : \$res[0]
-      }
-   };
-   die if $@;
+            Coro::_aio_set_state \$stat;
+            wantarray ? \@res : \$res[0]
+         }
+      };
+      die if $@;
+   }
 }
 
-wrap $_ for @IO::AIO::AIO_REQ
-               ? @IO::AIO::AIO_REQ
-               : @IO::AIO::EXPORT;
+sub AUTOLOAD {
+   (my $func = $AUTOLOAD) =~ s/^.*:://;
+   *$AUTOLOAD = \&{"IO::AIO::$func"};
+   goto &$AUTOLOAD;
+}
 
 =item $fh = aio_open $pathname, $flags, $mode
 

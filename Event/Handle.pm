@@ -373,6 +373,8 @@ sub READLINE {
 
 1;
 
+=back
+
 =head1 BUGS
 
  - Perl's IO-Handle model is THE bug.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2005 Marc Alexander Lehmann <schmorp@schmorp.de>
+ * Copyright (c) 2001-2006 Marc Alexander Lehmann <schmorp@schmorp.de>
  * 
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
@@ -33,6 +33,11 @@
  * build your own process abstraction using it or - better - just use GNU
  * Portable Threads, http://www.gnu.org/software/pth/.
  *
+ */
+
+/*
+ * 2006-10-26 Include stddef.h on OS X to work around one of its bugs.
+ *            Reported by Michael_G_Schwern.
  */
 
 #ifndef CORO_H
@@ -97,7 +102,7 @@ typedef void (*coro_func)(void *);
 /*
  * A coroutine state is saved in the following structure. Treat it as a
  * opaque type. errno and sigmask might be saved, but don't rely on it,
- * implement your own switching primitive.
+ * implement your own switching primitive if you need it.
  */
 typedef struct coro_context coro_context;
 

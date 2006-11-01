@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2005 Marc Alexander Lehmann <schmorp@schmorp.de>
+ * Copyright (c) 2001-2006 Marc Alexander Lehmann <schmorp@schmorp.de>
  * 
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
@@ -47,6 +47,10 @@
 #  define STACK_ADJUST_PTR(sp,ss) (sp)
 #  define STACK_ADJUST_SIZE(sp,ss) (ss)
 # endif
+#endif
+
+#if CORO_UCONTEXT
+# include <stddef.h>
 #endif
 
 #if CORO_SJLJ || CORO_LOSER || CORO_LINUX || CORO_IRIX
@@ -174,8 +178,21 @@ void coro_create(coro_context *ctx,
 # elif CORO_LOSER
 
   setjmp (ctx->env);
+#if __CYGWIN__
   ctx->env[7] = (long)((char *)sptr + ssize);
   ctx->env[8] = (long)coro_init;
+#elif defined(_M_IX86)
+  ((_JUMP_BUFFER *)&ctx->env)->Eip   = (long)coro_init;
+  ((_JUMP_BUFFER *)&ctx->env)->Esp   = (long)STACK_ADJUST_PTR (sptr,ssize);
+#elif defined(_M_AMD64)
+  ((_JUMP_BUFFER *)&ctx->env)->Rip   = (__int64)coro_init;
+  ((_JUMP_BUFFER *)&ctx->env)->Rsp   = (__int64)STACK_ADJUST_PTR (sptr,ssize);
+#elif defined(_M_IA64)
+  ((_JUMP_BUFFER *)&ctx->env)->StIIP = (__int64)coro_init;
+  ((_JUMP_BUFFER *)&ctx->env)->IntSp = (__int64)STACK_ADJUST_PTR (sptr,ssize);
+#else
+#error "microsoft libc or architecture not supported"
+#endif
 
 # elif CORO_LINUX
 

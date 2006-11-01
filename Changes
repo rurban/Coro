@@ -1,5 +1,17 @@
 Revision history for Perl extension Coro.
 
+TODO: possibly convert some of the Event modules into AnyEvent users.
+
+2.1  Wed Nov  1 23:01:13 CET 2006
+        - fix a long-standing bug in Coro::Select where select with
+          zero timeout would instead change the current default filehandle.
+	- use a simpler and hopefully more robust way to clone padlists
+          (uses less memory and a perl function instead of our own).
+        - coro can now create a stack guard area on many architectures.
+        - Coro::AIO properly reexports additional functions from IO::AIO.
+	- updated libcoro with a workaround for OS X,
+          pach and testing by Michael Schwern.
+
 2.0  Tue Oct 24 05:47:17 CEST 2006
 	- support additional aio requests in Coro::AIO.
 
