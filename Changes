@@ -1,11 +1,14 @@
 Revision history for Perl extension Coro.
 
 2.1
+TODO: aioreq_pri etc.
 	- use a simpler and hopefully more robust way to clone padlists
           (uses less memory and a perl function instead of our own).
         - coro can now create a stack guard area on many architectures.
 	- updated libcoro with a workaround for OS X,
           pach by Michael Schwern.
+        - fix a long-standing bug in Coro::Select where select with
+          zero timeout would instead change the current default filehandle.
 
 2.0  Tue Oct 24 05:47:17 CEST 2006
 	- support additional aio requests in Coro::AIO.
