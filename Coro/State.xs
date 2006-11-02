@@ -631,11 +631,11 @@ setup_coro (void *arg)
     {
       UNOP myop;
 
-      PL_op = (OP *)&myop;
-
       Zero(&myop, 1, UNOP);
       myop.op_next = Nullop;
       myop.op_flags = OPf_WANT_VOID;
+
+      PL_op = (OP *)&myop;
 
       PUSHMARK(SP);
       XPUSHs (sub_init);
@@ -956,7 +956,7 @@ _newprocess(args)
 
         /* same as JMPENV_BOOTSTRAP */
         /* we might be able to recycle start_env, but safe is safe */
-        /*Zero(&coro->start_env, 1, JMPENV);*/
+        /*Zero (&coro->start_env, 1, JMPENV);*/
         coro->start_env.je_ret = -1;
         coro->start_env.je_mustcatch = TRUE;
 
