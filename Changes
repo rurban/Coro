@@ -2,6 +2,8 @@ Revision history for Perl extension Coro.
 
 TODO: possibly convert some of the Event modules into AnyEvent users.
 
+	- should compile with perl 5.9.x now.
+
 2.1  Wed Nov  1 23:01:13 CET 2006
         - fix a long-standing bug in Coro::Select where select with
           zero timeout would instead change the current default filehandle.
