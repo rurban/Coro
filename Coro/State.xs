@@ -165,7 +165,11 @@ coro_clone_padlist (pTHX_ CV *cv)
 
   newpadlist = newAV ();
   AvREAL_off (newpadlist);
+#if PERL_VERSION < 9
   Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
+#else
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
+#endif
   newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
   --AvFILLp (padlist);
 
