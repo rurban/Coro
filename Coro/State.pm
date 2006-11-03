@@ -72,7 +72,8 @@ our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);
 
 Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If the subroutine
-returns it will be executed again.
+returns it will be executed again. If it throws an exception the program
+will terminate.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
@@ -87,9 +88,7 @@ sub initialize {
    eval {
       &$proc while 1;
    };
-   if ($@) {
-      print STDERR "FATAL: uncaught exception\n$@";
-   }
+   print STDERR $@ if $@;
    _exit 255;
 }
 
@@ -148,10 +147,6 @@ This exists mainly to ease subclassing (wether through @ISA or not).
 =back
 
 =head1 BUGS
-
-This module has not yet been extensively tested, but works on most
-platforms. Expect segfaults and memleaks (but please don't be surprised if
-it works...)
 
 This module is not thread-safe. You must only ever use this module from
 the same thread (this requirement might be loosened in the future).

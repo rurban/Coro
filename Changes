@@ -3,6 +3,11 @@ Revision history for Perl extension Coro.
 TODO: possibly convert some of the Event modules into AnyEvent users.
 
 	- should compile with perl 5.9.x now.
+        - reuse PL_start_env for all coros, saves some memory per coroutine.
+        - manage PL_top_env differently, hopefully to avoid panic: top_env.
+        - remove "FATAL: uncaught exception" prefix: coroutines that die
+          kill the whole process, just as exceptions in the main coroutine
+          do.
 
 2.1  Wed Nov  1 23:01:13 CET 2006
         - fix a long-standing bug in Coro::Select where select with
