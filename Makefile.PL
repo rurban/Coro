@@ -5,10 +5,9 @@ if ($] < 5.006) {
 
 ***
 *** WARNING: This module is quite low-level and uses undocumented perl
-*** internals to do it's job. While it seems to work fine with perl-5.8,
-*** 5.7 and 5.6, it has not been tested with older versions. If it
-*** compiles and passes the testsuite, it should work.  Otherwise you
-*** should either upgrade or fix it ;)
+*** internals to do it's job. While it seems to work fine with perl-5.[6-9]
+*** it has not been tested with older versions. If it compiles and passes the
+*** testsuite, it should work. Otherwise you should either upgrade or fix it ;)
 ***
 *** Marc Lehmann <schmorp\@schmorp.de>
 ***
@@ -54,7 +53,7 @@ WriteMakefile(
        # for Coro::Event
        Event		=> 0.86,
 
-       # for Coro::AIO
+       # for Coro::AIO, Coro::Util
        IO::AIO          => 1.6,
        AnyEvent         => 0,
     },
@@ -78,6 +77,7 @@ WriteMakefile(
     		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
 
     		    'Coro/AIO.pm'	=> '$(INST_LIBDIR)/Coro/AIO.pm',
+    		    'Coro/Util.pm'	=> '$(INST_LIBDIR)/Coro/Util.pm',
                     },
 );
 

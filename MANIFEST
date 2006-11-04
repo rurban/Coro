@@ -22,6 +22,7 @@ Coro/Timer.pm
 Coro/MakeMaker.pm
 Coro/CoroAPI.h
 Coro/AIO.pm
+Coro/Util.pm
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
@@ -43,7 +44,6 @@ t/10_bugs.t
 Event/Makefile.PL
 Event/Event.pm
 Event/Event.xs
-Event/Util.pm
 Event/Handle.pm
 Event/Socket.pm
 Event/Select.pm

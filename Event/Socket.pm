@@ -29,7 +29,9 @@ handle. L<Coro::Handle>.
 
 package Coro::Socket;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings "uninitialized";
+
+use strict;
 
 use Errno ();
 use Carp qw(croak);
@@ -39,7 +41,9 @@ use Coro::Util ();
 
 use base 'Coro::Handle';
 
-$VERSION = 1.9;
+our $VERSION = 1.9;
+
+our (%_proto, %_port);
 
 sub _proto($) {
    $_proto{$_[0]} ||= do {
@@ -102,7 +106,11 @@ sub _prepare_socket {
    socket $fh, PF_INET, $arg->{Type}, _proto($arg->{Proto})
       or return;
 
-   $fh = bless Coro::Handle->new_from_fh($fh, timeout => $arg{Timeout}), $class
+   $fh = bless Coro::Handle->new_from_fh (
+      $fh,
+      timeout       => $arg->{Timeout},
+      forward_class => $arg->{forward_class},
+   ), $class
       or return;
 
    if ($arg->{ReuseAddr}) {

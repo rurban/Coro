@@ -8,7 +8,7 @@ Coro::Handle - non-blocking io with a blocking interface.
 
 =head1 DESCRIPTION
 
-This module implements io-handles in a coroutine-compatible way, that is,
+This module implements IO-handles in a coroutine-compatible way, that is,
 other coroutines can run while reads or writes block on the handle. It
 does NOT inherit from IO::Handle but uses tied objects.
 
@@ -163,7 +163,20 @@ sub fh {
 }
 
 sub rbuf : lvalue {
-   tied(${$_[0]})->[3];
+   (tied ${$_[0]})->[3];
+}
+
+sub AUTOLOAD {
+   my $self = tied ${$_[0]};
+
+   (my $func = $AUTOLOAD) =~ s/^(.*):://;
+
+   my $forward = UNIVERSAL::can $self->[7], $func;
+
+   $forward or
+      die "Can't locate object method \"$func\" via package \"" . (ref $self) . "\"";
+
+   goto &$forward;
 }
 
 package Coro::Handle::FH;
@@ -187,22 +200,23 @@ use Event::Watcher qw(R W E);
 # 4 wb # unused
 # 5 rw
 # 6 ww
+# 7 forward class
 
 sub TIEHANDLE {
-   my $class = shift;
-   my %args = @_;
+   my ($class, %arg) = @_;
 
    my $self = bless [], $class;
-   $self->[0] = $args{fh};
-   $self->[1] = $args{desc};
-   $self->[2] = $args{timeout};
+   $self->[0] = $arg{fh};
+   $self->[1] = $arg{desc};
+   $self->[2] = $arg{timeout};
    $self->[3] = "";
    $self->[4] = "";
+   $self->[7] = $arg{forward_class};
 
    fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
       or croak "fcntl(O_NONBLOCK): $!";
 
-   $self;
+   $self
 }
 
 sub cleanup {

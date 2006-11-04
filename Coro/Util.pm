@@ -11,17 +11,20 @@ Coro::Util - various utility functions.
 This module implements various utility functions, mostly replacing perl
 functions by non-blocking counterparts.
 
+This module is an AnyEvent user. Refer to the L<AnyEvent|AnyEvent>
+documentation to see how to integrate it into your own programs.
+
 =over 4
 
 =cut
 
 package Coro::Util;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings "uninitialized";
 
-#use Carp qw(croak);
+use AnyEvent;
 
-use Coro::Handle;
+use Coro::State;
 use Coro::Semaphore;
 
 use base 'Exporter';
@@ -37,19 +40,23 @@ $MAXPARALLEL = 16; # max. number of parallel jobs
 my $jobs = new Coro::Semaphore $MAXPARALLEL;
 
 sub _do_asy(&;@) {
-   require POSIX; # just for _exit
-
    my $sub = shift;
    $jobs->down;
    my $fh;
    if (0 == open $fh, "-|") {
       syswrite STDOUT, join "\0", map { unpack "H*", $_ } &$sub;
-      POSIX::_exit(0);
+      Coro::State::_exit 0;
    }
    my $buf;
-   $fh = unblock $fh;
-   $fh->sysread($buf, 16384);
-   close $fh;
+   my $current = $Coro::current;
+   my $w; $w = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
+      sysread $fh, $buf, 16384, length $buf
+         and return;
+
+      undef $w;
+      $current->ready;
+   });
+   Coro::schedule;
    $jobs->up;
    my @r = map { pack "H*", $_ } split /\0/, $buf;
    wantarray ? @r : $r[0];
@@ -62,7 +69,7 @@ this is being implemented by forking, so it's not exactly low-cost.
 
 =cut
 
-my $netdns = eval { require Net::DNS::Resolver; new Net::DNS::Resolver; 0 };
+my $netdns = eval { die; require Net::DNS::Resolver; new Net::DNS::Resolver; };
 
 sub gethostbyname($) {
    if ($netdns) {
