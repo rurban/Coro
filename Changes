@@ -2,9 +2,11 @@ Revision history for Perl extension Coro.
 
 TODO: possibly convert some of the Event modules into AnyEvent users.
 
+	- converted Coro::Select to AnyEvent.
 	- added Coro::LWP which contains all the uglyness required to
           make LWP non-blocking.
 	- should work with perl 5.9.x now (Andreas König made me do it).
+        - fixed another bug in Coro::Select when the timeout was undef.
         - reuse PL_start_env for all coros, saves some memory per coroutine.
         - manage PL_top_env differently, hopefully to avoid panic: top_env.
         - timeout argument was not properly used in Coro::Socket.

@@ -89,9 +89,7 @@ only). Might change in the future.
 
 sub autoflush	{ !0 }
 
-=item $fh->fileno, $fh->close,
-$fh->read, $fh->sysread, $fh->syswrite,
-$fh->print, $fh->printf
+=item $fh->fileno, $fh->close, $fh->read, $fh->sysread, $fh->syswrite, $fh->print, $fh->printf
 
 Work like their function equivalents (except read, which works like
 sysread. You should not use the read function with Coro::Handles, it will
@@ -99,17 +97,26 @@ work but it's not efficient).
 
 =cut
 
-sub read	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub sysread	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub syswrite	{ Coro::Handle::FH::WRITE (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub print	{ Coro::Handle::FH::WRITE (tied ${+shift}, join "", @_) }
-sub printf	{ Coro::Handle::FH::PRINTF(tied ${+shift}, @_) }
-sub fileno	{ Coro::Handle::FH::FILENO(tied ${$_[0]}) }
-sub close	{ Coro::Handle::FH::CLOSE (tied ${$_[0]}) }
+sub read	{ Coro::Handle::FH::READ   (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub sysread	{ Coro::Handle::FH::READ   (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub syswrite	{ Coro::Handle::FH::WRITE  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub print	{ Coro::Handle::FH::WRITE  (tied ${+shift}, join "", @_) }
+sub printf	{ Coro::Handle::FH::PRINTF (tied ${+shift}, @_) }
+sub fileno	{ Coro::Handle::FH::FILENO (tied ${$_[0]}) }
+sub close	{ Coro::Handle::FH::CLOSE  (tied ${$_[0]}) }
+sub blocking    { !0 } # this handler always blocks the caller
+
+sub partial     {
+   my $obj = tied ${$_[0]};
+
+   my $retval = $obj->[8];
+   $obj->[8] = $_[1] if @_ > 1;
+   $retval
+}
 
 =item $fh->timeout([...])
 
-The optional agrument sets the new timeout (in seconds) for this
+The optional argument sets the new timeout (in seconds) for this
 handle. Returns the current (new) value.
 
 C<0> is a valid timeout, use C<undef> to disable the timeout.
@@ -205,6 +212,7 @@ use Event::Watcher qw(R W E);
 # 5 rw
 # 6 ww
 # 7 forward class
+# 8 blocking
 
 sub TIEHANDLE {
    my ($class, %arg) = @_;
@@ -216,6 +224,7 @@ sub TIEHANDLE {
    $self->[3] = "";
    $self->[4] = "";
    $self->[7] = $arg{forward_class};
+   $self->[8] = $arg{partial};
 
    fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
       or croak "fcntl(O_NONBLOCK): $!";
@@ -362,7 +371,7 @@ sub READ {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      last unless &readable;
+      last if $_[0][8] || !&readable;
    }
 
    return $res;

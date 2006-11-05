@@ -16,7 +16,6 @@ WriteMakefile(Event::MakeMaker::event_args(
                        'Event.pm'	=> '$(INST_LIBDIR)/Event.pm',
                        'Handle.pm'	=> '$(INST_LIBDIR)/Handle.pm',
                        'Socket.pm'	=> '$(INST_LIBDIR)/Socket.pm',
-                       'Select.pm'	=> '$(INST_LIBDIR)/Select.pm',
                   },
 ));
 

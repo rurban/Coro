@@ -29,20 +29,22 @@ compatible to perls builtin select, though.
 
 =item It overwrites Socket::inet_aton with Coro::Util::inet_aton.
 
-This is necessary because LWP might try to resolve hostnames this way.
+This is necessary because LWP might (and does) try to resolve hostnames
+this way.
 
 Impact: likely little, the two functions should be pretty equivalent.
 
-=item It overwrites IO::Socket::INET::new with Coro::Socket::new
+=item It replaces the base class of Net::HTTP, Net::FTP, Net::NNTP.
 
-This is necessary because LWP does not always use select to see wether a
-filehandle can be read/written without blocking.
+This is necessary because LWP does not always use select to see wether
+a filehandle can be read/written without blocking, so the base class
+C<IO::Socket::INET> needs to be replaced by C<Coro::Socket>.
 
 Impact: Coro::Socket is not at all compatible to IO::Socket::INET. While
 it duplicates some undocumented functionality required by LWP, it does not
 have all the methods of IO::Socket::INET and might act quite differently
-in practise. Every app that uses IO::Socket::INET now has to cope with
-Coro::Socket.
+in practise. Also, protocols other than the above mentioned will still block,
+at least some of the time.
 
 =back
 
@@ -65,11 +67,27 @@ use Coro::Socket;
 use Socket;
 use IO::Socket::INET;
 
+use Net::HTTP;
+use Net::FTP;
+use Net::NNTP;
+
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 
-*IO::Socket::INET::new = sub {
-   new Coro::Socket forward_class => @_;
-};
+for (@Net::HTTP::ISA, @Net::FTP::ISA, @Net::NTTP::ISA) {
+   $_ = Coro::LWP::Socket:: if $_ eq IO::Socket::INET::;
+}
+
+package Coro::LWP::Socket;
+
+use base Coro::Socket::;
+
+sub new {
+   my $self = shift;
+
+   $self->SUPER::new (@_, partial => 1)
+}
+
+1;
 
 =cut
 

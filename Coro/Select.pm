@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Select - a (slow but event-aware) replacement for CORE::select
+Coro::Select - a (slow but coro-aware) replacement for CORE::select
 
 =head1 SYNOPSIS
 
@@ -11,8 +11,8 @@ Coro::Select - a (slow but event-aware) replacement for CORE::select
 =head1 DESCRIPTION
 
 This module tries to create a fully working replacement for perl's
-C<select> built-in, using C<Event> watchers to do the job, so other
-coroutines can run in parallel.
+C<select> built-in, using C<AnyEvent> watchers to do the job, so other
+coroutines can run in parallel to any select user.
 
 To be effective globally, this module must be C<use>'d before any other
 module that uses C<select>, so it should generally be the first module
@@ -31,7 +31,7 @@ use strict;
 use Event;
 
 use Coro;
-use Coro::Event;
+use AnyEvent;
 
 use base Exporter::;
 
@@ -58,15 +58,18 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       my $current = $Coro::current;
       my $nfound = 0;
       my @w;
-      for ([0, 'r'], [1, 'w'], [2, 'e']) {
-         my ($i, $poll) = @$_;
+      # AnyEvent does not do 'e', so replace it by 'r'
+      for ([0, 'r', '<'], [1, 'w', '>'], [2, 'r', '<']) {
+         my ($i, $poll, $mode) = @$_;
          if (defined (my $vec = $_[$i])) {
             my $rvec = \$_[$i];
             for my $b (0 .. (8 * length $vec)) {
                if (vec $vec, $b, 1) {
                   (vec $$rvec, $b, 1) = 0;
+                  open my $fh, "$mode&$b"
+                     or die "Coro::Select::fd2fh($b): $!";
                   push @w,
-                     Event->io (fd => $b, poll => $poll, cb => sub {
+                     AnyEvent->io (fh => $fh, poll => $poll, cb => sub {
                         (vec $$rvec, $b, 1) = 1;
                         $nfound++;
                         $current->ready;
@@ -77,14 +80,14 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       }
 
       push @w,
-         Event->timer (after => $_[3], cb => sub {
+         AnyEvent->timer (after => $_[3], cb => sub {
             $current->ready;
-         });
+         })
+         if defined $_[3];
 
       Coro::schedule;
       # wait here
 
-      $_->cancel for @w;
       return $nfound
    }
 }

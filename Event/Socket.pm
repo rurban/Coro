@@ -36,10 +36,11 @@ use strict;
 use Errno ();
 use Carp qw(croak);
 use Socket;
+use IO::Socket::INET ();
 
 use Coro::Util ();
 
-use base 'Coro::Handle';
+use base qw(Coro::Handle IO::Socket::INET);
 
 our $VERSION = 1.9;
 
@@ -117,6 +118,7 @@ sub new {
       $fh,
       timeout       => $arg{Timeout},
       forward_class => $arg{forward_class},
+      partial       => $arg{partial},
    ), $class
       or return;
 
@@ -143,14 +145,14 @@ sub configure {
    }
 
    if ($arg->{PeerHost}) {
-      my @sa = _sa($arg->{PeerHost}, $arg->{PeerPort}, $arg->{Proto});
+      my @sa = _sa ($arg->{PeerHost}, $arg->{PeerPort}, $arg->{Proto});
 
       for (@sa) {
          $! = 0;
 
          if ($self->connect ($_)) {
             next unless writable $self;
-            $! = unpack "i", $self->getsockopt(SOL_SOCKET, SO_ERROR);
+            $! = unpack "i", $self->getsockopt (SOL_SOCKET, SO_ERROR);
          }
 
          $! or last;
@@ -158,18 +160,16 @@ sub configure {
          $!{ECONNREFUSED} or $!{ENETUNREACH} or $!{ETIMEDOUT} or $!{EHOSTUNREACH}
             or return;
       }
-   } else {
-      if (exists $arg->{Listen}) {
-         $self->listen ($arg->{Listen})
-            or return;
-      }
+   } elsif (exists $arg->{Listen}) {
+      $self->listen ($arg->{Listen})
+         or return;
    }
 
-   $self
+   1
 }
 
 =item connect, listen, bind, getsockopt, setsockopt,
-send, recv, peername, sockname, shutdown
+send, recv, peername, sockname, shutdown, peerport, peerhost
 
 Do the same thing as the perl builtins or IO::Socket methods (but return
 true on EINPROGRESS). Remember that these must be method calls.

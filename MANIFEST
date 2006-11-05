@@ -24,6 +24,7 @@ Coro/CoroAPI.h
 Coro/AIO.pm
 Coro/Util.pm
 Coro/LWP.pm
+Coro/Select.pm
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
@@ -47,7 +48,6 @@ Event/Event.pm
 Event/Event.xs
 Event/Handle.pm
 Event/Socket.pm
-Event/Select.pm
 
 Event/t/00_basic.t
 Event/t/01_unblock.t
