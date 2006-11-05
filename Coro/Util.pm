@@ -20,6 +20,8 @@ documentation to see how to integrate it into your own programs.
 
 package Coro::Util;
 
+use strict;
+
 no warnings "uninitialized";
 
 use AnyEvent;
@@ -29,13 +31,12 @@ use Coro::Semaphore;
 
 use base 'Exporter';
 
-@EXPORT = qw(
-   gethostbyname gethostbyaddr
-);
+our @EXPORT = qw(gethostbyname gethostbyaddr);
+our @EXPORT_OK = qw(inet_aton);
 
-$VERSION = 1.9;
+our $VERSION = 2.0;
 
-$MAXPARALLEL = 16; # max. number of parallel jobs
+our $MAXPARALLEL = 16; # max. number of parallel jobs
 
 my $jobs = new Coro::Semaphore $MAXPARALLEL;
 
@@ -62,10 +63,17 @@ sub _do_asy(&;@) {
    wantarray ? @r : $r[0];
 }
 
+sub dotted_quad($) {
+   $_[0] =~ /^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+            \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+            \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
+            \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)$/
+}
+
 =item gethostbyname, gethostbyaddr
 
 Work exactly like their perl counterparts, but do not block. Currently
-this is being implemented by forking, so it's not exactly low-cost.
+this is being implemented with forking, so it's not exactly low-cost.
 
 =cut
 
@@ -76,7 +84,7 @@ sub gethostbyname($) {
       #$netdns->query($_[0]);
       die;
    } else {
-      _do_asy { gethostbyname $_[0] } @_;
+      _do_asy { gethostbyname $_[0] } @_
    }
 }
 
@@ -84,7 +92,28 @@ sub gethostbyaddr($$) {
    if ($netdns) {
       die;
    } else {
-      _do_asy { gethostbyaddr $_[0], $_[1] } @_;
+      _do_asy { gethostbyaddr $_[0], $_[1] } @_
+   }
+}
+
+=item Coro::Util::inet_aton
+
+Works almost exactly like its Socket counterpart, except that it does not
+block. Is implemented with forking, so not exactly low-cost.
+
+=cut
+
+use Socket;
+
+our $inet_aton = \&Socket::inet_aton;
+
+sub inet_aton {
+   require Socket;
+
+   if (dotted_quad $_[0]) {
+      $inet_aton->($_[0])
+   } else {
+      _do_asy { $inet_aton->($_[0]) } @_
    }
 }
 

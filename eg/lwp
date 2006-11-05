@@ -1,16 +1,18 @@
 #!/usr/bin/perl
 
-# this hack shows how one can overwrite IO::Socket::INET to provide
-# non-blocking sockets by default. This makes lwp magically
-# non-blocking. I hope.
+# this hack shows how one can get LWP to be less blocking.
 
 {
-   # this is all the required magic: we replace the constructor.
+   # we replace Socket::inet_aton and CORE::select
+   use Coro::Select; # must come early
+   use Coro::Util;
    use Coro::Socket;
    use IO::Socket::INET;
-   sub IO::Socket::INET::new {
-      shift; new Coro::Socket @_;
-   };
+   use Socket;
+   BEGIN {
+      *Socket::inet_aton = \&Coro::Util::inet_aton;
+      *IO::Socket::INET::new = sub { new Coro::Socket forward_class => @_ };
+   }
 }
 
 use Coro;
@@ -20,16 +22,17 @@ use LWP::Simple;
 $SIG{PIPE} = 'IGNORE';
 
 async {
+   print "hi2\n";
+   get "http://www.google.de/";
+   print "ho2\n";
+};
+
+async {
    print "hi\n";
-   get "http://localhost/";
+   get "http://www.yahoo.com/";
    print "ho\n";
 
 };
 
-async {
-   print "hi2\n";
-   get "http://localhost/";
-   print "ho2\n";
-};
-
 loop;
+

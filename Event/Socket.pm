@@ -72,15 +72,12 @@ sub _sa($$$) {
    my $_port = _port($port, $proto);
 
    # optimize this a bit for a common case
-   if ($host =~ /^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
-                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
-                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
-                \.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)$/) {
-      return pack_sockaddr_in($_port, inet_aton $host);
+   if (Coro::Util::dotted_quad $host) {
+      return pack_sockaddr_in ($_port, inet_aton $host);
    } else {
       my (undef, undef, undef, undef, @host) = Coro::Util::gethostbyname $host
          or croak "unknown host: $host";
-      map pack_sockaddr_in($_port,$_), @host;
+      map pack_sockaddr_in ($_port,$_), @host;
    }
 }
 
@@ -100,79 +97,75 @@ Multihomed is always enabled.
 =cut
 
 sub _prepare_socket {
-   my ($class, $arg) = @_;
-   my $fh;
+   my ($self, $arg) = @_;
 
-   socket $fh, PF_INET, $arg->{Type}, _proto($arg->{Proto})
-      or return;
-
-   $fh = bless Coro::Handle->new_from_fh (
-      $fh,
-      timeout       => $arg->{Timeout},
-      forward_class => $arg->{forward_class},
-   ), $class
-      or return;
-
-   if ($arg->{ReuseAddr}) {
-      $fh->setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-         or croak "setsockopt(SO_REUSEADDR): $!";
-   }
-
-   if ($arg->{ReusePort}) {
-      $fh->setsockopt(SOL_SOCKET, SO_REUSEPORT, 1)
-         or croak "setsockopt(SO_REUSEPORT): $!";
-   }
-
-   if ($arg->{LocalPort} || $arg->{LocalHost}) {
-      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort} || 0, $arg->{Proto});
-      $fh->bind($sa[0])
-         or croak "bind($arg->{LocalHost}:$arg->{LocalPort}): $!";
-   }
-
-   $fh;
+   $self
 }
    
 sub new {
-   my $class = shift;
-   my %arg = @_;
-   my $fh;
+   my ($class, %arg) = @_;
 
    $arg{Proto}     ||= 'tcp';
    $arg{LocalHost} ||= delete $arg{LocalAddr};
    $arg{PeerHost}  ||= delete $arg{PeerAddr};
    defined ($arg{Type}) or $arg{Type} = $arg{Proto} eq "tcp" ? SOCK_STREAM : SOCK_DGRAM;
 
-   if ($arg{PeerHost}) {
-      my @sa = _sa($arg{PeerHost}, $arg{PeerPort}, $arg{Proto});
+   socket my $fh, PF_INET, $arg{Type}, _proto ($arg{Proto})
+      or return;
+
+   my $self = bless Coro::Handle->new_from_fh (
+      $fh,
+      timeout       => $arg{Timeout},
+      forward_class => $arg{forward_class},
+   ), $class
+      or return;
+
+   $self->configure (\%arg)
+}
+
+sub configure {
+   my ($self, $arg) = @_;
+
+   if ($arg->{ReuseAddr}) {
+      $self->setsockopt (SOL_SOCKET, SO_REUSEADDR, 1)
+         or croak "setsockopt(SO_REUSEADDR): $!";
+   }
+
+   if ($arg->{ReusePort}) {
+      $self->setsockopt (SOL_SOCKET, SO_REUSEPORT, 1)
+         or croak "setsockopt(SO_REUSEPORT): $!";
+   }
+
+   if ($arg->{LocalPort} || $arg->{LocalHost}) {
+      my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort} || 0, $arg->{Proto});
+      $self->bind ($sa[0])
+         or croak "bind($arg->{LocalHost}:$arg->{LocalPort}): $!";
+   }
+
+   if ($arg->{PeerHost}) {
+      my @sa = _sa($arg->{PeerHost}, $arg->{PeerPort}, $arg->{Proto});
 
       for (@sa) {
-         $fh = $class->_prepare_socket(\%arg)
-            or return;
-
          $! = 0;
 
-         if ($fh->connect($_)) {
-            next unless writable $fh;
-            $! = unpack "i", $fh->getsockopt(SOL_SOCKET, SO_ERROR);
+         if ($self->connect ($_)) {
+            next unless writable $self;
+            $! = unpack "i", $self->getsockopt(SOL_SOCKET, SO_ERROR);
          }
 
          $! or last;
 
          $!{ECONNREFUSED} or $!{ENETUNREACH} or $!{ETIMEDOUT} or $!{EHOSTUNREACH}
             or return;
-
-         undef $fh;
       }
    } else {
-      $fh = $class->_prepare_socket(\%arg)
-         or return;
-      if (exists $arg{Listen}) {
-         $fh->listen($arg{Listen})
+      if (exists $arg->{Listen}) {
+         $self->listen ($arg->{Listen})
             or return;
       }
    }
 
-   $fh;
+   $self
 }
 
 =item connect, listen, bind, getsockopt, setsockopt,

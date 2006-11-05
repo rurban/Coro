@@ -166,6 +166,10 @@ sub rbuf : lvalue {
    (tied ${$_[0]})->[3];
 }
 
+sub DESTROY {
+   # nop
+}
+
 sub AUTOLOAD {
    my $self = tied ${$_[0]};
 
