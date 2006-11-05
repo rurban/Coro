@@ -77,6 +77,7 @@ WriteMakefile(
     		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
 
     		    'Coro/AIO.pm'	=> '$(INST_LIBDIR)/Coro/AIO.pm',
+    		    'Coro/LWP.pm'	=> '$(INST_LIBDIR)/Coro/LWP.pm',
     		    'Coro/Util.pm'	=> '$(INST_LIBDIR)/Coro/Util.pm',
                     },
 );

@@ -23,6 +23,7 @@ Coro/MakeMaker.pm
 Coro/CoroAPI.h
 Coro/AIO.pm
 Coro/Util.pm
+Coro/LWP.pm
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h

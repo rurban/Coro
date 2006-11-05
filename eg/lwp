@@ -1,22 +1,8 @@
 #!/usr/bin/perl
 
-# this hack shows how one can get LWP to be less blocking.
-
-{
-   # we replace Socket::inet_aton and CORE::select
-   use Coro::Select; # must come early
-   use Coro::Util;
-   use Coro::Socket;
-   use IO::Socket::INET;
-   use Socket;
-   BEGIN {
-      *Socket::inet_aton = \&Coro::Util::inet_aton;
-      *IO::Socket::INET::new = sub { new Coro::Socket forward_class => @_ };
-   }
-}
-
 use Coro;
 use Coro::Event;
+use Coro::LWP; # should be use'd as early as possible
 use LWP::Simple;
 
 $SIG{PIPE} = 'IGNORE';
