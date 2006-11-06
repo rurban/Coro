@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # the classical producer/consumer example, using semaphores
-# one process produces items, send s a signal.
+# one process produces items, sends a signal.
 # another process waits for that signal and
 # consumed the item.
 
