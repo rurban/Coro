@@ -1,5 +1,6 @@
 Revision history for Perl extension Coro.
 
+2.5
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket
           use AnyEvent, moved them to Coro/.
 	- added Coro::LWP which contains all the uglyness required to

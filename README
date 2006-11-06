@@ -45,6 +45,9 @@ DESCRIPTION
         (usually unused). When the sub returns the new process is
         automatically terminated.
 
+        When the coroutine dies, the program will exit, just as in the main
+        program.
+
            # create a new coroutine that just prints its arguments
            async {
               print "@_\n";
@@ -80,7 +83,7 @@ DESCRIPTION
         Put the given process into the ready queue.
 
     $process->cancel (arg...)
-        Temrinates the given process and makes it return the given arguments
+        Terminates the given process and makes it return the given arguments
         as status (default: the empty list).
 
     $process->join

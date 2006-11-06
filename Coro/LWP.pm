@@ -71,6 +71,8 @@ use Net::HTTP;
 use Net::FTP;
 use Net::NNTP;
 
+our $VERSION = '0.9';
+
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 
 for (@Net::HTTP::ISA, @Net::FTP::ISA, @Net::NTTP::ISA) {
