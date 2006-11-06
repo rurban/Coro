@@ -2,7 +2,7 @@ Revision history for Perl extension Coro.
 
 TODO: possibly convert some of the Event modules into AnyEvent users.
 
-	- converted Coro::Select to AnyEvent.
+        - made Coro::Util and Coro::Select use AnyEvent, moved to Coro/.
 	- added Coro::LWP which contains all the uglyness required to
           make LWP non-blocking.
 	- should work with perl 5.9.x now (Andreas König made me do it).
@@ -14,7 +14,6 @@ TODO: possibly convert some of the Event modules into AnyEvent users.
         - emulate undocumented(!) functionality of IO::Socket required
           by LWP(!!).
         - updated eg/lwp to work with newer lwp's.
-        - made Coro::Util an AnyEvent user, moved it to Coro/.
         - remove "FATAL: uncaught exception" prefix. Coroutines that die
           kill the whole process, just as exceptions in the main "coroutine"
           did already.
