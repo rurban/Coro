@@ -1,8 +1,7 @@
 Revision history for Perl extension Coro.
 
-TODO: possibly convert some of the Event modules into AnyEvent users.
-
-        - made Coro::Util and Coro::Select use AnyEvent, moved to Coro/.
+        - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket
+          use AnyEvent, moved them to Coro/.
 	- added Coro::LWP which contains all the uglyness required to
           make LWP non-blocking.
 	- should work with perl 5.9.x now (Andreas König made me do it).

@@ -25,6 +25,8 @@ Coro/AIO.pm
 Coro/Util.pm
 Coro/LWP.pm
 Coro/Select.pm
+Coro/Handle.pm
+Coro/Socket.pm
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
@@ -46,8 +48,6 @@ t/10_bugs.t
 Event/Makefile.PL
 Event/Event.pm
 Event/Event.xs
-Event/Handle.pm
-Event/Socket.pm
 
 Event/t/00_basic.t
 Event/t/01_unblock.t
