@@ -1,6 +1,22 @@
 Revision history for Perl extension Coro.
 
-TODO: possibly convert some of the Event modules into AnyEvent users.
+2.5  Tue Nov  7 12:22:33 CET 2006
+        - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket
+          use AnyEvent, moved them to Coro/.
+	- added Coro::LWP which contains all the uglyness required to
+          make LWP non-blocking.
+	- should work with perl 5.9.x now (Andreas König made me do it).
+        - fixed another bug in Coro::Select when the timeout was undef.
+        - reuse PL_start_env for all coros, saves some memory per coroutine.
+        - manage PL_top_env differently, hopefully to avoid panic: top_env.
+        - timeout argument was not properly used in Coro::Socket.
+        - allow limited forms of subclassing in Coro::Handle/Coro::Socket.
+        - emulate undocumented(!) functionality of IO::Socket required
+          by LWP(!!).
+        - updated eg/lwp to work with newer lwp's.
+        - remove "FATAL: uncaught exception" prefix. Coroutines that die
+          kill the whole process, just as exceptions in the main "coroutine"
+          did already.
 
 2.1  Wed Nov  1 23:01:13 CET 2006
         - fix a long-standing bug in Coro::Select where select with

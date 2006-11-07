@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# this crap is an asynchroneous finger client. it's rather idiotic ;)
+# this crap is an asynchronous finger client. it's rather idiotic ;)
 
 use Coro;
 use Coro::Event;

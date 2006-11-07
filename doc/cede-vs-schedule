@@ -72,7 +72,7 @@ immediately. Unless somebody else wakes it up it'll never run again.
       }
    }
 
-It puts the waiting process into thr ready queue again.
+It puts the waiting process into the ready queue again.
 
 "cede" is implemented like this (in C, but the basic idea is the same):
 

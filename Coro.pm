@@ -43,7 +43,7 @@ our $idle;    # idle coroutine
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '2.1';
+our $VERSION = '2.5';
 
 our @EXPORT = qw(async cede schedule terminate current);
 our %EXPORT_TAGS = (
@@ -165,6 +165,9 @@ Create a new asynchronous process and return it's process object
 (usually unused). When the sub returns the new process is automatically
 terminated.
 
+When the coroutine dies, the program will exit, just as in the main
+program.
+
    # create a new coroutine that just prints its arguments
    async {
       print "@_\n";
@@ -243,7 +246,7 @@ Put the given process into the ready queue.
 
 =item $process->cancel (arg...)
 
-Temrinates the given process and makes it return the given arguments as
+Terminates the given process and makes it return the given arguments as
 status (default: the empty list).
 
 =cut

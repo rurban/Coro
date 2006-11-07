@@ -8,7 +8,7 @@ Coro::Handle - non-blocking io with a blocking interface.
 
 =head1 DESCRIPTION
 
-This module implements io-handles in a coroutine-compatible way, that is,
+This module implements IO-handles in a coroutine-compatible way, that is,
 other coroutines can run while reads or writes block on the handle. It
 does NOT inherit from IO::Handle but uses tied objects.
 
@@ -23,7 +23,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 1.9;
+$VERSION = 2.5;
 
 @EXPORT = qw(unblock);
 
@@ -89,9 +89,7 @@ only). Might change in the future.
 
 sub autoflush	{ !0 }
 
-=item $fh->fileno, $fh->close,
-$fh->read, $fh->sysread, $fh->syswrite,
-$fh->print, $fh->printf
+=item $fh->fileno, $fh->close, $fh->read, $fh->sysread, $fh->syswrite, $fh->print, $fh->printf
 
 Work like their function equivalents (except read, which works like
 sysread. You should not use the read function with Coro::Handles, it will
@@ -99,17 +97,26 @@ work but it's not efficient).
 
 =cut
 
-sub read	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub sysread	{ Coro::Handle::FH::READ  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub syswrite	{ Coro::Handle::FH::WRITE (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub print	{ Coro::Handle::FH::WRITE (tied ${+shift}, join "", @_) }
-sub printf	{ Coro::Handle::FH::PRINTF(tied ${+shift}, @_) }
-sub fileno	{ Coro::Handle::FH::FILENO(tied ${$_[0]}) }
-sub close	{ Coro::Handle::FH::CLOSE (tied ${$_[0]}) }
+sub read	{ Coro::Handle::FH::READ   (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub sysread	{ Coro::Handle::FH::READ   (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub syswrite	{ Coro::Handle::FH::WRITE  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
+sub print	{ Coro::Handle::FH::WRITE  (tied ${+shift}, join "", @_) }
+sub printf	{ Coro::Handle::FH::PRINTF (tied ${+shift}, @_) }
+sub fileno	{ Coro::Handle::FH::FILENO (tied ${$_[0]}) }
+sub close	{ Coro::Handle::FH::CLOSE  (tied ${$_[0]}) }
+sub blocking    { !0 } # this handler always blocks the caller
+
+sub partial     {
+   my $obj = tied ${$_[0]};
+
+   my $retval = $obj->[8];
+   $obj->[8] = $_[1] if @_ > 1;
+   $retval
+}
 
 =item $fh->timeout([...])
 
-The optional agrument sets the new timeout (in seconds) for this
+The optional argument sets the new timeout (in seconds) for this
 handle. Returns the current (new) value.
 
 C<0> is a valid timeout, use C<undef> to disable the timeout.
@@ -163,7 +170,24 @@ sub fh {
 }
 
 sub rbuf : lvalue {
-   tied(${$_[0]})->[3];
+   (tied ${$_[0]})->[3];
+}
+
+sub DESTROY {
+   # nop
+}
+
+sub AUTOLOAD {
+   my $self = tied ${$_[0]};
+
+   (my $func = $AUTOLOAD) =~ s/^(.*):://;
+
+   my $forward = UNIVERSAL::can $self->[7], $func;
+
+   $forward or
+      die "Can't locate object method \"$func\" via package \"" . (ref $self) . "\"";
+
+   goto &$forward;
 }
 
 package Coro::Handle::FH;
@@ -174,8 +198,7 @@ use Fcntl ();
 use Errno ();
 use Carp 'croak';
 
-use Coro::Event;
-use Event::Watcher qw(R W E);
+use AnyEvent;
 
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
@@ -185,32 +208,32 @@ use Event::Watcher qw(R W E);
 # 2 timeout
 # 3 rb
 # 4 wb # unused
-# 5 rw
-# 6 ww
+# 5 unused
+# 6 unused
+# 7 forward class
+# 8 blocking
 
 sub TIEHANDLE {
-   my $class = shift;
-   my %args = @_;
+   my ($class, %arg) = @_;
 
    my $self = bless [], $class;
-   $self->[0] = $args{fh};
-   $self->[1] = $args{desc};
-   $self->[2] = $args{timeout};
+   $self->[0] = $arg{fh};
+   $self->[1] = $arg{desc};
+   $self->[2] = $arg{timeout};
    $self->[3] = "";
    $self->[4] = "";
+   $self->[7] = $arg{forward_class};
+   $self->[8] = $arg{partial};
 
    fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
       or croak "fcntl(O_NONBLOCK): $!";
 
-   $self;
+   $self
 }
 
 sub cleanup {
    $_[0][3] = "";
-   ($_[0][5])->cancel if defined $_[0][5]; $_[0][5] = undef;
-
    $_[0][4] = "";
-   ($_[0][6])->cancel if defined $_[0][6]; $_[0][6] = undef;
 }
 
 sub OPEN {
@@ -275,21 +298,53 @@ sub FETCH {
 }
 
 sub readable {
-   ($_[0][5] ||= Coro::Event->io(
-      fd      => $_[0][0],
-      desc    => "$_[0][1] R",
-      timeout => $_[0][2],
-      poll    => R+E,
-   ))->next->{Coro::Event}[5] & R;
+   my $current = $Coro::current;
+   my $io = 1;
+
+   my $w = AnyEvent->io (
+      fh      => $_[0][0],
+      desc    => "$_[0][1] readable",
+      poll    => 'r',
+      cb      => sub {
+         $current->ready;
+      },
+   );
+
+   my $t = $_[0][2] && AnyEvent->timer (
+      after => $_[0][2],
+      cb    => sub {
+         $io = 0;
+         $current->ready;
+      },
+   );
+
+   &Coro::schedule;
+   $io
 }
 
 sub writable {
-   ($_[0][6] ||= Coro::Event->io(
-      fd      => $_[0][0],
-      desc    => "$_[0][1] W",
-      timeout => $_[0][2],
-      poll    => W+E,
-   ))->next->{Coro::Event}[5] & W;
+   my $current = $Coro::current;
+   my $io = 1;
+
+   my $w = AnyEvent->io (
+      fh      => $_[0][0],
+      desc    => "$_[0][1] writable",
+      poll    => 'w',
+      cb      => sub {
+         $current->ready;
+      },
+   );
+
+   my $t = $_[0][2] && AnyEvent->timer (
+      after => $_[0][2],
+      cb    => sub {
+         $io = 0;
+         $current->ready;
+      },
+   );
+
+   &Coro::schedule;
+   $io
 }
 
 sub WRITE {
@@ -344,7 +399,7 @@ sub READ {
       } elsif ($! != Errno::EAGAIN) {
          last;
       }
-      last unless &readable;
+      last if $_[0][8] || !&readable;
    }
 
    return $res;

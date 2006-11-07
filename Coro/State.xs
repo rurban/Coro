@@ -102,9 +102,6 @@ typedef struct {
 } coro_stack;
 
 struct coro {
-  /* the top-level JMPENV for each coroutine, needed to catch dies. */
-  JMPENV start_env;
-
   /* the optional C context */
   coro_stack *stack;
   void *cursp;
@@ -165,7 +162,11 @@ coro_clone_padlist (pTHX_ CV *cv)
 
   newpadlist = newAV ();
   AvREAL_off (newpadlist);
+#if PERL_VERSION < 9
   Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
+#else
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
+#endif
   newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
   --AvFILLp (padlist);
 
@@ -627,11 +628,11 @@ setup_coro (void *arg)
     {
       UNOP myop;
 
-      PL_op = (OP *)&myop;
-
       Zero(&myop, 1, UNOP);
       myop.op_next = Nullop;
       myop.op_flags = OPf_WANT_VOID;
+
+      PL_op = (OP *)&myop;
 
       PUSHMARK(SP);
       XPUSHs (sub_init);
@@ -659,7 +660,7 @@ continue_coro (void *arg)
   dTHX;
   Coro__State ctx = (Coro__State)arg;
 
-  PL_top_env = &ctx->start_env;
+  PL_top_env = &PL_start_env;
 
   ctx->cursp = 0;
   PL_op = PL_op->op_next;
@@ -675,6 +676,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
 
   if (prev != next)
     {
+      /* has this coro been created yet? */
       if (next->mainstack)
         {
           LOCK;
@@ -723,15 +725,17 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
           SAVE (prev, -1); /* first get rid of the old state */
           UNLOCK;
 
+          /* create the coroutine for the first time */
           if (flags & TRANSFER_SAVE_CCTXT)
             {
               if (!prev->stack)
                 allocate_stack (prev, 0);
 
+              /* the new coroutine starts with start_env again */
+              PL_top_env = &PL_start_env;
+
               if (prev->stack->sptr && flags & TRANSFER_LAZY_STACK)
                 {
-                  PL_top_env = &next->start_env;
-
                   setup_coro (next);
                   next->cursp = stacklevel;
 
@@ -950,12 +954,6 @@ _newprocess(args)
         /*coro->mainstack = 0; *//*actual work is done inside transfer */
         /*coro->stack = 0;*/
 
-        /* same as JMPENV_BOOTSTRAP */
-        /* we might be able to recycle start_env, but safe is safe */
-        /*Zero(&coro->start_env, 1, JMPENV);*/
-        coro->start_env.je_ret = -1;
-        coro->start_env.je_mustcatch = TRUE;
-
         RETVAL = coro;
         OUTPUT:
         RETVAL
@@ -1008,8 +1006,6 @@ _exit(code)
 
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
-# this is slightly dirty (should expose a c-level api)
-
 void
 yield(...)
 	PROTOTYPE: @
@@ -1040,8 +1036,6 @@ yield(...)
 
 MODULE = Coro::State                PACKAGE = Coro
 
-# this is slightly dirty (should expose a c-level api)
-
 BOOT:
 {
 	int i;
@@ -1070,8 +1064,8 @@ BOOT:
           coroapi.current  = coro_current;
 
           GCoroAPI = &coroapi;
-          sv_setiv(sv, (IV)&coroapi);
-          SvREADONLY_on(sv);
+          sv_setiv (sv, (IV)&coroapi);
+          SvREADONLY_on (sv);
         }
 }
 
