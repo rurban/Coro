@@ -99,11 +99,11 @@ our $AUTOLOAD;
                \$state = Coro::_aio_get_state;
                \@res = \@_;
                \$current->ready;
-               undef \$current;
             };
 
             &$iosub;
 
+            Coro::schedule;
             Coro::schedule while !\$state;
 
             Coro::_aio_set_state \$state;
