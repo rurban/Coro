@@ -849,7 +849,7 @@ coro_deq (pTHX_ int min_prio)
     min_prio = 0;
 
   for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= min_prio; )
-    if (av_len (coro_ready[prio]) >= 0)
+    if (AvFILLp (coro_ready[prio]) >= 0)
       {
         coro_nready--;
         return av_shift (coro_ready[prio]);
