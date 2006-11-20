@@ -45,6 +45,10 @@ For your convienience, here are the changed function signatures for most
 of the requests, for documentation of these functions please have a look
 at L<IO::AIO|the IO::AIO manual>.
 
+The AnyEvent watcher can be disabled by executing C<undef
+$Coro::AIO::WATCHER>. Please notify the author of when and why you think
+this was necessary.
+
 =over 4
 
 =cut
@@ -60,7 +64,7 @@ use IO::AIO ();
 use base Exporter::;
 
 our $FH; open $FH, "<&=" . IO::AIO::poll_fileno;
-our $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => sub { IO::AIO::poll_cb });
+our $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&IO::AIO::poll_cb);
 
 our @EXPORT    = @IO::AIO::EXPORT;
 our @EXPORT_OK = @IO::AIO::EXPORT_OK;

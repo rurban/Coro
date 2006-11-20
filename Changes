@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+	- avoid deadlock in Coro::Event's idle process when it is called
+          early with no active watchers.
 	- minor documentation cleanup.
 
 2.5  Tue Nov  7 12:22:33 CET 2006

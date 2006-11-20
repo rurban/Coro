@@ -155,23 +155,6 @@ This is the version of C<loop> you should use instead of C<Event::loop>
 when using this module - it will ensure correct scheduling in the presence
 of events.
 
-=begin comment
-
-Unlike loop's counterpart it is not an error when no watchers are active -
-loop silently returns in this case, as if unloop(undef) were called.
-
-=end comment
-
-=cut
-
-# no longer do something special - it's done internally now
-
-#sub loop(;$) {
-#   #local $Coro::idle = $Coro::current;
-#   #Coro::schedule; # become idle task, which is implicitly ready
-#   &Event::loop;
-#}
-
 =item unloop([$result])
 
 Same as Event::unloop (provided here for your convinience only).
@@ -180,8 +163,8 @@ Same as Event::unloop (provided here for your convinience only).
 
 $Coro::idle = new Coro sub {
    while () {
-      Event::one_event; # inefficient
       Coro::schedule;
+      Event::one_event; # inefficient
    }
 };
 
