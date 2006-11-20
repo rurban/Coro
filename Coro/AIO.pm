@@ -88,7 +88,7 @@ our $AUTOLOAD;
 #line 1 "Coro::AIO::$sub($proto)"
          sub $sub($proto) {
             my \$current = \$Coro::current;
-            my \$stat;
+            my \$state;
             my \@res;
 
             push \@_, sub {
@@ -100,9 +100,9 @@ our $AUTOLOAD;
 
             &$iosub;
 
-            Coro::schedule while \$current;
+            Coro::schedule while !\$state;
 
-            Coro::_aio_set_state \$stat;
+            Coro::_aio_set_state \$state;
             wantarray ? \@res : \$res[0]
          }
       };
