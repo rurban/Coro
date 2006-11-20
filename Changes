@@ -1,5 +1,9 @@
 Revision history for Perl extension Coro.
 
+TODO: check wether stack-sharing is still effective
+TODO: more effective stack sharing by having one "default stack" for "simple" coroutines?
+TODO: verify exception frame changes and force stack copies?
+
 	- avoid deadlock in Coro::Event's idle process when it is called
           early with no active watchers.
 	- minor documentation cleanup.

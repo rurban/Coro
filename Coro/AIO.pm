@@ -55,7 +55,7 @@ this was necessary.
 
 package Coro::AIO;
 
-use strict 'subs';
+use strict qw(subs vars);
 
 use Coro ();
 use AnyEvent;
@@ -96,7 +96,7 @@ our $AUTOLOAD;
             my \@res;
 
             push \@_, sub {
-               \$stat = Coro::_aio_get_state;
+               \$state = Coro::_aio_get_state;
                \@res = \@_;
                \$current->ready;
                undef \$current;
