@@ -5,6 +5,7 @@ TODO: more effective stack sharing by having one "default stack" for "simple" co
 TODO: verify exception frame changes and force stack copies?
 
 	- minor documentation cleanup.
+        - verys minor optimisations and cleanups.
 
 2.5  Tue Nov  7 12:22:33 CET 2006
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket

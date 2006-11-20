@@ -794,7 +794,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
 												\
   } while(0)
 
-#define SvSTATE(sv) INT2PTR (struct coro *, SvIV (sv))
+#define SvSTATE(sv) INT2PTR (struct coro *, SvIVX (sv))
 
 static void
 api_transfer(pTHX_ SV *prev, SV *next, int flags)
@@ -816,7 +816,7 @@ api_transfer(pTHX_ SV *prev, SV *next, int flags)
 
 /* for Coro.pm */
 static GV *coro_current, *coro_idle;
-static AV *coro_ready[PRIO_MAX-PRIO_MIN+1];
+static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
 
 static void
@@ -849,10 +849,10 @@ coro_deq (pTHX_ int min_prio)
     min_prio = 0;
 
   for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= min_prio; )
-    if (AvFILLp (coro_ready[prio]) >= 0)
+    if (AvFILLp (coro_ready [prio]) >= 0)
       {
         coro_nready--;
-        return av_shift (coro_ready[prio]);
+        return av_shift (coro_ready [prio]);
       }
 
   return 0;
@@ -1028,8 +1028,8 @@ yield(...)
           av_store (defav, items, SvREFCNT_inc (ST(items)));
 
         sv = av_pop ((AV *)SvRV (yieldstack));
-        prev = INT2PTR (struct coro *, SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0))));
-        next = INT2PTR (struct coro *, SvIV ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0))));
+        prev = SvSTATE ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
+        next = SvSTATE ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
         SvREFCNT_dec (sv);
 
         transfer (aTHX_ prev, next, 0);
