@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+	- minor documentation cleanup.
+
 2.5  Tue Nov  7 12:22:33 CET 2006
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket
           use AnyEvent, moved them to Coro/.

@@ -34,6 +34,11 @@ function - it will be managed by this module.
 Your application should just create all necessary coroutines and then call
 Coro::Event::loop.
 
+Please note that even programs or modules (such as
+L<Coro::Handle|Coro::Handle>) that use "traditional"
+event-based/continuation style will run more efficient with this module
+then when using only Event.
+
 =over 4
 
 =cut

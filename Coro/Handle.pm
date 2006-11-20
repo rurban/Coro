@@ -9,8 +9,12 @@ Coro::Handle - non-blocking io with a blocking interface.
 =head1 DESCRIPTION
 
 This module implements IO-handles in a coroutine-compatible way, that is,
-other coroutines can run while reads or writes block on the handle. It
-does NOT inherit from IO::Handle but uses tied objects.
+other coroutines can run while reads or writes block on the handle.
+
+It does so by using L<AnyEvent|AnyEvent> to wait for readable/writable
+data, allowing other coroutines to run while one coroutine waits for I/O.
+
+Coro::Handle does NOT inherit from IO::Handle but uses tied objects.
 
 =over 4
 
