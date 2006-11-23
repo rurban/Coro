@@ -33,15 +33,6 @@ confess (const char *msg)
 
 #define EV_CLASS "Coro::Event"
 
-static pe_idle *scheduler;
-static int do_schedule;
-
-#define NEED_SCHEDULE if (!do_schedule)					\
-                        {						\
- 		          do_schedule = 1;				\
-		          GEventAPI->now ((pe_watcher *)scheduler);	\
-                        }
-
 static void
 coro_std_cb(pe_event *pe)
 {
@@ -60,7 +51,6 @@ coro_std_cb(pe_event *pe)
       CORO_READY (*cd_coro);
       SvREFCNT_dec (*cd_coro);
       *cd_coro = &PL_sv_undef;
-      NEED_SCHEDULE;
     }
   else
     {
@@ -69,13 +59,13 @@ coro_std_cb(pe_event *pe)
     }
 }
 
-static void
-scheduler_cb(pe_event *pe)
+static double
+prepare_hook (void *data)
 {
   while (CORO_NREADY)
     CORO_CEDE;
 
-  do_schedule = 0;
+  return 1e20;
 }
 
 MODULE = Coro::Event                PACKAGE = Coro::Event
@@ -87,13 +77,7 @@ BOOT:
         I_EVENT_API ("Coro::Event");
 	I_CORO_API ("Coro::Event");
 
-        /* create a fake idle handler (we only ever call now) */
-        scheduler = GEventAPI->new_idle (0, 0);
-        scheduler->base.callback = scheduler_cb;
-        scheduler->base.prio = PE_PRIO_NORMAL; /* StarvePrio */
-        scheduler->min_interval = newSVnv (0);
-        scheduler->max_interval = newSVnv (0);
-        GEventAPI->stop ((pe_watcher *)scheduler, 0);
+        GEventAPI->add_hook ("prepare", (void *)prepare_hook, 0);
 }
 
 void
@@ -151,16 +135,4 @@ _next(self)
             AvARRAY(priv)[CD_CORO] = SvREFCNT_inc (CORO_CURRENT);
             XSRETURN_YES;
           }
-
-MODULE = Coro::Event                PACKAGE = Coro
-
-# overwrite the ready function
-void
-ready(self)
-	SV *	self
-        PROTOTYPE: $
-	CODE:
-        NEED_SCHEDULE;
-        CORO_READY (self);
-
 

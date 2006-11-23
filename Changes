@@ -3,6 +3,24 @@ Revision history for Perl extension Coro.
 TODO: check wether stack-sharing is still effective
 TODO: more effective stack sharing by having one "default stack" for "simple" coroutines?
 TODO: verify exception frame changes and force stack copies?
+#2  0x00002ac4a63f2622 in api_schedule () at State.xs:895
+#3  0x00002ac4a63f26a9 in XS_Coro_schedule (cv=0x911700) at State.xs:1095
+#4  0x00000000004941b8 in Perl_pp_entersub () at pp_hot.c:2869
+#5  0x0000000000489fee in Perl_runops_standard () at run.c:37
+#6  0x000000000041dec7 in Perl_call_sv (sv=0xbfd8ea0, flags=<value optimized out>) at perl.c:2806
+#7  0x00002ac4a6606ad3 in pe_event_invoke (ev=0x1ada6e0) at c/ev.c:308
+#8  0x00002ac4a6608878 in one_event (tm=60) at c/queue.c:91
+#9  0x00002ac4a6608f4f in XS_Event_one_event (cv=<value optimized out>) at c/queue.c:234
+#10 0x00000000004941b8 in Perl_pp_entersub () at pp_hot.c:2869
+#11 0x0000000000489fee in Perl_runops_standard () at run.c:37
+#12 0x00000000004c4287 in S_docatch (o=<value optimized out>) at pp_ctl.c:2566
+#13 0x0000000000489fee in Perl_runops_standard () at run.c:37
+#14 0x00000000004c4287 in S_docatch (o=<value optimized out>) at pp_ctl.c:2566
+#15 0x0000000000489fee in Perl_runops_standard () at run.c:37
+#16 0x000000000041e38c in Perl_call_sv (sv=<value optimized out>, flags=140) at perl.c:2806
+#17 0x00002ac4a63f1d72 in setup_coro (arg=0x881d80) at State.xs:620
+#18 0x00002ac4a63f28b7 in coro_init () at libcoro/coro.c:78
+#19 0x0000000000000000 in ?? ()
 
 	- minor documentation cleanup.
         - verys minor optimisations and cleanups.
