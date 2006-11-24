@@ -774,6 +774,8 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
   UNLOCK;
 }
 
+/* use this function pointer to call the above function */
+/* this is done to increase chances of the compiler not inlining the call */
 void (*coro_state_transfer)(pTHX_ struct coro *prev, struct coro *next, int flags) = transfer_impl;
 
 #define SV_CORO(sv,func)									\

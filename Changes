@@ -9,6 +9,7 @@ TODO: verify exception frame changes and force stack copies?
         - Coro::Event should be cleaner and more efficient now.
 	- minor documentation cleanup.
         - very minor optimisations and cleanups.
+        - avoid problems due to compiler inlining.
 
 2.5  Tue Nov  7 12:22:33 CET 2006
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket
