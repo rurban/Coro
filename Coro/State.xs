@@ -147,8 +147,12 @@ struct coro {
   COP *curcop;
   JMPENV *top_env;
 
+  /* coro process data */
+  int prio;
+
   /* data associated with this coroutine (initial args) */
   AV *args;
+  int refcnt;
 };
 
 typedef struct coro *Coro__State;
@@ -783,7 +787,7 @@ void (*coro_state_transfer)(pTHX_ struct coro *prev, struct coro *next, int flag
     if (SvROK (sv))										\
       sv = SvRV (sv);										\
         											\
-    if (SvTYPE (sv) == SVt_PVHV)								\
+    if (SvTYPE (sv) == SVt_PVHV && SvSTASH (sv) != coro_state_stash)				\
       {												\
         HE *he = hv_fetch_ent ((HV *)sv, ucoro_state_sv, 0, ucoro_state_hash);			\
 												\
@@ -799,7 +803,61 @@ void (*coro_state_transfer)(pTHX_ struct coro *prev, struct coro *next, int flag
 												\
   } while(0)
 
-#define SvSTATE(sv) INT2PTR (struct coro *, SvIVX (sv))
+static void
+coro_state_destroy (struct coro *coro)
+{
+  if (coro->refcnt--)
+    return;
+
+  if (coro->mainstack && coro->mainstack != main_mainstack)
+    {
+      struct coro temp;
+
+      SAVE (aTHX_ (&temp), TRANSFER_SAVE_ALL);
+      LOAD (aTHX_ coro);
+
+      destroy_stacks (aTHX);
+
+      LOAD ((&temp)); /* this will get rid of defsv etc.. */
+
+      coro->mainstack = 0;
+    }
+
+  deallocate_stack (coro);
+  SvREFCNT_dec (coro->args);
+  Safefree (coro);
+}
+
+static int
+coro_state_clear (SV *sv, MAGIC *mg)
+{
+  struct coro *coro = (struct coro *)mg->mg_ptr;
+  mg->mg_ptr = 0;
+
+  coro_state_destroy (coro);
+
+  return 0;
+}
+
+static int
+coro_state_dup (MAGIC *mg, CLONE_PARAMS *params)
+{
+  struct coro *coro = (struct coro *)mg->mg_ptr;
+
+  ++coro->refcnt;
+
+  return 0;
+}
+
+static MGVTBL coro_state_vtbl = { 0, 0, 0, 0, coro_state_clear, 0, coro_state_dup, 0 };
+
+static struct coro *
+SvSTATE (SV *coro)
+{
+  MAGIC *mg = SvMAGIC (SvROK (coro) ? SvRV (coro) : coro);
+  assert (mg->mg_type == PERL_MAGIC_ext);
+  return (struct coro *)mg->mg_ptr;
+}
 
 static void
 api_transfer (pTHX_ SV *prev, SV *next, int flags)
@@ -827,18 +885,16 @@ static int coro_nready;
 static void
 coro_enq (pTHX_ SV *sv)
 {
-  SV **xprio;
   int prio;
 
   if (SvTYPE (sv) != SVt_PVHV)
     croak ("Coro::ready tried to enqueue something that is not a coroutine");
 
-  xprio = hv_fetch ((HV *)sv, "prio", 4, 0);
-  prio = xprio ? SvIV (*xprio) : PRIO_NORMAL;
-
-  prio = prio > PRIO_MAX ? PRIO_MAX
-       : prio < PRIO_MIN ? PRIO_MIN
-       : prio;
+  {
+    SV *coro = sv;
+    SV_CORO (coro, "omg");
+    prio = SvSTATE (coro)->prio;
+  }
 
   av_push (coro_ready [prio - PRIO_MIN], sv);
   coro_nready++;
@@ -919,7 +975,7 @@ api_cede (void)
 
 MODULE = Coro::State                PACKAGE = Coro::State
 
-PROTOTYPES: ENABLE
+PROTOTYPES: DISABLE
 
 BOOT:
 {       /* {} necessary for stoopid perl-5.6.x */
@@ -941,18 +997,17 @@ BOOT:
 
         coroapi.ver      = CORO_API_VERSION;
         coroapi.transfer = api_transfer;
+
+        assert (("PRIO_NORMAL must be 0", !PRIO_NORMAL));
 }
 
-Coro::State
+SV *
 new (char *klass, ...)
-        PROTOTYPE: $@
         CODE:
 {
-        Coro__State coro;
+        struct coro *coro;
+        HV *hv;
         int i;
-
-        if (!SvOK (ST (1)))
-          croak ("Coro::State::new needs something callable as first argument");
 
         Newz (0, coro, 1, struct coro);
         coro->args = newAV ();
@@ -960,10 +1015,12 @@ new (char *klass, ...)
         for (i = 1; i < items; i++)
           av_push (coro->args, newSVsv (ST (i)));
 
-        RETVAL = coro;
-
         /*coro->mainstack = 0; *//*actual work is done inside transfer */
         /*coro->stack = 0;*/
+
+        hv = newHV ();
+        sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
+        RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
 }
         OUTPUT:
         RETVAL
@@ -973,7 +1030,6 @@ transfer(prev, next, flags)
         SV	*prev
         SV	*next
         int	flags
-        PROTOTYPE: @
         CODE:
         PUTBACK;
         SV_CORO (next, "Coro::transfer");
@@ -981,34 +1037,40 @@ transfer(prev, next, flags)
         coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
         SPAGAIN;
 
-void
-DESTROY(coro)
-        Coro::State	coro
+int
+prio (Coro::State coro, int newprio = 0)
+        ALIAS:
+        nice = 1
         CODE:
+{
+        RETVAL = coro->prio;
 
-        if (coro->mainstack && coro->mainstack != main_mainstack)
+        if (items > 1)
           {
-            struct coro temp;
+            if (ix)
+              newprio += coro->prio;
 
-            PUTBACK;
-            SAVE (aTHX_ (&temp), TRANSFER_SAVE_ALL);
-            LOAD (aTHX_ coro);
-            SPAGAIN;
+            if (newprio < PRIO_MIN) newprio = PRIO_MIN;
+            if (newprio > PRIO_MAX) newprio = PRIO_MAX;
 
-            destroy_stacks (aTHX);
-
-            LOAD ((&temp)); /* this will get rid of defsv etc.. */
-            SPAGAIN;
-
-            coro->mainstack = 0;
+            coro->prio = newprio;
           }
-
-        deallocate_stack (coro);
-        SvREFCNT_dec (coro->args);
-        Safefree (coro);
+}
 
 void
-_exit(code)
+_clone_state_from (SV *dst, SV *src)
+	CODE:
+{
+	struct coro *coro_src = SvSTATE (src);
+
+        sv_unmagic (SvRV (dst), PERL_MAGIC_ext);
+
+        ++coro_src->refcnt;
+        sv_magicext (SvRV (dst), 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro_src, 0)->mg_flags |= MGf_DUP;
+}
+
+void
+_exit (code)
 	int	code
         PROTOTYPE: $
 	CODE:
@@ -1017,7 +1079,7 @@ _exit(code)
 MODULE = Coro::State                PACKAGE = Coro::Cont
 
 void
-yield(...)
+yield (...)
 	PROTOTYPE: @
         CODE:
         SV *yieldstack;
@@ -1082,7 +1144,7 @@ BOOT:
 #if !PERL_MICRO
 
 void
-ready(self)
+ready (self)
 	SV *	self
         PROTOTYPE: $
 	CODE:
@@ -1091,7 +1153,7 @@ ready(self)
 #endif
 
 int
-nready(...)
+nready (...)
 	PROTOTYPE:
         CODE:
         RETVAL = coro_nready;
@@ -1099,13 +1161,13 @@ nready(...)
         RETVAL
 
 void
-schedule(...)
+schedule (...)
 	PROTOTYPE:
 	CODE:
         api_schedule ();
 
 void
-cede(...)
+cede (...)
 	PROTOTYPE:
 	CODE:
         api_cede ();

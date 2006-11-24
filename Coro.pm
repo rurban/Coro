@@ -143,7 +143,7 @@ $manager = new Coro sub {
          # process itself intact (we basically make it a zombie
          # process that always runs the manager thread, so it's possible
          # to transfer() to this process).
-         $coro->{_coro_state} = $manager->{_coro_state};
+         $coro->{_coro_state}->_clone_state_from ($manager->{_coro_state});
       }
       &schedule;
    }
@@ -276,7 +276,7 @@ sub join {
    wantarray ? @{$self->{status}} : $self->{status}[0];
 }
 
-=item $oldprio = $process->prio($newprio)
+=item $oldprio = $process->prio ($newprio)
 
 Sets (or gets, if the argument is missing) the priority of the
 process. Higher priority processes get run before lower priority
@@ -301,12 +301,10 @@ process). This is a bug that will be fixed in some future version.
 =cut
 
 sub prio {
-   my $old = $_[0]{prio};
-   $_[0]{prio} = $_[1] if @_ > 1;
-   $old;
+   shift->{_coro_state}->prio (@_)
 }
 
-=item $newprio = $process->nice($change)
+=item $newprio = $process->nice ($change)
 
 Similar to C<prio>, but subtract the given value from the priority (i.e.
 higher values mean lower priority, just as in unix).
@@ -314,10 +312,10 @@ higher values mean lower priority, just as in unix).
 =cut
 
 sub nice {
-   $_[0]{prio} -= $_[1];
+   shift->{_coro_state}->nice (@_)
 }
 
-=item $olddesc = $process->desc($newdesc)
+=item $olddesc = $process->desc ($newdesc)
 
 Sets (or gets in case the argument is missing) the description for this
 process. This is just a free-form string you can associate with a process.
