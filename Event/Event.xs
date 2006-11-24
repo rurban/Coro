@@ -65,7 +65,7 @@ prepare_hook (void *data)
   while (CORO_NREADY)
     CORO_CEDE;
 
-  return 1e20;
+  return 1e10;
 }
 
 MODULE = Coro::Event                PACKAGE = Coro::Event

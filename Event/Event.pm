@@ -163,8 +163,8 @@ Same as Event::unloop (provided here for your convinience only).
 
 $Coro::idle = new Coro sub {
    while () {
-      Coro::schedule;
       Event::one_event; # inefficient
+      Coro::schedule;
    }
 };
 
