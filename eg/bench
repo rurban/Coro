@@ -8,7 +8,7 @@
 use Coro;
 use Benchmark;
 
-sub a() { }
+sub a($) { }
 
 $a = bless {}, main::;
 
@@ -37,12 +37,14 @@ sub doit0 {
       transfer($c0, $main,  0); transfer($c0, $main,  0);
       transfer($c0, $main,  0); transfer($c0, $main,  0);
       transfer($c0, $main,  0); transfer($c0, $main,  0);
+      transfer($c0, $main,  0); transfer($c0, $main,  0);
    }
 }
 
 sub doit1 {
    while() {
       # some unrolling here as well..
+      transfer($c1, $main, -1); transfer($c1, $main, -1);
       transfer($c1, $main, -1); transfer($c1, $main, -1);
       transfer($c1, $main, -1); transfer($c1, $main, -1);
       transfer($c1, $main, -1); transfer($c1, $main, -1);
@@ -61,10 +63,10 @@ transfer($main, $c0, 0);
 transfer($main, $c1, -1);
 
 timethese 1000000, {
-   empty    => '&a; &a',
-   method   => '$a->b(5); $a->b(6)',
-   cede     => 'cede',
-   transfer0=> 'transfer($main, $c0, 0)',
-   transfer1=> 'transfer($main, $c1, -1)',
+   function  => 'a(5); a(6)',
+   method    => '$a->b(5); $a->b(6)',
+   cede      => 'cede',
+   transfer0 => 'transfer($main, $c0, 0)',
+   transfer1 => 'transfer($main, $c1, -1)',
 };
 

@@ -79,6 +79,9 @@ If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
 to save the current coroutine in.
 
+The returned object is an empty hash which can be used for any purpose
+whatsoever, for example when subclassing Coro::State.
+
 =cut
 
 # this is called (or rather: goto'ed) for each and every
@@ -124,15 +127,6 @@ this:
      local ($_, $@, ...);
      $old->transfer ($new);
   }
-
-IMPLEMENTORS NOTE: all Coro::State functions/methods expect either the
-usual Coro::State object or a hashref with a key named "_coro_state" that
-contains the real Coro::State object. That is, you can do:
-
-  $obj->{_coro_state} = new Coro::State ...;
-  Coro::State::transfer (..., $obj);
-
-This exists mainly to ease subclassing (wether through @ISA or not).
 
 =cut
 

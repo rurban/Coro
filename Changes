@@ -7,9 +7,14 @@ TODO: verify exception frame changes and force stack copies?
         - Coro::Event could cause livelocks if it was used but
           Event watchers were used directly.
         - Coro::Event should be cleaner and more efficient now.
-	- minor documentation cleanup.
-        - very minor optimisations and cleanups.
+        - minor incompatibility: subclassing is supported directly now
+          without going through a _coro_state member.
+        - process swicthing is much faster now.
+        - very minor optimisations and code/documentation cleanup.
         - avoid problems due to compiler inlining.
+        - possibly better support for threads.
+        - removed timers from Coro::Timer -> use AnyEvent instead.
+        - replaced Coro::idle coroutine by (cleaner) idle handler.
 
 2.5  Tue Nov  7 12:22:33 CET 2006
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket

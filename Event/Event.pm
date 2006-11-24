@@ -51,6 +51,7 @@ use Carp;
 no warnings;
 
 use Coro;
+use Coro::Timer;
 use Event qw(loop unloop); # we are re-exporting this, cooool!
 
 use XSLoader;
@@ -161,23 +162,7 @@ Same as Event::unloop (provided here for your convinience only).
 
 =cut
 
-$Coro::idle = new Coro sub {
-   while () {
-      Event::one_event; # inefficient
-      Coro::schedule;
-   }
-};
-
-# provide hooks for Coro::Timer
-
-package Coro::Timer;
-
-unless ($override) {
-   $override = 1;
-   *_new_timer = sub {
-      Event->timer(at => $_[0], cb => $_[1]);
-   };
-}
+$Coro::idle = \&Event::one_event; # inefficient
 
 1;
 

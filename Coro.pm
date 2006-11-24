@@ -37,9 +37,9 @@ no warnings "uninitialized";
 
 use Coro::State;
 
-use base Exporter::;
+use base qw(Coro::State Exporter);
 
-our $idle;    # idle coroutine
+our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
@@ -97,7 +97,12 @@ $main = new Coro;
 
 =item $current (or as function: current)
 
-The current coroutine (the last coroutine switched to). The initial value is C<$main> (of course).
+The current coroutine (the last coroutine switched to). The initial value
+is C<$main> (of course).
+
+This variable is B<strictly> I<read-only>. It is provided for performance
+reasons. If performance is not essentiel you are encouraged to use the
+C<Coro::current> function instead.
 
 =cut
 
@@ -112,15 +117,19 @@ sub current() { $current }
 
 =item $idle
 
-The coroutine to switch to when no other coroutine is running. The default
-implementation prints "FATAL: deadlock detected" and exits.
+A callback that is called whenever the scheduler finds no ready coroutines
+to run. The default implementation prints "FATAL: deadlock detected" and
+exits.
+
+This hook is overwritten by modules such as C<Coro::Timer> and
+C<Coro::Event> to wait on an external event that hopefully wakes up some
+coroutine.
 
 =cut
 
-# should be done using priorities :(
-$idle = new Coro sub {
+$idle = sub {
    print STDERR "FATAL: deadlock detected\n";
-   exit(51);
+   exit (51);
 };
 
 # this coroutine is necessary because a coroutine
@@ -139,11 +148,11 @@ $manager = new Coro sub {
          $coro->{status} ||= [];
          $_->ready for @{delete $coro->{join} || []};
 
-         # the next line destroys the _coro_state, but keeps the
+         # the next line destroys the coro state, but keeps the
          # process itself intact (we basically make it a zombie
          # process that always runs the manager thread, so it's possible
          # to transfer() to this process).
-         $coro->{_coro_state}->_clone_state_from ($manager->{_coro_state});
+         $coro->_clone_state_from ($manager);
       }
       &schedule;
    }
@@ -233,9 +242,8 @@ sub _newcoro {
 
 sub new {
    my $class = shift;
-   bless {
-      _coro_state => (new Coro::State \&_newcoro, @_),
-   }, $class;
+
+   $class->SUPER::new (\&_newcoro, @_)
 }
 
 =item $process->ready
@@ -298,22 +306,10 @@ but changing the priority of processes in the ready queue (but not
 running) will only take effect after the next schedule (of that
 process). This is a bug that will be fixed in some future version.
 
-=cut
-
-sub prio {
-   shift->{_coro_state}->prio (@_)
-}
-
 =item $newprio = $process->nice ($change)
 
 Similar to C<prio>, but subtract the given value from the priority (i.e.
 higher values mean lower priority, just as in unix).
-
-=cut
-
-sub nice {
-   shift->{_coro_state}->nice (@_)
-}
 
 =item $olddesc = $process->desc ($newdesc)
 

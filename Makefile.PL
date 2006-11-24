@@ -55,7 +55,7 @@ WriteMakefile(
 
        # for Coro::AIO, Coro::Util
        IO::AIO          => 1.6,
-       AnyEvent         => 0,
+       AnyEvent         => 2.1,
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',

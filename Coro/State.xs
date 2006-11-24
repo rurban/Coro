@@ -59,8 +59,7 @@ static long pagesize;
 # endif
 #endif
 
-#define SUB_INIT    "Coro::State::initialize"
-#define UCORO_STATE "_coro_state"
+#define SUB_INIT "Coro::State::initialize"
 
 /* The next macro should declare a variable stacklevel that contains and approximation
  * to the current C stack pointer. Its property is that it changes with each call
@@ -84,9 +83,7 @@ static perl_mutex coro_mutex;
 
 static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
-static HV *coro_state_stash;
-static SV *ucoro_state_sv;
-static U32 ucoro_state_hash;
+static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
 /* this is actually not only the c stack but also c registers etc... */
@@ -782,27 +779,6 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
 /* this is done to increase chances of the compiler not inlining the call */
 void (*coro_state_transfer)(pTHX_ struct coro *prev, struct coro *next, int flags) = transfer_impl;
 
-#define SV_CORO(sv,func)									\
-  do {												\
-    if (SvROK (sv))										\
-      sv = SvRV (sv);										\
-        											\
-    if (SvTYPE (sv) == SVt_PVHV && SvSTASH (sv) != coro_state_stash)				\
-      {												\
-        HE *he = hv_fetch_ent ((HV *)sv, ucoro_state_sv, 0, ucoro_state_hash);			\
-												\
-        if (!he)										\
-          croak ("%s() -- %s is a hashref but lacks the " UCORO_STATE " key", func, # sv);	\
-                                                                                                \
-        (sv) = SvRV (HeVAL(he));								\
-      }												\
-                                                                                                \
-    /* must also be changed inside Coro::Cont::yield */						\
-    if (!SvOBJECT (sv) || SvSTASH (sv) != coro_state_stash)					\
-      croak ("%s() -- %s is not (and contains not) a Coro::State object", func, # sv);		\
-												\
-  } while(0)
-
 static void
 coro_state_destroy (struct coro *coro)
 {
@@ -854,7 +830,21 @@ static MGVTBL coro_state_vtbl = { 0, 0, 0, 0, coro_state_clear, 0, coro_state_du
 static struct coro *
 SvSTATE (SV *coro)
 {
-  MAGIC *mg = SvMAGIC (SvROK (coro) ? SvRV (coro) : coro);
+  HV *stash;
+  MAGIC *mg;
+
+  if (SvROK (coro))
+    coro = SvRV (coro);
+
+  stash = SvSTASH (coro);
+  if (stash != coro_stash && stash != coro_state_stash)
+    {
+      /* very slow, but rare, check */
+      if (!sv_derived_from (sv_2mortal (newRV_inc (coro)), "Coro::State"))
+        croak ("Coro::State object required");
+    }
+
+  mg = SvMAGIC (coro);
   assert (mg->mg_type == PERL_MAGIC_ext);
   return (struct coro *)mg->mg_ptr;
 }
@@ -862,9 +852,6 @@ SvSTATE (SV *coro)
 static void
 api_transfer (pTHX_ SV *prev, SV *next, int flags)
 {
-  SV_CORO (prev, "Coro::transfer");
-  SV_CORO (next, "Coro::transfer");
-
   coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
 }
 
@@ -890,11 +877,7 @@ coro_enq (pTHX_ SV *sv)
   if (SvTYPE (sv) != SVt_PVHV)
     croak ("Coro::ready tried to enqueue something that is not a coroutine");
 
-  {
-    SV *coro = sv;
-    SV_CORO (coro, "omg");
-    prio = SvSTATE (coro)->prio;
-  }
+  prio = SvSTATE (sv)->prio;
 
   av_push (coro_ready [prio - PRIO_MIN], sv);
   coro_nready++;
@@ -938,22 +921,39 @@ api_schedule (void)
   dTHX;
 
   SV *prev, *next;
+  SV *current = GvSV (coro_current);
 
-  LOCK;
+  for (;;)
+    {
+      LOCK;
 
-  prev = SvRV (GvSV (coro_current));
-  next = coro_deq (aTHX_ PRIO_MIN);
+      next = coro_deq (aTHX_ PRIO_MIN);
 
-  if (!next)
-    next = SvREFCNT_inc (SvRV (GvSV (coro_idle)));
+      if (next)
+        break;
+
+      UNLOCK;
+
+      {
+        dSP;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK (SP);
+        PUTBACK;
+        call_sv (GvSV (coro_idle), G_DISCARD);
+
+        FREETMPS;
+        LEAVE;
+      }
+    }
+
+  prev = SvRV (current);
+  SvRV (current) = next;
 
   /* free this only after the transfer */
   coro_mortal = prev;
-  SV_CORO (prev, "Coro::schedule");
-
-  SvRV (GvSV (coro_current)) = next;
-
-  SV_CORO (next, "Coro::schedule");
 
   UNLOCK;
 
@@ -978,14 +978,12 @@ MODULE = Coro::State                PACKAGE = Coro::State
 PROTOTYPES: DISABLE
 
 BOOT:
-{       /* {} necessary for stoopid perl-5.6.x */
+{
 #ifdef USE_ITHREADS
         MUTEX_INIT (&coro_mutex);
 #endif
         BOOT_PAGESIZE;
 
-        ucoro_state_sv = newSVpv (UCORO_STATE, sizeof(UCORO_STATE) - 1);
-        PERL_HASH(ucoro_state_hash, UCORO_STATE, sizeof(UCORO_STATE) - 1);
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
         newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
@@ -1032,8 +1030,6 @@ transfer(prev, next, flags)
         int	flags
         CODE:
         PUTBACK;
-        SV_CORO (next, "Coro::transfer");
-        SV_CORO (prev, "Coro::transfer");
         coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
         SPAGAIN;
 
@@ -1082,6 +1078,7 @@ void
 yield (...)
 	PROTOTYPE: @
         CODE:
+{
         SV *yieldstack;
         SV *sv;
         AV *defav = GvAV (PL_defgv);
@@ -1100,25 +1097,27 @@ yield (...)
           av_store (defav, items, SvREFCNT_inc (ST(items)));
 
         sv = av_pop ((AV *)SvRV (yieldstack));
-        prev = SvSTATE ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 0, 0)));
-        next = SvSTATE ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
+        prev = SvSTATE (*av_fetch ((AV *)SvRV (sv), 0, 0));
+        next = SvSTATE (*av_fetch ((AV *)SvRV (sv), 1, 0));
         SvREFCNT_dec (sv);
 
         coro_state_transfer (aTHX_ prev, next, 0);
+}
 
 MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
 {
 	int i;
-	HV *stash = gv_stashpv ("Coro", TRUE);
 
-        newCONSTSUB (stash, "PRIO_MAX",    newSViv (PRIO_MAX));
-        newCONSTSUB (stash, "PRIO_HIGH",   newSViv (PRIO_HIGH));
-        newCONSTSUB (stash, "PRIO_NORMAL", newSViv (PRIO_NORMAL));
-        newCONSTSUB (stash, "PRIO_LOW",    newSViv (PRIO_LOW));
-        newCONSTSUB (stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
-        newCONSTSUB (stash, "PRIO_MIN",    newSViv (PRIO_MIN));
+	coro_stash = gv_stashpv ("Coro",        TRUE);
+
+        newCONSTSUB (coro_stash, "PRIO_MAX",    newSViv (PRIO_MAX));
+        newCONSTSUB (coro_stash, "PRIO_HIGH",   newSViv (PRIO_HIGH));
+        newCONSTSUB (coro_stash, "PRIO_NORMAL", newSViv (PRIO_NORMAL));
+        newCONSTSUB (coro_stash, "PRIO_LOW",    newSViv (PRIO_LOW));
+        newCONSTSUB (coro_stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
+        newCONSTSUB (coro_stash, "PRIO_MIN",    newSViv (PRIO_MIN));
 
         coro_current = gv_fetchpv ("Coro::current", TRUE, SVt_PV);
         coro_idle    = gv_fetchpv ("Coro::idle"   , TRUE, SVt_PV);

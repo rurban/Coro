@@ -18,7 +18,6 @@ Coro/Channel.pm
 Coro/Cont.pm
 Coro/Specific.pm
 Coro/RWLock.pm
-Coro/Timer.pm
 Coro/MakeMaker.pm
 Coro/CoroAPI.h
 Coro/AIO.pm

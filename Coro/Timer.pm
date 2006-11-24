@@ -24,18 +24,15 @@ This module is not subclassable.
 
 package Coro::Timer;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
 
 use Carp ();
 use Exporter;
 
 use Coro ();
+use AnyEvent ();
 
-BEGIN {
-   eval "use Time::HiRes 'time'";
-}
-
-$VERSION = 1.9;
+$VERSION = "2.0";
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
@@ -59,25 +56,20 @@ C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
 
 # deep magic, expecially the double indirection :(:(
 sub timeout($) {
-   my $self = \\my $timer;
    my $current = $Coro::current;
-   $timer = _new_timer(time + $_[0], sub {
-      undef $timer; # set flag
-      $current->ready;
-   });
-   bless $self, 'Coro::timeout'; # weird quoting required by 5.9.3, it seems
+   my $timeout;
+   bless {
+      timer => AnyEvent->timer (after => $_[0], cb => sub {
+                  $timeout = 1;
+                  $current->ready;
+               }),
+      timeout => \$timeout,
+   }, "Coro::Timer::Timeout";
 }
 
-package Coro::timeout;
+package Coro::Timer::Timeout;
 
-sub bool    {
-   !${${$_[0]}}
-}
-
-sub DESTROY { 
-   ${${$_[0]}}->cancel if ${${$_[0]}};
-   undef ${${$_[0]}}; # without this it leaks like hell. breaks the circular reference inside the closure
-}
+sub bool { ${$_[0]{timeout}} }
 
 use overload 'bool' => \&bool, '0+' => \&bool;
 
@@ -92,71 +84,13 @@ and, most important, without blocking other coroutines.
 
 sub sleep {
    my $current = $Coro::current;
-   my $timer = _new_timer(time + $_[0], sub { $current->ready });
+   my $timer = AnyEvent->timer (after => $_[0], cb => sub { $current->ready });
    Coro::schedule;
-   $timer->cancel;
 }
 
-=item $timer = new Coro::Timer at/after => xxx, cb => \&yyy;
-
-Create a new timer.
-
-=cut
-
-sub new {
-   my $class = shift;
-   my %arg = @_;
-
-   $arg{at} = time + delete $arg{after} if exists $arg{after};
-
-   _new_timer($arg{at}, $arg{cb});
-}
-
-my $timer;
-my @timer;
-
-unless ($override) {
-   $override = 1;
-   *_new_timer = sub {
-      my $self = bless [$_[0], $_[1]], Coro::Timer::simple;
-
-      # my version of rapid prototyping. guys, use a real event module!
-      @timer = sort { $a->[0] cmp $b->[0] } @timer, $self;
-
-      unless ($timer) {
-         $timer = new Coro sub {
-            my $NOW = time;
-            while (@timer) {
-               Coro::cede;
-               if ($NOW >= $timer[0][0]) {
-                  my $next = shift @timer;
-                  $next->[1] and $next->[1]->();
-               } else {
-                  select undef, undef, undef, $timer[0][0] - $NOW;
-                  $NOW = time;
-               }
-            };
-            undef $timer;
-         };
-         $timer->prio(Coro::PRIO_MIN);
-         $timer->ready;
-      }
-
-      $self;
-   };
-
-   *Coro::Timer::simple::cancel = sub {
-      @{$_[0]} = ();
-   };
-}
-
-=item $timer->cancel
-
-Cancel the timer (the callback will no longer be called). This method MUST
-be called to remove the timer from memory, otherwise it will never be
-freed!
-
-=cut
+$Coro::idle = sub {
+   AnyEvent->one_event;
+};
 
 1;
 
