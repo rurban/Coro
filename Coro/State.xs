@@ -944,22 +944,27 @@ BOOT:
 }
 
 Coro::State
-_newprocess(args)
-        SV *	args
-        PROTOTYPE: $
+new (char *klass, ...)
+        PROTOTYPE: $@
         CODE:
+{
         Coro__State coro;
+        int i;
 
-        if (!SvROK (args) || SvTYPE (SvRV (args)) != SVt_PVAV)
-          croak ("Coro::State::_newprocess expects an arrayref");
-        
+        if (!SvOK (ST (1)))
+          croak ("Coro::State::new needs something callable as first argument");
+
         Newz (0, coro, 1, struct coro);
+        coro->args = newAV ();
 
-        coro->args = (AV *)SvREFCNT_inc (SvRV (args));
-        /*coro->mainstack = 0; *//*actual work is done inside transfer */
-        /*coro->stack = 0;*/
+        for (i = 1; i < items; i++)
+          av_push (coro->args, newSVsv (ST (i)));
 
         RETVAL = coro;
+
+        /*coro->mainstack = 0; *//*actual work is done inside transfer */
+        /*coro->stack = 0;*/
+}
         OUTPUT:
         RETVAL
 

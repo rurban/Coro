@@ -92,12 +92,6 @@ sub initialize {
    _exit 255;
 }
 
-sub new {
-   my $class = shift;
-   my $proc = shift || sub { die "tried to transfer to an empty coroutine" };
-   bless _newprocess [$proc, @_], $class;
-}
-
 =item $prev->transfer ($next, $flags)
 
 Save the state of the current subroutine in C<$prev> and switch to the

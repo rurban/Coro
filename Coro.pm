@@ -234,7 +234,7 @@ sub _newcoro {
 sub new {
    my $class = shift;
    bless {
-      _coro_state => (new Coro::State $_[0] && \&_newcoro, @_),
+      _coro_state => (new Coro::State \&_newcoro, @_),
    }, $class;
 }
 
