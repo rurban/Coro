@@ -669,8 +669,9 @@ continue_coro (void *arg)
   abort ();
 }
 
+/* never call directly, always through the coro_state_transfer global variable */
 static void
-transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
+transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
 {
   dSTACKLEVEL;
 
@@ -773,6 +774,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
   UNLOCK;
 }
 
+void (*coro_state_transfer)(pTHX_ struct coro *prev, struct coro *next, int flags) = transfer_impl;
+
 #define SV_CORO(sv,func)									\
   do {												\
     if (SvROK (sv))										\
@@ -797,12 +800,12 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int flags)
 #define SvSTATE(sv) INT2PTR (struct coro *, SvIVX (sv))
 
 static void
-api_transfer(pTHX_ SV *prev, SV *next, int flags)
+api_transfer (pTHX_ SV *prev, SV *next, int flags)
 {
   SV_CORO (prev, "Coro::transfer");
   SV_CORO (next, "Coro::transfer");
 
-  transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
+  coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
 }
 
 /** Coro ********************************************************************/
@@ -896,8 +899,8 @@ api_schedule (void)
 
   UNLOCK;
 
-  transfer (aTHX_ SvSTATE (prev), SvSTATE (next),
-            TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
+  coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next),
+                       TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
 }
 
 static void
@@ -968,7 +971,7 @@ transfer(prev, next, flags)
         PUTBACK;
         SV_CORO (next, "Coro::transfer");
         SV_CORO (prev, "Coro::transfer");
-        transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
+        coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
         SPAGAIN;
 
 void
@@ -1032,7 +1035,7 @@ yield(...)
         next = SvSTATE ((SV*)SvRV (*av_fetch ((AV *)SvRV (sv), 1, 0)));
         SvREFCNT_dec (sv);
 
-        transfer (aTHX_ prev, next, 0);
+        coro_state_transfer (aTHX_ prev, next, 0);
 
 MODULE = Coro::State                PACKAGE = Coro
 
