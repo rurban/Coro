@@ -87,12 +87,13 @@ whatsoever, for example when subclassing Coro::State.
 # this is called (or rather: goto'ed) for each and every
 # new coroutine. IT MUST NEVER RETURN!
 sub initialize {
-   my $proc = shift;
+   $_[0]->transfer ($_[0], 0); shift; # set initial stack pointer
    eval {
-      &$proc while 1;
+      $_[0] or die "transfer() to empty coroutine $_[0]";
+      &{$_[0]} while 1;
    };
    print STDERR $@ if $@;
-   _exit 255;
+   _exit 55;
 }
 
 =item $prev->transfer ($next, $flags)
@@ -109,7 +110,6 @@ oring the following constants together:
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
-   SAVE_CCTXT  save/restore C-stack (you usually want this for coroutines)
 
 These constants are not exported by default. If you don't need any extra
 additional state saved, use C<0> as the flags value.

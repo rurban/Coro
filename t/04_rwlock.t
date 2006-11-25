@@ -29,12 +29,17 @@ async {
 
 print "ok 7\n";
 cede;
+cede;
+cede;
+cede;
 print "ok 9\n";
 $l->unlock;
 cede;
+
 print "ok 12\n";
 $l->rdlock;
 print "ok 13\n";
+cede;
 cede;
 print "ok 15\n";
 

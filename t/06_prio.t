@@ -5,7 +5,9 @@ use Coro qw(:prio cede async current);
 
 print "ok 1\n";
 
-(async { print "ok 2\n"; cede; print "ok 3\n" })->prio(10);
+use Carp; $SIG{__DIE__} = sub { Carp::cluck $@ };#d#
+
+(async { print "ok 2\n"; cede; cede; cede; print "ok 3\n" })->prio(10);
 (async { print "ok 4\n" })->prio(2);
 (async { print "ok 5\n" })->prio(PRIO_HIGH);
 (async { print "ok 6\n" });

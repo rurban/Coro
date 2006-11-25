@@ -96,7 +96,7 @@ our $AUTOLOAD;
             my \@res;
 
             push \@_, sub {
-               \$state = Coro::_aio_get_state;
+               \$state = _get_state;
                \@res = \@_;
                \$current->ready;
             };
@@ -106,7 +106,7 @@ our $AUTOLOAD;
             Coro::schedule;
             Coro::schedule while !\$state;
 
-            Coro::_aio_set_state \$state;
+            _set_state \$state;
             wantarray ? \@res : \$res[0]
          }
       };

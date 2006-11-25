@@ -86,24 +86,21 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
-/* this is actually not only the c stack but also c registers etc... */
-typedef struct {
-  int refcnt; /* pointer reference counter */
-  int usecnt; /* shared by how many coroutines */
-  int gencnt; /* generation counter */
+/* this is actually not just the c stack but also c registers etc... */
+typedef struct coro_stack {
+  struct coro_stack *next;
 
-  coro_context cctx;
-
+  void *idle_sp;
   void *sptr;
   long ssize; /* positive == mmap, otherwise malloc */
+
+  /* cpu state */
+  coro_context cctx;
 } coro_stack;
 
-struct coro {
-  /* the optional C context */
-  coro_stack *stack;
-  void *cursp;
-  int gencnt;
+static coro_stack *main_stack;
 
+struct coro {
   /* optionally saved, might be zero */
   AV *defav;
   SV *defsv;
@@ -112,6 +109,9 @@ struct coro {
   /* saved global state not related to stacks */
   U8 dowarn;
   I32 in_eval;
+
+  /* the c stack, if any */
+  coro_stack *stack;
 
   /* the stacks and related info (callchain etc..) */
   PERL_SI *curstackinfo;
@@ -534,140 +534,141 @@ destroy_stacks(pTHX)
 }
 
 static void
-allocate_stack (Coro__State ctx, int alloc)
-{
-  coro_stack *stack;
-
-  New (0, stack, 1, coro_stack);
-
-  stack->refcnt = 1;
-  stack->usecnt = 1;
-  stack->gencnt = ctx->gencnt = 0;
-
-  if (alloc)
-    {
-#if HAVE_MMAP
-      stack->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE; /* mmap should do allocate-on-write for us */
-      stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
-      if (stack->sptr != (void *)-1)
-        {
-# if STACKGUARD
-          mprotect (stack->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
-# endif
-        }
-      else
-#endif
-        {
-          stack->ssize = - (STACKSIZE * (long)sizeof (long));
-          New (0, stack->sptr, STACKSIZE, long);
-        }
-    }
-  else
-    stack->sptr = 0;
-
-  ctx->stack = stack;
-}
-
-static void
-deallocate_stack (Coro__State ctx)
-{
-  coro_stack *stack = ctx->stack;
-
-  ctx->stack = 0;
-
-  if (stack)
-    {
-      if (!--stack->refcnt)
-        {
-#ifdef HAVE_MMAP
-          if (stack->ssize > 0 && stack->sptr)
-            munmap (stack->sptr, stack->ssize);
-          else
-#endif
-            Safefree (stack->sptr);
-
-          Safefree (stack);
-        }
-      else if (ctx->gencnt == stack->gencnt)
-        --stack->usecnt;
-    }
-}
-
-static void
-setup_coro (void *arg)
+setup_coro (struct coro *coro)
 {
   /*
    * emulate part of the perl startup here.
    */
   dTHX;
   dSP;
-  Coro__State ctx = (Coro__State)arg;
+  UNOP myop;
   SV *sub_init = (SV *)get_cv (SUB_INIT, FALSE);
 
   coro_init_stacks (aTHX);
   /*PL_curcop = 0;*/
   /*PL_in_eval = PL_in_eval;*/ /* inherit */
   SvREFCNT_dec (GvAV (PL_defgv));
-  GvAV (PL_defgv) = ctx->args; ctx->args = 0;
+  GvAV (PL_defgv) = coro->args; coro->args = 0;
 
   SPAGAIN;
 
-  if (ctx->stack)
-    {
-      ctx->cursp = 0;
+  Zero (&myop, 1, UNOP);
+  myop.op_next = Nullop;
+  myop.op_flags = OPf_WANT_VOID;
 
-      PUSHMARK(SP);
-      PUTBACK;
-      (void) call_sv (sub_init, G_VOID|G_NOARGS|G_EVAL);
+  PL_op = (OP *)&myop;
 
-      if (SvTRUE (ERRSV))
-        croak (NULL);
-      else
-        croak ("FATAL: CCTXT coroutine returned!");
-    }
-  else
-    {
-      UNOP myop;
+  PUSHMARK(SP);
+  XPUSHs (sub_init);
+  PUTBACK;
+  PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
+  SPAGAIN;
 
-      Zero(&myop, 1, UNOP);
-      myop.op_next = Nullop;
-      myop.op_flags = OPf_WANT_VOID;
-
-      PL_op = (OP *)&myop;
-
-      PUSHMARK(SP);
-      XPUSHs (sub_init);
-      /*
-       * the next line is slightly wrong, as PL_op->op_next
-       * is actually being executed so we skip the first op.
-       * that doesn't matter, though, since it is only
-       * pp_nextstate and we never return...
-       * ah yes, and I don't care anyways ;)
-       */
-      PUTBACK;
-      PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
-      SPAGAIN;
-
-      ENTER; /* necessary e.g. for dounwind */
-    }
+  ENTER; /* necessary e.g. for dounwind */
 }
 
 static void
-continue_coro (void *arg)
+transfer_tail ()
+{
+  if (coro_mortal)
+    {
+      SvREFCNT_dec (coro_mortal);
+      coro_mortal = 0;
+    }
+
+  UNLOCK;
+}
+
+static void
+coro_run (void *arg)
 {
   /*
    * this is a _very_ stripped down perl interpreter ;)
    */
   dTHX;
-  Coro__State ctx = (Coro__State)arg;
+
+  transfer_tail ();
 
   PL_top_env = &PL_start_env;
-
-  ctx->cursp = 0;
-  PL_op = PL_op->op_next;
-  CALLRUNOPS(aTHX);
+  PL_restartop = PL_op->op_next;
+  /* somebody will hit me for both perl_run and PL_restart_top */
+  perl_run (aTHX_ PERL_GET_CONTEXT);
 
   abort ();
+}
+
+static coro_stack *
+stack_new ()
+{
+  coro_stack *stack;
+
+  New (0, stack, 1, coro_stack);
+
+#if HAVE_MMAP
+
+  stack->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE; /* mmap should do allocate-on-write for us */
+  stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+
+  if (stack->sptr == (void *)-1)
+    {
+      fprintf (stderr, "FATAL: unable to mmap stack for coroutine\n");
+      _exit (EXIT_FAILURE);
+    }
+
+  mprotect (stack->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
+
+#else
+
+  stack->ssize = STACKSIZE * (long)sizeof (long);
+  New (0, stack->sptr, STACKSIZE, long);
+
+  if (!stack->sptr)
+    {
+      fprintf (stderr, "FATAL: unable to malloc stack for coroutine\n");
+      _exit (EXIT_FAILURE);
+    }
+
+#endif
+
+  coro_create (&stack->cctx, coro_run, 0, stack->sptr, stack->ssize);
+
+  return stack;
+}
+
+static void
+stack_free (coro_stack *stack)
+{
+  if (!stack || stack == main_stack)
+    return;
+
+#if HAVE_MMAP
+  munmap (stack->sptr, stack->ssize);
+#else
+  Safefree (stack->sptr);
+#endif
+
+  Safefree (stack);
+}
+
+static coro_stack *stack_first;
+
+static void
+stack_get (struct coro *coro)
+{
+  if (stack_first)
+    {
+      coro->stack = stack_first;
+      stack_first = stack_first->next;
+    }
+  else
+    coro->stack = stack_new ();
+}
+
+static void
+stack_put (coro_stack *stack)
+{
+  stack->next = stack_first;
+  stack_first = stack;
 }
 
 /* never call directly, always through the coro_state_transfer global variable */
@@ -676,103 +677,45 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
 {
   dSTACKLEVEL;
 
-  if (prev != next)
-    {
-      /* has this coro been created yet? */
-      if (next->mainstack)
-        {
-          LOCK;
-          SAVE (prev, flags);
-          LOAD (next);
-          UNLOCK;
-
-          /* mark this state as in-use */
-          next->mainstack = 0;
-          next->tmps_ix = -2;
-
-          /* stacklevel changed? if yes, grab the stack for us! */
-          if (flags & TRANSFER_SAVE_CCTXT)
-            {
-              if (!prev->stack)
-                allocate_stack (prev, 0);
-              else if (prev->cursp != stacklevel
-                       && prev->stack->usecnt > 1)
-                {
-                  prev->gencnt = ++prev->stack->gencnt;
-                  prev->stack->usecnt = 1;
-                }
-
-              /* has our stack been invalidated? */
-              if (next->stack && next->stack->gencnt != next->gencnt)
-                {
-                  deallocate_stack (next);
-                  allocate_stack (next, 1);
-                  coro_create (&(next->stack->cctx),
-                               continue_coro, (void *)next,
-                               next->stack->sptr, labs (next->stack->ssize));
-                }
-
-              coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
-              prev->cursp = stacklevel;
-              /* don't add any code here */
-            }
-          else
-            next->cursp = stacklevel;
-        }
-      else if (next->tmps_ix == -2)
-        croak ("tried to transfer to running coroutine");
-      else
-        {
-          LOCK;
-          SAVE (prev, -1); /* first get rid of the old state */
-          UNLOCK;
-
-          /* create the coroutine for the first time */
-          if (flags & TRANSFER_SAVE_CCTXT)
-            {
-              if (!prev->stack)
-                allocate_stack (prev, 0);
-
-              /* the new coroutine starts with start_env again */
-              PL_top_env = &PL_start_env;
-
-              if (prev->stack->sptr && flags & TRANSFER_LAZY_STACK)
-                {
-                  setup_coro (next);
-                  next->cursp = stacklevel;
-
-                  prev->stack->refcnt++;
-                  prev->stack->usecnt++;
-                  next->stack = prev->stack;
-                  next->gencnt = prev->gencnt;
-                }
-              else
-                {
-                  assert (!next->stack);
-                  allocate_stack (next, 1);
-                  coro_create (&(next->stack->cctx),
-                               setup_coro, (void *)next,
-                               next->stack->sptr, labs (next->stack->ssize));
-                  coro_transfer (&(prev->stack->cctx), &(next->stack->cctx));
-                  prev->cursp = stacklevel;
-                  /* don't add any code here */
-                }
-            }
-          else
-            {
-              setup_coro (next);
-              next->cursp = stacklevel;
-            }
-        }
-    }
+  /* sometimes transfer is only called to set idle_sp */
+  if (!prev->stack->idle_sp)
+    prev->stack->idle_sp = stacklevel;
 
   LOCK;
-  if (coro_mortal)
+
+  if (prev != next)
     {
-      SvREFCNT_dec (coro_mortal);
-      coro_mortal = 0;
+      coro_stack *prev_stack = prev->stack;
+
+      /* possibly "free" the stack */
+      if (prev_stack->idle_sp == stacklevel)
+        {
+          stack_put (prev_stack);
+          prev->stack = 0;
+        }
+
+      if (!next->mainstack)
+        {
+          /* first get rid of the old state */
+          SAVE (prev, -1);
+          /* setup coroutine call */
+          setup_coro (next);
+          next->stack = 0;
+        }
+      else
+        {
+          SAVE (prev, flags);
+          LOAD (next);
+        }
+
+      if (!next->stack)
+        stack_get (next);
+
+      if (prev_stack != next->stack)
+        coro_transfer (&prev_stack->cctx, &next->stack->cctx);
     }
-  UNLOCK;
+
+  transfer_tail ();
 }
 
 /* use this function pointer to call the above function */
@@ -799,7 +742,7 @@ coro_state_destroy (struct coro *coro)
       coro->mainstack = 0;
     }
 
-  deallocate_stack (coro);
+  stack_free (coro->stack);
   SvREFCNT_dec (coro->args);
   Safefree (coro);
 }
@@ -957,17 +900,30 @@ api_schedule (void)
 
   UNLOCK;
 
-  coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next),
-                       TRANSFER_SAVE_ALL | TRANSFER_LAZY_STACK);
+  coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), TRANSFER_SAVE_ALL);
 }
+
+static int coro_cede_self;
 
 static void
 api_cede (void)
 {
   dTHX;
+  SV *current = SvREFCNT_inc (SvRV (GvSV (coro_current)));
 
   LOCK;
-  coro_enq (aTHX_ SvREFCNT_inc (SvRV (GvSV (coro_current))));
+
+  if (coro_cede_self)
+    {
+      AV *runqueue = coro_ready [PRIO_MAX - PRIO_MIN];
+      av_unshift (runqueue, 1);
+      av_store (runqueue, 0, current);
+      coro_nready++;
+      coro_cede_self = 0;
+    }
+  else
+    coro_enq (aTHX_ current);
+
   UNLOCK;
 
   api_schedule ();
@@ -989,12 +945,14 @@ BOOT:
         newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
         newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
         newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
-        newCONSTSUB (coro_state_stash, "SAVE_CCTXT", newSViv (TRANSFER_SAVE_CCTXT));
 
         main_mainstack = PL_mainstack;
 
         coroapi.ver      = CORO_API_VERSION;
         coroapi.transfer = api_transfer;
+
+        Newz (0, main_stack, 1, coro_stack);
+        main_stack->idle_sp = (void *)-1;
 
         assert (("PRIO_NORMAL must be 0", !PRIO_NORMAL));
 }
@@ -1010,21 +968,23 @@ new (char *klass, ...)
         Newz (0, coro, 1, struct coro);
         coro->args = newAV ();
 
-        for (i = 1; i < items; i++)
-          av_push (coro->args, newSVsv (ST (i)));
-
-        /*coro->mainstack = 0; *//*actual work is done inside transfer */
-        /*coro->stack = 0;*/
-
         hv = newHV ();
         sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
         RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
+
+        av_push (coro->args, newSVsv (RETVAL));
+        for (i = 1; i < items; i++)
+          av_push (coro->args, newSVsv (ST (i)));
+
+        coro->stack = main_stack;
+        /*coro->mainstack = 0; *//*actual work is done inside transfer */
+        /*coro->stack = 0;*/
 }
         OUTPUT:
         RETVAL
 
 void
-transfer(prev, next, flags)
+transfer (prev, next, flags)
         SV	*prev
         SV	*next
         int	flags
@@ -1052,6 +1012,11 @@ prio (Coro::State coro, int newprio = 0)
             coro->prio = newprio;
           }
 }
+
+void
+_clear_idle_sp (Coro::State self)
+	CODE:
+        self->stack->idle_sp = 0;
 
 void
 _clone_state_from (SV *dst, SV *src)
@@ -1140,16 +1105,11 @@ BOOT:
         }
 }
 
-#if !PERL_MICRO
-
 void
-ready (self)
-	SV *	self
+ready (SV *self)
         PROTOTYPE: $
 	CODE:
         api_ready (self);
-
-#endif
 
 int
 nready (...)
@@ -1166,14 +1126,20 @@ schedule (...)
         api_schedule ();
 
 void
+_set_cede_self ()
+	CODE:
+        coro_cede_self = 1;
+
+void
 cede (...)
 	PROTOTYPE:
 	CODE:
         api_cede ();
 
-# and these are hacks
+MODULE = Coro::State                PACKAGE = Coro::AIO
+
 SV *
-_aio_get_state ()
+_get_state ()
 	CODE:
 {
 	struct {
@@ -1194,7 +1160,7 @@ _aio_get_state ()
         RETVAL
 
 void
-_aio_set_state (char *data_)
+_set_state (char *data_)
 	PROTOTYPE: $
 	CODE:
 {

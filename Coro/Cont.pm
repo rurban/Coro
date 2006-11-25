@@ -85,7 +85,7 @@ $VERSION = 1.9;
 
 =item csub { ... }
 
-Create a new "continuation" (when the sub falls of the end it is being
+Create a new "continuation" (when the sub falls off the end it is being
 terminated).
 
 =cut
@@ -104,11 +104,11 @@ sub csub(&) {
 
    # call it once
    push @{ $Coro::current->{yieldstack} }, [$coro, $prev];
-   &Coro::State::transfer($prev, $coro, 0);
+   Coro::State::transfer ($prev, $coro, 0);
 
    sub {
       push @{ $Coro::current->{yieldstack} }, [$coro, $prev];
-      &Coro::State::transfer($prev, $coro, 0);
+      Coro::State::transfer ($prev, $coro, 0);
       wantarray ? @_ : $_[0];
    };
 }

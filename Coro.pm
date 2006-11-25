@@ -236,14 +236,17 @@ by calling the ready method.
 
 =cut
 
-sub _newcoro {
+sub _new_coro {
+#   $current->_clear_idle_sp; # set the idle sp on the following cede
+   _set_cede_self;  # ensures that cede cede's us first
+   cede;
    terminate &{+shift};
 }
 
 sub new {
    my $class = shift;
 
-   $class->SUPER::new (\&_newcoro, @_)
+   $class->SUPER::new (\&_new_coro, @_)
 }
 
 =item $process->ready
