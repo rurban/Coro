@@ -590,7 +590,7 @@ coro_run (void *arg)
   transfer_tail ();
 
   PL_top_env = &PL_start_env;
-  PL_restartop = PL_op->op_next;
+  PL_restartop = PL_op;
   /* somebody will hit me for both perl_run and PL_restart_top */
   perl_run (aTHX_ PERL_GET_CONTEXT);
 
@@ -652,16 +652,23 @@ stack_free (coro_stack *stack)
 
 static coro_stack *stack_first;
 
-static void
-stack_get (struct coro *coro)
+static coro_stack *
+stack_get ()
 {
+  coro_stack *stack;
+
   if (stack_first)
     {
-      coro->stack = stack_first;
-      stack_first = stack_first->next;
+      stack = stack_first;
+      stack_first = stack->next;
     }
   else
-    coro->stack = stack_new ();
+   {
+     stack = stack_new ();
+     PL_op = PL_op->op_next;
+   }
+
+  return stack;
 }
 
 static void
@@ -688,7 +695,7 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
       coro_stack *prev_stack = prev->stack;
 
       /* possibly "free" the stack */
-      if (prev_stack->idle_sp == stacklevel)
+      if (0 && prev_stack->idle_sp == stacklevel)
         {
           stack_put (prev_stack);
           prev->stack = 0;
@@ -712,7 +719,7 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
         }
 
       if (!next->stack)
-        stack_get (next);
+        next->stack = stack_get ();
 
       if (prev_stack != next->stack)
         coro_transfer (&prev_stack->cctx, &next->stack->cctx);

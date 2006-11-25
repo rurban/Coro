@@ -4,6 +4,8 @@ TODO: check wether stack-sharing is still effective
 TODO: more effective stack sharing by having one "default stack" for "simple" coroutines?
 TODO: verify exception frame changes and force stack copies?
 
+	- reimplement a new stack sharing algorithm.
+        - make stack sharing mandatory (it no longer uses a heuristic).
         - Coro::Event could cause livelocks if it was used but
           Event watchers were used directly.
         - Coro::Event should be cleaner and more efficient now.

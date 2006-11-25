@@ -135,8 +135,7 @@ $idle = sub {
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 my @destroy;
-my $manager;
-$manager = new Coro sub {
+my $manager; $manager = new Coro sub {
    while () {
       # by overwriting the state object with the manager we destroy it
       # while still being able to schedule this coroutine (in case it has
@@ -236,7 +235,7 @@ by calling the ready method.
 =cut
 
 sub _new_coro {
-   $current->_clear_idle_sp; # set the idle sp on the following cede
+   $current->_clear_idle_sp; # (re-)set the idle sp on the following cede
    _set_cede_self;  # ensures that cede cede's us first
    cede;
    terminate &{+shift};
