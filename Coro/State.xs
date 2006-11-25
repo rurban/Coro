@@ -694,18 +694,21 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
           prev->stack = 0;
         }
 
-      if (!next->mainstack)
+      if (next->mainstack)
         {
+          /* coroutine already started */
+          SAVE (prev, flags);
+          LOAD (next);
+        }
+      else
+        {
+          /* need to start coroutine */
           /* first get rid of the old state */
           SAVE (prev, -1);
           /* setup coroutine call */
           setup_coro (next);
+          /* need to change stack from main_stack to real one */
           next->stack = 0;
-        }
-      else
-        {
-          SAVE (prev, flags);
-          LOAD (next);
         }
 
       if (!next->stack)
