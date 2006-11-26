@@ -95,7 +95,7 @@ typedef struct coro_stack {
   long ssize; /* positive == mmap, otherwise malloc */
 
   /* cpu state */
-  void *idle_sp; /* original stacklevel when coroutine was created */
+  void *idle_sp; /* sp of top-level transfer/schedule/cede call */
   JMPENV *top_env;
   coro_context cctx;
 } coro_stack;
@@ -231,7 +231,7 @@ get_padlist (pTHX_ CV *cv)
   else
    {
 #if 0
-     /* this should work - but it doesn't :( */
+     /* this is probably cleaner, but also slower? */
      CV *cp = Perl_cv_clone (aTHX_ cv);
      CvPADLIST (cv) = CvPADLIST (cp);
      CvPADLIST (cp) = 0;
