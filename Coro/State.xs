@@ -438,8 +438,6 @@ save_state(Coro__State c, int flags)
 static void
 coro_init_stacks ()
 {
-    LOCK;
-
     PL_curstackinfo = new_stackinfo(96, 1024/sizeof(PERL_CONTEXT) - 1);
     PL_curstackinfo->si_type = PERLSI_MAIN;
     PL_curstack = PL_curstackinfo->si_stack;
@@ -475,8 +473,6 @@ coro_init_stacks ()
     PL_retstack_ix = 0;
     PL_retstack_max = 8;
 #endif
-
-    UNLOCK;
 }
 
 /*
@@ -574,27 +570,37 @@ free_coro_mortal ()
 }
 
 static void
+prepare_cctx (coro_stack *cctx)
+{
+  dSP;
+  UNOP myop;
+
+  Zero (&myop, 1, UNOP);
+  myop.op_next = PL_op;
+  myop.op_flags = OPf_WANT_VOID | OPf_STACKED;
+
+  PUSHMARK(SP);
+  EXTEND (SP, 2);
+  PUSHs (newSViv (PTR2IV (cctx)));
+  PUSHs ((SV *)get_cv ("Coro::State::cctx_init", FALSE));
+  PUTBACK;
+  PL_restartop = PL_ppaddr[OP_ENTERSUB](aTHX);
+  SPAGAIN;
+}
+
+static void
 coro_run (void *arg)
 {
   /*
    * this is a _very_ stripped down perl interpreter ;)
    */
-  dTHX;
-  int ret;
-
   UNLOCK;
 
   PL_top_env = &PL_start_env;
-
-  sv_setiv (get_sv ("Coro::State::cctx_stack", FALSE), PTR2IV ((coro_stack *)arg));
-  sv_setiv (get_sv ("Coro::State::cctx_restartop", FALSE), PTR2IV (PL_op));
-
-  /* continue at cctx_init, without entersub */
-  PL_restartop = CvSTART (get_cv ("Coro::State::cctx_init", FALSE));
+  prepare_cctx ((coro_stack *)arg);
 
   /* somebody will hit me for both perl_run and PL_restartop */
-  ret = perl_run (PERL_GET_CONTEXT);
-  printf ("ret %d\n", ret);//D
+  perl_run (PERL_GET_CONTEXT);
 
   fputs ("FATAL: C coroutine fell over the edge of the world, aborting.\n", stderr);
   abort ();
@@ -911,20 +917,16 @@ prepare_schedule (struct transfer_args *ta)
 {
   SV *current, *prev, *next;
 
-  LOCK;
-
   current = GvSV (coro_current);
 
   for (;;)
     {
       LOCK;
-
       next = coro_deq (PRIO_MIN);
+      UNLOCK;
 
       if (next)
         break;
-
-      UNLOCK;
 
       {
         dSP;
@@ -945,14 +947,14 @@ prepare_schedule (struct transfer_args *ta)
   SvRV (current) = next;
 
   /* free this only after the transfer */
+  LOCK;
   free_coro_mortal ();
+  UNLOCK;
   coro_mortal = prev;
 
   ta->prev = SvSTATE (prev);
   ta->next = SvSTATE (next);
   ta->flags = TRANSFER_SAVE_ALL;
-
-  UNLOCK;
 }
 
 static void

@@ -66,7 +66,7 @@ BEGIN {
 use Exporter;
 use base Exporter::;
 
-our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);
+our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV);
 
 =item $coro = new [$coderef] [, @args...]
 
@@ -84,19 +84,11 @@ whatsoever, for example when subclassing Coro::State.
 
 =cut
 
-our $cctx_stack;
-our $cctx_restartop;
-our $cctx_count = 0;
-
-# this is called for each newly created C perl environment
-# be careful, this is not a normal function, it is never
-# being "entersub"'d and never must "leavesub"'d
+# this is called for each newly created C coroutine,
+# and is being artificially interjected into the
+# opcode flow
 sub cctx_init {
-   ++$cctx_count;
-   _set_stacklevel $cctx_stack;
-
-   # this will jump to the actual coroutine op
-   _nonlocal_goto $cctx_restartop;
+   _set_stacklevel $_[0];
 }
 
 # this is called (or rather: goto'ed) for each and every
