@@ -1,5 +1,3 @@
-#define PERL_NO_GET_CONTEXT
-
 #include "libcoro/coro.c"
 
 #include "EXTERN.h"
@@ -156,7 +154,7 @@ typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
 
 static AV *
-coro_clone_padlist (pTHX_ CV *cv)
+coro_clone_padlist (CV *cv)
 {
   AV *padlist = CvPADLIST (cv);
   AV *newpadlist, *newpad;
@@ -178,7 +176,7 @@ coro_clone_padlist (pTHX_ CV *cv)
 }
 
 static void
-free_padlist (pTHX_ AV *padlist)
+free_padlist (AV *padlist)
 {
   /* may be during global destruction */
   if (SvREFCNT (padlist))
@@ -209,7 +207,7 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 
   /* casting is fun. */
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-    free_padlist (aTHX_ padlist);
+    free_padlist (padlist);
 
   SvREFCNT_dec (av);
 
@@ -222,7 +220,7 @@ static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
 
 /* the next two functions merely cache the padlists */
 static void
-get_padlist (pTHX_ CV *cv)
+get_padlist (CV *cv)
 {
   MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
 
@@ -232,18 +230,18 @@ get_padlist (pTHX_ CV *cv)
    {
 #if 0
      /* this is probably cleaner, but also slower? */
-     CV *cp = Perl_cv_clone (aTHX_ cv);
+     CV *cp = Perl_cv_clone (cv);
      CvPADLIST (cv) = CvPADLIST (cp);
      CvPADLIST (cp) = 0;
      SvREFCNT_dec (cp);
 #else
-     CvPADLIST (cv) = coro_clone_padlist (aTHX_ cv);
+     CvPADLIST (cv) = coro_clone_padlist (cv);
 #endif
    }
 }
 
 static void
-put_padlist (pTHX_ CV *cv)
+put_padlist (CV *cv)
 {
   MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
 
@@ -261,13 +259,13 @@ put_padlist (pTHX_ CV *cv)
 #define SB do {
 #define SE } while (0)
 
-#define LOAD(state)       load_state(aTHX_ (state));
-#define SAVE(state,flags) save_state(aTHX_ (state),(flags));
+#define LOAD(state)       load_state((state));
+#define SAVE(state,flags) save_state((state),(flags));
 
 #define REPLACE_SV(sv,val) SB SvREFCNT_dec(sv); (sv) = (val); (val) = 0; SE
 
 static void
-load_state(pTHX_ Coro__State c)
+load_state(Coro__State c)
 {
   PL_dowarn = c->dowarn;
   PL_in_eval = c->in_eval;
@@ -318,7 +316,7 @@ load_state(pTHX_ Coro__State c)
 
         if (padlist)
           {
-            put_padlist (aTHX_ cv); /* mark this padlist as available */
+            put_padlist (cv); /* mark this padlist as available */
             CvPADLIST(cv) = padlist;
           }
 
@@ -330,7 +328,7 @@ load_state(pTHX_ Coro__State c)
 }
 
 static void
-save_state(pTHX_ Coro__State c, int flags)
+save_state(Coro__State c, int flags)
 {
   {
     dSP;
@@ -368,7 +366,7 @@ save_state(pTHX_ Coro__State c, int flags)
                     PUSHs ((SV *)CvPADLIST(cv));
                     PUSHs ((SV *)cv);
 
-                    get_padlist (aTHX_ cv);
+                    get_padlist (cv);
                   }
               }
 #ifdef CXt_FORMAT
@@ -438,7 +436,7 @@ save_state(pTHX_ Coro__State c, int flags)
  * not usually need a lot of stackspace.
  */
 static void
-coro_init_stacks (pTHX)
+coro_init_stacks ()
 {
     LOCK;
 
@@ -485,7 +483,7 @@ coro_init_stacks (pTHX)
  * destroy the stacks, the callchain etc...
  */
 static void
-destroy_stacks(pTHX)
+destroy_stacks()
 {
   if (!IN_DESTRUCT)
     {
@@ -542,7 +540,7 @@ setup_coro (struct coro *coro)
   UNOP myop;
   SV *sub_init = (SV *)get_cv ("Coro::State::coro_init", FALSE);
 
-  coro_init_stacks (aTHX);
+  coro_init_stacks ();
   /*PL_curcop = 0;*/
   /*PL_in_eval = PL_in_eval;*/ /* inherit */
   SvREFCNT_dec (GvAV (PL_defgv));
@@ -570,8 +568,6 @@ free_coro_mortal ()
 {
   if (coro_mortal)
     {
-      dTHX;
-
       SvREFCNT_dec (coro_mortal);
       coro_mortal = 0;
     }
@@ -597,7 +593,7 @@ coro_run (void *arg)
   PL_restartop = CvSTART (get_cv ("Coro::State::cctx_init", FALSE));
 
   /* somebody will hit me for both perl_run and PL_restartop */
-  ret = perl_run (aTHX_ PERL_GET_CONTEXT);
+  ret = perl_run (PERL_GET_CONTEXT);
   printf ("ret %d\n", ret);//D
 
   fputs ("FATAL: C coroutine fell over the edge of the world, aborting.\n", stderr);
@@ -690,7 +686,7 @@ stack_put (coro_stack *stack)
 
 /* never call directly, always through the coro_state_transfer global variable */
 static void
-transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
+transfer_impl (struct coro *prev, struct coro *next, int flags)
 {
   dSTACKLEVEL;
 
@@ -752,7 +748,7 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
 /* use this function pointer to call the above function */
 /* this is done to increase chances of the compiler not inlining the call */
 /* not static to make it even harder for the compiler (and theoretically impossible in most cases */
-void (*coro_state_transfer)(pTHX_ struct coro *prev, struct coro *next, int flags) = transfer_impl;
+void (*coro_state_transfer)(struct coro *prev, struct coro *next, int flags) = transfer_impl;
 
 struct transfer_args
 {
@@ -772,10 +768,10 @@ coro_state_destroy (struct coro *coro)
     {
       struct coro temp;
 
-      SAVE (aTHX_ (&temp), TRANSFER_SAVE_ALL);
-      LOAD (aTHX_ coro);
+      SAVE ((&temp), TRANSFER_SAVE_ALL);
+      LOAD (coro);
 
-      destroy_stacks (aTHX);
+      destroy_stacks ();
 
       LOAD ((&temp)); /* this will get rid of defsv etc.. */
 
@@ -788,7 +784,7 @@ coro_state_destroy (struct coro *coro)
 }
 
 static int
-coro_state_clear (SV *sv, MAGIC *mg)
+coro_state_clear (pTHX_ SV *sv, MAGIC *mg)
 {
   struct coro *coro = (struct coro *)mg->mg_ptr;
   mg->mg_ptr = 0;
@@ -799,7 +795,7 @@ coro_state_clear (SV *sv, MAGIC *mg)
 }
 
 static int
-coro_state_dup (MAGIC *mg, CLONE_PARAMS *params)
+coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
 {
   struct coro *coro = (struct coro *)mg->mg_ptr;
 
@@ -833,7 +829,7 @@ SvSTATE (SV *coro)
 }
 
 static void
-prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev, SV *next, int flags)
+prepare_transfer (struct transfer_args *ta, SV *prev, SV *next, int flags)
 {
   ta->prev  = SvSTATE (prev);
   ta->next  = SvSTATE (next);
@@ -846,7 +842,7 @@ api_transfer (SV *prev, SV *next, int flags)
   dTHX;
   struct transfer_args ta;
 
-  prepare_transfer (aTHX_ &ta, prev, next, flags);
+  prepare_transfer (&ta, prev, next, flags);
   TRANSFER (ta);
 }
 
@@ -865,7 +861,7 @@ static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
 
 static void
-coro_enq (pTHX_ SV *sv)
+coro_enq (SV *sv)
 {
   int prio;
 
@@ -879,7 +875,7 @@ coro_enq (pTHX_ SV *sv)
 }
 
 static SV *
-coro_deq (pTHX_ int min_prio)
+coro_deq (int min_prio)
 {
   int prio = PRIO_MAX - PRIO_MIN;
 
@@ -906,12 +902,12 @@ api_ready (SV *coro)
     coro = SvRV (coro);
 
   LOCK;
-  coro_enq (aTHX_ SvREFCNT_inc (coro));
+  coro_enq (SvREFCNT_inc (coro));
   UNLOCK;
 }
 
 static void
-prepare_schedule (aTHX_ struct transfer_args *ta)
+prepare_schedule (struct transfer_args *ta)
 {
   SV *current, *prev, *next;
 
@@ -923,7 +919,7 @@ prepare_schedule (aTHX_ struct transfer_args *ta)
     {
       LOCK;
 
-      next = coro_deq (aTHX_ PRIO_MIN);
+      next = coro_deq (PRIO_MIN);
 
       if (next)
         break;
@@ -960,10 +956,10 @@ prepare_schedule (aTHX_ struct transfer_args *ta)
 }
 
 static void
-prepare_cede (aTHX_ struct transfer_args *ta)
+prepare_cede (struct transfer_args *ta)
 {
   LOCK;
-  coro_enq (aTHX_ SvREFCNT_inc (SvRV (GvSV (coro_current))));
+  coro_enq (SvREFCNT_inc (SvRV (GvSV (coro_current))));
   UNLOCK;
 
   prepare_schedule (ta);
