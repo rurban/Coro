@@ -29,6 +29,7 @@
 # endif
 #endif
 
+#include <stdio.h>
 #include <errno.h>
 
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
@@ -59,18 +60,19 @@ static long pagesize;
 # endif
 #endif
 
-#define SUB_INIT "Coro::State::initialize"
-
 /* The next macro should declare a variable stacklevel that contains and approximation
  * to the current C stack pointer. Its property is that it changes with each call
  * and should be unique. */
-#define dSTACKLEVEL void *stacklevel = &stacklevel
+#define dSTACKLEVEL int stacklevel
+#define STACKLEVEL ((void *)&stacklevel)
 
 #define IN_DESTRUCT (PL_main_cv == Nullcv)
 
 #define labs(l) ((l) >= 0 ? (l) : -(l))
 
 #include "CoroAPI.h"
+
+#define TRANSFER_SET_STACKLEVEL 0x8bfbfbfb /* magic cookie */
 
 #ifdef USE_ITHREADS
 static perl_mutex coro_mutex;
@@ -86,21 +88,31 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
-/* this is actually not just the c stack but also c registers etc... */
+/* this is a structure representing a c-level coroutine */
 typedef struct coro_stack {
   struct coro_stack *next;
 
-  void *idle_sp;
+  void *idle_sp; /* original stacklevel when coroutine was created */
   void *sptr;
   long ssize; /* positive == mmap, otherwise malloc */
 
   /* cpu state */
   coro_context cctx;
+  JMPENV *top_env;
 } coro_stack;
 
+/* the (fake) coro_stack representing the main program */
 static coro_stack *main_stack;
 
+/* this is a structure representing a perl-level coroutine */
 struct coro {
+  /* the c coroutine allocated to this perl coroutine, if any */
+  coro_stack *stack;
+
+  /* data associated with this coroutine (initial args) */
+  AV *args;
+  int refcnt;
+
   /* optionally saved, might be zero */
   AV *defav;
   SV *defsv;
@@ -109,9 +121,6 @@ struct coro {
   /* saved global state not related to stacks */
   U8 dowarn;
   I32 in_eval;
-
-  /* the c stack, if any */
-  coro_stack *stack;
 
   /* the stacks and related info (callchain etc..) */
   PERL_SI *curstackinfo;
@@ -142,14 +151,9 @@ struct coro {
   I32 retstack_max;
   PMOP *curpm;
   COP *curcop;
-  JMPENV *top_env;
 
   /* coro process data */
   int prio;
-
-  /* data associated with this coroutine (initial args) */
-  AV *args;
-  int refcnt;
 };
 
 typedef struct coro *Coro__State;
@@ -302,7 +306,6 @@ load_state(pTHX_ Coro__State c)
 #endif
   PL_curpm = c->curpm;
   PL_curcop = c->curcop;
-  PL_top_env = c->top_env;
 
   if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
   if (c->defsv) REPLACE_SV (DEFSV          , c->defsv);
@@ -430,7 +433,6 @@ save_state(pTHX_ Coro__State c, int flags)
 #endif
   c->curpm = PL_curpm;
   c->curcop = PL_curcop;
-  c->top_env = PL_top_env;
 }
 
 /*
@@ -542,7 +544,7 @@ setup_coro (struct coro *coro)
   dTHX;
   dSP;
   UNOP myop;
-  SV *sub_init = (SV *)get_cv (SUB_INIT, FALSE);
+  SV *sub_init = (SV *)get_cv ("Coro::State::coro_init", FALSE);
 
   coro_init_stacks (aTHX);
   /*PL_curcop = 0;*/
@@ -568,15 +570,13 @@ setup_coro (struct coro *coro)
 }
 
 static void
-transfer_tail ()
+free_coro_mortal ()
 {
   if (coro_mortal)
     {
       SvREFCNT_dec (coro_mortal);
       coro_mortal = 0;
     }
-
-  UNLOCK;
 }
 
 static void
@@ -586,12 +586,15 @@ coro_run (void *arg)
    * this is a _very_ stripped down perl interpreter ;)
    */
   dTHX;
-
-  transfer_tail ();
-
   PL_top_env = &PL_start_env;
-  PL_restartop = PL_op;
-  /* somebody will hit me for both perl_run and PL_restart_top */
+
+  UNLOCK;
+
+  sv_setiv (get_sv ("Coro::State::cctx_stack", FALSE), PTR2IV ((coro_stack *)arg));
+  sv_setiv (get_sv ("Coro::State::cctx_restartop", FALSE), PTR2IV (PL_op));
+  PL_restartop = CvSTART (get_cv ("Coro::State::cctx_init", FALSE));
+
+  /* somebody will hit me for both perl_run and PL_restart_op */
   perl_run (aTHX_ PERL_GET_CONTEXT);
 
   abort ();
@@ -611,7 +614,7 @@ stack_new ()
 
   if (stack->sptr == (void *)-1)
     {
-      fprintf (stderr, "FATAL: unable to mmap stack for coroutine\n");
+      perror ("FATAL: unable to mmap stack for coroutine");
       _exit (EXIT_FAILURE);
     }
 
@@ -624,13 +627,13 @@ stack_new ()
 
   if (!stack->sptr)
     {
-      fprintf (stderr, "FATAL: unable to malloc stack for coroutine\n");
+      perror (stderr, "FATAL: unable to malloc stack for coroutine");
       _exit (EXIT_FAILURE);
     }
 
 #endif
 
-  coro_create (&stack->cctx, coro_run, 0, stack->sptr, stack->ssize);
+  coro_create (&stack->cctx, coro_run, (void *)stack, stack->sptr, stack->ssize);
 
   return stack;
 }
@@ -685,21 +688,13 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
   dSTACKLEVEL;
 
   /* sometimes transfer is only called to set idle_sp */
-  if (!prev->stack->idle_sp)
-    prev->stack->idle_sp = stacklevel;
-
-  LOCK;
-
-  if (prev != next)
+  if (flags == TRANSFER_SET_STACKLEVEL)
+    ((coro_stack *)prev)->idle_sp = STACKLEVEL;
+  else if (prev != next)
     {
-      coro_stack *prev_stack = prev->stack;
+      coro_stack *prev__stack;
 
-      /* possibly "free" the stack */
-      if (0 && prev_stack->idle_sp == stacklevel)
-        {
-          stack_put (prev_stack);
-          prev->stack = 0;
-        }
+      LOCK;
 
       if (next->mainstack)
         {
@@ -714,23 +709,47 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
           SAVE (prev, -1);
           /* setup coroutine call */
           setup_coro (next);
-          /* need to change stack from main_stack to real one */
+          /* need a stack */
           next->stack = 0;
+        }
+
+      prev__stack = prev->stack;
+
+      /* possibly "free" the stack */
+      if (prev__stack->idle_sp == STACKLEVEL)
+        {
+          stack_put (prev__stack);
+          prev->stack = 0;
         }
 
       if (!next->stack)
         next->stack = stack_get ();
 
-      if (prev_stack != next->stack)
-        coro_transfer (&prev_stack->cctx, &next->stack->cctx);
-    }
+      if (prev__stack != next->stack)
+        {
+          prev__stack->top_env = PL_top_env;
+          PL_top_env = next->stack->top_env;
+          coro_transfer (&prev__stack->cctx, &next->stack->cctx);
+        }
 
-  transfer_tail ();
+      free_coro_mortal ();
+
+      UNLOCK;
+    }
 }
 
 /* use this function pointer to call the above function */
 /* this is done to increase chances of the compiler not inlining the call */
+/* not static to make it even harder for the compiler (and theoretically impossible in most cases */
 void (*coro_state_transfer)(pTHX_ struct coro *prev, struct coro *next, int flags) = transfer_impl;
+
+struct transfer_args
+{
+  struct coro *prev, *next;
+  int flags;
+};
+
+#define TRANSFER(ta) coro_state_transfer ((ta).prev, (ta).next, (ta).flags)
 
 static void
 coro_state_destroy (struct coro *coro)
@@ -803,9 +822,21 @@ SvSTATE (SV *coro)
 }
 
 static void
-api_transfer (pTHX_ SV *prev, SV *next, int flags)
+prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev, SV *next, int flags)
 {
-  coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
+  ta->prev  = SvSTATE (prev);
+  ta->next  = SvSTATE (next);
+  ta->flags = flags;
+}
+
+static void
+api_transfer (SV *prev, SV *next, int flags)
+{
+  dTHX;
+  struct transfer_args ta;
+
+  prepare_transfer (aTHX_ &ta, prev, next, flags);
+  TRANSFER (ta);
 }
 
 /** Coro ********************************************************************/
@@ -869,12 +900,13 @@ api_ready (SV *coro)
 }
 
 static void
-api_schedule (void)
+prepare_schedule (aTHX_ struct transfer_args *ta)
 {
-  dTHX;
+  SV *current, *prev, *next;
 
-  SV *prev, *next;
-  SV *current = GvSV (coro_current);
+  LOCK;
+
+  current = GvSV (coro_current);
 
   for (;;)
     {
@@ -906,37 +938,44 @@ api_schedule (void)
   SvRV (current) = next;
 
   /* free this only after the transfer */
+  free_coro_mortal ();
   coro_mortal = prev;
 
-  UNLOCK;
+  ta->prev = SvSTATE (prev);
+  ta->next = SvSTATE (next);
+  ta->flags = TRANSFER_SAVE_ALL;
 
-  coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), TRANSFER_SAVE_ALL);
+  UNLOCK;
 }
 
-static int coro_cede_self;
+static void
+prepare_cede (aTHX_ struct transfer_args *ta)
+{
+  LOCK;
+  coro_enq (aTHX_ SvREFCNT_inc (SvRV (GvSV (coro_current))));
+  UNLOCK;
+
+  prepare_schedule (ta);
+}
+
+static void
+api_schedule (void)
+{
+  dTHX;
+  struct transfer_args ta;
+
+  prepare_schedule (&ta);
+  TRANSFER (ta);
+}
 
 static void
 api_cede (void)
 {
   dTHX;
-  SV *current = SvREFCNT_inc (SvRV (GvSV (coro_current)));
+  struct transfer_args ta;
 
-  LOCK;
-
-  if (coro_cede_self)
-    {
-      AV *runqueue = coro_ready [PRIO_MAX - PRIO_MIN];
-      av_unshift (runqueue, 1);
-      av_store (runqueue, 0, current);
-      coro_nready++;
-      coro_cede_self = 0;
-    }
-  else
-    coro_enq (aTHX_ current);
-
-  UNLOCK;
-
-  api_schedule ();
+  prepare_cede (&ta);
+  TRANSFER (ta);
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State
@@ -982,7 +1021,6 @@ new (char *klass, ...)
         sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
         RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
 
-        av_push (coro->args, newSVsv (RETVAL));
         for (i = 1; i < items; i++)
           av_push (coro->args, newSVsv (ST (i)));
 
@@ -994,39 +1032,41 @@ new (char *klass, ...)
         RETVAL
 
 void
-transfer (prev, next, flags)
-        SV	*prev
-        SV	*next
-        int	flags
-        CODE:
-        PUTBACK;
-        coro_state_transfer (aTHX_ SvSTATE (prev), SvSTATE (next), flags);
-        SPAGAIN;
-
-int
-prio (Coro::State coro, int newprio = 0)
-        ALIAS:
-        nice = 1
+transfer (...)
+	ALIAS:
+        Coro::schedule  = 1
+        Coro::cede      = 2
+        _set_stacklevel = 3
         CODE:
 {
-        RETVAL = coro->prio;
+	struct transfer_args ta;
 
-        if (items > 1)
+        switch (ix)
           {
-            if (ix)
-              newprio += coro->prio;
+            case 0:
+              if (items != 3)
+                croak ("Coro::State::transfer(prev,next,flags) expects three arguments, not %d", items);
 
-            if (newprio < PRIO_MIN) newprio = PRIO_MIN;
-            if (newprio > PRIO_MAX) newprio = PRIO_MAX;
+              prepare_transfer (&ta, ST (0), ST (1), SvIV (ST (2)));
+              break;
 
-            coro->prio = newprio;
+            case 1:
+              prepare_schedule (&ta);
+              break;
+
+            case 2:
+              prepare_cede (&ta);
+              break;
+
+            case 3:
+              ta.prev  = (struct coro *)INT2PTR (coro_stack *, SvIV (ST (0)));
+              ta.next  = 0;
+              ta.flags = TRANSFER_SET_STACKLEVEL;
+              break;
           }
-}
 
-void
-_clear_idle_sp (Coro::State self)
-	CODE:
-        self->stack->idle_sp = 0;
+        TRANSFER (ta);
+}
 
 void
 _clone_state_from (SV *dst, SV *src)
@@ -1039,6 +1079,12 @@ _clone_state_from (SV *dst, SV *src)
         ++coro_src->refcnt;
         sv_magicext (SvRV (dst), 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro_src, 0)->mg_flags |= MGf_DUP;
 }
+
+void
+_nonlocal_goto (IV nextop)
+	CODE:
+        /* uuh, somebody will kill me again for this */
+        PL_op->op_next = INT2PTR (OP *, nextop);
 
 void
 _exit (code)
@@ -1115,6 +1161,26 @@ BOOT:
         }
 }
 
+int
+prio (Coro::State coro, int newprio = 0)
+        ALIAS:
+        nice = 1
+        CODE:
+{
+        RETVAL = coro->prio;
+
+        if (items > 1)
+          {
+            if (ix)
+              newprio += coro->prio;
+
+            if (newprio < PRIO_MIN) newprio = PRIO_MIN;
+            if (newprio > PRIO_MAX) newprio = PRIO_MAX;
+
+            coro->prio = newprio;
+          }
+}
+
 void
 ready (SV *self)
         PROTOTYPE: $
@@ -1128,23 +1194,6 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
-
-void
-schedule (...)
-	PROTOTYPE:
-	CODE:
-        api_schedule ();
-
-void
-_set_cede_self ()
-	CODE:
-        coro_cede_self = 1;
-
-void
-cede (...)
-	PROTOTYPE:
-	CODE:
-        api_cede ();
 
 MODULE = Coro::State                PACKAGE = Coro::AIO
 

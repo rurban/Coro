@@ -84,10 +84,25 @@ whatsoever, for example when subclassing Coro::State.
 
 =cut
 
+our $cctx_stack;
+our $cctx_restartop;
+our $cctx_count = 0;
+
+# this is called for each newly created C perl environment
+# be careful, this is not a normal function, it is never
+# being "entersub"'d and never must "leavesub"'d
+sub cctx_init {
+#   warn "coroutine header: $cctx_stack $cctx_restartop <@_>\n";#d#
+   ++$cctx_count;
+   _set_stacklevel $cctx_stack;
+
+   # this will jump to the actual coroutine op
+   _nonlocal_goto $cctx_restartop;
+}
+
 # this is called (or rather: goto'ed) for each and every
 # new coroutine. IT MUST NEVER RETURN!
-sub initialize {
-   $_[0]->transfer ($_[0], 0); shift; # set initial stack pointer
+sub coro_init {
    eval {
       $_[0] or die "transfer() to empty coroutine $_[0]";
       &{$_[0]} while 1;

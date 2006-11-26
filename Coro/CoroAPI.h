@@ -31,7 +31,7 @@ struct CoroAPI {
   /*struct coro *(*sv_to_coro)(SV *arg, const char *funcname, const char *varname);*/
 
   /* public, state */
-  void (*transfer)(pTHX_ SV *prev, SV *next, int flags);
+  void (*transfer)(SV *prev, SV *next, int flags);
 
   /* public, coro */
   void (*schedule)(void);

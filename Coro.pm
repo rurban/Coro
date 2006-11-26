@@ -235,9 +235,6 @@ by calling the ready method.
 =cut
 
 sub _new_coro {
-   $current->_clear_idle_sp; # (re-)set the idle sp on the following cede
-   _set_cede_self;  # ensures that cede cede's us first
-   cede;
    terminate &{+shift};
 }
 
