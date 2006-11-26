@@ -100,9 +100,6 @@ typedef struct coro_stack {
   coro_context cctx;
 } coro_stack;
 
-/* the (fake) coro_stack representing the main program */
-static coro_stack *main_stack;
-
 /* this is a structure representing a perl-level coroutine */
 struct coro {
   /* the c coroutine allocated to this perl coroutine, if any */
@@ -649,7 +646,7 @@ stack_new ()
 static void
 stack_free (coro_stack *stack)
 {
-  if (!stack || stack == main_stack)
+  if (!stack)
     return;
 
 #if HAVE_MMAP
@@ -721,6 +718,10 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
           next->stack = 0;
         }
 
+      if (!prev->stack)
+        /* create a new empty context */
+        Newz (0, prev->stack, 1, coro_stack);
+
       prev__stack = prev->stack;
 
       /* possibly "free" the stack */
@@ -737,7 +738,6 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
         {
           prev__stack->top_env = PL_top_env;
           PL_top_env = next->stack->top_env;
-          printf ("stacksw %p %p\n", prev__stack->idle_sp, next->stack->idle_sp);//D
           coro_transfer (&prev__stack->cctx, &next->stack->cctx);
         }
 
@@ -1009,9 +1009,6 @@ BOOT:
         coroapi.ver      = CORO_API_VERSION;
         coroapi.transfer = api_transfer;
 
-        Newz (0, main_stack, 1, coro_stack);
-        main_stack->idle_sp = (void *)-1;
-
         assert (("PRIO_NORMAL must be 0", !PRIO_NORMAL));
 }
 
@@ -1033,7 +1030,6 @@ new (char *klass, ...)
         for (i = 1; i < items; i++)
           av_push (coro->args, newSVsv (ST (i)));
 
-        coro->stack = main_stack;
         /*coro->mainstack = 0; *//*actual work is done inside transfer */
         /*coro->stack = 0;*/
 }

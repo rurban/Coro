@@ -92,7 +92,6 @@ our $cctx_count = 0;
 # be careful, this is not a normal function, it is never
 # being "entersub"'d and never must "leavesub"'d
 sub cctx_init {
-#   warn "coroutine header: $cctx_stack $cctx_restartop <@_>\n";#d#
    ++$cctx_count;
    _set_stacklevel $cctx_stack;
 
