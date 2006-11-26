@@ -570,6 +570,8 @@ free_coro_mortal ()
 {
   if (coro_mortal)
     {
+      dTHX;
+
       SvREFCNT_dec (coro_mortal);
       coro_mortal = 0;
     }
