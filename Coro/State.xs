@@ -92,13 +92,14 @@ static SV *coro_mortal; /* will be freed after next transfer */
 typedef struct coro_stack {
   struct coro_stack *next;
 
-  void *idle_sp; /* original stacklevel when coroutine was created */
+  /* the stack */
   void *sptr;
   long ssize; /* positive == mmap, otherwise malloc */
 
   /* cpu state */
-  coro_context cctx;
+  void *idle_sp; /* original stacklevel when coroutine was created */
   JMPENV *top_env;
+  coro_context cctx;
 } coro_stack;
 
 /* the (fake) coro_stack representing the main program */
@@ -586,12 +587,15 @@ coro_run (void *arg)
    * this is a _very_ stripped down perl interpreter ;)
    */
   dTHX;
-  PL_top_env = &PL_start_env;
 
   UNLOCK;
 
+  PL_top_env = &PL_start_env;
+
   sv_setiv (get_sv ("Coro::State::cctx_stack", FALSE), PTR2IV ((coro_stack *)arg));
   sv_setiv (get_sv ("Coro::State::cctx_restartop", FALSE), PTR2IV (PL_op));
+
+  /* continue at cctx_init, without entersub */
   PL_restartop = CvSTART (get_cv ("Coro::State::cctx_init", FALSE));
 
   /* somebody will hit me for both perl_run and PL_restart_op */
