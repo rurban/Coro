@@ -6,6 +6,7 @@ TODO: verify exception frame changes and force stack copies?
 
 	- reimplement a new stack sharing algorithm.
         - make stack sharing mandatory (it no longer uses a heuristic).
+        - eval/die no longer cause weird problems under heavy use.
         - Coro::Event could cause livelocks if it was used but
           Event watchers were used directly.
         - Coro::Event should be cleaner and more efficient now.
