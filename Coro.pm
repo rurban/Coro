@@ -43,7 +43,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '2.5';
+our $VERSION = '3.0';
 
 our @EXPORT = qw(async cede schedule terminate current);
 our %EXPORT_TAGS = (
