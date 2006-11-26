@@ -68,8 +68,6 @@ static long pagesize;
 
 #define IN_DESTRUCT (PL_main_cv == Nullcv)
 
-#define labs(l) ((l) >= 0 ? (l) : -(l))
-
 #include "CoroAPI.h"
 
 #define TRANSFER_SET_STACKLEVEL 0x8bfbfbfb /* magic cookie */
@@ -587,6 +585,7 @@ coro_run (void *arg)
    * this is a _very_ stripped down perl interpreter ;)
    */
   dTHX;
+  int ret;
 
   UNLOCK;
 
@@ -598,9 +597,11 @@ coro_run (void *arg)
   /* continue at cctx_init, without entersub */
   PL_restartop = CvSTART (get_cv ("Coro::State::cctx_init", FALSE));
 
-  /* somebody will hit me for both perl_run and PL_restart_op */
-  perl_run (aTHX_ PERL_GET_CONTEXT);
+  /* somebody will hit me for both perl_run and PL_restartop */
+  ret = perl_run (aTHX_ PERL_GET_CONTEXT);
+  printf ("ret %d\n", ret);//D
 
+  fputs ("FATAL: C coroutine fell over the edge of the world, aborting.\n", stderr);
   abort ();
 }
 
@@ -613,7 +614,8 @@ stack_new ()
 
 #if HAVE_MMAP
 
-  stack->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE; /* mmap should do allocate-on-write for us */
+  stack->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE;
+  /* mmap suppsedly does allocate-on-write for us */
   stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
   if (stack->sptr == (void *)-1)
@@ -622,7 +624,9 @@ stack_new ()
       _exit (EXIT_FAILURE);
     }
 
+# if STACKGUARD
   mprotect (stack->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
+# endif
 
 #else
 
@@ -733,6 +737,7 @@ transfer_impl (pTHX_ struct coro *prev, struct coro *next, int flags)
         {
           prev__stack->top_env = PL_top_env;
           PL_top_env = next->stack->top_env;
+          printf ("stacksw %p %p\n", prev__stack->idle_sp, next->stack->idle_sp);//D
           coro_transfer (&prev__stack->cctx, &next->stack->cctx);
         }
 
@@ -1036,11 +1041,12 @@ new (char *klass, ...)
         RETVAL
 
 void
-transfer (...)
+_set_stacklevel (...)
 	ALIAS:
-        Coro::schedule  = 1
-        Coro::cede      = 2
-        _set_stacklevel = 3
+        Coro::State::transfer = 1
+        Coro::schedule        = 2
+        Coro::cede            = 3
+        Coro::Cont::yield     = 4
         CODE:
 {
 	struct transfer_args ta;
@@ -1048,25 +1054,52 @@ transfer (...)
         switch (ix)
           {
             case 0:
+              ta.prev  = (struct coro *)INT2PTR (coro_stack *, SvIV (ST (0)));
+              ta.next  = 0;
+              ta.flags = TRANSFER_SET_STACKLEVEL;
+              break;
+
+            case 1:
               if (items != 3)
                 croak ("Coro::State::transfer(prev,next,flags) expects three arguments, not %d", items);
 
               prepare_transfer (&ta, ST (0), ST (1), SvIV (ST (2)));
               break;
 
-            case 1:
+            case 2:
               prepare_schedule (&ta);
               break;
 
-            case 2:
+            case 3:
               prepare_cede (&ta);
               break;
 
-            case 3:
-              ta.prev  = (struct coro *)INT2PTR (coro_stack *, SvIV (ST (0)));
-              ta.next  = 0;
-              ta.flags = TRANSFER_SET_STACKLEVEL;
-              break;
+            case 4:
+              {
+                SV *yieldstack;
+                SV *sv;
+                AV *defav = GvAV (PL_defgv);
+
+                yieldstack = *hv_fetch (
+                   (HV *)SvRV (GvSV (coro_current)),
+                   "yieldstack", sizeof ("yieldstack") - 1,
+                   0
+                );
+
+                /* set up @_ -- ugly */
+                av_clear (defav);
+                av_fill (defav, items - 1);
+                while (items--)
+                  av_store (defav, items, SvREFCNT_inc (ST(items)));
+
+                sv = av_pop ((AV *)SvRV (yieldstack));
+                ta.prev = SvSTATE (*av_fetch ((AV *)SvRV (sv), 0, 0));
+                ta.next = SvSTATE (*av_fetch ((AV *)SvRV (sv), 1, 0));
+                ta.flags = 0;
+                SvREFCNT_dec (sv);
+              }
+            break;
+
           }
 
         TRANSFER (ta);
@@ -1096,38 +1129,6 @@ _exit (code)
         PROTOTYPE: $
 	CODE:
 	_exit (code);
-
-MODULE = Coro::State                PACKAGE = Coro::Cont
-
-void
-yield (...)
-	PROTOTYPE: @
-        CODE:
-{
-        SV *yieldstack;
-        SV *sv;
-        AV *defav = GvAV (PL_defgv);
-        struct coro *prev, *next;
-
-        yieldstack = *hv_fetch (
-           (HV *)SvRV (GvSV (coro_current)),
-           "yieldstack", sizeof ("yieldstack") - 1,
-           0
-        );
-
-        /* set up @_ -- ugly */
-        av_clear (defav);
-        av_fill (defav, items - 1);
-        while (items--)
-          av_store (defav, items, SvREFCNT_inc (ST(items)));
-
-        sv = av_pop ((AV *)SvRV (yieldstack));
-        prev = SvSTATE (*av_fetch ((AV *)SvRV (sv), 0, 0));
-        next = SvSTATE (*av_fetch ((AV *)SvRV (sv), 1, 0));
-        SvREFCNT_dec (sv);
-
-        coro_state_transfer (aTHX_ prev, next, 0);
-}
 
 MODULE = Coro::State                PACKAGE = Coro
 
