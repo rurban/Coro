@@ -140,39 +140,9 @@ struct coro {
   SV *defsv;
   SV *errsv;
   
-  /* saved global state not related to stacks */
-  U8 dowarn;
-  I32 in_eval;
-
-  /* the stacks and related info (callchain etc..) */
-  PERL_SI *curstackinfo;
-  AV *curstack;
-  AV *mainstack;
-  SV **stack_sp;
-  OP *op;
-  SV **curpad;
-  AV *comppad;
-  CV *compcv;
-  SV **stack_base;
-  SV **stack_max;
-  SV **tmps_stack;
-  I32 tmps_floor;
-  I32 tmps_ix;
-  I32 tmps_max;
-  I32 *markstack;
-  I32 *markstack_ptr;
-  I32 *markstack_max;
-  I32 *scopestack;
-  I32 scopestack_ix;
-  I32 scopestack_max;
-  ANY *savestack;
-  I32 savestack_ix;
-  I32 savestack_max;
-  OP **retstack;
-  I32 retstack_ix;
-  I32 retstack_max;
-  PMOP *curpm;
-  COP *curcop;
+#define VAR(name,type) type name;
+# include "state.h"
+#undef VAR
 
   /* coro process data */
   int prio;
@@ -295,39 +265,9 @@ put_padlist (CV *cv)
 static void
 load_state(Coro__State c)
 {
-  PL_dowarn = c->dowarn;
-  PL_in_eval = c->in_eval;
-
-  PL_curstackinfo = c->curstackinfo;
-  PL_curstack = c->curstack;
-  PL_mainstack = c->mainstack;
-  PL_stack_sp = c->stack_sp;
-  PL_op = c->op;
-  PL_curpad = c->curpad;
-  PL_comppad = c->comppad;
-  PL_compcv = c->compcv;
-  PL_stack_base = c->stack_base;
-  PL_stack_max = c->stack_max;
-  PL_tmps_stack = c->tmps_stack;
-  PL_tmps_floor = c->tmps_floor;
-  PL_tmps_ix = c->tmps_ix;
-  PL_tmps_max = c->tmps_max;
-  PL_markstack = c->markstack;
-  PL_markstack_ptr = c->markstack_ptr;
-  PL_markstack_max = c->markstack_max;
-  PL_scopestack = c->scopestack;
-  PL_scopestack_ix = c->scopestack_ix;
-  PL_scopestack_max = c->scopestack_max;
-  PL_savestack = c->savestack;
-  PL_savestack_ix = c->savestack_ix;
-  PL_savestack_max = c->savestack_max;
-#if !PERL_VERSION_ATLEAST (5,9,0)
-  PL_retstack = c->retstack;
-  PL_retstack_ix = c->retstack_ix;
-  PL_retstack_max = c->retstack_max;
-#endif
-  PL_curpm = c->curpm;
-  PL_curcop = c->curcop;
+#define VAR(name,type) PL_ ## name = c->name;
+# include "state.h"
+#undef VAR
 
   if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
   if (c->defsv) REPLACE_SV (DEFSV          , c->defsv);
@@ -422,39 +362,9 @@ save_state(Coro__State c, int flags)
   c->defsv = flags & TRANSFER_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
   c->errsv = flags & TRANSFER_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
 
-  c->dowarn = PL_dowarn;
-  c->in_eval = PL_in_eval;
-
-  c->curstackinfo = PL_curstackinfo;
-  c->curstack = PL_curstack;
-  c->mainstack = PL_mainstack;
-  c->stack_sp = PL_stack_sp;
-  c->op = PL_op;
-  c->curpad = PL_curpad;
-  c->comppad = PL_comppad;
-  c->compcv = PL_compcv;
-  c->stack_base = PL_stack_base;
-  c->stack_max = PL_stack_max;
-  c->tmps_stack = PL_tmps_stack;
-  c->tmps_floor = PL_tmps_floor;
-  c->tmps_ix = PL_tmps_ix;
-  c->tmps_max = PL_tmps_max;
-  c->markstack = PL_markstack;
-  c->markstack_ptr = PL_markstack_ptr;
-  c->markstack_max = PL_markstack_max;
-  c->scopestack = PL_scopestack;
-  c->scopestack_ix = PL_scopestack_ix;
-  c->scopestack_max = PL_scopestack_max;
-  c->savestack = PL_savestack;
-  c->savestack_ix = PL_savestack_ix;
-  c->savestack_max = PL_savestack_max;
-#if !PERL_VERSION_ATLEAST (5,9,0)
-  c->retstack = PL_retstack;
-  c->retstack_ix = PL_retstack_ix;
-  c->retstack_max = PL_retstack_max;
-#endif
-  c->curpm = PL_curpm;
-  c->curcop = PL_curcop;
+#define VAR(name,type)c->name = PL_ ## name;
+# include "state.h"
+#undef VAR
 }
 
 /*
