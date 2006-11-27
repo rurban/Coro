@@ -85,12 +85,12 @@ whatsoever, for example when subclassing Coro::State.
 
 =cut
 
-our $cctx_stack;
+our $cctx;
 
 # this is called for each newly created C coroutine,
 # and is being artificially injected into the opcode flow
 sub cctx_init {
-   _set_stacklevel $cctx_stack;
+   _set_stacklevel $cctx;
 }
 
 # this is called (or rather: goto'ed) for each and every

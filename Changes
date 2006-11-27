@@ -5,10 +5,10 @@ Revision history for Perl extension Coro.
         - make stack sharing mandatory (it no longer uses a heuristic).
         - eval/die no longer cause weird problems under heavy use.
         - Coro::Event could cause livelocks if it was used but
-          Event watchers were used directly.
+          no Coro::Event watchers were used.
         - Coro::Event should be cleaner and more efficient now.
-        - minor incompatibility: subclassing is supported directly now
-          without going through a _coro_state member.
+        - minor incompatibility: subclassing Coro::State is supported
+          directly now without going through a _coro_state member.
         - state/coro switching is much faster now.
         - very minor optimisations and code/documentation cleanup.
         - avoid problems due to compiler inlining.

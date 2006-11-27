@@ -64,8 +64,11 @@
 #  define BOOT_PAGESIZE pagesize = sysconf (_SC_PAGESIZE)
 static long pagesize;
 # else
-#  define BOOT_PAGESIZE
+#  define BOOT_PAGESIZE (void)0
 # endif
+#else
+# define PAGESIZE 0
+# define BOOT_PAGESIZE (void)0
 #endif
 
 /* The next macro should declare a variable stacklevel that contains and approximation
@@ -103,8 +106,8 @@ static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
 /* this is a structure representing a c-level coroutine */
-typedef struct coro_stack {
-  struct coro_stack *next;
+typedef struct coro_cctx {
+  struct coro_cctx *next;
 
   /* the stack */
   void *sptr;
@@ -118,12 +121,12 @@ typedef struct coro_stack {
 #if USE_VALGRIND
   int valgrind_id;
 #endif
-} coro_stack;
+} coro_cctx;
 
 /* this is a structure representing a perl-level coroutine */
 struct coro {
   /* the c coroutine allocated to this perl coroutine, if any */
-  coro_stack *stack;
+  coro_cctx *cctx;
 
   /* data associated with this coroutine (initial args) */
   AV *args;
@@ -501,7 +504,7 @@ coro_init_stacks ()
  * destroy the stacks, the callchain etc...
  */
 static void
-coro_destroy_stacks()
+coro_destroy_stacks ()
 {
   if (!IN_DESTRUCT)
     {
@@ -597,7 +600,7 @@ free_coro_mortal ()
 }
 
 static void NOINLINE
-prepare_cctx (coro_stack *cctx)
+prepare_cctx (coro_cctx *cctx)
 {
   dSP;
   LOGOP myop;
@@ -606,7 +609,7 @@ prepare_cctx (coro_stack *cctx)
   myop.op_next = PL_op;
   myop.op_flags = OPf_WANT_VOID;
 
-  sv_setiv (get_sv ("Coro::State::cctx_stack", FALSE), PTR2IV (cctx));
+  sv_setiv (get_sv ("Coro::State::cctx", FALSE), PTR2IV (cctx));
 
   PUSHMARK (SP);
   XPUSHs ((SV *)get_cv ("Coro::State::cctx_init", FALSE));
@@ -626,7 +629,7 @@ coro_run (void *arg)
    */
   PL_top_env = &PL_start_env;
   /* inject call to cctx_init */
-  prepare_cctx ((coro_stack *)arg);
+  prepare_cctx ((coro_cctx *)arg);
 
   /* somebody will hit me for both perl_run and PL_restartop */
   perl_run (PL_curinterp);
@@ -635,103 +638,103 @@ coro_run (void *arg)
   abort ();
 }
 
-static coro_stack *
-stack_new ()
+static coro_cctx *
+cctx_new ()
 {
-  coro_stack *stack;
+  coro_cctx *cctx;
 
-  New (0, stack, 1, coro_stack);
+  New (0, cctx, 1, coro_cctx);
 
 #if HAVE_MMAP
 
-  stack->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE;
+  cctx->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE;
   /* mmap suppsedly does allocate-on-write for us */
-  stack->sptr = mmap (0, stack->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+  cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
-  if (stack->sptr == (void *)-1)
+  if (cctx->sptr == (void *)-1)
     {
       perror ("FATAL: unable to mmap stack for coroutine");
       _exit (EXIT_FAILURE);
     }
 
 # if STACKGUARD
-  mprotect (stack->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
+  mprotect (cctx->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
 # endif
 
 #else
 
-  stack->ssize = STACKSIZE * (long)sizeof (long);
-  New (0, stack->sptr, STACKSIZE, long);
+  cctx->ssize = STACKSIZE * (long)sizeof (long);
+  New (0, cctx->sptr, STACKSIZE, long);
 
-  if (!stack->sptr)
+  if (!cctx->sptr)
     {
-      perror (stderr, "FATAL: unable to malloc stack for coroutine");
+      perror ("FATAL: unable to malloc stack for coroutine");
       _exit (EXIT_FAILURE);
     }
 
 #endif
 
 #if USE_VALGRIND
-  stack->valgrind_id = VALGRIND_STACK_REGISTER (
-     STACKGUARD * PAGESIZE + (char *)stack->sptr,
-     stack->ssize          + (char *)stack->sptr
+  cctx->valgrind_id = VALGRIND_STACK_REGISTER (
+     STACKGUARD * PAGESIZE + (char *)cctx->sptr,
+     cctx->ssize           + (char *)cctx->sptr
   );
 #endif
 
-  coro_create (&stack->cctx, coro_run, (void *)stack, stack->sptr, stack->ssize);
+  coro_create (&cctx->cctx, coro_run, (void *)cctx, cctx->sptr, cctx->ssize);
 
-  return stack;
+  return cctx;
 }
 
 static void
-stack_free (coro_stack *stack)
+cctx_free (coro_cctx *cctx)
 {
-  if (!stack)
+  if (!cctx)
     return;
 
 #if USE_VALGRIND
-  VALGRIND_STACK_DEREGISTER (stack->valgrind_id);
+  VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
 #endif
 
 #if HAVE_MMAP
-  munmap (stack->sptr, stack->ssize);
+  munmap (cctx->sptr, cctx->ssize);
 #else
-  Safefree (stack->sptr);
+  Safefree (cctx->sptr);
 #endif
 
-  Safefree (stack);
+  Safefree (cctx);
 }
 
-static coro_stack *stack_first;
+static coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
 
-static coro_stack *
-stack_get ()
+static coro_cctx *
+cctx_get ()
 {
-  coro_stack *stack;
+  coro_cctx *cctx;
 
-  if (stack_first)
+  if (cctx_first)
     {
       --cctx_idle;
-      stack = stack_first;
-      stack_first = stack->next;
+      cctx = cctx_first;
+      cctx_first = cctx->next;
     }
   else
    {
      ++cctx_count;
-     stack = stack_new ();
+     cctx = cctx_new ();
      PL_op = PL_op->op_next;
    }
 
-  return stack;
+  return cctx;
 }
 
 static void
-stack_put (coro_stack *stack)
+cctx_put (coro_cctx *cctx)
 {
   ++cctx_idle;
-  stack->next = stack_first;
-  stack_first = stack;
+  cctx->next = cctx_first;
+  cctx_first = cctx;
 }
 
 /* never call directly, always through the coro_state_transfer global variable */
@@ -742,10 +745,10 @@ transfer (struct coro *prev, struct coro *next, int flags)
 
   /* sometimes transfer is only called to set idle_sp */
   if (flags == TRANSFER_SET_STACKLEVEL)
-    ((coro_stack *)prev)->idle_sp = STACKLEVEL;
+    ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
   else if (prev != next)
     {
-      coro_stack *prev__stack;
+      coro_cctx *prev__cctx;
 
       LOCK;
 
@@ -763,30 +766,30 @@ transfer (struct coro *prev, struct coro *next, int flags)
           /* setup coroutine call */
           setup_coro (next);
           /* need a stack */
-          next->stack = 0;
+          next->cctx = 0;
         }
 
-      if (!prev->stack)
+      if (!prev->cctx)
         /* create a new empty context */
-        Newz (0, prev->stack, 1, coro_stack);
+        Newz (0, prev->cctx, 1, coro_cctx);
 
-      prev__stack = prev->stack;
+      prev__cctx = prev->cctx;
 
-      /* possibly "free" the stack */
-      if (prev__stack->idle_sp == STACKLEVEL)
+      /* possibly "free" the cctx */
+      if (prev__cctx->idle_sp == STACKLEVEL)
         {
-          stack_put (prev__stack);
-          prev->stack = 0;
+          cctx_put (prev__cctx);
+          prev->cctx = 0;
         }
 
-      if (!next->stack)
-        next->stack = stack_get ();
+      if (!next->cctx)
+        next->cctx = cctx_get ();
 
-      if (prev__stack != next->stack)
+      if (prev__cctx != next->cctx)
         {
-          prev__stack->top_env = PL_top_env;
-          PL_top_env = next->stack->top_env;
-          coro_transfer (&prev__stack->cctx, &next->stack->cctx);
+          prev__cctx->top_env = PL_top_env;
+          PL_top_env = next->cctx->top_env;
+          coro_transfer (&prev__cctx->cctx, &next->cctx->cctx);
         }
 
       free_coro_mortal ();
@@ -823,7 +826,7 @@ coro_state_destroy (struct coro *coro)
       coro->mainstack = 0;
     }
 
-  stack_free (coro->stack);
+  cctx_free (coro->cctx);
   SvREFCNT_dec (coro->args);
   Safefree (coro);
 }
@@ -1077,9 +1080,6 @@ new (char *klass, ...)
 
         for (i = 1; i < items; i++)
           av_push (coro->args, newSVsv (ST (i)));
-
-        /*coro->mainstack = 0; *//*actual work is done inside transfer */
-        /*coro->stack = 0;*/
 }
         OUTPUT:
         RETVAL
@@ -1098,7 +1098,7 @@ _set_stacklevel (...)
         switch (ix)
           {
             case 0:
-              ta.prev  = (struct coro *)INT2PTR (coro_stack *, SvIV (ST (0)));
+              ta.prev  = (struct coro *)INT2PTR (coro_cctx *, SvIV (ST (0)));
               ta.next  = 0;
               ta.flags = TRANSFER_SET_STACKLEVEL;
               break;
@@ -1167,6 +1167,20 @@ _exit (code)
         PROTOTYPE: $
 	CODE:
 	_exit (code);
+
+int
+cctx_count ()
+	CODE:
+        RETVAL = cctx_count;
+	OUTPUT:
+        RETVAL
+
+int
+cctx_idle ()
+	CODE:
+        RETVAL = cctx_idle;
+	OUTPUT:
+        RETVAL
 
 MODULE = Coro::State                PACKAGE = Coro
 
