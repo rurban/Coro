@@ -67,7 +67,7 @@ use base Exporter::;
 
 our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV);
 
-=item $coro = new [$coderef] [, @args...]
+=item $coro = new Coro::State [$coderef] [, @args...]
 
 Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If the subroutine
@@ -85,17 +85,17 @@ whatsoever, for example when subclassing Coro::State.
 
 =cut
 
-our $cctx;
+our $_cctx; # holds the coro_cctx pointer
 
 # this is called for each newly created C coroutine,
 # and is being artificially injected into the opcode flow
-sub cctx_init {
-   _set_stacklevel $cctx;
+sub _cctx_init {
+   _set_stacklevel $_cctx;
 }
 
 # this is called (or rather: goto'ed) for each and every
 # new coroutine. IT MUST NEVER RETURN!
-sub coro_init {
+sub _coro_init {
    eval {
       $_[0] or die "transfer() to empty coroutine $_[0]";
       &{$_[0]} while 1;
@@ -135,6 +135,18 @@ this:
      local ($_, $@, ...);
      $old->transfer ($new);
   }
+
+=item Coro::State::cctx_count
+
+Returns the number of C-level coroutines allocated. If this number is
+very high (more than a dozen) it might help to identify points of C-level
+recursion in your code and moving this into a separate coroutine.
+
+=item Coro::State::cctx_idle
+
+Returns the number of allocated but idle (free for reuse) C level
+coroutines. As C level coroutines are curretly rarely being deallocated, a
+high number means that you used many C coroutines in the past.
 
 =cut
 

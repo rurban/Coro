@@ -105,6 +105,9 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
+static struct coro_cctx *cctx_first;
+static int cctx_count, cctx_idle;
+
 /* this is a structure representing a c-level coroutine */
 typedef struct coro_cctx {
   struct coro_cctx *next;
@@ -580,7 +583,7 @@ setup_coro (struct coro *coro)
     PL_op = (OP *)&myop;
 
     PUSHMARK (SP);
-    XPUSHs ((SV *)get_cv ("Coro::State::coro_init", FALSE));
+    XPUSHs ((SV *)get_cv ("Coro::State::_coro_init", FALSE));
     PUTBACK;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
     SPAGAIN;
@@ -609,10 +612,10 @@ prepare_cctx (coro_cctx *cctx)
   myop.op_next = PL_op;
   myop.op_flags = OPf_WANT_VOID;
 
-  sv_setiv (get_sv ("Coro::State::cctx", FALSE), PTR2IV (cctx));
+  sv_setiv (get_sv ("Coro::State::_cctx", FALSE), PTR2IV (cctx));
 
   PUSHMARK (SP);
-  XPUSHs ((SV *)get_cv ("Coro::State::cctx_init", FALSE));
+  XPUSHs ((SV *)get_cv ("Coro::State::_cctx_init", FALSE));
   PUTBACK;
   PL_restartop = PL_ppaddr[OP_ENTERSUB](aTHX);
   SPAGAIN;
@@ -628,6 +631,7 @@ coro_run (void *arg)
    * this is a _very_ stripped down perl interpreter ;)
    */
   PL_top_env = &PL_start_env;
+
   /* inject call to cctx_init */
   prepare_cctx ((coro_cctx *)arg);
 
@@ -642,6 +646,8 @@ static coro_cctx *
 cctx_new ()
 {
   coro_cctx *cctx;
+
+  ++cctx_count;
 
   New (0, cctx, 1, coro_cctx);
 
@@ -692,6 +698,8 @@ cctx_free (coro_cctx *cctx)
   if (!cctx)
     return;
 
+  --cctx_count;
+
 #if USE_VALGRIND
   VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
 #endif
@@ -704,9 +712,6 @@ cctx_free (coro_cctx *cctx)
 
   Safefree (cctx);
 }
-
-static coro_cctx *cctx_first;
-static int cctx_count, cctx_idle;
 
 static coro_cctx *
 cctx_get ()
@@ -721,7 +726,6 @@ cctx_get ()
     }
   else
    {
-     ++cctx_count;
      cctx = cctx_new ();
      PL_op = PL_op->op_next;
    }
