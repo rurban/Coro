@@ -12,7 +12,7 @@
        && (PERL_VERSION > (b)					\
            || (PERL_VERSION == (b) && PERLSUBVERSION >= (c)))))
 
-#if !PERL_VERSION_ATLEAST (5,8,0)
+#if !PERL_VERSION_ATLEAST (5,6,0)
 # ifndef PL_ppaddr
 #  define PL_ppaddr ppaddr
 # endif
@@ -493,7 +493,7 @@ coro_init_stacks ()
  * destroy the stacks, the callchain etc...
  */
 static void
-destroy_stacks()
+coro_destroy_stacks()
 {
   if (!IN_DESTRUCT)
     {
@@ -545,32 +545,35 @@ setup_coro (struct coro *coro)
   /*
    * emulate part of the perl startup here.
    */
-  dTHX;
-  dSP;
-  UNOP myop;
-  SV *sub_init = (SV *)get_cv ("Coro::State::coro_init", FALSE);
 
   coro_init_stacks ();
-  /*PL_curcop = 0;*/
-  /*PL_in_eval = PL_in_eval;*/ /* inherit */
-  SvREFCNT_dec (GvAV (PL_defgv));
-  GvAV (PL_defgv) = coro->args; coro->args = 0;
 
-  SPAGAIN;
+  {
+    dSP;
+    LOGOP myop;
 
-  Zero (&myop, 1, UNOP);
-  myop.op_next = Nullop;
-  myop.op_flags = OPf_WANT_VOID;
+    /*PL_curcop = 0;*/
+    PL_in_eval = 0;
+    SvREFCNT_dec (GvAV (PL_defgv));
+    GvAV (PL_defgv) = coro->args; coro->args = 0;
 
-  PL_op = (OP *)&myop;
+    SPAGAIN;
 
-  PUSHMARK(SP);
-  XPUSHs (sub_init);
-  PUTBACK;
-  PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
-  SPAGAIN;
+    Zero (&myop, 1, LOGOP);
+    myop.op_next = Nullop;
+    myop.op_flags = OPf_WANT_VOID;
 
-  ENTER; /* necessary e.g. for dounwind */
+    PL_op = (OP *)&myop;
+
+    PUSHMARK (SP);
+    PUSHMARK (SP);
+    XPUSHs ((SV *)get_cv ("Coro::State::coro_init", FALSE));
+    PUTBACK;
+    PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
+    SPAGAIN;
+
+    ENTER; /* necessary e.g. for dounwind */
+  }
 }
 
 static void
@@ -587,16 +590,16 @@ static void NOINLINE
 prepare_cctx (coro_stack *cctx)
 {
   dSP;
-  UNOP myop;
+  LOGOP myop;
 
-  Zero (&myop, 1, UNOP);
+  Zero (&myop, 1, LOGOP);
   myop.op_next = PL_op;
-  myop.op_flags = OPf_WANT_VOID | OPf_STACKED;
+  myop.op_flags = OPf_WANT_VOID;
 
-  PUSHMARK(SP);
-  EXTEND (SP, 2);
-  PUSHs (newSViv (PTR2IV (cctx)));
-  PUSHs ((SV *)get_cv ("Coro::State::cctx_init", FALSE));
+  sv_setiv (get_sv ("Coro::State::cctx_stack", FALSE), PTR2IV (cctx));
+
+  PUSHMARK (SP);
+  XPUSHs ((SV *)get_cv ("Coro::State::cctx_init", FALSE));
   PUTBACK;
   PL_restartop = PL_ppaddr[OP_ENTERSUB](aTHX);
   SPAGAIN;
@@ -605,16 +608,18 @@ prepare_cctx (coro_stack *cctx)
 static void
 coro_run (void *arg)
 {
+  /* coro_run is the alternative epilogue of transfer() */
+  UNLOCK;
+
   /*
    * this is a _very_ stripped down perl interpreter ;)
    */
-  UNLOCK;
-
   PL_top_env = &PL_start_env;
+  /* inject call to cctx_init */
   prepare_cctx ((coro_stack *)arg);
 
   /* somebody will hit me for both perl_run and PL_restartop */
-  perl_run (PERL_GET_CONTEXT);
+  perl_run (PL_curinterp);
 
   fputs ("FATAL: C coroutine fell over the edge of the world, aborting.\n", stderr);
   abort ();
@@ -677,6 +682,7 @@ stack_free (coro_stack *stack)
 }
 
 static coro_stack *stack_first;
+static int cctx_count, cctx_idle;
 
 static coro_stack *
 stack_get ()
@@ -685,11 +691,13 @@ stack_get ()
 
   if (stack_first)
     {
+      --cctx_idle;
       stack = stack_first;
       stack_first = stack->next;
     }
   else
    {
+     ++cctx_count;
      stack = stack_new ();
      PL_op = PL_op->op_next;
    }
@@ -700,6 +708,7 @@ stack_get ()
 static void
 stack_put (coro_stack *stack)
 {
+  ++cctx_idle;
   stack->next = stack_first;
   stack_first = stack;
 }
@@ -786,7 +795,7 @@ coro_state_destroy (struct coro *coro)
       SAVE ((&temp), TRANSFER_SAVE_ALL);
       LOAD (coro);
 
-      destroy_stacks ();
+      coro_destroy_stacks ();
 
       LOAD ((&temp)); /* this will get rid of defsv etc.. */
 
@@ -825,6 +834,8 @@ static MGVTBL coro_state_vtbl = {
   0,
 #ifdef MGf_DUP
   coro_state_dup,
+#else
+# define MGf_DUP 0
 #endif
 };
 
