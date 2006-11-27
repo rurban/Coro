@@ -6,7 +6,13 @@
 
 #include "patchlevel.h"
 
-#if PERL_VERSION < 6
+#define PERL_VERSION_ATLEAST(a,b,c)				\
+  (PERL_REVISION > (a)						\
+   || (PERL_REVISION == (a)					\
+       && (PERL_VERSION > (b)					\
+           || (PERL_VERSION == (b) && PERLSUBVERSION >= (c)))))
+
+#if !PERL_VERSION_ATLEAST (5,6,0)
 # ifndef PL_ppaddr
 #  define PL_ppaddr ppaddr
 # endif
@@ -65,6 +71,14 @@ static long pagesize;
 #define STACKLEVEL ((void *)&stacklevel)
 
 #define IN_DESTRUCT (PL_main_cv == Nullcv)
+
+#if __GNUC__ >= 3
+# define attribute(x) __attribute__(x)
+#else
+# define attribute(x)
+#endif
+
+#define NOINLINE attribute ((noinline))
 
 #include "CoroAPI.h"
 
@@ -161,10 +175,10 @@ coro_clone_padlist (CV *cv)
 
   newpadlist = newAV ();
   AvREAL_off (newpadlist);
-#if PERL_VERSION < 9
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
-#else
+#if PERL_VERSION_ATLEAST (5,9,0)
   Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
+#else
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
 #endif
   newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
   --AvFILLp (padlist);
@@ -293,7 +307,7 @@ load_state(Coro__State c)
   PL_savestack = c->savestack;
   PL_savestack_ix = c->savestack_ix;
   PL_savestack_max = c->savestack_max;
-#if PERL_VERSION < 9
+#if !PERL_VERSION_ATLEAST (5,9,0)
   PL_retstack = c->retstack;
   PL_retstack_ix = c->retstack_ix;
   PL_retstack_max = c->retstack_max;
@@ -420,7 +434,7 @@ save_state(Coro__State c, int flags)
   c->savestack = PL_savestack;
   c->savestack_ix = PL_savestack_ix;
   c->savestack_max = PL_savestack_max;
-#if PERL_VERSION < 9
+#if !PERL_VERSION_ATLEAST (5,9,0)
   c->retstack = PL_retstack;
   c->retstack_ix = PL_retstack_ix;
   c->retstack_max = PL_retstack_max;
@@ -468,7 +482,7 @@ coro_init_stacks ()
     PL_savestack_ix = 0;
     PL_savestack_max = 96;
 
-#if PERL_VERSION < 9
+#if !PERL_VERSION_ATLEAST (5,9,0)
     New(54,PL_retstack,8,OP*);
     PL_retstack_ix = 0;
     PL_retstack_max = 8;
@@ -520,7 +534,7 @@ destroy_stacks()
   Safefree (PL_markstack);
   Safefree (PL_scopestack);
   Safefree (PL_savestack);
-#if PERL_VERSION < 9
+#if !PERL_VERSION_ATLEAST (5,9,0)
   Safefree (PL_retstack);
 #endif
 }
@@ -569,7 +583,7 @@ free_coro_mortal ()
     }
 }
 
-static void
+static void NOINLINE
 prepare_cctx (coro_stack *cctx)
 {
   dSP;
@@ -691,8 +705,8 @@ stack_put (coro_stack *stack)
 }
 
 /* never call directly, always through the coro_state_transfer global variable */
-static void
-transfer_impl (struct coro *prev, struct coro *next, int flags)
+static void NOINLINE
+transfer (struct coro *prev, struct coro *next, int flags)
 {
   dSTACKLEVEL;
 
@@ -751,18 +765,13 @@ transfer_impl (struct coro *prev, struct coro *next, int flags)
     }
 }
 
-/* use this function pointer to call the above function */
-/* this is done to increase chances of the compiler not inlining the call */
-/* not static to make it even harder for the compiler (and theoretically impossible in most cases */
-void (*coro_state_transfer)(struct coro *prev, struct coro *next, int flags) = transfer_impl;
-
 struct transfer_args
 {
   struct coro *prev, *next;
   int flags;
 };
 
-#define TRANSFER(ta) coro_state_transfer ((ta).prev, (ta).next, (ta).flags)
+#define TRANSFER(ta) transfer ((ta).prev, (ta).next, (ta).flags)
 
 static void
 coro_state_destroy (struct coro *coro)
@@ -810,7 +819,14 @@ coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
   return 0;
 }
 
-static MGVTBL coro_state_vtbl = { 0, 0, 0, 0, coro_state_clear, 0, coro_state_dup, 0 };
+static MGVTBL coro_state_vtbl = {
+  0, 0, 0, 0,
+  coro_state_clear,
+  0,
+#ifdef MGf_DUP
+  coro_state_dup,
+#endif
+};
 
 static struct coro *
 SvSTATE (SV *coro)
@@ -1112,12 +1128,6 @@ _clone_state_from (SV *dst, SV *src)
         ++coro_src->refcnt;
         sv_magicext (SvRV (dst), 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro_src, 0)->mg_flags |= MGf_DUP;
 }
-
-void
-_nonlocal_goto (IV nextop)
-	CODE:
-        /* uuh, somebody will kill me again for this */
-        PL_op->op_next = INT2PTR (OP *, nextop);
 
 void
 _exit (code)
