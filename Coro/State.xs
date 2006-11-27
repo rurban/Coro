@@ -12,7 +12,7 @@
        && (PERL_VERSION > (b)					\
            || (PERL_VERSION == (b) && PERLSUBVERSION >= (c)))))
 
-#if !PERL_VERSION_ATLEAST (5,6,0)
+#if !PERL_VERSION_ATLEAST (5,8,0)
 # ifndef PL_ppaddr
 #  define PL_ppaddr ppaddr
 # endif
