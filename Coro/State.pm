@@ -38,11 +38,10 @@ modules for a higher level process abstraction including scheduling.
 
 A newly created coroutine that has not been used only allocates a
 relatively small (a few hundred bytes) structure. Only on the first
-C<transfer> will perl stacks (a few k) and optionally C stack (4-16k) be
-allocated. On systems supporting mmap a 128k stack is allocated, on the
-assumption that the OS has on-demand virtual memory. All this is very
-system-dependent. On my i686-pc-linux-gnu system this amounts to about 10k
-per coroutine, 5k when the experimental context sharing is enabled.
+C<transfer> will perl stacks (a few k) and optionally C stack All this
+is very system-dependent. On my i686-pc-linux-gnu system this amounts
+to about 10k per coroutine, 5k when the experimental context sharing is
+enabled.
 
 =head2 FUNCTIONS
 
@@ -74,6 +73,8 @@ Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If the subroutine
 returns it will be executed again. If it throws an exception the program
 will terminate.
+
+Calling C<exit> in a coroutine will not work correctly, so do not do that.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used

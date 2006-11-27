@@ -173,6 +173,8 @@ Create a new asynchronous process and return it's process object
 (usually unused). When the sub returns the new process is automatically
 terminated.
 
+Calling C<exit> in a coroutine will not work correctly, so do not do that.
+
 When the coroutine dies, the program will exit, just as in the main
 program.
 
@@ -231,6 +233,8 @@ Create a new process and return it. When the sub returns the process
 automatically terminates as if C<terminate> with the returned values were
 called. To make the process run you must first put it into the ready queue
 by calling the ready method.
+
+Calling C<exit> in a coroutine will not work correctly, so do not do that.
 
 =cut
 

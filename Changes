@@ -1,5 +1,6 @@
 Revision history for Perl extension Coro.
 
+3.0
 	- reimplement a new stack sharing algorithm.
         - make stack sharing mandatory (it no longer uses a heuristic).
         - eval/die no longer cause weird problems under heavy use.

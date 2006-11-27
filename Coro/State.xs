@@ -631,7 +631,7 @@ coro_run (void *arg)
   /* somebody will hit me for both perl_run and PL_restartop */
   perl_run (PL_curinterp);
 
-  fputs ("FATAL: C coroutine fell over the edge of the world, aborting.\n", stderr);
+  fputs ("FATAL: C coroutine fell over the edge of the world, aborting. Did you call exit in a coroutine?\n", stderr);
   abort ();
 }
 

@@ -8,6 +8,6 @@ sub p1 : Coro {
 }
 
 print "ok 1\n";
-cede; cede;
+cede;
 print "ok 3\n";
 
