@@ -548,16 +548,19 @@ setup_coro (struct coro *coro)
 
   coro_init_stacks ();
 
+  PL_curcop  = 0;
+  PL_in_eval = 0;
+  PL_curpm   = 0;
+
   {
     dSP;
     LOGOP myop;
 
-    /*PL_curcop = 0;*/
-    PL_in_eval = 0;
+    /* I have no idea why this is needed, but it is */
+    PUSHMARK (SP);
+
     SvREFCNT_dec (GvAV (PL_defgv));
     GvAV (PL_defgv) = coro->args; coro->args = 0;
-
-    SPAGAIN;
 
     Zero (&myop, 1, LOGOP);
     myop.op_next = Nullop;
@@ -565,7 +568,6 @@ setup_coro (struct coro *coro)
 
     PL_op = (OP *)&myop;
 
-    PUSHMARK (SP);
     PUSHMARK (SP);
     XPUSHs ((SV *)get_cv ("Coro::State::coro_init", FALSE));
     PUTBACK;
