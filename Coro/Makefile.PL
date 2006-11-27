@@ -166,6 +166,24 @@ print <<EOF;
 
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
 
+Coro can tell valgrind about its stacks and so reduce spurious warnings
+where valgrind would otherwise complain about possible stack switches.
+
+Enabling this does not incur visible runtime or memory overhead, but it
+requires that you have the <valgrind/valgrind.h> header file available.
+
+Valgrind support is completely optional, so the default of disabling it is
+the safe choice.
+
+EOF
+
+my $valgrind = prompt ("Enable valgrind support (y/n)", "n");
+$DEFINE .= " -DUSE_VALGRIND=1" if $valgrind =~ /[yY]/;
+
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
 EOF
 
 WriteMakefile(

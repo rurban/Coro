@@ -14,6 +14,7 @@ Revision history for Perl extension Coro.
         - removed timers from Coro::Timer -> use AnyEvent instead.
         - replaced Coro::idle coroutine by (cleaner) idle handler.
         - updated to newest libcoro.
+        - implement enhanced support for valgrind.
 
 2.5  Tue Nov  7 12:22:33 CET 2006
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket

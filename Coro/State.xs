@@ -6,6 +6,10 @@
 
 #include "patchlevel.h"
 
+#if USE_VALGRIND
+# include <valgrind/valgrind.h>
+#endif
+
 #define PERL_VERSION_ATLEAST(a,b,c)				\
   (PERL_REVISION > (a)						\
    || (PERL_REVISION == (a)					\
@@ -110,6 +114,10 @@ typedef struct coro_stack {
   void *idle_sp; /* sp of top-level transfer/schedule/cede call */
   JMPENV *top_env;
   coro_context cctx;
+
+#if USE_VALGRIND
+  int valgrind_id;
+#endif
 } coro_stack;
 
 /* this is a structure representing a perl-level coroutine */
@@ -663,6 +671,13 @@ stack_new ()
 
 #endif
 
+#if USE_VALGRIND
+  stack->valgrind_id = VALGRIND_STACK_REGISTER (
+     STACKGUARD * PAGESIZE + (char *)stack->sptr,
+     stack->ssize          + (char *)stack->sptr
+  );
+#endif
+
   coro_create (&stack->cctx, coro_run, (void *)stack, stack->sptr, stack->ssize);
 
   return stack;
@@ -673,6 +688,10 @@ stack_free (coro_stack *stack)
 {
   if (!stack)
     return;
+
+#if USE_VALGRIND
+  VALGRIND_STACK_DEREGISTER (stack->valgrind_id);
+#endif
 
 #if HAVE_MMAP
   munmap (stack->sptr, stack->ssize);
