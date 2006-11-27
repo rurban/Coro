@@ -216,14 +216,22 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 
 static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
 
+#define CORO_MAGIC(cv)					\
+    SvMAGIC (cv)					\
+       ? SvMAGIC (cv)->mg_type == PERL_MAGIC_coro	\
+          ? SvMAGIC (cv)				\
+          : mg_find ((SV *)cv, PERL_MAGIC_coro)		\
+       : 0
+
 /* the next two functions merely cache the padlists */
 static void
 get_padlist (CV *cv)
 {
-  MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
+  MAGIC *mg = CORO_MAGIC (cv);
+  AV *av;
 
-  if (mg && AvFILLp ((AV *)mg->mg_obj) >= 0)
-    CvPADLIST (cv) = (AV *)av_pop ((AV *)mg->mg_obj);
+  if (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0)
+    CvPADLIST (cv) = (AV *)AvARRAY (av)[AvFILLp (av)--];
   else
    {
 #if 0
@@ -241,7 +249,8 @@ get_padlist (CV *cv)
 static void
 put_padlist (CV *cv)
 {
-  MAGIC *mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
+  MAGIC *mg = CORO_MAGIC (cv);
+  AV *av;
 
   if (!mg)
     {
@@ -251,7 +260,12 @@ put_padlist (CV *cv)
       mg->mg_obj = (SV *)newAV ();
     }
 
-  av_push ((AV *)mg->mg_obj, (SV *)CvPADLIST (cv));
+  av = (AV *)mg->mg_obj;
+
+  if (AvFILLp (av) >= AvMAX (av))
+    av_extend (av, AvMAX (av) + 1);
+
+  AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
 }
 
 #define SB do {
@@ -280,15 +294,9 @@ load_state(Coro__State c)
     /* now do the ugly restore mess */
     while ((cv = (CV *)POPs))
       {
-        AV *padlist = (AV *)POPs;
-
-        if (padlist)
-          {
-            put_padlist (cv); /* mark this padlist as available */
-            CvPADLIST(cv) = padlist;
-          }
-
-        ++CvDEPTH(cv);
+        put_padlist (cv); /* mark this padlist as available */
+        CvDEPTH (cv) = PTR2IV (POPs);
+        CvPADLIST (cv) = (AV *)POPs;
       }
 
     PUTBACK;
@@ -320,20 +328,16 @@ save_state(Coro__State c, int flags)
             if (CxTYPE(cx) == CXt_SUB)
               {
                 CV *cv = cx->blk_sub.cv;
-                if (CvDEPTH(cv))
-                  {
-                    EXTEND (SP, CvDEPTH(cv)*2);
 
-                    while (--CvDEPTH(cv))
-                      {
-                        /* this tells the restore code to increment CvDEPTH */
-                        PUSHs (Nullsv);
-                        PUSHs ((SV *)cv);
-                      }
+                if (CvDEPTH (cv))
+                  {
+                    EXTEND (SP, 3);
 
                     PUSHs ((SV *)CvPADLIST(cv));
+                    PUSHs (INT2PTR (SV *, CvDEPTH (cv)));
                     PUSHs ((SV *)cv);
 
+                    CvDEPTH (cv) = 0;
                     get_padlist (cv);
                   }
               }
