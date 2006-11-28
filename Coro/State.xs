@@ -696,6 +696,7 @@ transfer (struct coro *prev, struct coro *next, int flags)
       /* possibly "free" the cctx */
       if (prev__cctx->idle_sp == STACKLEVEL)
         {
+          assert (PL_top_env == prev__cctx->top_env);//D
           cctx_put (prev__cctx);
           prev->cctx = 0;
         }
