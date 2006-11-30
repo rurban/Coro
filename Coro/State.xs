@@ -684,8 +684,11 @@ transfer (struct coro *prev, struct coro *next, int flags)
           prev->flags |= CF_RUNNING;
         }
 
-      assert ( prev->flags & CF_RUNNING);
-      assert (!next->flags & CF_RUNNING);
+      if (!prev->flags & CF_RUNNING)
+        croak ("Coro::State::transfer called with non-running prev Coro::State, but can only transfer from running states");
+
+      if (next->flags & CF_RUNNING)
+        croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states");
 
       prev->flags &= ~CF_RUNNING;
       next->flags |=  CF_RUNNING;
@@ -705,9 +708,8 @@ transfer (struct coro *prev, struct coro *next, int flags)
           SAVE (prev, -1);
           /* setup coroutine call */
           setup_coro (next);
-          /* need a stack */
+          /* need a new stack */
           assert (!next->stack);
-          next->cctx = 0;
         }
 
       prev__cctx = prev->cctx;
@@ -715,7 +717,8 @@ transfer (struct coro *prev, struct coro *next, int flags)
       /* possibly "free" the cctx */
       if (prev__cctx->idle_sp == STACKLEVEL)
         {
-          assert (PL_top_env == prev__cctx->top_env);//D
+          assert (PL_top_env == prev__cctx->top_env);
+
           cctx_put (prev__cctx);
           prev->cctx = 0;
         }
@@ -755,6 +758,9 @@ coro_state_destroy (struct coro *coro)
 {
   if (coro->refcnt--)
     return;
+
+  if (coro->flags & CF_RUNNING)
+    croak ("FATAL: tried to destroy currently running coroutine");
 
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
@@ -862,16 +868,9 @@ static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
 
 static void
-coro_enq (SV *sv)
+coro_enq (SV *coro_sv)
 {
-  int prio;
-
-  if (SvTYPE (sv) != SVt_PVHV)
-    croak ("Coro::ready tried to enqueue something that is not a coroutine");
-
-  prio = SvSTATE (sv)->prio;
-
-  av_push (coro_ready [prio - PRIO_MIN], sv);
+  av_push (coro_ready [SvSTATE (coro_sv)->prio - PRIO_MIN], coro_sv);
   coro_nready++;
 }
 
@@ -903,8 +902,12 @@ api_ready (SV *coro_sv)
     coro_sv = SvRV (coro_sv);
 
   coro = SvSTATE (coro_sv);
+
   if (coro->flags & CF_READY)
     return 0;
+
+  if (coro->flags & CF_RUNNING)
+    croak ("Coro::ready called on currently running coroutine");
 
   coro->flags |= CF_READY;
 
@@ -918,9 +921,7 @@ api_ready (SV *coro_sv)
 static int
 api_is_ready (SV *coro_sv)
 {
-  struct coro *coro;
-
-  return !!(SvSTATE (coro_sv)->flags & CF_READY);
+  return !!SvSTATE (coro_sv)->flags & CF_READY;
 }
 
 static void
