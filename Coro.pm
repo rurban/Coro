@@ -248,11 +248,15 @@ sub new {
    $class->SUPER::new (\&_new_coro, @_)
 }
 
-=item $process->ready
+=item $success = $process->ready
 
-Put the given process into the ready queue.
+Put the given process into the ready queue (according to it's priority)
+and return true. If the process is already in the ready queue, do nothing
+and return false.
 
-=cut
+=item $is_ready = $process->is_ready
+
+Return wether the process is currently the ready queue or not,
 
 =item $process->cancel (arg...)
 

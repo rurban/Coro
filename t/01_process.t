@@ -1,5 +1,5 @@
 $|=1;
-print "1..3\n";
+print "1..6\n";
 
 use Coro;
 
@@ -10,4 +10,15 @@ sub p1 : Coro {
 print "ok 1\n";
 cede;
 print "ok 3\n";
+
+my $c1 = async {
+   print "ok 5\n";
+   cede;
+};
+
+print $c1->ready ? "not " : "", "ok 4\n";
+
+cede;
+
+print "ok 6\n";
 

@@ -67,7 +67,7 @@ use base Exporter::;
 
 our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV);
 
-=item $coro = new Coro::State [$coderef] [, @args...]
+=item $coro = new Coro::State [$coderef[, @args...]]
 
 Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If the subroutine

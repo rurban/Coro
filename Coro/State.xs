@@ -121,10 +121,17 @@ typedef struct coro_cctx {
   JMPENV *top_env;
   coro_context cctx;
 
+  int inuse;
+
 #if USE_VALGRIND
   int valgrind_id;
 #endif
 } coro_cctx;
+
+enum {
+  CF_RUNNING, /* coroutine is running */
+  CF_READY,   /* coroutine is ready */
+};
 
 /* this is a structure representing a perl-level coroutine */
 struct coro {
@@ -134,6 +141,7 @@ struct coro {
   /* data associated with this coroutine (initial args) */
   AV *args;
   int refcnt;
+  int flags;
 
   /* optionally saved, might be zero */
   AV *defav;
@@ -668,6 +676,20 @@ transfer (struct coro *prev, struct coro *next, int flags)
     {
       coro_cctx *prev__cctx;
 
+      if (!prev->cctx)
+        {
+          /* create a new empty context */
+          Newz (0, prev->cctx, 1, coro_cctx);
+          prev->cctx->inuse = 1;
+          prev->flags |= CF_RUNNING;
+        }
+
+      assert ( prev->flags & CF_RUNNING);
+      assert (!next->flags & CF_RUNNING);
+
+      prev->flags &= ~CF_RUNNING;
+      next->flags |=  CF_RUNNING;
+
       LOCK;
 
       if (next->mainstack)
@@ -684,12 +706,9 @@ transfer (struct coro *prev, struct coro *next, int flags)
           /* setup coroutine call */
           setup_coro (next);
           /* need a stack */
+          assert (!next->stack);
           next->cctx = 0;
         }
-
-      if (!prev->cctx)
-        /* create a new empty context */
-        Newz (0, prev->cctx, 1, coro_cctx);
 
       prev__cctx = prev->cctx;
 
@@ -706,6 +725,12 @@ transfer (struct coro *prev, struct coro *next, int flags)
 
       if (prev__cctx != next->cctx)
         {
+          assert ( prev__cctx->inuse);
+          assert (!next->cctx->inuse);
+
+          prev__cctx->inuse = 0;
+          next->cctx->inuse = 1;
+
           prev__cctx->top_env = PL_top_env;
           PL_top_env = next->cctx->top_env;
           coro_transfer (&prev__cctx->cctx, &next->cctx->cctx);
@@ -869,17 +894,33 @@ coro_deq (int min_prio)
   return 0;
 }
 
-static void
-api_ready (SV *coro)
+static int
+api_ready (SV *coro_sv)
 {
-  dTHX;
+  struct coro *coro;
 
-  if (SvROK (coro))
-    coro = SvRV (coro);
+  if (SvROK (coro_sv))
+    coro_sv = SvRV (coro_sv);
+
+  coro = SvSTATE (coro_sv);
+  if (coro->flags & CF_READY)
+    return 0;
+
+  coro->flags |= CF_READY;
 
   LOCK;
-  coro_enq (SvREFCNT_inc (coro));
+  coro_enq (SvREFCNT_inc (coro_sv));
   UNLOCK;
+
+  return 1;
+}
+
+static int
+api_is_ready (SV *coro_sv)
+{
+  struct coro *coro;
+
+  return !!(SvSTATE (coro_sv)->flags & CF_READY);
 }
 
 static void
@@ -925,14 +966,14 @@ prepare_schedule (struct transfer_args *ta)
   ta->prev = SvSTATE (prev);
   ta->next = SvSTATE (next);
   ta->flags = TRANSFER_SAVE_ALL;
+
+  ta->next->flags &= ~CF_READY;
 }
 
 static void
 prepare_cede (struct transfer_args *ta)
 {
-  LOCK;
-  coro_enq (SvREFCNT_inc (SvRV (GvSV (coro_current))));
-  UNLOCK;
+  api_ready (GvSV (coro_current));
 
   prepare_schedule (ta);
 }
@@ -1128,6 +1169,7 @@ BOOT:
           coroapi.schedule = api_schedule;
           coroapi.cede     = api_cede;
           coroapi.ready    = api_ready;
+          coroapi.is_ready = api_is_ready;
           coroapi.nready   = &coro_nready;
           coroapi.current  = coro_current;
 
@@ -1157,11 +1199,21 @@ prio (Coro::State coro, int newprio = 0)
           }
 }
 
-void
+SV *
 ready (SV *self)
         PROTOTYPE: $
 	CODE:
-        api_ready (self);
+        RETVAL = boolSV (api_ready (self));
+	OUTPUT:
+        RETVAL
+
+SV *
+is_ready (SV *self)
+        PROTOTYPE: $
+	CODE:
+        RETVAL = boolSV (api_is_ready (self));
+	OUTPUT:
+        RETVAL
 
 int
 nready (...)
