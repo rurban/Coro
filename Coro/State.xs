@@ -717,13 +717,12 @@ transfer (struct coro *prev, struct coro *next, int flags)
       /* possibly "free" the cctx */
       if (prev__cctx->idle_sp == STACKLEVEL)
         {
+          /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
           assert (PL_top_env == prev__cctx->top_env);
 
           cctx_put (prev__cctx);
           prev->cctx = 0;
         }
-      else if (prev__cctx->idle_sp) //D
-        fprintf (stderr, "coro %p has own stack %p-%p\n", prev__cctx, prev__cctx->idle_sp, STACKLEVEL);//D
 
       if (!next->cctx)
         next->cctx = cctx_get ();
