@@ -216,8 +216,8 @@ use AnyEvent;
 # 2 timeout
 # 3 rb
 # 4 wb # unused
-# 5 unused
-# 6 unused
+# 5 read watcher, if Coro::Event used
+# 6 write watcher, if Coro::Event used
 # 7 forward class
 # 8 blocking
 
@@ -305,7 +305,7 @@ sub FETCH {
    "$_[0]<$_[0][1]>";
 }
 
-sub readable {
+sub readable_anyevent {
    my $current = $Coro::current;
    my $io = 1;
 
@@ -335,7 +335,7 @@ sub readable {
    $io
 }
 
-sub writable {
+sub writable_anyevent {
    my $current = $Coro::current;
    my $io = 1;
 
@@ -363,6 +363,39 @@ sub writable {
 
    $io
 }
+
+sub readable_coro {
+   ($_[0][5] ||= "Coro::Event"->io(
+      fd      => $_[0][0],
+      desc    => "fh $_[0][1] read watcher",
+      timeout => $_[0][2],
+      poll    => &Event::Watcher::R + &Event::Watcher::E + &Event::Watcher::T,
+   ))->next->[5] & &Event::Watcher::R;
+}
+
+sub writable_coro {
+   ($_[0][6] ||= "Coro::Event"->io(
+      fd      => $_[0][0],
+      desc    => "fh $_[0][1] write watcher",
+      timeout => $_[0][2],
+      poll    => &Event::Watcher::W + &Event::Watcher::E + &Event::Watcher::T,
+   ))->next->[5] & &Event::Watcher::W;
+}
+
+for my $rw (qw(readable writable)) {
+   no strict 'refs';
+
+   *$rw = sub {
+      my $res = &{"$rw\_anyevent"};
+      if ($AnyEvent::MODEL eq "AnyEvent::Impl::Coro" or $AnyEvent::MODEL eq "AnyEvent::Impl::Event") {
+         require Coro::Event;
+         *$rw = \&{"$rw\_coro"};
+      } else {
+         *$rw = \&{"$rw\_anyevent"};
+      }
+      $res
+   };
+};
 
 sub WRITE {
    my $len = defined $_[2] ? $_[2] : length $_[1];

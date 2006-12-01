@@ -11,7 +11,7 @@
 #define CD_CORO	0
 #define CD_TYPE	1
 #define CD_OK	2
-#define CD_PRIO	3 /* hardcoded in Coro::Event */
+
 #define CD_HITS	4 /* hardcoded in Coro::Event */
 #define CD_GOT	5 /* hardcoded in Coro::Event, Coro::Handle */
 #define CD_MAX	5
@@ -23,7 +23,6 @@ coro_std_cb (pe_event *pe)
   IV type = SvIV (AvARRAY (priv)[CD_TYPE]);
   SV **cd_coro;
 
-  SvIV_set (AvARRAY (priv)[CD_PRIO], pe->prio);
   SvIV_set (AvARRAY (priv)[CD_HITS], pe->hits);
 
   if (type == 1)
@@ -80,7 +79,6 @@ _install_std_cb (SV *self, int type)
           AvARRAY (priv)[CD_CORO] = &PL_sv_undef;
           AvARRAY (priv)[CD_TYPE] = newSViv (type);
           AvARRAY (priv)[CD_OK  ] = &PL_sv_no;
-          AvARRAY (priv)[CD_PRIO] = newSViv (0);
           AvARRAY (priv)[CD_HITS] = newSViv (0);
           AvARRAY (priv)[CD_GOT ] = newSViv (0);
           SvREADONLY_on (priv);
@@ -108,7 +106,12 @@ _next (SV *self)
           }
 
         if (!w->running)
-          GEventAPI->start (w, 1);
+          {
+            SvIV_set (AvARRAY (priv)[CD_GOT],  0);
+            SvIV_set (AvARRAY (priv)[CD_HITS], 0);
+
+            GEventAPI->start (w, 1);
+          }
 
         if (AvARRAY (priv)[CD_CORO] == &PL_sv_undef)
           AvARRAY (priv)[CD_CORO] = SvREFCNT_inc (CORO_CURRENT);
@@ -117,4 +120,21 @@ _next (SV *self)
 
         XSRETURN_YES; /* schedule */
 }
+
+SV *
+_event (SV *self)
+	CODE:
+{
+        if (GIMME_V == G_VOID)
+          XSRETURN_EMPTY;
+
+        {
+          pe_watcher *w = GEventAPI->sv_2watcher (self);
+          AV *priv = (AV *)w->ext_data;
+
+          RETVAL = newRV_inc ((SV *)priv);
+        }
+}
+	OUTPUT:
+        RETVAL
 
