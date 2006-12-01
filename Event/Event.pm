@@ -39,13 +39,25 @@ L<Coro::Handle|Coro::Handle>) that use "traditional"
 event-based/continuation style will run more efficient with this module
 then when using only Event.
 
+=head1 WARNING
+
+Please note that Event does not support coroutines or threads. That
+means that you B<MUST NOT> block in an event callback. Again: In Event
+callbacks, you I<must never ever> call a Coroutine fucntion that blocks
+the current coroutine.
+
+While this seems to work superficially, it will eventually cause memory
+corruption.
+
+=head1 FUNCTIONS
+
 =over 4
 
 =cut
 
 package Coro::Event;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
 
 use Carp;
 no warnings;
@@ -67,7 +79,7 @@ BEGIN {
    XSLoader::load __PACKAGE__, $VERSION;
 }
 
-=item $w = Coro::Event->flavour(args...)
+=item $w = Coro::Event->flavour (args...)
 
 Create and return a watcher of the given type.
 
@@ -84,7 +96,7 @@ Return the next event of the event queue of the watcher.
 
 =cut
 
-=item do_flavour(args...)
+=item do_flavour args...
 
 Create a watcher of the given type and immediately call it's next
 method. This is less efficient then calling the constructor once and the
@@ -149,7 +161,7 @@ into the Event dispatcher.
 =cut
 
 sub sweep {
-   Event::one_event(0); # for now
+   Event::one_event 0; # for now
 }
 
 =item $result = loop([$timeout])
