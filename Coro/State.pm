@@ -39,9 +39,8 @@ modules for a higher level process abstraction including scheduling.
 A newly created coroutine that has not been used only allocates a
 relatively small (a few hundred bytes) structure. Only on the first
 C<transfer> will perl stacks (a few k) and optionally C stack All this
-is very system-dependent. On my i686-pc-linux-gnu system this amounts
-to about 10k per coroutine, 5k when the experimental context sharing is
-enabled.
+is very system-dependent. On my x86_64-pc-linux-gnu system this amounts
+to about 8k per coroutine.
 
 =head2 FUNCTIONS
 

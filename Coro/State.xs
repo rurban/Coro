@@ -391,7 +391,7 @@ save_state(Coro__State c, int flags)
 static void
 coro_init_stacks ()
 {
-    PL_curstackinfo = new_stackinfo(96, 1024/sizeof(PERL_CONTEXT) - 1);
+    PL_curstackinfo = new_stackinfo(128, 1024/sizeof(PERL_CONTEXT));
     PL_curstackinfo->si_type = PERLSI_MAIN;
     PL_curstack = PL_curstackinfo->si_stack;
     PL_mainstack = PL_curstack;		/* remember in case we switch stacks */
@@ -400,31 +400,31 @@ coro_init_stacks ()
     PL_stack_sp = PL_stack_base;
     PL_stack_max = PL_stack_base + AvMAX(PL_curstack);
 
-    New(50,PL_tmps_stack,96,SV*);
+    New(50,PL_tmps_stack,128,SV*);
     PL_tmps_floor = -1;
     PL_tmps_ix = -1;
-    PL_tmps_max = 96;
+    PL_tmps_max = 128;
 
-    New(54,PL_markstack,16,I32);
+    New(54,PL_markstack,32,I32);
     PL_markstack_ptr = PL_markstack;
-    PL_markstack_max = PL_markstack + 16;
+    PL_markstack_max = PL_markstack + 32;
 
 #ifdef SET_MARK_OFFSET
     SET_MARK_OFFSET;
 #endif
 
-    New(54,PL_scopestack,16,I32);
+    New(54,PL_scopestack,32,I32);
     PL_scopestack_ix = 0;
-    PL_scopestack_max = 16;
+    PL_scopestack_max = 32;
 
-    New(54,PL_savestack,96,ANY);
+    New(54,PL_savestack,64,ANY);
     PL_savestack_ix = 0;
-    PL_savestack_max = 96;
+    PL_savestack_max = 64;
 
 #if !PERL_VERSION_ATLEAST (5,9,0)
-    New(54,PL_retstack,8,OP*);
+    New(54,PL_retstack,16,OP*);
     PL_retstack_ix = 0;
-    PL_retstack_max = 8;
+    PL_retstack_max = 16;
 #endif
 }
 
