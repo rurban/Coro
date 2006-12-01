@@ -103,8 +103,8 @@ our $AUTOLOAD;
 
             &$iosub;
 
-            Coro::schedule;
-            Coro::schedule while !\$state;
+            &Coro::schedule;
+            &Coro::schedule while !\$state;
 
             _set_state \$state;
             wantarray ? \@res : \$res[0]

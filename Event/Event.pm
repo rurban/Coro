@@ -58,7 +58,7 @@ use XSLoader;
 
 use base Exporter::;
 
-our @EXPORT = qw(loop unloop sweep reschedule);
+our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
    our $VERSION = 1.9;
@@ -125,7 +125,9 @@ for my $flavour (qw(idle var timer io signal)) {
 # double calls to avoid stack-cloning ;()
 # is about 10% slower, though.
 sub next($) {
-   &Coro::schedule if &_next; $_[0];
+   &Coro::schedule while &_next;
+
+   $_[0]
 }
 
 sub Coro::Event::w    { $_[0] }

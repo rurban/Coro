@@ -311,6 +311,7 @@ sub readable {
       poll    => 'r',
       cb      => sub {
          $current->ready;
+         undef $current;
       },
    );
 
@@ -319,10 +320,13 @@ sub readable {
       cb    => sub {
          $io = 0;
          $current->ready;
+         undef $current;
       },
    );
 
    &Coro::schedule;
+   &Coro::schedule while $current;
+
    $io
 }
 
@@ -336,6 +340,7 @@ sub writable {
       poll    => 'w',
       cb      => sub {
          $current->ready;
+         undef $current;
       },
    );
 
@@ -344,10 +349,12 @@ sub writable {
       cb    => sub {
          $io = 0;
          $current->ready;
+         undef $current;
       },
    );
 
-   &Coro::schedule;
+   &Coro::schedule while $current;
+
    $io
 }
 

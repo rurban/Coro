@@ -1,12 +1,16 @@
 Revision history for Perl extension Coro.
 
 3.0
-	- reimplement a new stack sharing algorithm.
+	- the "FINALLY COMPLETELY STABLE" release (coming soon:
+          the "FAMOUS LAST WORDS" release).
+	- implement a new stack sharing algorithm.
         - make stack sharing mandatory (it no longer uses a heuristic).
         - eval/die no longer cause weird problems under heavy use.
         - Coro::Event could cause livelocks if it was used but
           no Coro::Event watchers were used.
         - Coro::Event should be cleaner and more efficient now.
+        - putting a coroutine into the ready queue twice could under
+          some circumstances lead to stack corruption.
         - minor incompatibility: subclassing Coro::State is supported
           directly now without going through a _coro_state member.
         - state/coro switching is much faster now.
@@ -17,6 +21,8 @@ Revision history for Perl extension Coro.
         - updated to newest libcoro.
         - implement enhanced support for valgrind.
         - implement is_ready and return value for ready.
+        - many ->wait methods and Coro::Event could return
+          spuriously without the event having happened.
 
 2.5  Tue Nov  7 12:22:33 CET 2006
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket

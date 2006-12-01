@@ -79,6 +79,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
                         (vec $$rvec, $b, 1) = 1;
                         $nfound++;
                         $current->ready;
+                        undef $current;
                      });
                }
             }
@@ -88,11 +89,13 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       push @w,
          AnyEvent->timer (after => $_[3], cb => sub {
             $current->ready;
+            undef $current;
          })
          if defined $_[3];
 
-      Coro::schedule;
       # wait here
+      &Coro::schedule;
+      &Coro::schedule while $current;
 
       return $nfound
    }

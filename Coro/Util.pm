@@ -44,10 +44,12 @@ sub _do_asy(&;@) {
    my $sub = shift;
    $jobs->down;
    my $fh;
+
    if (0 == open $fh, "-|") {
       syswrite STDOUT, join "\0", map { unpack "H*", $_ } &$sub;
       Coro::State::_exit 0;
    }
+
    my $buf;
    my $current = $Coro::current;
    my $w; $w = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
@@ -57,7 +59,10 @@ sub _do_asy(&;@) {
       undef $w;
       $current->ready;
    });
-   Coro::schedule;
+
+   &Coro::schedule;
+   &Coro::schedule while $w;
+
    $jobs->up;
    my @r = map { pack "H*", $_ } split /\0/, $buf;
    wantarray ? @r : $r[0];

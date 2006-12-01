@@ -49,33 +49,40 @@ sub new {
 Wait for the signal to occur. Returns immediately if the signal has been
 sent before.
 
-=item $status = $s->timed_wait($timeout)
+Signals are not reliable, so this function might rewturn
+spuriously. Always test for the condition you are waiting on.
+
+=item $status = $s->timed_wait ($timeout)
 
 Like C<wait>, but returns false if no signal happens within $timeout
 seconds, otherwise true.
 
+See C<wait> for reliability concerns.
+
 =cut
 
 sub wait {
-   if ($_[0][0]) {
-      $_[0][0] = 0;
-   } else {
+   unless ($_[0][0]) {
       push @{$_[0][1]}, $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
+      $_[0][0] = 0;
    }
 }
 
 sub timed_wait {
-   if ($_[0][0]) {
-      $_[0][0] = 0;
-      return 1;
-   } else {
+
+   unless ($_[0][0]) {
       require Coro::Timer;
       my $timeout = Coro::Timer::timeout($_[1]);
+
       push @{$_[0][1]}, $Coro::current;
-      Coro::schedule;
-      return !$timeout;
+      &Coro::schedule;
+      $_[0][0] = 0;
+
+      return 0 if $timeout;
    }
+
+   1
 }
 
 =item $s->send
@@ -86,11 +93,7 @@ if no process is waiting.
 =cut
 
 sub send {
-   if (@{$_[0][1]}) {
-      (shift @{$_[0][1]})->ready;
-   } else {
-      $_[0][0] = 1;
-   }
+   (shift @{$_[0][1]})->ready if @{$_[0][1]};
 }
 
 =item $s->broadcast
@@ -101,7 +104,9 @@ waiting the signal is lost.
 =cut
 
 sub broadcast {
-   (shift @{$_[0][1]})->ready while @{$_[0][1]};
+   if (my $waiters = delete $_[0][1]) {
+      $_->ready for @$waiters;
+   }
 }
 
 =item $s->awaited
@@ -111,7 +116,7 @@ Return true when the signal is being awaited by some process.
 =cut
 
 sub awaited {
-   !!@{$_[0][1]};
+   ! ! @{$_[0][1]}
 }
 
 1;

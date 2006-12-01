@@ -119,11 +119,14 @@ sub current() { $current }
 
 A callback that is called whenever the scheduler finds no ready coroutines
 to run. The default implementation prints "FATAL: deadlock detected" and
-exits.
+exits, because the program has no other way to continue.
 
 This hook is overwritten by modules such as C<Coro::Timer> and
-C<Coro::Event> to wait on an external event that hopefully wakes up some
-coroutine.
+C<Coro::Event> to wait on an external event that hopefully wake up a
+coroutine so the scheduler can run it.
+
+Please note that if your callback recursively invokes perl (e.g. for event
+handlers), then it must be prepared to be called recursively.
 
 =cut
 
@@ -195,7 +198,27 @@ sub async(&@) {
 
 Calls the scheduler. Please note that the current process will not be put
 into the ready queue, so calling this function usually means you will
-never be called again.
+never be called again unless something else (e.g. an event handler) calls
+ready.
+
+The canonical way to wait on external events is this:
+
+   {
+      # remember current process
+      my $current = $Coro::current;
+
+      # register a hypothetical event handler
+      on_event_invoke sub {
+         # wake up sleeping coroutine
+         $current->ready;
+         undef $current;
+      };
+
+      # call schedule until event occured.
+      # in case we are woken up for other reasons
+      # (current still defined), loop.
+      Coro::schedule while $current;
+   }
 
 =cut
 

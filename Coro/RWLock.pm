@@ -56,7 +56,7 @@ Try to acquire a read lock.
 sub rdlock {
    while ($_[0][0]) {
       push @{$_[0][3]}, $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
    }
    ++$_[0][2];
 }
@@ -79,7 +79,7 @@ Try to acquire a write lock.
 sub wrlock {
    while ($_[0][0] || $_[0][2]) {
       push @{$_[0][1]}, $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
    }
    ++$_[0][0];
 }

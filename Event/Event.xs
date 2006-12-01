@@ -38,7 +38,7 @@ coro_std_cb(pe_event *pe)
 {
   AV *priv = (AV *)pe->ext_data;
   IV type = SvIV (*av_fetch (priv, CD_TYPE, 1));
-  SV **cd_coro = &AvARRAY(priv)[CD_CORO];
+  SV **cd_coro;
 
   sv_setiv (AvARRAY(priv)[CD_PRIO], pe->prio);
   sv_setiv (AvARRAY(priv)[CD_HITS], pe->hits);
@@ -46,16 +46,17 @@ coro_std_cb(pe_event *pe)
   if (type == 1)
     sv_setiv (AvARRAY(priv)[CD_GOT], ((pe_ioevent *)pe)->got);
 
+  GEventAPI->stop (pe->up, 0);
+
+  AvARRAY(priv)[CD_OK] = &PL_sv_yes;
+
+  cd_coro = &AvARRAY(priv)[CD_CORO];
   if (*cd_coro != &PL_sv_undef)
     {
+      AvARRAY(priv)[CD_OK] = &PL_sv_yes;
       CORO_READY (*cd_coro);
       SvREFCNT_dec (*cd_coro);
       *cd_coro = &PL_sv_undef;
-    }
-  else
-    {
-      AvARRAY(priv)[CD_OK] = &PL_sv_yes;
-      GEventAPI->stop (pe->up, 0);
     }
 }
 
@@ -85,6 +86,7 @@ _install_std_cb(self,type)
 	SV *	self
         int	type
         CODE:
+{
         pe_watcher *w = GEventAPI->sv_2watcher (self);
 
         if (WaFLAGS (w) & PE_PERLCB)
@@ -111,28 +113,28 @@ _install_std_cb(self,type)
 
           GEventAPI->start (w, 0);
         }
+}
 
 void
 _next(self)
 	SV *	self
         CODE:
+{
         pe_watcher *w = GEventAPI->sv_2watcher (self);
         AV *priv = (AV *)w->ext_data;
-
-        if (!w->running)
-          GEventAPI->start (w, 1);
 
         if (AvARRAY(priv)[CD_OK] == &PL_sv_yes)
           {
             AvARRAY(priv)[CD_OK] = &PL_sv_no;
             XSRETURN_NO;
           }
-        else 
-          {
-            if (AvARRAY(priv)[CD_CORO] != &PL_sv_undef)
-              confess ("only one coroutine can wait for an event");
 
-            AvARRAY(priv)[CD_CORO] = SvREFCNT_inc (CORO_CURRENT);
-            XSRETURN_YES;
-          }
+        if (!w->running)
+          GEventAPI->start (w, 1);
+
+        if (AvARRAY(priv)[CD_CORO] == &PL_sv_undef)
+          AvARRAY(priv)[CD_CORO] = SvREFCNT_inc (CORO_CURRENT);
+
+        XSRETURN_YES;
+}
 

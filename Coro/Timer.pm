@@ -46,9 +46,10 @@ C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
       my $timeout = Coro::Timer::timeout 60;
 
       while (condition false) {
-         schedule; # wait until woken up or timeout
+         Coro::schedule; # wait until woken up or timeout
          return 0 if $timeout; # timed out
       }
+
       return 1; # condition satisfied
    }
 
@@ -84,8 +85,13 @@ and, most important, without blocking other coroutines.
 
 sub sleep {
    my $current = $Coro::current;
-   my $timer = AnyEvent->timer (after => $_[0], cb => sub { $current->ready });
-   Coro::schedule;
+
+   my $timer = AnyEvent->timer (after => $_[0], cb => sub {
+      $current->ready;
+      undef $current;
+   });
+
+   do { &Coro::schedule } while $current;
 }
 
 $Coro::idle = sub {
