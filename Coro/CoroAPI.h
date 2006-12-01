@@ -23,6 +23,7 @@
 
 /*struct coro;*/ /* opaque */
 
+/* private structure, always use the provided macros below */
 struct CoroAPI {
   I32 ver;
 #define CORO_API_VERSION 2
@@ -31,16 +32,16 @@ struct CoroAPI {
   /* internal */
   /*struct coro *(*sv_to_coro)(SV *arg, const char *funcname, const char *varname);*/
 
-  /* public, state */
+  /* public API, Coro::State */
   void (*transfer) (SV *prev, SV *next, int flags);
 
-  /* public, coro */
+  /* public API, Coro */
   void (*schedule) (void);
   void (*cede) (void);
   int (*ready) (SV *coro_sv);
   int (*is_ready) (SV *coro_sv);
   int *nready;
-  GV *current;
+  SV *current;
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -51,7 +52,7 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_READY(coro)               GCoroAPI->ready (coro)
 #define CORO_IS_READY(coro)            GCoroAPI->is_ready (coro)
 #define CORO_NREADY                    (*GCoroAPI->nready)
-#define CORO_CURRENT                   SvRV (GvSV (GCoroAPI->current))
+#define CORO_CURRENT                   SvRV (GCoroAPI->current)
 
 #define I_CORO_API(YourName)                                               \
 STMT_START {                                                               \

@@ -118,24 +118,27 @@ for my $flavour (qw(idle var timer io signal)) {
          or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
 
       my $w = $new->($class,
-            desc => $flavour,
+            desc   => $flavour,
             @_,
             parked => 1,
       );
-      _install_std_cb($w, $type);
-      bless $w, $class; # reblessing due to broken Event
+
+      _install_std_cb $w, $type;
+      
+      # reblessing due to Event being broken
+      bless $w, $class
    };
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
-      my $e = (&$coronew)->next;
+      my $e = &$coronew->next;
       $e->cancel; # $e === $e->w
-      $e;
+      $e
    };
 }
 
-# double calls to avoid stack-cloning ;()
-# is about 10% slower, though.
+# do schedule in perl to avoid forcign a stack allocation.
+# this is about 10% slower, though.
 sub next($) {
    &Coro::schedule while &_next;
 

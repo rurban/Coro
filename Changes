@@ -9,6 +9,8 @@ Revision history for Perl extension Coro.
         - eval/die no longer cause weird problems under heavy use.
         - Coro::Event could cause livelocks if it was used but
           no Coro::Event watchers were used.
+        - Coro::Event now uses asynccheck as prepare does not
+          check for changed watchers.
         - Coro::Event should be cleaner and more efficient now.
         - new utility function Coro::unblock_sub.
         - document the sad fact that Event is no longer reentrant.

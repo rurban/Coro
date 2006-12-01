@@ -132,8 +132,9 @@ typedef struct coro_cctx {
 } coro_cctx;
 
 enum {
-  CF_RUNNING, /* coroutine is running */
-  CF_READY,   /* coroutine is ready */
+  CF_RUNNING = 0x0001, /* coroutine is running */
+  CF_READY   = 0x0002, /* coroutine is ready */
+  CF_NEW     = 0x0004, /* ahs never been switched to */
 };
 
 /* this is a structure representing a perl-level coroutine */
@@ -282,13 +283,13 @@ put_padlist (CV *cv)
 #define SB do {
 #define SE } while (0)
 
-#define LOAD(state)       load_state((state));
-#define SAVE(state,flags) save_state((state),(flags));
+#define LOAD(state)       load_state ((state))
+#define SAVE(state,flags) save_state ((state),(flags))
 
-#define REPLACE_SV(sv,val) SB SvREFCNT_dec(sv); (sv) = (val); (val) = 0; SE
+#define REPLACE_SV(sv,val) SB SvREFCNT_dec (sv); (sv) = (val); (val) = 0; SE
 
 static void
-load_state(Coro__State c)
+load_state (Coro__State c)
 {
 #define VAR(name,type) PL_ ## name = c->name;
 # include "state.h"
@@ -315,7 +316,7 @@ load_state(Coro__State c)
 }
 
 static void
-save_state(Coro__State c, int flags)
+save_state (Coro__State c, int flags)
 {
   {
     dSP;
@@ -336,7 +337,7 @@ save_state(Coro__State c, int flags)
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
-            if (CxTYPE(cx) == CXt_SUB)
+            if (CxTYPE (cx) == CXt_SUB)
               {
                 CV *cv = cx->blk_sub.cv;
 
@@ -344,7 +345,7 @@ save_state(Coro__State c, int flags)
                   {
                     EXTEND (SP, 3);
 
-                    PUSHs ((SV *)CvPADLIST(cv));
+                    PUSHs ((SV *)CvPADLIST (cv));
                     PUSHs (INT2PTR (SV *, CvDEPTH (cv)));
                     PUSHs ((SV *)cv);
 
@@ -353,7 +354,7 @@ save_state(Coro__State c, int flags)
                   }
               }
 #ifdef CXt_FORMAT
-            else if (CxTYPE(cx) == CXt_FORMAT)
+            else if (CxTYPE (cx) == CXt_FORMAT)
               {
                 /* I never used formats, so how should I know how these are implemented? */
                 /* my bold guess is as a simple, plain sub... */
@@ -487,9 +488,12 @@ setup_coro (struct coro *coro)
 
   coro_init_stacks ();
 
-  PL_curcop  = 0;
-  PL_in_eval = 0;
-  PL_curpm   = 0;
+  PL_curcop     = &PL_compiling;
+  PL_in_eval    = EVAL_NULL;
+  PL_curpm      = 0;
+  PL_localizing = 0;
+  PL_dirty      = 0;
+  PL_restartop  = 0;
 
   {
     dSP;
@@ -512,9 +516,9 @@ setup_coro (struct coro *coro)
     PUTBACK;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
     SPAGAIN;
-
-    ENTER; /* necessary e.g. for dounwind */
   }
+
+  ENTER; /* necessary e.g. for dounwind */
 }
 
 static void
@@ -690,14 +694,16 @@ transfer (struct coro *prev, struct coro *next, int flags)
     {
       coro_cctx *prev__cctx;
 
-      if (!prev->cctx)
+      if (prev->flags & CF_NEW)
         {
           /* create a new empty context */
           Newz (0, prev->cctx, 1, coro_cctx);
           prev->cctx->inuse = 1;
-          prev->flags |= CF_RUNNING;
+          prev->flags &= ~CF_NEW;
+          prev->flags |=  CF_RUNNING;
         }
 
+      /*TODO: must not croak here */
       if (!prev->flags & CF_RUNNING)
         croak ("Coro::State::transfer called with non-running prev Coro::State, but can only transfer from running states");
 
@@ -718,6 +724,8 @@ transfer (struct coro *prev, struct coro *next, int flags)
       else
         {
           /* need to start coroutine */
+          assert (next->flags & CF_NEW);
+          next->flags &= ~CF_NEW;
           /* first get rid of the old state */
           SAVE (prev, -1);
           /* setup coroutine call */
@@ -729,26 +737,26 @@ transfer (struct coro *prev, struct coro *next, int flags)
       prev__cctx = prev->cctx;
 
       /* possibly "free" the cctx */
-      if (prev__cctx->idle_sp == STACKLEVEL)
+      if (prev__cctx->idle_sp == STACKLEVEL && 0)
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
           assert (PL_top_env == prev__cctx->top_env);
 
-          cctx_put (prev__cctx);
           prev->cctx = 0;
+
+          cctx_put (prev__cctx);
+          prev__cctx->inuse = 0;
         }
 
       if (!next->cctx)
-        next->cctx = cctx_get ();
+        {
+          next->cctx = cctx_get ();
+          assert (!next->cctx->inuse);
+          next->cctx->inuse = 1;
+        }
 
       if (prev__cctx != next->cctx)
         {
-          assert ( prev__cctx->inuse);
-          assert (!next->cctx->inuse);
-
-          prev__cctx->inuse = 0;
-          next->cctx->inuse = 1;
-
           prev__cctx->top_env = PL_top_env;
           PL_top_env = next->cctx->top_env;
           coro_transfer (&prev__cctx->cctx, &next->cctx->cctx);
@@ -774,12 +782,12 @@ coro_state_destroy (struct coro *coro)
   if (coro->refcnt--)
     return;
 
-  if (coro->flags & CF_RUNNING)
-    croak ("FATAL: tried to destroy currently running coroutine");
-
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
       struct coro temp;
+
+      if (coro->flags & CF_RUNNING)
+        croak ("FATAL: tried to destroy currently running coroutine");
 
       SAVE ((&temp), TRANSFER_SAVE_ALL);
       LOAD (coro);
@@ -861,7 +869,6 @@ prepare_transfer (struct transfer_args *ta, SV *prev, SV *next, int flags)
 static void
 api_transfer (SV *prev, SV *next, int flags)
 {
-  dTHX;
   struct transfer_args ta;
 
   prepare_transfer (&ta, prev, next, flags);
@@ -878,7 +885,7 @@ api_transfer (SV *prev, SV *next, int flags)
 #define PRIO_MIN    -4
 
 /* for Coro.pm */
-static GV *coro_current, *coro_idle;
+static SV *coro_current;
 static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
 
@@ -921,8 +928,10 @@ api_ready (SV *coro_sv)
   if (coro->flags & CF_READY)
     return 0;
 
+#if 0 /* this is actually harmless */
   if (coro->flags & CF_RUNNING)
     croak ("Coro::ready called on currently running coroutine");
+#endif
 
   coro->flags |= CF_READY;
 
@@ -942,9 +951,7 @@ api_is_ready (SV *coro_sv)
 static void
 prepare_schedule (struct transfer_args *ta)
 {
-  SV *current, *prev, *next;
-
-  current = GvSV (coro_current);
+  SV *prev, *next;
 
   for (;;)
     {
@@ -963,15 +970,15 @@ prepare_schedule (struct transfer_args *ta)
 
         PUSHMARK (SP);
         PUTBACK;
-        call_sv (GvSV (coro_idle), G_DISCARD);
+        call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
 
         FREETMPS;
         LEAVE;
       }
     }
 
-  prev = SvRV (current);
-  SvRV (current) = next;
+  prev = SvRV (coro_current);
+  SvRV_set (coro_current, next);
 
   /* free this only after the transfer */
   LOCK;
@@ -979,17 +986,21 @@ prepare_schedule (struct transfer_args *ta)
   UNLOCK;
   coro_mortal = prev;
 
-  ta->prev = SvSTATE (prev);
-  ta->next = SvSTATE (next);
+  assert (!SvROK(prev));//D
+  assert (!SvROK(next));//D
+
+  ta->prev  = SvSTATE (prev);
+  ta->next  = SvSTATE (next);
   ta->flags = TRANSFER_SAVE_ALL;
 
+  assert (ta->flags & CF_READY);
   ta->next->flags &= ~CF_READY;
 }
 
 static void
 prepare_cede (struct transfer_args *ta)
 {
-  api_ready (GvSV (coro_current));
+  api_ready (coro_current);
 
   prepare_schedule (ta);
 }
@@ -997,7 +1008,6 @@ prepare_cede (struct transfer_args *ta)
 static void
 api_schedule (void)
 {
-  dTHX;
   struct transfer_args ta;
 
   prepare_schedule (&ta);
@@ -1007,7 +1017,6 @@ api_schedule (void)
 static void
 api_cede (void)
 {
-  dTHX;
   struct transfer_args ta;
 
   prepare_cede (&ta);
@@ -1049,6 +1058,7 @@ new (char *klass, ...)
 
         Newz (0, coro, 1, struct coro);
         coro->args = newAV ();
+        coro->flags = CF_NEW;
 
         hv = newHV ();
         sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
@@ -1081,7 +1091,7 @@ _set_stacklevel (...)
 
             case 1:
               if (items != 3)
-                croak ("Coro::State::transfer(prev,next,flags) expects three arguments, not %d", items);
+                croak ("Coro::State::transfer (prev,next,flags) expects three arguments, not %d", items);
 
               prepare_transfer (&ta, ST (0), ST (1), SvIV (ST (2)));
               break;
@@ -1101,7 +1111,7 @@ _set_stacklevel (...)
                 AV *defav = GvAV (PL_defgv);
 
                 yieldstack = *hv_fetch (
-                   (HV *)SvRV (GvSV (coro_current)),
+                   (HV *)SvRV (coro_current),
                    "yieldstack", sizeof ("yieldstack") - 1,
                    0
                 );
@@ -1173,8 +1183,8 @@ BOOT:
         newCONSTSUB (coro_stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
         newCONSTSUB (coro_stash, "PRIO_MIN",    newSViv (PRIO_MIN));
 
-        coro_current = gv_fetchpv ("Coro::current", TRUE, SVt_PV);
-        coro_idle    = gv_fetchpv ("Coro::idle"   , TRUE, SVt_PV);
+        coro_current = get_sv ("Coro::current", FALSE);
+        SvREADONLY_on (coro_current);
 
         for (i = PRIO_MAX - PRIO_MIN + 1; i--; )
           coro_ready[i] = newAV ();
@@ -1238,6 +1248,13 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
+
+void
+_set_current (SV *current)
+        PROTOTYPE: $
+	CODE:
+        SvREFCNT_dec (SvRV (coro_current));
+        SvRV_set (coro_current, SvREFCNT_inc (SvRV (current)));
 
 MODULE = Coro::State                PACKAGE = Coro::AIO
 

@@ -38,9 +38,9 @@ modules for a higher level process abstraction including scheduling.
 
 A newly created coroutine that has not been used only allocates a
 relatively small (a few hundred bytes) structure. Only on the first
-C<transfer> will perl stacks (a few k) and optionally C stack All this
+C<transfer> will perl stacks (a few k) and optionally C stack. All this
 is very system-dependent. On my x86_64-pc-linux-gnu system this amounts
-to about 8k per coroutine.
+to about 8k per (non-trivial) coroutine.
 
 =head2 FUNCTIONS
 
@@ -57,6 +57,10 @@ use XSLoader;
 
 BEGIN {
    our $VERSION = '3.0';
+
+   # must be done here because the xs part expects it to exist
+   # it might exist already because Coro::Specific created it.
+   $Coro::current ||= { };
 
    XSLoader::load __PACKAGE__, $VERSION;
 }

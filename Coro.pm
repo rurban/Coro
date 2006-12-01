@@ -59,7 +59,7 @@ our @EXPORT_OK = @{$EXPORT_TAGS{prio}};
    sub import {
       no strict 'refs';
 
-      Coro->export_to_level(1, @_);
+      Coro->export_to_level (1, @_);
 
       my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
       *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
@@ -107,11 +107,10 @@ C<Coro::current> function instead.
 =cut
 
 # maybe some other module used Coro::Specific before...
-if ($current) {
-   $main->{specific} = $current->{specific};
-}
+$main->{specific} = $current->{specific}
+   if $current;
 
-$current = $main;
+_set_current $main;
 
 sub current() { $current }
 

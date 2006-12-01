@@ -22,14 +22,15 @@ Coro::Handle does NOT inherit from IO::Handle but uses tied objects.
 
 package Coro::Handle;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
+use strict;
 
+use Carp ();
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 2.5;
-
-@EXPORT = qw(unblock);
+our $VERSION = 2.5;
+our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
 
@@ -47,7 +48,7 @@ sub new_from_fh {
    my ($package, $filename, $line) = caller;
    $filename =~ s/^.*[\/\\]//;
 
-   tie $self, Coro::Handle::FH, fh => $fh, desc => "$filename:$line", @_;
+   tie $self, 'Coro::Handle::FH', fh => $fh, desc => "$filename:$line", @_;
 
    my $_fh = select bless \$self, ref $class ? ref $class : $class; $| = 1; select $_fh;
 }
@@ -71,10 +72,10 @@ until an error condition happens (and return false).
 
 =cut
 
-sub readable	{ Coro::Handle::FH::readable(tied ${$_[0]}) }
-sub writable	{ Coro::Handle::FH::writable(tied ${$_[0]}) }
+sub readable	{ Coro::Handle::FH::readable (tied ${$_[0]}) }
+sub writable	{ Coro::Handle::FH::writable (tied ${$_[0]}) }
 
-=item $fh->readline([$terminator])
+=item $fh->readline ([$terminator])
 
 Like the builtin of the same name, but allows you to specify the input
 record separator in a coroutine-safe manner (i.e. not using a global
@@ -84,7 +85,7 @@ variable).
 
 sub readline	{ tied(${+shift})->READLINE(@_) }
 
-=item $fh->autoflush([...])
+=item $fh->autoflush ([...])
 
 Always returns true, arguments are being ignored (exists for compatibility
 only). Might change in the future.
@@ -181,6 +182,8 @@ sub DESTROY {
    # nop
 }
 
+our $AUTOLOAD;
+
 sub AUTOLOAD {
    my $self = tied ${$_[0]};
 
@@ -196,7 +199,8 @@ sub AUTOLOAD {
 
 package Coro::Handle::FH;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
+use strict;
 
 use Fcntl ();
 use Errno ();
@@ -253,16 +257,16 @@ sub OPEN {
 }
 
 sub PRINT {
-   WRITE(shift, join "", @_);
+   WRITE (shift, join "", @_);
 }
 
 sub PRINTF {
-   WRITE(shift, sprintf(shift,@_));
+   WRITE (shift, sprintf shift,@_);
 }
 
 sub GETC {
    my $buf;
-   READ($_[0], $buf, 1);
+   READ ($_[0], $buf, 1);
    $buf;
 }
 
@@ -271,15 +275,15 @@ sub BINMODE {
 }
 
 sub TELL {
-   use Carp (); Carp::croak("Coro::Handle's don't support tell()");
+   Carp::croak "Coro::Handle's don't support tell()";
 }
 
 sub SEEK {
-   use Carp (); Carp::croak("Coro::Handle's don't support seek()");
+   Carp::croak "Coro::Handle's don't support seek()";
 }
 
 sub EOF {
-   use Carp (); Carp::croak("Coro::Handle's don't support eof()");
+   Carp::croak "Coro::Handle's don't support eof()";
 }
 
 sub CLOSE {
@@ -306,16 +310,17 @@ sub readable {
    my $io = 1;
 
    my $w = AnyEvent->io (
-      fh      => $_[0][0],
-      desc    => "$_[0][1] readable",
-      poll    => 'r',
-      cb      => sub {
+      desc  => "$_[0][1] read watcher",
+      fh    => $_[0][0],
+      poll  => 'r',
+      cb    => sub {
          $current->ready;
          undef $current;
       },
    );
 
-   my $t = $_[0][2] && AnyEvent->timer (
+   my $t = (defined $_[0][2]) && AnyEvent->timer (
+      desc  => "fh $_[0][1] read timeout",
       after => $_[0][2],
       cb    => sub {
          $io = 0;
@@ -335,16 +340,17 @@ sub writable {
    my $io = 1;
 
    my $w = AnyEvent->io (
-      fh      => $_[0][0],
-      desc    => "$_[0][1] writable",
-      poll    => 'w',
-      cb      => sub {
+      desc  => "fh $_[0][1] write watcher",
+      fh    => $_[0][0],
+      poll  => 'w',
+      cb    => sub {
          $current->ready;
          undef $current;
       },
    );
 
-   my $t = $_[0][2] && AnyEvent->timer (
+   my $t = (defined $_[0][2]) && AnyEvent->timer (
+      desc  => "fh $_[0][1] write timeout",
       after => $_[0][2],
       cb    => sub {
          $io = 0;
@@ -363,8 +369,8 @@ sub WRITE {
    my $ofs = $_[3];
    my $res = 0;
 
-   while() {
-      my $r = syswrite $_[0][0], $_[1], $len, $ofs;
+   while () {
+      my $r = syswrite ($_[0][0], $_[1], $len, $ofs);
       if (defined $r) {
          $len -= $r;
          $ofs += $r;
