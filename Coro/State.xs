@@ -715,16 +715,9 @@ transfer (struct coro *prev, struct coro *next, int flags)
 
       LOCK;
 
-      if (next->mainstack)
-        {
-          /* coroutine already started */
-          SAVE (prev, flags);
-          LOAD (next);
-        }
-      else
+      if (next->flags & CF_NEW)
         {
           /* need to start coroutine */
-          assert (next->flags & CF_NEW);
           next->flags &= ~CF_NEW;
           /* first get rid of the old state */
           SAVE (prev, -1);
@@ -732,6 +725,12 @@ transfer (struct coro *prev, struct coro *next, int flags)
           setup_coro (next);
           /* need a new stack */
           assert (!next->stack);
+        }
+      else
+        {
+          /* coroutine already started */
+          SAVE (prev, flags);
+          LOAD (next);
         }
 
       prev__cctx = prev->cctx;
@@ -1076,7 +1075,6 @@ _set_stacklevel (...)
         Coro::State::transfer = 1
         Coro::schedule        = 2
         Coro::cede            = 3
-        Coro::Cont::yield     = 4
         CODE:
 {
 	struct transfer_args ta;
@@ -1103,33 +1101,6 @@ _set_stacklevel (...)
             case 3:
               prepare_cede (&ta);
               break;
-
-            case 4:
-              {
-                SV *yieldstack;
-                SV *sv;
-                AV *defav = GvAV (PL_defgv);
-
-                yieldstack = *hv_fetch (
-                   (HV *)SvRV (coro_current),
-                   "yieldstack", sizeof ("yieldstack") - 1,
-                   0
-                );
-
-                /* set up @_ -- ugly */
-                av_clear (defav);
-                av_fill (defav, items - 1);
-                while (items--)
-                  av_store (defav, items, SvREFCNT_inc (ST(items)));
-
-                sv = av_pop ((AV *)SvRV (yieldstack));
-                ta.prev = SvSTATE (*av_fetch ((AV *)SvRV (sv), 0, 0));
-                ta.next = SvSTATE (*av_fetch ((AV *)SvRV (sv), 1, 0));
-                ta.flags = 0;
-                SvREFCNT_dec (sv);
-              }
-            break;
-
           }
 
         TRANSFER (ta);

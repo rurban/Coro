@@ -26,6 +26,9 @@ Revision history for Perl extension Coro.
         - updated to newest libcoro.
         - implement enhanced support for valgrind.
         - implement is_ready and return value for ready.
+        - removed Coro::Cont, it was a misnomer (it's generators),
+          and it was somewhat annoying to get it right. Will come back
+          if somebody asks for it :)
         - many ->wait methods and Coro::Event could return
           spuriously without the event having happened.
 

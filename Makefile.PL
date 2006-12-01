@@ -65,7 +65,7 @@ WriteMakefile(
     		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
     		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',
 
-    		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
+#    		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
 
     		    'Coro/Specific.pm'	=> '$(INST_LIBDIR)/Coro/Specific.pm',
 
