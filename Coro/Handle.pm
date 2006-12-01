@@ -83,7 +83,7 @@ variable).
 
 =cut
 
-sub readline	{ tied(${+shift})->READLINE(@_) }
+sub readline	{ tied(${+shift})->READLINE (@_) }
 
 =item $fh->autoflush ([...])
 
@@ -97,7 +97,7 @@ sub autoflush	{ !0 }
 =item $fh->fileno, $fh->close, $fh->read, $fh->sysread, $fh->syswrite, $fh->print, $fh->printf
 
 Work like their function equivalents (except read, which works like
-sysread. You should not use the read function with Coro::Handles, it will
+sysread. You should not use the read function with Coro::Handle's, it will
 work but it's not efficient).
 
 =cut
@@ -129,11 +129,11 @@ C<0> is a valid timeout, use C<undef> to disable the timeout.
 =cut
 
 sub timeout {
-   my $self = tied(${$_[0]});
+   my $self = tied ${$_[0]};
    if (@_ > 1) {
       $self->[2] = $_[1];
-      $self->[5]->timeout($_[1]) if $self->[5];
-      $self->[6]->timeout($_[1]) if $self->[6];
+      $self->[5]->timeout ($_[1]) if $self->[5];
+      $self->[6]->timeout ($_[1]) if $self->[6];
    }
    $self->[2];
 }
@@ -157,7 +157,7 @@ readline nor sysread are viable candidates, like this:
   my $nb_fh = $fh->fh;
   my $buf = \$fh->rbuf;
 
-  for(;;) {
+  while () {
      # now use buffer contents, modifying
      # if necessary to reflect the removed data
 
@@ -249,25 +249,27 @@ sub OPEN {
    my $self = shift;
    my $r = @_ == 2 ? open $self->[0], $_[0], $_[1]
                    : open $self->[0], $_[0], $_[1], $_[2];
+
    if ($r) {
       fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
          or croak "fcntl(O_NONBLOCK): $!";
    }
-   $r;
+
+   $r
 }
 
 sub PRINT {
-   WRITE (shift, join "", @_);
+   WRITE (shift, join "", @_)
 }
 
 sub PRINTF {
-   WRITE (shift, sprintf shift,@_);
+   WRITE (shift, sprintf shift,@_)
 }
 
 sub GETC {
    my $buf;
    READ ($_[0], $buf, 1);
-   $buf;
+   $buf
 }
 
 sub BINMODE {
@@ -288,7 +290,7 @@ sub EOF {
 
 sub CLOSE {
    &cleanup;
-   close $_[0][0];
+   close $_[0][0]
 }
 
 sub DESTROY {
@@ -296,13 +298,13 @@ sub DESTROY {
 }
 
 sub FILENO {
-   fileno $_[0][0];
+   fileno $_[0][0]
 }
 
 # seems to be called for stringification (how weird), at least
 # when DumpValue::dumpValue is used to print this.
 sub FETCH {
-   "$_[0]<$_[0][1]>";
+   "$_[0]<$_[0][1]>"
 }
 
 sub readable_anyevent {
@@ -365,21 +367,21 @@ sub writable_anyevent {
 }
 
 sub readable_coro {
-   ($_[0][5] ||= "Coro::Event"->io(
+   ($_[0][5] ||= "Coro::Event"->io (
       fd      => $_[0][0],
       desc    => "fh $_[0][1] read watcher",
       timeout => $_[0][2],
       poll    => &Event::Watcher::R + &Event::Watcher::E + &Event::Watcher::T,
-   ))->next->[5] & &Event::Watcher::R;
+   ))->next->[5] & &Event::Watcher::R
 }
 
 sub writable_coro {
-   ($_[0][6] ||= "Coro::Event"->io(
+   ($_[0][6] ||= "Coro::Event"->io (
       fd      => $_[0][0],
       desc    => "fh $_[0][1] write watcher",
       timeout => $_[0][2],
       poll    => &Event::Watcher::W + &Event::Watcher::E + &Event::Watcher::T,
-   ))->next->[5] & &Event::Watcher::W;
+   ))->next->[5] & &Event::Watcher::W
 }
 
 for my $rw (qw(readable writable)) {
@@ -427,14 +429,14 @@ sub READ {
    if (length $_[0][3]) {
       my $l = length $_[0][3];
       if ($l <= $len) {
-         substr($_[1], $ofs) = $_[0][3]; $_[0][3] = "";
+         substr ($_[1], $ofs) = $_[0][3]; $_[0][3] = "";
          $len -= $l;
          $ofs += $l;
          $res += $l;
          return $res unless $len;
       } else {
-         substr($_[1], $ofs) = substr($_[0][3], 0, $len);
-         substr($_[0][3], 0, $len) = "";
+         substr ($_[1], $ofs) = substr ($_[0][3], 0, $len);
+         substr ($_[0][3], 0, $len) = "";
          return $len;
       }
    }

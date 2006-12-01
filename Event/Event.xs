@@ -75,7 +75,7 @@ _install_std_cb (SV *self, int type)
           AV *priv = newAV ();
           SV *rv = newRV_noinc ((SV *)priv);
 
-          av_extend (priv, CD_MAX);
+          av_fill (priv, CD_MAX);
           AvARRAY (priv)[CD_CORO] = &PL_sv_undef;
           AvARRAY (priv)[CD_TYPE] = newSViv (type);
           AvARRAY (priv)[CD_OK  ] = &PL_sv_no;

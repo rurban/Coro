@@ -25,7 +25,7 @@ print "ok 3\n";
 async {
    print "ok 5\n";
 
-   do_timer(after => 0.001);
+   do_timer (after => 0.001);
 
    print "ok 7\n";
 
@@ -33,7 +33,7 @@ async {
 
    print "ok 8\n";
 
-   $w->print($buf, "x" x (1024*128));
+   $w->print ($buf, "x" x (1024*128));
 
    print "ok 10\n";
 
@@ -49,7 +49,7 @@ print "ok 6\n";
 
 print <$r> == 13 ? "" : "not ", "ok 9\n";
 
-$r->read($buf, 1024*128);
+$r->read ($buf, 1024*128);
 
 print "ok 11\n";
 
