@@ -9,6 +9,7 @@ Revision history for Perl extension Coro.
         - Coro::Event could cause livelocks if it was used but
           no Coro::Event watchers were used.
         - Coro::Event should be cleaner and more efficient now.
+        - new utility function Coro::unblock_sub.
         - document the sad fact that Event is no longer reentrant.
         - putting a coroutine into the ready queue twice could under
           some circumstances lead to stack corruption.
