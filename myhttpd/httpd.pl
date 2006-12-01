@@ -3,6 +3,7 @@ use Coro::Semaphore;
 use Coro::Event;
 use Coro::Socket;
 use Coro::Signal;
+use Coro::AIO ();
 
 use HTTP::Date;
 use POSIX ();
@@ -145,9 +146,9 @@ use IO::AIO;
 
 IO::AIO::min_parallel $::AIO_PARALLEL;
 
-Event->io(fd => IO::AIO::poll_fileno,
-          poll => 'r', async => 1,
-          cb => \&IO::AIO::poll_cb);
+Event->io (fd => IO::AIO::poll_fileno,
+           poll => 'r', async => 1,
+           cb => \&IO::AIO::poll_cb);
 
 our %conn; # $conn{ip}{self} => connobj
 our %uri;  # $uri{ip}{uri}{self}
@@ -631,20 +632,10 @@ ignore:
             die bless {}, err::;
          }
 
-         if (0) { # !AIO
-            sysread $fh, $buf, $h > $bufsize ? $bufsize : $h
-               or last;
-         } else {
-            aio_read($fh, $l, ($h > $bufsize ? $bufsize : $h),
-                     $buf, 0, sub {
-                        $r = $_[0];
-                        Coro::ready($current);
-                     });
-            &Coro::schedule;
-            last unless $r;
-         }
+         Coro::AIO::aio_read $fh, $l, ($h > $bufsize ? $bufsize : $h), $buf, 0
+            or last;
 
-         $tbf->request(length $buf);
+         $tbf->request (length $buf);
          my $w = syswrite $self->{fh}, $buf
             or last;
          $::written += $w;
@@ -657,3 +648,4 @@ ignore:
 }
 
 1
+
