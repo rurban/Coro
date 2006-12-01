@@ -3,7 +3,8 @@ Revision history for Perl extension Coro.
 3.0
 	- the "FINALLY COMPLETELY STABLE" release (coming soon:
           the "FAMOUS LAST WORDS" release).
-	- implement a new stack sharing algorithm.
+	- implement a new stack sharing algorithm, which uses a stack
+          pool (size currently hardcoded).
         - make stack sharing mandatory (it no longer uses a heuristic).
         - eval/die no longer cause weird problems under heavy use.
         - Coro::Event could cause livelocks if it was used but

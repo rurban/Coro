@@ -10,6 +10,9 @@
 # include <valgrind/valgrind.h>
 #endif
 
+/* the maximum number of idle cctx that will be pooled */
+#define MAX_IDLE_CCTX 8
+
 #define PERL_VERSION_ATLEAST(a,b,c)				\
   (PERL_REVISION > (a)						\
    || (PERL_REVISION == (a)					\
@@ -615,7 +618,7 @@ cctx_new ()
 }
 
 static void
-cctx_free (coro_cctx *cctx)
+cctx_destroy (coro_cctx *cctx)
 {
   if (!cctx)
     return;
@@ -642,9 +645,9 @@ cctx_get ()
 
   if (cctx_first)
     {
-      --cctx_idle;
       cctx = cctx_first;
       cctx_first = cctx->next;
+      --cctx_idle;
     }
   else
    {
@@ -658,6 +661,17 @@ cctx_get ()
 static void
 cctx_put (coro_cctx *cctx)
 {
+  /* free another cctx if overlimit */
+  if (cctx_idle >= MAX_IDLE_CCTX)
+    {
+      coro_cctx *first = cctx_first;
+      cctx_first = first->next;
+      --cctx_idle;
+
+      assert (!first->inuse);
+      cctx_destroy (first);
+    }
+
   ++cctx_idle;
   cctx->next = cctx_first;
   cctx_first = cctx;
@@ -777,7 +791,7 @@ coro_state_destroy (struct coro *coro)
       coro->mainstack = 0;
     }
 
-  cctx_free (coro->cctx);
+  cctx_destroy (coro->cctx);
   SvREFCNT_dec (coro->args);
   Safefree (coro);
 }
