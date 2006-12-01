@@ -25,6 +25,9 @@ our $errorlog;
 our $NOW;
 our $HTTP_NOW;
 
+our $ERROR_LOG;
+our $ACCESS_LOG;
+
 Event->timer(interval => 1, hard => 1, cb => sub {
    $NOW = time;
    $HTTP_NOW = time2str $NOW;
@@ -139,6 +142,9 @@ if ($SERVER_PORT2) {
 
 package conn;
 
+use strict;
+use bytes;
+
 use Socket;
 use HTTP::Date;
 use Convert::Scalar 'weaken';
@@ -204,7 +210,6 @@ sub prune_cache {
          prune_cache($hash->{$_});
          unless (scalar keys %{$hash->{$_}}) {
             delete $hash->{$_};
-            $d2++;
          }
       }
    }
@@ -599,9 +604,7 @@ ignore:
       $self->{time} = $::NOW;
       $self->{written} = 0;
 
-      my $current = $Coro::current;
-
-      my ($fh, $buf, $r);
+      my $fh;
 
       open $fh, "<", $self->{path}
          or die "$self->{path}: late open failure ($!)";
@@ -632,7 +635,7 @@ ignore:
             die bless {}, err::;
          }
 
-         Coro::AIO::aio_read $fh, $l, ($h > $bufsize ? $bufsize : $h), $buf, 0
+         Coro::AIO::aio_read $fh, $l, ($h > $bufsize ? $bufsize : $h), my $buf, 0
             or last;
 
          $tbf->request (length $buf);
@@ -640,7 +643,7 @@ ignore:
             or last;
          $::written += $w;
          $self->{written} += $w;
-         $l += $r;
+         $l += $w;
       }
 
       close $fh;
