@@ -84,7 +84,7 @@ sub handler {
    while () {
       if (@newcons) {
          eval {
-            conn->new(@{pop @newcons})->handle;
+            conn->new (@{pop @newcons})->handle;
          };
          slog 1, "$@" if $@ && !ref $@;
 
@@ -124,7 +124,7 @@ my $http_port = new Coro::Socket
         LocalAddr => $SERVER_HOST,
         LocalPort => $SERVER_PORT,
         ReuseAddr => 1,
-        Listen => 50,
+        Listen    => 50,
    or die "unable to start server";
 
 listen_on $http_port;
@@ -134,7 +134,7 @@ if ($SERVER_PORT2) {
            LocalAddr => $SERVER_HOST,
            LocalPort => $SERVER_PORT2,
            ReuseAddr => 1,
-           Listen => 50,
+           Listen    => 50,
       or die "unable to start server";
 
    listen_on $http_port;
@@ -162,9 +162,8 @@ our %blocked;
 our %mimetype;
 
 sub read_mimetypes {
-   local *M;
-   if (open M, "<mime_types") {
-      while (<M>) {
+   if (open my $fh, "<mime_types") {
+      while (<$fh>) {
          if (/^([^#]\S+)\t+(\S+)$/) {
             $mimetype{lc $1} = $2;
          }
@@ -182,7 +181,7 @@ sub new {
    my $peername = shift;
    my $self = bless { fh => $fh }, $class;
    my (undef, $iaddr) = unpack_sockaddr_in $peername
-      or $self->err(500, "unable to decode peername");
+      or $self->err (500, "unable to decode peername");
 
    $self->{remote_addr} =
       $self->{remote_id} = inet_ntoa $iaddr;
@@ -194,12 +193,13 @@ sub new {
    $::conns++;
    $::maxconns = $::conns if $::conns > $::maxconns;
 
-   $self;
+   $self
 }
 
 sub DESTROY {
    #my $self = shift;
-   $::conns--;
+   close $self->{fh}; # workaround
+   --$::conns;
 }
 
 sub prune_cache {
@@ -224,7 +224,7 @@ sub prune_caches {
    }
 }
 
-Event->timer(interval => 60, cb => \&prune_caches);
+Event->timer (interval => 60, cb => \&prune_caches);
 
 sub slog {
    my $self = shift;
@@ -295,9 +295,9 @@ sub err {
    }
    $hdr->{"Connection"} = "close";
 
-   $self->response($code, $msg, $hdr, $content);
+   $self->response ($code, $msg, $hdr, $content);
 
-   die bless {}, err::;
+   die bless {}, err::
 }
 
 sub handle {
@@ -307,7 +307,7 @@ sub handle {
    my $host;
 
    $fh->timeout($::REQ_TIMEOUT);
-   while() {
+   while () {
       $self->{reqs}++;
 
       # read request and parse first line
@@ -479,12 +479,12 @@ sub respond {
       if ($::internal{$1}) {
          $::internal{$1}->($self);
       } else {
-         $self->err(404, "not found");
+         $self->err (404, "not found");
       }
    } else {
 
       stat $path
-         or $self->err(404, "not found");
+         or $self->err (404, "not found");
 
       $self->{stat} = [stat _];
 
@@ -497,21 +497,21 @@ sub respond {
          if ($path !~ /\/$/) {
             # create a redirect to get the trailing "/"
             # we don't try to avoid the :80
-            $self->err(301, "moved permanently", { Location =>  "http://".$self->server_hostport."$self->{uri}/" });
+            $self->err (301, "moved permanently", { Location =>  "http://".$self->server_hostport."$self->{uri}/" });
          } else {
             $ims < $self->{stat}[9]
-               or $self->err(304, "not modified");
+               or $self->err (304, "not modified");
 
             if (-r "$path/index.html") {
                # replace directory "size" by index.html filesize
                $self->{stat} = [stat ($self->{path} .= "/index.html")];
-               $self->handle_file($queue_index, $tbf_top);
+               $self->handle_file ($queue_index, $tbf_top);
             } else {
                $self->handle_dir;
             }
          }
       } elsif (-f _ && -r _) {
-         -x _ and $self->err(403, "forbidden");
+         -x _ and $self->err (403, "forbidden");
 
          if (keys %{$conn{$self->{remote_id}}} > $::MAX_TRANSFERS_IP) {
             my $timeout = $::NOW + 10;
@@ -524,9 +524,9 @@ sub respond {
             }
          }
 
-         $self->handle_file($queue_file, $tbf_top);
+         $self->handle_file ($queue_file, $tbf_top);
       } else {
-         $self->err(404, "not found");
+         $self->err (404, "not found");
       }
    }
 }
@@ -535,7 +535,7 @@ sub handle_dir {
    my $self = shift;
    my $idx = $self->diridx;
 
-   $self->response(200, "ok",
+   $self->response (200, "ok",
          {
             "Content-Type"   => "text/html; charset=utf-8",
             "Content-Length" => length $idx,
@@ -569,7 +569,7 @@ sub handle_file {
       }
       $hdr->{"Content-Range"} = "bytes */$length";
       $hdr->{"Content-Length"} = $length;
-      $self->err(416, "not satisfiable", $hdr, "");
+      $self->err (416, "not satisfiable", $hdr, "");
 
 satisfiable:
       # check for segmented downloads
@@ -577,7 +577,7 @@ satisfiable:
          my $timeout = $::NOW + 15;
          while (keys %{$uri{$self->{remote_id}}{$self->{uri}}} > 1) {
             if ($timeout <= $::NOW) {
-               $self->block($::BLOCKTIME, "segmented downloads are forbidden");
+               $self->block ($::BLOCKTIME, "segmented downloads are forbidden");
                #$self->err_segmented_download;
             } else {
                $httpevent->wait;
@@ -598,32 +598,24 @@ ignore:
    $hdr->{"Content-Type"} = $mimetype{lc $1} || "application/octet-stream";
    $hdr->{"Content-Length"} = $length;
 
-   $self->response(@code, $hdr, "");
+   $self->response (@code, $hdr, "");
 
    if ($self->{method} eq "GET") {
       $self->{time} = $::NOW;
       $self->{written} = 0;
 
-      my $fh;
-
-      open $fh, "<", $self->{path}
+      open my $fh, "<", $self->{path}
          or die "$self->{path}: late open failure ($!)";
 
       $h -= $l - 1;
 
-      if (0) { # !AIO
-         if ($l) {
-            sysseek $fh, $l, 0;
-         }
-      }
-      
-      my $transfer = $queue->start_transfer($h);
+      my $transfer = $queue->start_transfer ($h);
       my $locked;
       my $bufsize = $::WAIT_BUFSIZE; # initial buffer size
 
       while ($h > 0) {
          unless ($locked) {
-            if ($locked ||= $transfer->try($::WAIT_INTERVAL)) {
+            if ($locked ||= $transfer->try ($::WAIT_INTERVAL)) {
                $bufsize = $::BUFSIZE;
                $self->{time} = $::NOW;
                $self->{written} = 0;
