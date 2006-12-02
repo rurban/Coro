@@ -1,3 +1,4 @@
+/* list the interpreter variables that need to be saved/restored */
 /* mostly copied from thrdvar.h */
 
 VAR(stack_sp,      SV **)          /* top of the stack */
@@ -12,13 +13,13 @@ VAR(scopestack_ix, I32)
 VAR(scopestack_max,I32)
 
 VAR(savestack,     ANY *)          /* items that need to be restored
-                                                                                     when LEAVEing scopes we've ENTERed */
+                                      when LEAVEing scopes we've ENTERed */
 VAR(savestack_ix,  I32)
 VAR(savestack_max, I32)
 
 VAR(tmps_stack,    SV **)          /* mortals we've made */
-VAR(tmps_ix,      I32)
-VAR(tmps_floor,   I32)
+VAR(tmps_ix,       I32)
+VAR(tmps_floor,    I32)
 VAR(tmps_max,      I32)
 
 VAR(markstack,     I32 *)          /* stack_sp locations we're remembering */
@@ -34,7 +35,6 @@ VAR(retstack_max,  I32)
 VAR(curpm,         PMOP *)         /* what to do \ interps in REs from */
 VAR(curcop,        COP *)
 
-VAR(restartop,     OP *)           /* propagating an error from croak? */
 VAR(in_eval,       int)            /* trap "fatal" errors? */
 VAR(localizing,    int)            /* are we processing a local() list? */
 
@@ -46,3 +46,4 @@ VAR(sortstash,     HV *)           /* which is in some package or other */
 VAR(sortcxix,      I32)            /* from pp_ctl.c */
 
 VAR(comppad,       AV *)           /* storage for lexically scoped temporaries */
+

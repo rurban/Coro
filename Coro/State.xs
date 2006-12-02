@@ -1240,8 +1240,10 @@ SV *
 _get_state ()
 	CODE:
 {
+	struct io_state *data;
+
         RETVAL = newSV (sizeof (struct io_state));
-	struct io_state *data = (struct io_state *)SvPVX (RETVAL);
+	data = (struct io_state *)SvPVX (RETVAL);
         SvCUR_set (RETVAL, sizeof (struct io_state));
         SvPOK_only (RETVAL);
 
