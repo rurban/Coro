@@ -29,7 +29,7 @@ use Carp ();
 use Errno ();
 use base 'Exporter';
 
-our $VERSION = 2.5;
+our $VERSION = '3.0';
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -48,16 +48,14 @@ sub new_from_fh {
 
    tie $self, 'Coro::Handle::FH', fh => $fh, @_;
 
-   my $old_fh = select bless \$self, ref $class ? ref $class : $class;
-   $| = 1;
-   select $old_fh
+   bless \$self, ref $class ? ref $class : $class
 }
 
 =item $fh = unblock $fh
 
-This is a convinience function that just calls C<new_from_fh> on the given
-filehandle. Use it to replace a normal perl filehandle by a non-blocking
-equivalent.
+This is a convinience function that just calls C<new_from_fh> on the
+given filehandle. Use it to replace a normal perl filehandle by a
+non-(coroutine-)blocking equivalent.
 
 =cut
 

@@ -736,7 +736,7 @@ transfer (struct coro *prev, struct coro *next, int flags)
       prev__cctx = prev->cctx;
 
       /* possibly "free" the cctx */
-      if (prev__cctx->idle_sp == STACKLEVEL && 0)
+      if (prev__cctx->idle_sp == STACKLEVEL)
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
           assert (PL_top_env == prev__cctx->top_env);
