@@ -46,10 +46,7 @@ sub new_from_fh {
    my $fh = shift or return;
    my $self = do { local *Coro::Handle };
 
-   my ($package, $filename, $line) = caller;
-   $filename =~ s/^.*[\/\\]//;
-
-   tie $self, 'Coro::Handle::FH', fh => $fh, desc => "$filename:$line", @_;
+   tie $self, 'Coro::Handle::FH', fh => $fh, @_;
 
    my $old_fh = select bless \$self, ref $class ? ref $class : $class;
    $| = 1;
