@@ -1,5 +1,7 @@
 Revision history for Perl extension Coro.
 
+TODO: transfer flags must be per state
+
 3.0
 	- the "FINALLY COMPLETELY STABLE" release (coming soon:
           the "FAMOUS LAST WORDS" release).
