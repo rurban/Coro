@@ -88,20 +88,21 @@ whatsoever, for example when subclassing Coro::State.
 
 =cut
 
-our $_cctx; # holds the coro_cctx pointer
-
 # this is called for each newly created C coroutine,
-# and is being artificially injected into the opcode flow
+# and is being artificially injected into the opcode flow.
+# its sole purpose is to call transfer() once so it knows
+# the stop level stack frame for stack sharing.
 sub _cctx_init {
-   _set_stacklevel $_cctx;
+   _set_stacklevel $_[0];
 }
 
 # this is called (or rather: goto'ed) for each and every
 # new coroutine. IT MUST NEVER RETURN!
 sub _coro_init {
    eval {
-      $_[0] or die "transfer() to empty coroutine $_[0]";
-      &{$_[0]} while 1;
+      my $coro = shift;
+      $coro or die "transfer() to empty coroutine $coro";
+      &$coro;
    };
    print STDERR $@ if $@;
    _exit 55;

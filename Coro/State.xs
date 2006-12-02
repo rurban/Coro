@@ -103,6 +103,14 @@ static perl_mutex coro_mutex;
 # define UNLOCK (void)0
 #endif
 
+struct io_state
+{
+  int errorno;
+  I32 laststype;
+  int laststatval;
+  Stat_t statcache;
+};
+
 static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash, *coro_stash;
@@ -499,9 +507,6 @@ setup_coro (struct coro *coro)
     dSP;
     LOGOP myop;
 
-    /* I have no idea why this is needed, but it is */
-    PUSHMARK (SP);
-
     SvREFCNT_dec (GvAV (PL_defgv));
     GvAV (PL_defgv) = coro->args; coro->args = 0;
 
@@ -509,11 +514,10 @@ setup_coro (struct coro *coro)
     myop.op_next = Nullop;
     myop.op_flags = OPf_WANT_VOID;
 
-    PL_op = (OP *)&myop;
-
     PUSHMARK (SP);
     XPUSHs ((SV *)get_cv ("Coro::State::_coro_init", FALSE));
     PUTBACK;
+    PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
     SPAGAIN;
   }
@@ -531,6 +535,7 @@ free_coro_mortal ()
     }
 }
 
+/* inject a fake call to Coro::State::_cctx_init into the execution */
 static void NOINLINE
 prepare_cctx (coro_cctx *cctx)
 {
@@ -539,21 +544,22 @@ prepare_cctx (coro_cctx *cctx)
 
   Zero (&myop, 1, LOGOP);
   myop.op_next = PL_op;
-  myop.op_flags = OPf_WANT_VOID;
-
-  sv_setiv (get_sv ("Coro::State::_cctx", FALSE), PTR2IV (cctx));
+  myop.op_flags = OPf_WANT_VOID | OPf_STACKED;
 
   PUSHMARK (SP);
-  XPUSHs ((SV *)get_cv ("Coro::State::_cctx_init", FALSE));
+  EXTEND (SP, 2);
+  PUSHs (sv_2mortal (newSViv (PTR2IV (cctx))));
+  PUSHs ((SV *)get_cv ("Coro::State::_cctx_init", FALSE));
   PUTBACK;
-  PL_restartop = PL_ppaddr[OP_ENTERSUB](aTHX);
+  PL_op = (OP *)&myop;
+  PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
   SPAGAIN;
 }
 
 static void
 coro_run (void *arg)
 {
-  /* coro_run is the alternative epilogue of transfer() */
+  /* coro_run is the alternative tail of transfer(), so unlock here. */
   UNLOCK;
 
   /*
@@ -565,6 +571,7 @@ coro_run (void *arg)
   prepare_cctx ((coro_cctx *)arg);
 
   /* somebody will hit me for both perl_run and PL_restartop */
+  PL_restartop = PL_op;
   perl_run (PL_curinterp);
 
   fputs ("FATAL: C coroutine fell over the edge of the world, aborting. Did you call exit in a coroutine?\n", stderr);
@@ -583,7 +590,7 @@ cctx_new ()
 #if HAVE_MMAP
 
   cctx->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE;
-  /* mmap suppsedly does allocate-on-write for us */
+  /* mmap supposedly does allocate-on-write for us */
   cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
   if (cctx->sptr == (void *)-1)
@@ -1233,19 +1240,15 @@ SV *
 _get_state ()
 	CODE:
 {
-	struct {
-          int errorno;
-          int laststype;
-          int laststatval;
-          Stat_t statcache;
-        } data;
+        RETVAL = newSV (sizeof (struct io_state));
+	struct io_state *data = (struct io_state *)SvPVX (RETVAL);
+        SvCUR_set (RETVAL, sizeof (struct io_state));
+        SvPOK_only (RETVAL);
 
-        data.errorno = errno;
-        data.laststype = PL_laststype;
-        data.laststatval = PL_laststatval;
-        data.statcache = PL_statcache;
-
-        RETVAL = newSVpvn ((char *)&data, sizeof data);
+        data->errorno     = errno;
+        data->laststype   = PL_laststype;
+        data->laststatval = PL_laststatval;
+        data->statcache   = PL_statcache;
 }
 	OUTPUT:
         RETVAL
@@ -1255,15 +1258,11 @@ _set_state (char *data_)
 	PROTOTYPE: $
 	CODE:
 {
-	struct {
-          int errorno;
-          int laststype;
-          int laststatval;
-          Stat_t statcache;
-        } *data = (void *)data_;
+	struct io_state *data = (void *)data_;
 
-        errno = data->errorno;
-        PL_laststype = data->laststype;
+        errno          = data->errorno;
+        PL_laststype   = data->laststype;
         PL_laststatval = data->laststatval;
-        PL_statcache = data->statcache;
+        PL_statcache   = data->statcache;
 }
+

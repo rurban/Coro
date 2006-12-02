@@ -8,7 +8,7 @@
 #include "EventAPI.h"
 #include "../Coro/CoroAPI.h"
 
-#define CD_CORO	0
+#define CD_WAIT	0 /* wait queue */
 #define CD_TYPE	1
 #define CD_OK	2
 
@@ -21,24 +21,22 @@ coro_std_cb (pe_event *pe)
 {
   AV *priv = (AV *)pe->ext_data;
   IV type = SvIV (AvARRAY (priv)[CD_TYPE]);
-  SV **cd_coro;
+  AV *cd_wait;
+  SV *coro;
 
   SvIV_set (AvARRAY (priv)[CD_HITS], pe->hits);
-
-  if (type == 1)
-    SvIV_set (AvARRAY (priv)[CD_GOT], ((pe_ioevent *)pe)->got);
-
-  GEventAPI->stop (pe->up, 0);
+  SvIV_set (AvARRAY (priv)[CD_GOT], type ? ((pe_ioevent *)pe)->got : 0);
 
   AvARRAY (priv)[CD_OK] = &PL_sv_yes;
 
-  cd_coro = &AvARRAY(priv)[CD_CORO];
-  if (*cd_coro != &PL_sv_undef)
+  cd_wait = (AV *)AvARRAY(priv)[CD_WAIT];
+  if ((coro = av_shift (cd_wait)))
     {
-      AvARRAY (priv)[CD_OK] = &PL_sv_yes;
-      CORO_READY (*cd_coro);
-      SvREFCNT_dec (*cd_coro);
-      *cd_coro = &PL_sv_undef;
+      if (av_len (cd_wait) < 0)
+        GEventAPI->stop (pe->up, 0);
+
+      CORO_READY (coro);
+      SvREFCNT_dec (coro);
     }
 }
 
@@ -76,7 +74,7 @@ _install_std_cb (SV *self, int type)
           SV *rv = newRV_noinc ((SV *)priv);
 
           av_fill (priv, CD_MAX);
-          AvARRAY (priv)[CD_CORO] = &PL_sv_undef;
+          AvARRAY (priv)[CD_WAIT] = newAV (); /* badbad */
           AvARRAY (priv)[CD_TYPE] = newSViv (type);
           AvARRAY (priv)[CD_OK  ] = &PL_sv_no;
           AvARRAY (priv)[CD_HITS] = newSViv (0);
@@ -105,18 +103,10 @@ _next (SV *self)
             XSRETURN_NO; /* got an event */
           }
 
+        av_push ((AV *)AvARRAY (priv)[CD_WAIT], SvREFCNT_inc (CORO_CURRENT));
+
         if (!w->running)
-          {
-            SvIV_set (AvARRAY (priv)[CD_GOT],  0);
-            SvIV_set (AvARRAY (priv)[CD_HITS], 0);
-
-            GEventAPI->start (w, 1);
-          }
-
-        if (AvARRAY (priv)[CD_CORO] == &PL_sv_undef)
-          AvARRAY (priv)[CD_CORO] = SvREFCNT_inc (CORO_CURRENT);
-        else if (AvARRAY (priv)[CD_CORO] != CORO_CURRENT)
-          croak ("Coro::Event::next can only be called from a single coroutine at a time, caught");
+          GEventAPI->start (w, 1);
 
         XSRETURN_YES; /* schedule */
 }

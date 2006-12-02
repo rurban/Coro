@@ -13,6 +13,8 @@ TODO: transfer flags must be per state
           no Coro::Event watchers were used.
         - Coro::Event now uses asynccheck as prepare does not
           check for changed watchers.
+        - Coro::Event allows multiple waiting coros and will wake up one
+          per event.
         - Coro::Event should be cleaner and more efficient now.
         - new utility function Coro::unblock_sub.
         - document the sad fact that Event is no longer reentrant.

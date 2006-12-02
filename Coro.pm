@@ -256,14 +256,14 @@ Calling C<exit> in a coroutine will not work correctly, so do not do that.
 
 =cut
 
-sub _new_coro {
+sub _run_coro {
    terminate &{+shift};
 }
 
 sub new {
    my $class = shift;
 
-   $class->SUPER::new (\&_new_coro, @_)
+   $class->SUPER::new (\&_run_coro, @_)
 }
 
 =item $success = $coroutine->ready
