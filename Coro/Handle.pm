@@ -35,8 +35,9 @@ our @EXPORT = qw(unblock);
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
 
 Create a new non-blocking io-handle using the given
-perl-filehandle. Returns undef if no fhandle is given. The only other
-supported argument is "timeout", which sets a timeout for each operation.
+perl-filehandle. Returns C<undef> if no filehandle is given. The only
+other supported argument is "timeout", which sets a timeout for each
+operation.
 
 =cut
 
@@ -50,7 +51,9 @@ sub new_from_fh {
 
    tie $self, 'Coro::Handle::FH', fh => $fh, desc => "$filename:$line", @_;
 
-   my $_fh = select bless \$self, ref $class ? ref $class : $class; $| = 1; select $_fh;
+   my $old_fh = select bless \$self, ref $class ? ref $class : $class;
+   $| = 1;
+   select $old_fh
 }
 
 =item $fh = unblock $fh
@@ -62,7 +65,7 @@ equivalent.
 =cut
 
 sub unblock($) {
-   new_from_fh Coro::Handle $_[0];
+   new_from_fh Coro::Handle $_[0]
 }
 
 =item $fh->writable, $fh->readable
