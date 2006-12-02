@@ -119,7 +119,7 @@ sub partial     {
    $retval
 }
 
-=item $fh->timeout([...])
+=item $fh->timeout ([...])
 
 The optional argument sets the new timeout (in seconds) for this
 handle. Returns the current (new) value.
@@ -135,7 +135,7 @@ sub timeout {
       $self->[5]->timeout ($_[1]) if $self->[5];
       $self->[6]->timeout ($_[1]) if $self->[6];
    }
-   $self->[2];
+   $self->[2]
 }
 
 =item $fh->fh
@@ -384,6 +384,7 @@ sub writable_coro {
    ))->next->[5] & &Event::Watcher::W
 }
 
+# decide on event model at runtime
 for my $rw (qw(readable writable)) {
    no strict 'refs';
 
