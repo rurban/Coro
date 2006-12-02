@@ -190,14 +190,15 @@ sub new {
 
    weaken ($Coro::current->{conn} = $self);
 
-   $::conns++;
+   ++$::conns;
    $::maxconns = $::conns if $::conns > $::maxconns;
 
    $self
 }
 
 sub DESTROY {
-   #my $self = shift;
+   my $self = shift;
+
    close $self->{fh}; # workaround
    --$::conns;
 }

@@ -33,8 +33,8 @@ sub conn::gen_statdata {
    }
 
    sub read_file {
-      local ($/, *X);
-      (open X, "<$_[0]\x00") ? <X> : ();
+      local $/;
+      (open my $fh, "<$_[0]\x00") ? <$fh> : ()
    }
 
    {
@@ -47,12 +47,11 @@ sub conn::gen_statdata {
       } while $path ne "";
    }
 
-   local *DIR;
-   if (opendir DIR, $self->{path}) {
+   if (opendir my $dir, $self->{path}) {
       my $dlen = 0;
       my $flen = 0;
       my $slen = 0;
-      for (sort readdir DIR) {
+      for (sort readdir $dir) {
          next if /$ignore/;
          stat "$self->{path}$_";
          if (-d _) {
@@ -103,8 +102,8 @@ sub conn::get_statdata {
 
 sub handle_redirect { # unused
    if (-f ".redirect") {
-      if (open R, "<.redirect") {
-         while (<R>) {
+      if (open my $fh, "<.redirect") {
+         while (<$fh>) {
             if (/^(?:$host$port)$uri([^ \tr\n]*)[ \t\r\n]+(.*)$/) {
                my $rem = $1;
                my $url = $2;
