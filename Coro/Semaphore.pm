@@ -67,7 +67,7 @@ $timeout seconds, otherwise true.
 sub down {
    while ($_[0][0] <= 0) {
       push @{$_[0][1]}, $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
    }
    --$_[0][0];
 }
@@ -78,7 +78,7 @@ sub timed_down {
 
    while ($_[0][0] <= 0) {
       push @{$_[0][1]}, $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
       if ($timeout) {
          # ugly as hell. slow, too, btw!
          for (0..$#{$_[0][1]}) {

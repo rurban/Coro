@@ -11,14 +11,13 @@ Coro/Makefile.PL
 Coro/typemap
 Coro/State.pm
 Coro/State.xs
+Coro/state.h
 Coro/Signal.pm
 Coro/Semaphore.pm
 Coro/SemaphoreSet.pm
 Coro/Channel.pm
-Coro/Cont.pm
 Coro/Specific.pm
 Coro/RWLock.pm
-Coro/Timer.pm
 Coro/MakeMaker.pm
 Coro/CoroAPI.h
 Coro/AIO.pm
@@ -36,7 +35,6 @@ Coro/libcoro/conftest.c
 t/00_basic.t
 t/01_process.t
 t/02_channel.t
-t/03_cont.t
 t/04_rwlock.t
 t/05_specific.t
 t/06_prio.t
@@ -57,7 +55,6 @@ eg/prodcons1
 eg/prodcons2
 eg/prodcons3
 eg/attributes
-eg/cont
 eg/event
 eg/lwp
 eg/dns

@@ -12,13 +12,19 @@ Coro::Select - a (slow but coro-aware) replacement for CORE::select
 
 This module tries to create a fully working replacement for perl's
 C<select> built-in, using C<AnyEvent> watchers to do the job, so other
-coroutines can run in parallel to any select user.
+coroutines can run in parallel to any select user. As many libraries that
+only have a blocking API do not use global variables and often use select
+(or IO::Select), this effectively makes most such libraries "somewhat"
+non-blocking w.r.t. other coroutines.
 
 To be effective globally, this module must be C<use>'d before any other
 module that uses C<select>, so it should generally be the first module
 C<use>'d in the main program.
 
 You can also invoke it from the commandline as C<perl -MCoro::Select>.
+
+Performance naturally isn't great, but unless you need very high select
+performance you normally won't notice the difference.
 
 =over 4
 
@@ -73,6 +79,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
                         (vec $$rvec, $b, 1) = 1;
                         $nfound++;
                         $current->ready;
+                        undef $current;
                      });
                }
             }
@@ -82,11 +89,13 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       push @w,
          AnyEvent->timer (after => $_[3], cb => sub {
             $current->ready;
+            undef $current;
          })
          if defined $_[3];
 
-      Coro::schedule;
       # wait here
+      &Coro::schedule;
+      &Coro::schedule while $current;
 
       return $nfound
    }
@@ -95,6 +104,10 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
 1;
 
 =back
+
+=head1 SEE ALSO
+
+L<Coro::LWP>.
 
 =head1 AUTHOR
 

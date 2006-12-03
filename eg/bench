@@ -8,7 +8,7 @@
 use Coro;
 use Benchmark;
 
-sub a() { }
+sub a($) { }
 
 $a = bless {}, main::;
 
@@ -37,6 +37,7 @@ sub doit0 {
       transfer($c0, $main,  0); transfer($c0, $main,  0);
       transfer($c0, $main,  0); transfer($c0, $main,  0);
       transfer($c0, $main,  0); transfer($c0, $main,  0);
+      transfer($c0, $main,  0); transfer($c0, $main,  0);
    }
 }
 
@@ -46,25 +47,28 @@ sub doit1 {
       transfer($c1, $main, -1); transfer($c1, $main, -1);
       transfer($c1, $main, -1); transfer($c1, $main, -1);
       transfer($c1, $main, -1); transfer($c1, $main, -1);
+      transfer($c1, $main, -1); transfer($c1, $main, -1);
    }
 }
 
-$c0 = Coro::State::_newprocess [sub {
+$c0 = new Coro::State sub {
    doit0(1,2,3,4,5,6,7,8,9);
-}];
+};
 
-$c1 = Coro::State::_newprocess [sub {
+$c1 = new Coro::State sub {
    doit1(1,2,3,4,5,6,7,8,9);
-}];
+};
 
 transfer($main, $c0, 0);
 transfer($main, $c1, -1);
 
 timethese 1000000, {
-   empty    => '&a; &a',
-   method   => '$a->b(5); $a->b(6)',
-   cede     => 'cede',
-   transfer0=> 'transfer($main, $c0, 0)',
-   transfer1=> 'transfer($main, $c1, -1)',
+   function  => 'a(5); a(6)',
+   method    => '$a->b(5); $a->b(6)',
+   cede      => 'cede',
+   transfer0 => 'transfer($main, $c0, 0)',
+   transfer1 => 'transfer($main, $c1, -1)',
 };
+
+
 

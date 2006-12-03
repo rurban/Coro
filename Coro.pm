@@ -10,7 +10,7 @@ Coro - coroutine process abstraction
     # some asynchronous thread of execution
  };
 
- # alternatively create an async process like this:
+ # alternatively create an async coroutine like this:
 
  sub some_func : Coro {
     # some more async code
@@ -37,15 +37,15 @@ no warnings "uninitialized";
 
 use Coro::State;
 
-use base Exporter::;
+use base qw(Coro::State Exporter);
 
-our $idle;    # idle coroutine
+our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '2.5';
+our $VERSION = '3.0';
 
-our @EXPORT = qw(async cede schedule terminate current);
+our @EXPORT = qw(async cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
@@ -59,7 +59,7 @@ our @EXPORT_OK = @{$EXPORT_TAGS{prio}};
    sub import {
       no strict 'refs';
 
-      Coro->export_to_level(1, @_);
+      Coro->export_to_level (1, @_);
 
       my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
       *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
@@ -97,37 +97,47 @@ $main = new Coro;
 
 =item $current (or as function: current)
 
-The current coroutine (the last coroutine switched to). The initial value is C<$main> (of course).
+The current coroutine (the last coroutine switched to). The initial value
+is C<$main> (of course).
+
+This variable is B<strictly> I<read-only>. It is provided for performance
+reasons. If performance is not essentiel you are encouraged to use the
+C<Coro::current> function instead.
 
 =cut
 
 # maybe some other module used Coro::Specific before...
-if ($current) {
-   $main->{specific} = $current->{specific};
-}
+$main->{specific} = $current->{specific}
+   if $current;
 
-$current = $main;
+_set_current $main;
 
 sub current() { $current }
 
 =item $idle
 
-The coroutine to switch to when no other coroutine is running. The default
-implementation prints "FATAL: deadlock detected" and exits.
+A callback that is called whenever the scheduler finds no ready coroutines
+to run. The default implementation prints "FATAL: deadlock detected" and
+exits, because the program has no other way to continue.
+
+This hook is overwritten by modules such as C<Coro::Timer> and
+C<Coro::Event> to wait on an external event that hopefully wake up a
+coroutine so the scheduler can run it.
+
+Please note that if your callback recursively invokes perl (e.g. for event
+handlers), then it must be prepared to be called recursively.
 
 =cut
 
-# should be done using priorities :(
-$idle = new Coro sub {
+$idle = sub {
    print STDERR "FATAL: deadlock detected\n";
-   exit(51);
+   exit (51);
 };
 
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 my @destroy;
-my $manager;
-$manager = new Coro sub {
+my $manager; $manager = new Coro sub {
    while () {
       # by overwriting the state object with the manager we destroy it
       # while still being able to schedule this coroutine (in case it has
@@ -139,11 +149,11 @@ $manager = new Coro sub {
          $coro->{status} ||= [];
          $_->ready for @{delete $coro->{join} || []};
 
-         # the next line destroys the _coro_state, but keeps the
-         # process itself intact (we basically make it a zombie
-         # process that always runs the manager thread, so it's possible
-         # to transfer() to this process).
-         $coro->{_coro_state} = $manager->{_coro_state};
+         # the next line destroys the coro state, but keeps the
+         # coroutine itself intact (we basically make it a zombie
+         # coroutine that always runs the manager thread, so it's possible
+         # to transfer() to this coroutine).
+         $coro->_clone_state_from ($manager);
       }
       &schedule;
    }
@@ -155,15 +165,17 @@ $manager = new Coro sub {
 
 =head2 STATIC METHODS
 
-Static methods are actually functions that operate on the current process only.
+Static methods are actually functions that operate on the current coroutine only.
 
 =over 4
 
 =item async { ... } [@args...]
 
-Create a new asynchronous process and return it's process object
-(usually unused). When the sub returns the new process is automatically
+Create a new asynchronous coroutine and return it's coroutine object
+(usually unused). When the sub returns the new coroutine is automatically
 terminated.
+
+Calling C<exit> in a coroutine will not work correctly, so do not do that.
 
 When the coroutine dies, the program will exit, just as in the main
 program.
@@ -177,30 +189,45 @@ program.
 
 sub async(&@) {
    my $pid = new Coro @_;
-   $manager->ready; # this ensures that the stack is cloned from the manager
    $pid->ready;
-   $pid;
+   $pid
 }
 
 =item schedule
 
-Calls the scheduler. Please note that the current process will not be put
+Calls the scheduler. Please note that the current coroutine will not be put
 into the ready queue, so calling this function usually means you will
-never be called again.
+never be called again unless something else (e.g. an event handler) calls
+ready.
 
-=cut
+The canonical way to wait on external events is this:
+
+   {
+      # remember current coroutine
+      my $current = $Coro::current;
+
+      # register a hypothetical event handler
+      on_event_invoke sub {
+         # wake up sleeping coroutine
+         $current->ready;
+         undef $current;
+      };
+
+      # call schedule until event occured.
+      # in case we are woken up for other reasons
+      # (current still defined), loop.
+      Coro::schedule while $current;
+   }
 
 =item cede
 
-"Cede" to other processes. This function puts the current process into the
+"Cede" to other coroutines. This function puts the current coroutine into the
 ready queue and calls C<schedule>, which has the effect of giving up the
 current "timeslice" to other coroutines of the same or higher priority.
 
-=cut
-
 =item terminate [arg...]
 
-Terminates the current process with the given status values (see L<cancel>).
+Terminates the current coroutine with the given status values (see L<cancel>).
 
 =cut
 
@@ -212,41 +239,46 @@ sub terminate {
 
 # dynamic methods
 
-=head2 PROCESS METHODS
+=head2 COROUTINE METHODS
 
-These are the methods you can call on process objects.
+These are the methods you can call on coroutine objects.
 
 =over 4
 
 =item new Coro \&sub [, @args...]
 
-Create a new process and return it. When the sub returns the process
+Create a new coroutine and return it. When the sub returns the coroutine
 automatically terminates as if C<terminate> with the returned values were
-called. To make the process run you must first put it into the ready queue
+called. To make the coroutine run you must first put it into the ready queue
 by calling the ready method.
+
+Calling C<exit> in a coroutine will not work correctly, so do not do that.
 
 =cut
 
-sub _newcoro {
+sub _run_coro {
    terminate &{+shift};
 }
 
 sub new {
    my $class = shift;
-   bless {
-      _coro_state => (new Coro::State $_[0] && \&_newcoro, @_),
-   }, $class;
+
+   $class->SUPER::new (\&_run_coro, @_)
 }
 
-=item $process->ready
+=item $success = $coroutine->ready
 
-Put the given process into the ready queue.
+Put the given coroutine into the ready queue (according to it's priority)
+and return true. If the coroutine is already in the ready queue, do nothing
+and return false.
 
-=cut
+=item $is_ready = $coroutine->is_ready
 
-=item $process->cancel (arg...)
+Return wether the coroutine is currently the ready queue or not,
 
-Terminates the given process and makes it return the given arguments as
+=item $coroutine->cancel (arg...)
+
+Terminates the given coroutine and makes it return the given arguments as
 status (default: the empty list).
 
 =cut
@@ -259,11 +291,11 @@ sub cancel {
    &schedule if $current == $self;
 }
 
-=item $process->join
+=item $coroutine->join
 
 Wait until the coroutine terminates and return any values given to the
 C<terminate> or C<cancel> functions. C<join> can be called multiple times
-from multiple processes.
+from multiple coroutine.
 
 =cut
 
@@ -276,11 +308,11 @@ sub join {
    wantarray ? @{$self->{status}} : $self->{status}[0];
 }
 
-=item $oldprio = $process->prio($newprio)
+=item $oldprio = $coroutine->prio ($newprio)
 
 Sets (or gets, if the argument is missing) the priority of the
-process. Higher priority processes get run before lower priority
-processes. Priorities are small signed integers (currently -4 .. +3),
+coroutine. Higher priority coroutines get run before lower priority
+coroutines. Priorities are small signed integers (currently -4 .. +3),
 that you can refer to using PRIO_xxx constants (use the import tag :prio
 to get then):
 
@@ -293,34 +325,20 @@ to get then):
 The idle coroutine ($Coro::idle) always has a lower priority than any
 existing coroutine.
 
-Changing the priority of the current process will take effect immediately,
-but changing the priority of processes in the ready queue (but not
+Changing the priority of the current coroutine will take effect immediately,
+but changing the priority of coroutines in the ready queue (but not
 running) will only take effect after the next schedule (of that
-process). This is a bug that will be fixed in some future version.
+coroutine). This is a bug that will be fixed in some future version.
 
-=cut
-
-sub prio {
-   my $old = $_[0]{prio};
-   $_[0]{prio} = $_[1] if @_ > 1;
-   $old;
-}
-
-=item $newprio = $process->nice($change)
+=item $newprio = $coroutine->nice ($change)
 
 Similar to C<prio>, but subtract the given value from the priority (i.e.
 higher values mean lower priority, just as in unix).
 
-=cut
-
-sub nice {
-   $_[0]{prio} -= $_[1];
-}
-
-=item $olddesc = $process->desc($newdesc)
+=item $olddesc = $coroutine->desc ($newdesc)
 
 Sets (or gets in case the argument is missing) the description for this
-process. This is just a free-form string you can associate with a process.
+coroutine. This is just a free-form string you can associate with a coroutine.
 
 =cut
 
@@ -328,6 +346,71 @@ sub desc {
    my $old = $_[0]{desc};
    $_[0]{desc} = $_[1] if @_ > 1;
    $old;
+}
+
+=back
+
+=head2 UTILITY FUNCTIONS
+
+=over 4
+
+=item unblock_sub { ... }
+
+This utility function takes a BLOCK or code reference and "unblocks" it,
+returning the new coderef. This means that the new coderef will return
+immediately without blocking, returning nothing, while the original code
+ref will be called (with parameters) from within its own coroutine.
+
+The reason this fucntion exists is that many event libraries (such as the
+venerable L<Event|Event> module) are not coroutine-safe (a weaker form
+of thread-safety). This means you must not block within event callbacks,
+otherwise you might suffer from crashes or worse.
+
+This function allows your callbacks to block by executing them in another
+coroutine where it is safe to block. One example where blocking is handy
+is when you use the L<Coro::AIO|Coro::AIO> functions to save results to
+disk.
+
+In short: simply use C<unblock_sub { ... }> instead of C<sub { ... }> when
+creating event callbacks that want to block.
+
+=cut
+
+our @unblock_pool;
+our @unblock_queue;
+our $UNBLOCK_POOL_SIZE = 2;
+
+sub unblock_handler_ {
+   while () {
+      my ($cb, @arg) = @{ delete $Coro::current->{arg} };
+      $cb->(@arg);
+
+      last if @unblock_pool >= $UNBLOCK_POOL_SIZE;
+      push @unblock_pool, $Coro::current;
+      schedule;
+   }        
+}           
+
+our $unblock_scheduler = async {
+   while () {
+      while (my $cb = pop @unblock_queue) {
+         my $handler = (pop @unblock_pool or new Coro \&unblock_handler_);
+         $handler->{arg} = $cb;
+         $handler->ready;
+         cede;
+      }
+
+      schedule;
+   }
+};
+
+sub unblock_sub(&) {
+   my $cb = shift;
+
+   sub {
+      push @unblock_queue, [$cb, @_];
+      $unblock_scheduler->ready;
+   }
 }
 
 =back

@@ -55,7 +55,7 @@ WriteMakefile(
 
        # for Coro::AIO, Coro::Util
        IO::AIO          => 1.6,
-       AnyEvent         => 0,
+       AnyEvent         => 2.1,
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
@@ -65,7 +65,7 @@ WriteMakefile(
     		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
     		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',
 
-    		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
+#    		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
 
     		    'Coro/Specific.pm'	=> '$(INST_LIBDIR)/Coro/Specific.pm',
 

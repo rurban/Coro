@@ -31,32 +31,6 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
    $iface = "s";
 }
 
-print <<EOF;
-
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
-
-C context sharing: This option makes it possible to share the C stack and
-context between many coroutines, resulting in large memory savings and
-slight speed gains, at the cost of potential (but mostly theoretical)
-segfaults. On my Linux/x86 machine this decreased the size of a new
-coroutine from 9k to 5k, but the savings are much more apparent on
-machines without mmap or good memory management.
-
-The algorithm relies on the non-fact that the same machine stack pointer
-indicates the same function call nesting level, which usually works good
-enough (no known cases of it failing are known) but might fail in theory.
-
-The default (enabled) has been in use on productions servers for some
-time now, without any problem reports, so you are encouraged to use the
-default.
-
-EOF
-
-if (prompt ("Do you want to enable C context sharing (y/n)", "y") !~ /^\s*n/i) {
-   print "\nC context sharing enabled.\n\n";
-   $DEFINE .= " -DCORO_LAZY_STACK";
-}
-
 if ($iface) {
    print <<EOF;
 
@@ -187,6 +161,24 @@ EOF
 
 my $stackguard = prompt ("Number of guard pages (0 disables)", "4");
 $DEFINE .= " -DSTACKGUARD=$stackguard";
+
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
+Coro can tell valgrind about its stacks and so reduce spurious warnings
+where valgrind would otherwise complain about possible stack switches.
+
+Enabling this does not incur visible runtime or memory overhead, but it
+requires that you have the <valgrind/valgrind.h> header file available.
+
+Valgrind support is completely optional, so the default of disabling it is
+the safe choice.
+
+EOF
+
+my $valgrind = prompt ("Enable valgrind support (y/n)", "n");
+$DEFINE .= " -DUSE_VALGRIND=1" if $valgrind =~ /[yY]/;
 
 print <<EOF;
 

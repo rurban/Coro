@@ -34,25 +34,43 @@ function - it will be managed by this module.
 Your application should just create all necessary coroutines and then call
 Coro::Event::loop.
 
+Please note that even programs or modules (such as
+L<Coro::Handle|Coro::Handle>) that use "traditional"
+event-based/continuation style will run more efficient with this module
+then when using only Event.
+
+=head1 WARNING
+
+Please note that Event does not support coroutines or threads. That
+means that you B<MUST NOT> block in an event callback. Again: In Event
+callbacks, you I<must never ever> call a Coroutine fucntion that blocks
+the current coroutine.
+
+While this seems to work superficially, it will eventually cause memory
+corruption.
+
+=head1 FUNCTIONS
+
 =over 4
 
 =cut
 
 package Coro::Event;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
 
 use Carp;
 no warnings;
 
 use Coro;
+use Coro::Timer;
 use Event qw(loop unloop); # we are re-exporting this, cooool!
 
 use XSLoader;
 
 use base Exporter::;
 
-our @EXPORT = qw(loop unloop sweep reschedule);
+our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
    our $VERSION = 1.9;
@@ -61,7 +79,7 @@ BEGIN {
    XSLoader::load __PACKAGE__, $VERSION;
 }
 
-=item $w = Coro::Event->flavour(args...)
+=item $w = Coro::Event->flavour (args...)
 
 Create and return a watcher of the given type.
 
@@ -78,7 +96,7 @@ Return the next event of the event queue of the watcher.
 
 =cut
 
-=item do_flavour(args...)
+=item do_flavour args...
 
 Create a watcher of the given type and immediately call it's next
 method. This is less efficient then calling the constructor once and the
@@ -100,26 +118,32 @@ for my $flavour (qw(idle var timer io signal)) {
          or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
 
       my $w = $new->($class,
-            desc => $flavour,
+            desc   => $flavour,
             @_,
             parked => 1,
       );
-      _install_std_cb($w, $type);
-      bless $w, $class; # reblessing due to broken Event
+
+      _install_std_cb $w, $type;
+      
+      # reblessing due to Event being broken
+      bless $w, $class
    };
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
-      my $e = (&$coronew)->next;
-      $e->cancel; # $e === $e->w
-      $e;
+      @_ = &$coronew;
+      &Coro::schedule while &_next;
+      $_[0]->cancel;
+      &_event
    };
 }
 
-# double calls to avoid stack-cloning ;()
-# is about 10% slower, though.
+# do schedule in perl to avoid forcing a stack allocation.
+# this is about 10% slower, though.
 sub next($) {
-   &Coro::schedule if &_next; $_[0];
+   &Coro::schedule while &_next;
+
+   &_event
 }
 
 sub Coro::Event::w    { $_[0] }
@@ -141,7 +165,7 @@ into the Event dispatcher.
 =cut
 
 sub sweep {
-   Event::one_event(0); # for now
+   Event::one_event 0; # for now
 }
 
 =item $result = loop([$timeout])
@@ -150,46 +174,13 @@ This is the version of C<loop> you should use instead of C<Event::loop>
 when using this module - it will ensure correct scheduling in the presence
 of events.
 
-=begin comment
-
-Unlike loop's counterpart it is not an error when no watchers are active -
-loop silently returns in this case, as if unloop(undef) were called.
-
-=end comment
-
-=cut
-
-# no longer do something special - it's done internally now
-
-#sub loop(;$) {
-#   #local $Coro::idle = $Coro::current;
-#   #Coro::schedule; # become idle task, which is implicitly ready
-#   &Event::loop;
-#}
-
 =item unloop([$result])
 
 Same as Event::unloop (provided here for your convinience only).
 
 =cut
 
-$Coro::idle = new Coro sub {
-   while () {
-      Event::one_event; # inefficient
-      Coro::schedule;
-   }
-};
-
-# provide hooks for Coro::Timer
-
-package Coro::Timer;
-
-unless ($override) {
-   $override = 1;
-   *_new_timer = sub {
-      Event->timer(at => $_[0], cb => $_[1]);
-   };
-}
+$Coro::idle = \&Event::one_event; # inefficient
 
 1;
 

@@ -44,7 +44,7 @@ sub new {
    bless [[], [], $_[1] || (1e30),[]], $_[0];
 }
 
-=item $q->put($scalar)
+=item $q->put ($scalar)
 
 Put the given scalar into the queue.
 

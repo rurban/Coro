@@ -69,7 +69,7 @@ sub down {
       }
 
       push @{$sem->[1]}, $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
    }
 }
 
@@ -97,7 +97,7 @@ sub timed_down {
       }
 
       push @{$sem->[1]}, $Coro::current;
-      Coro::schedule;
+      &Coro::schedule;
    }
 }
 

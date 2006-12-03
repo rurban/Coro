@@ -45,13 +45,17 @@ For your convienience, here are the changed function signatures for most
 of the requests, for documentation of these functions please have a look
 at L<IO::AIO|the IO::AIO manual>.
 
+The AnyEvent watcher can be disabled by executing C<undef
+$Coro::AIO::WATCHER>. Please notify the author of when and why you think
+this was necessary.
+
 =over 4
 
 =cut
 
 package Coro::AIO;
 
-use strict 'subs';
+use strict qw(subs vars);
 
 use Coro ();
 use AnyEvent;
@@ -60,7 +64,7 @@ use IO::AIO ();
 use base Exporter::;
 
 our $FH; open $FH, "<&=" . IO::AIO::poll_fileno;
-our $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => sub { IO::AIO::poll_cb });
+our $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&IO::AIO::poll_cb);
 
 our @EXPORT    = @IO::AIO::EXPORT;
 our @EXPORT_OK = @IO::AIO::EXPORT_OK;
@@ -88,21 +92,21 @@ our $AUTOLOAD;
 #line 1 "Coro::AIO::$sub($proto)"
          sub $sub($proto) {
             my \$current = \$Coro::current;
-            my \$stat;
+            my \$state;
             my \@res;
 
             push \@_, sub {
-               \$stat = Coro::_aio_get_state;
+               \$state = _get_state;
                \@res = \@_;
                \$current->ready;
-               undef \$current;
             };
 
             &$iosub;
 
-            Coro::schedule while \$current;
+            &Coro::schedule;
+            &Coro::schedule while !\$state;
 
-            Coro::_aio_set_state \$stat;
+            _set_state \$state;
             wantarray ? \@res : \$res[0]
          }
       };

@@ -16,45 +16,43 @@
 #define TRANSFER_SAVE_DEFAV	0x00000001 /* @_ */
 #define TRANSFER_SAVE_DEFSV	0x00000002 /* $_ */
 #define TRANSFER_SAVE_ERRSV	0x00000004 /* $@ */
-/* c-related */
-#define TRANSFER_SAVE_CCTXT	0x00000100
-#ifdef CORO_LAZY_STACK
-# define TRANSFER_LAZY_STACK	0x00000200
-#else
-# define TRANSFER_LAZY_STACK	0x00000000
-#endif
 
-#define TRANSFER_SAVE_ALL	(TRANSFER_SAVE_DEFAV|TRANSFER_SAVE_DEFSV \
-                                |TRANSFER_SAVE_ERRSV|TRANSFER_SAVE_CCTXT)
+#define TRANSFER_SAVE_ALL	( TRANSFER_SAVE_DEFAV \
+                                | TRANSFER_SAVE_DEFSV \
+                                | TRANSFER_SAVE_ERRSV )
 
-struct coro; /* opaque */
+/*struct coro;*/ /* opaque */
 
+/* private structure, always use the provided macros below */
 struct CoroAPI {
   I32 ver;
-#define CORO_API_VERSION 1
+#define CORO_API_VERSION 2
+#define CORO_API_REVISION 0
 
   /* internal */
   /*struct coro *(*sv_to_coro)(SV *arg, const char *funcname, const char *varname);*/
 
-  /* public, state */
-  void (*transfer)(pTHX_ SV *prev, SV *next, int flags);
+  /* public API, Coro::State */
+  void (*transfer) (SV *prev, SV *next, int flags);
 
-  /* public, coro */
-  void (*schedule)(void);
-  void (*cede)(void);
-  void (*ready)(SV *sv);
+  /* public API, Coro */
+  void (*schedule) (void);
+  void (*cede) (void);
+  int (*ready) (SV *coro_sv);
+  int (*is_ready) (SV *coro_sv);
   int *nready;
-  GV *current;
+  SV *current;
 };
 
 static struct CoroAPI *GCoroAPI;
 
-#define CORO_TRANSFER(prev,next,flags) GCoroAPI->transfer(aTHX_ (prev), (next), (flags))
-#define CORO_SCHEDULE            GCoroAPI->schedule ()
-#define CORO_CEDE                GCoroAPI->cede ()
-#define CORO_READY(coro)         GCoroAPI->ready (coro)
-#define CORO_NREADY              (*GCoroAPI->nready)
-#define CORO_CURRENT             SvRV(GvSV(GCoroAPI->current))
+#define CORO_TRANSFER(prev,next,flags) GCoroAPI->transfer (aTHX_ (prev), (next), (flags))
+#define CORO_SCHEDULE                  GCoroAPI->schedule ()
+#define CORO_CEDE                      GCoroAPI->cede ()
+#define CORO_READY(coro)               GCoroAPI->ready (coro)
+#define CORO_IS_READY(coro)            GCoroAPI->is_ready (coro)
+#define CORO_NREADY                    (*GCoroAPI->nready)
+#define CORO_CURRENT                   SvRV (GCoroAPI->current)
 
 #define I_CORO_API(YourName)                                               \
 STMT_START {                                                               \

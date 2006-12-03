@@ -9,8 +9,12 @@ Coro::Handle - non-blocking io with a blocking interface.
 =head1 DESCRIPTION
 
 This module implements IO-handles in a coroutine-compatible way, that is,
-other coroutines can run while reads or writes block on the handle. It
-does NOT inherit from IO::Handle but uses tied objects.
+other coroutines can run while reads or writes block on the handle.
+
+It does so by using L<AnyEvent|AnyEvent> to wait for readable/writable
+data, allowing other coroutines to run while one coroutine waits for I/O.
+
+Coro::Handle does NOT inherit from IO::Handle but uses tied objects.
 
 =over 4
 
@@ -18,20 +22,22 @@ does NOT inherit from IO::Handle but uses tied objects.
 
 package Coro::Handle;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
+use strict;
 
+use Carp ();
 use Errno ();
 use base 'Exporter';
 
-$VERSION = 2.5;
-
-@EXPORT = qw(unblock);
+our $VERSION = '3.0';
+our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
 
 Create a new non-blocking io-handle using the given
-perl-filehandle. Returns undef if no fhandle is given. The only other
-supported argument is "timeout", which sets a timeout for each operation.
+perl-filehandle. Returns C<undef> if no filehandle is given. The only
+other supported argument is "timeout", which sets a timeout for each
+operation.
 
 =cut
 
@@ -40,24 +46,21 @@ sub new_from_fh {
    my $fh = shift or return;
    my $self = do { local *Coro::Handle };
 
-   my ($package, $filename, $line) = caller;
-   $filename =~ s/^.*[\/\\]//;
+   tie $self, 'Coro::Handle::FH', fh => $fh, @_;
 
-   tie $self, Coro::Handle::FH, fh => $fh, desc => "$filename:$line", @_;
-
-   my $_fh = select bless \$self, ref $class ? ref $class : $class; $| = 1; select $_fh;
+   bless \$self, ref $class ? ref $class : $class
 }
 
 =item $fh = unblock $fh
 
-This is a convinience function that just calls C<new_from_fh> on the given
-filehandle. Use it to replace a normal perl filehandle by a non-blocking
-equivalent.
+This is a convinience function that just calls C<new_from_fh> on the
+given filehandle. Use it to replace a normal perl filehandle by a
+non-(coroutine-)blocking equivalent.
 
 =cut
 
 sub unblock($) {
-   new_from_fh Coro::Handle $_[0];
+   new_from_fh Coro::Handle $_[0]
 }
 
 =item $fh->writable, $fh->readable
@@ -67,10 +70,10 @@ until an error condition happens (and return false).
 
 =cut
 
-sub readable	{ Coro::Handle::FH::readable(tied ${$_[0]}) }
-sub writable	{ Coro::Handle::FH::writable(tied ${$_[0]}) }
+sub readable	{ Coro::Handle::FH::readable (tied ${$_[0]}) }
+sub writable	{ Coro::Handle::FH::writable (tied ${$_[0]}) }
 
-=item $fh->readline([$terminator])
+=item $fh->readline ([$terminator])
 
 Like the builtin of the same name, but allows you to specify the input
 record separator in a coroutine-safe manner (i.e. not using a global
@@ -78,9 +81,9 @@ variable).
 
 =cut
 
-sub readline	{ tied(${+shift})->READLINE(@_) }
+sub readline	{ tied(${+shift})->READLINE (@_) }
 
-=item $fh->autoflush([...])
+=item $fh->autoflush ([...])
 
 Always returns true, arguments are being ignored (exists for compatibility
 only). Might change in the future.
@@ -92,7 +95,7 @@ sub autoflush	{ !0 }
 =item $fh->fileno, $fh->close, $fh->read, $fh->sysread, $fh->syswrite, $fh->print, $fh->printf
 
 Work like their function equivalents (except read, which works like
-sysread. You should not use the read function with Coro::Handles, it will
+sysread. You should not use the read function with Coro::Handle's, it will
 work but it's not efficient).
 
 =cut
@@ -114,7 +117,7 @@ sub partial     {
    $retval
 }
 
-=item $fh->timeout([...])
+=item $fh->timeout ([...])
 
 The optional argument sets the new timeout (in seconds) for this
 handle. Returns the current (new) value.
@@ -124,13 +127,13 @@ C<0> is a valid timeout, use C<undef> to disable the timeout.
 =cut
 
 sub timeout {
-   my $self = tied(${$_[0]});
+   my $self = tied ${$_[0]};
    if (@_ > 1) {
       $self->[2] = $_[1];
-      $self->[5]->timeout($_[1]) if $self->[5];
-      $self->[6]->timeout($_[1]) if $self->[6];
+      $self->[5]->timeout ($_[1]) if $self->[5];
+      $self->[6]->timeout ($_[1]) if $self->[6];
    }
-   $self->[2];
+   $self->[2]
 }
 
 =item $fh->fh
@@ -152,7 +155,7 @@ readline nor sysread are viable candidates, like this:
   my $nb_fh = $fh->fh;
   my $buf = \$fh->rbuf;
 
-  for(;;) {
+  while () {
      # now use buffer contents, modifying
      # if necessary to reflect the removed data
 
@@ -177,6 +180,8 @@ sub DESTROY {
    # nop
 }
 
+our $AUTOLOAD;
+
 sub AUTOLOAD {
    my $self = tied ${$_[0]};
 
@@ -192,7 +197,8 @@ sub AUTOLOAD {
 
 package Coro::Handle::FH;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
+use strict;
 
 use Fcntl ();
 use Errno ();
@@ -208,8 +214,8 @@ use AnyEvent;
 # 2 timeout
 # 3 rb
 # 4 wb # unused
-# 5 unused
-# 6 unused
+# 5 read watcher, if Coro::Event used
+# 6 write watcher, if Coro::Event used
 # 7 forward class
 # 8 blocking
 
@@ -234,6 +240,8 @@ sub TIEHANDLE {
 sub cleanup {
    $_[0][3] = "";
    $_[0][4] = "";
+   (delete $_[0][5])->cancel if $_[0][5];
+   (delete $_[0][6])->cancel if $_[0][6];
 }
 
 sub OPEN {
@@ -241,25 +249,27 @@ sub OPEN {
    my $self = shift;
    my $r = @_ == 2 ? open $self->[0], $_[0], $_[1]
                    : open $self->[0], $_[0], $_[1], $_[2];
+
    if ($r) {
       fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
          or croak "fcntl(O_NONBLOCK): $!";
    }
-   $r;
+
+   $r
 }
 
 sub PRINT {
-   WRITE(shift, join "", @_);
+   WRITE (shift, join "", @_)
 }
 
 sub PRINTF {
-   WRITE(shift, sprintf(shift,@_));
+   WRITE (shift, sprintf shift,@_)
 }
 
 sub GETC {
    my $buf;
-   READ($_[0], $buf, 1);
-   $buf;
+   READ ($_[0], $buf, 1);
+   $buf
 }
 
 sub BINMODE {
@@ -267,20 +277,20 @@ sub BINMODE {
 }
 
 sub TELL {
-   use Carp (); Carp::croak("Coro::Handle's don't support tell()");
+   Carp::croak "Coro::Handle's don't support tell()";
 }
 
 sub SEEK {
-   use Carp (); Carp::croak("Coro::Handle's don't support seek()");
+   Carp::croak "Coro::Handle's don't support seek()";
 }
 
 sub EOF {
-   use Carp (); Carp::croak("Coro::Handle's don't support eof()");
+   Carp::croak "Coro::Handle's don't support eof()";
 }
 
 sub CLOSE {
    &cleanup;
-   close $_[0][0];
+   close $_[0][0]
 }
 
 sub DESTROY {
@@ -288,72 +298,115 @@ sub DESTROY {
 }
 
 sub FILENO {
-   fileno $_[0][0];
+   fileno $_[0][0]
 }
 
 # seems to be called for stringification (how weird), at least
 # when DumpValue::dumpValue is used to print this.
 sub FETCH {
-   "$_[0]<$_[0][1]>";
+   "$_[0]<$_[0][1]>"
 }
 
-sub readable {
+sub readable_anyevent {
    my $current = $Coro::current;
    my $io = 1;
 
    my $w = AnyEvent->io (
-      fh      => $_[0][0],
-      desc    => "$_[0][1] readable",
-      poll    => 'r',
-      cb      => sub {
+      desc  => "$_[0][1] read watcher",
+      fh    => $_[0][0],
+      poll  => 'r',
+      cb    => sub {
          $current->ready;
+         undef $current;
       },
    );
 
-   my $t = $_[0][2] && AnyEvent->timer (
+   my $t = (defined $_[0][2]) && AnyEvent->timer (
+      desc  => "fh $_[0][1] read timeout",
       after => $_[0][2],
       cb    => sub {
          $io = 0;
          $current->ready;
+         undef $current;
       },
    );
 
    &Coro::schedule;
+   &Coro::schedule while $current;
+
    $io
 }
 
-sub writable {
+sub writable_anyevent {
    my $current = $Coro::current;
    my $io = 1;
 
    my $w = AnyEvent->io (
-      fh      => $_[0][0],
-      desc    => "$_[0][1] writable",
-      poll    => 'w',
-      cb      => sub {
+      desc  => "fh $_[0][1] write watcher",
+      fh    => $_[0][0],
+      poll  => 'w',
+      cb    => sub {
          $current->ready;
+         undef $current;
       },
    );
 
-   my $t = $_[0][2] && AnyEvent->timer (
+   my $t = (defined $_[0][2]) && AnyEvent->timer (
+      desc  => "fh $_[0][1] write timeout",
       after => $_[0][2],
       cb    => sub {
          $io = 0;
          $current->ready;
+         undef $current;
       },
    );
 
-   &Coro::schedule;
+   &Coro::schedule while $current;
+
    $io
 }
+
+sub readable_coro {
+   ($_[0][5] ||= "Coro::Event"->io (
+      fd      => $_[0][0],
+      desc    => "fh $_[0][1] read watcher",
+      timeout => $_[0][2],
+      poll    => &Event::Watcher::R + &Event::Watcher::E + &Event::Watcher::T,
+   ))->next->[5] & &Event::Watcher::R
+}
+
+sub writable_coro {
+   ($_[0][6] ||= "Coro::Event"->io (
+      fd      => $_[0][0],
+      desc    => "fh $_[0][1] write watcher",
+      timeout => $_[0][2],
+      poll    => &Event::Watcher::W + &Event::Watcher::E + &Event::Watcher::T,
+   ))->next->[5] & &Event::Watcher::W
+}
+
+# decide on event model at runtime
+for my $rw (qw(readable writable)) {
+   no strict 'refs';
+
+   *$rw = sub {
+      my $res = &{"$rw\_anyevent"};
+      if ($AnyEvent::MODEL eq "AnyEvent::Impl::Coro" or $AnyEvent::MODEL eq "AnyEvent::Impl::Event") {
+         require Coro::Event;
+         *$rw = \&{"$rw\_coro"};
+      } else {
+         *$rw = \&{"$rw\_anyevent"};
+      }
+      $res
+   };
+};
 
 sub WRITE {
    my $len = defined $_[2] ? $_[2] : length $_[1];
    my $ofs = $_[3];
    my $res = 0;
 
-   while() {
-      my $r = syswrite $_[0][0], $_[1], $len, $ofs;
+   while () {
+      my $r = syswrite ($_[0][0], $_[1], $len, $ofs);
       if (defined $r) {
          $len -= $r;
          $ofs += $r;
@@ -377,14 +430,14 @@ sub READ {
    if (length $_[0][3]) {
       my $l = length $_[0][3];
       if ($l <= $len) {
-         substr($_[1], $ofs) = $_[0][3]; $_[0][3] = "";
+         substr ($_[1], $ofs) = $_[0][3]; $_[0][3] = "";
          $len -= $l;
          $ofs += $l;
          $res += $l;
          return $res unless $len;
       } else {
-         substr($_[1], $ofs) = substr($_[0][3], 0, $len);
-         substr($_[0][3], 0, $len) = "";
+         substr ($_[1], $ofs) = substr ($_[0][3], 0, $len);
+         substr ($_[0][3], 0, $len) = "";
          return $len;
       }
    }

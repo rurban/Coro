@@ -38,11 +38,9 @@ modules for a higher level process abstraction including scheduling.
 
 A newly created coroutine that has not been used only allocates a
 relatively small (a few hundred bytes) structure. Only on the first
-C<transfer> will perl stacks (a few k) and optionally C stack (4-16k) be
-allocated. On systems supporting mmap a 128k stack is allocated, on the
-assumption that the OS has on-demand virtual memory. All this is very
-system-dependent. On my i686-pc-linux-gnu system this amounts to about 10k
-per coroutine, 5k when the experimental context sharing is enabled.
+C<transfer> will perl stacks (a few k) and optionally C stack. All this
+is very system-dependent. On my x86_64-pc-linux-gnu system this amounts
+to about 8k per (non-trivial) coroutine.
 
 =head2 FUNCTIONS
 
@@ -58,7 +56,11 @@ no warnings "uninitialized";
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 1.9;
+   our $VERSION = '3.0';
+
+   # must be done here because the xs part expects it to exist
+   # it might exist already because Coro::Specific created it.
+   $Coro::current ||= { };
 
    XSLoader::load __PACKAGE__, $VERSION;
 }
@@ -66,36 +68,44 @@ BEGIN {
 use Exporter;
 use base Exporter::;
 
-our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_CURPM SAVE_CCTXT);
+our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV);
 
-=item $coro = new [$coderef] [, @args...]
+=item $coro = new Coro::State [$coderef[, @args...]]
 
 Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If the subroutine
 returns it will be executed again. If it throws an exception the program
 will terminate.
 
+Calling C<exit> in a coroutine will not work correctly, so do not do that.
+
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
 to save the current coroutine in.
 
+The returned object is an empty hash which can be used for any purpose
+whatsoever, for example when subclassing Coro::State.
+
 =cut
+
+# this is called for each newly created C coroutine,
+# and is being artificially injected into the opcode flow.
+# its sole purpose is to call transfer() once so it knows
+# the stop level stack frame for stack sharing.
+sub _cctx_init {
+   _set_stacklevel $_[0];
+}
 
 # this is called (or rather: goto'ed) for each and every
 # new coroutine. IT MUST NEVER RETURN!
-sub initialize {
-   my $proc = shift;
+sub _coro_init {
    eval {
-      &$proc while 1;
+      my $coro = shift;
+      $coro or die "transfer() to empty coroutine $coro";
+      &$coro;
    };
    print STDERR $@ if $@;
-   _exit 255;
-}
-
-sub new {
-   my $class = shift;
-   my $proc = shift || sub { die "tried to transfer to an empty coroutine" };
-   bless _newprocess [$proc, @_], $class;
+   _exit 55;
 }
 
 =item $prev->transfer ($next, $flags)
@@ -112,7 +122,6 @@ oring the following constants together:
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
-   SAVE_CCTXT  save/restore C-stack (you usually want this for coroutines)
 
 These constants are not exported by default. If you don't need any extra
 additional state saved, use C<0> as the flags value.
@@ -131,14 +140,17 @@ this:
      $old->transfer ($new);
   }
 
-IMPLEMENTORS NOTE: all Coro::State functions/methods expect either the
-usual Coro::State object or a hashref with a key named "_coro_state" that
-contains the real Coro::State object. That is, you can do:
+=item Coro::State::cctx_count
 
-  $obj->{_coro_state} = new Coro::State ...;
-  Coro::State::transfer (..., $obj);
+Returns the number of C-level coroutines allocated. If this number is
+very high (more than a dozen) it might help to identify points of C-level
+recursion in your code and moving this into a separate coroutine.
 
-This exists mainly to ease subclassing (wether through @ISA or not).
+=item Coro::State::cctx_idle
+
+Returns the number of allocated but idle (free for reuse) C level
+coroutines. As C level coroutines are curretly rarely being deallocated, a
+high number means that you used many C coroutines in the past.
 
 =cut
 

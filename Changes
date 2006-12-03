@@ -1,5 +1,41 @@
 Revision history for Perl extension Coro.
 
+TODO: transfer flags must be per state
+
+3.0  Sun Dec  3 22:57:25 CET 2006
+	- the "FINALLY COMPLETELY STABLE" release (coming soon:
+          the "FAMOUS LAST WORDS" release).
+	- implement a new stack sharing algorithm, which uses a stack
+          pool (size currently hardcoded).
+        - make stack sharing mandatory (it no longer uses a heuristic).
+        - eval/die no longer cause weird problems under heavy use.
+        - Coro::Event could cause livelocks if it was used but
+          no Coro::Event watchers were used.
+        - Coro::Event now uses asynccheck as prepare does not
+          check for changed watchers.
+        - Coro::Event allows multiple waiting coros and will wake up one
+          per event.
+        - Coro::Event should be cleaner and more efficient now.
+        - new utility function Coro::unblock_sub.
+        - document the sad fact that Event is no longer reentrant.
+        - putting a coroutine into the ready queue twice could under
+          some circumstances lead to stack corruption.
+        - minor incompatibility: subclassing Coro::State is supported
+          directly now without going through a _coro_state member.
+        - state/coro switching is much faster now.
+        - very minor optimisations and code/documentation cleanup.
+        - avoid problems due to compiler inlining.
+        - removed timers from Coro::Timer -> use AnyEvent instead.
+        - replaced Coro::idle coroutine by (cleaner) idle handler.
+        - updated to newest libcoro.
+        - implement enhanced support for valgrind.
+        - implement is_ready and return value for ready.
+        - removed Coro::Cont, it was a misnomer (it's generators),
+          and it was somewhat annoying to get it right. Will come back
+          if somebody asks for it :)
+        - many ->wait methods and Coro::Event could return
+          spuriously without the event having happened.
+
 2.5  Tue Nov  7 12:22:33 CET 2006
         - made Coro::Util, Coro::Select, Coro::Handle and Coro::Socket
           use AnyEvent, moved them to Coro/.

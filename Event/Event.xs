@@ -2,80 +2,50 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#include <assert.h>
 #include <string.h>
-
-/* this useful idiom is unfortunately missing... */
-static void
-confess (const char *msg)
-{
-  dSP;
-
-  PUSHMARK(SP);
-  XPUSHs (sv_2mortal(newSVpv("only one coroutine can wait for an event at any given time",0)));
-  PUTBACK;
-  call_pv ("Carp::confess", G_VOID);
-}
 
 #include "EventAPI.h"
 #include "../Coro/CoroAPI.h"
 
-#ifndef PE_PERLCB
-# define PE_PERLCB 0x020 /* not public, but we need it :( */
-#endif
-
-#define CD_CORO	0
+#define CD_WAIT	0 /* wait queue */
 #define CD_TYPE	1
 #define CD_OK	2
-#define CD_PRIO	3 /* hardcoded in Coro::Event */
+
 #define CD_HITS	4 /* hardcoded in Coro::Event */
 #define CD_GOT	5 /* hardcoded in Coro::Event, Coro::Handle */
 #define CD_MAX	5
 
-#define EV_CLASS "Coro::Event"
-
-static pe_idle *scheduler;
-static int do_schedule;
-
-#define NEED_SCHEDULE if (!do_schedule)					\
-                        {						\
- 		          do_schedule = 1;				\
-		          GEventAPI->now ((pe_watcher *)scheduler);	\
-                        }
-
 static void
-coro_std_cb(pe_event *pe)
+coro_std_cb (pe_event *pe)
 {
   AV *priv = (AV *)pe->ext_data;
-  IV type = SvIV (*av_fetch (priv, CD_TYPE, 1));
-  SV **cd_coro = &AvARRAY(priv)[CD_CORO];
+  IV type = SvIV (AvARRAY (priv)[CD_TYPE]);
+  AV *cd_wait;
+  SV *coro;
 
-  sv_setiv (AvARRAY(priv)[CD_PRIO], pe->prio);
-  sv_setiv (AvARRAY(priv)[CD_HITS], pe->hits);
+  SvIV_set (AvARRAY (priv)[CD_HITS], pe->hits);
+  SvIV_set (AvARRAY (priv)[CD_GOT], type ? ((pe_ioevent *)pe)->got : 0);
 
-  if (type == 1)
-    sv_setiv (AvARRAY(priv)[CD_GOT], ((pe_ioevent *)pe)->got);
+  AvARRAY (priv)[CD_OK] = &PL_sv_yes;
 
-  if (*cd_coro != &PL_sv_undef)
+  cd_wait = (AV *)AvARRAY(priv)[CD_WAIT];
+  if ((coro = av_shift (cd_wait)))
     {
-      CORO_READY (*cd_coro);
-      SvREFCNT_dec (*cd_coro);
-      *cd_coro = &PL_sv_undef;
-      NEED_SCHEDULE;
-    }
-  else
-    {
-      AvARRAY(priv)[CD_OK] = &PL_sv_yes;
-      GEventAPI->stop (pe->up, 0);
+      if (av_len (cd_wait) < 0)
+        GEventAPI->stop (pe->up, 0);
+
+      CORO_READY (coro);
+      SvREFCNT_dec (coro);
     }
 }
 
 static void
-scheduler_cb(pe_event *pe)
+asynccheck_hook (void *data)
 {
+  /* ceding from C means allocating a stack, but we assume this is a rare case */
   while (CORO_NREADY)
     CORO_CEDE;
-
-  do_schedule = 0;
 }
 
 MODULE = Coro::Event                PACKAGE = Coro::Event
@@ -87,80 +57,74 @@ BOOT:
         I_EVENT_API ("Coro::Event");
 	I_CORO_API ("Coro::Event");
 
-        /* create a fake idle handler (we only ever call now) */
-        scheduler = GEventAPI->new_idle (0, 0);
-        scheduler->base.callback = scheduler_cb;
-        scheduler->base.prio = PE_PRIO_NORMAL; /* StarvePrio */
-        scheduler->min_interval = newSVnv (0);
-        scheduler->max_interval = newSVnv (0);
-        GEventAPI->stop ((pe_watcher *)scheduler, 0);
+        GEventAPI->add_hook ("asynccheck", (void *)asynccheck_hook, 0);
 }
 
 void
-_install_std_cb(self,type)
-	SV *	self
-        int	type
+_install_std_cb (SV *self, int type)
         CODE:
+{
         pe_watcher *w = GEventAPI->sv_2watcher (self);
 
-        if (WaFLAGS (w) & PE_PERLCB)
-          croak ("Coro::Event watchers must not have a perl callback (see Coro::Event), caught");
+        if (w->callback)
+          croak ("Coro::Event watchers must not have a callback (see Coro::Event), caught");
+
         {
           AV *priv = newAV ();
           SV *rv = newRV_noinc ((SV *)priv);
 
-          av_extend (priv, CD_MAX);
-          av_store (priv, CD_CORO, &PL_sv_undef);
-          av_store (priv, CD_TYPE, newSViv (type));
-          av_store (priv, CD_OK  , &PL_sv_no);
-          av_store (priv, CD_PRIO, newSViv (0));
-          av_store (priv, CD_HITS, newSViv (0));
-          av_store (priv, CD_GOT , type ? newSViv (0) : &PL_sv_undef);
+          av_fill (priv, CD_MAX);
+          AvARRAY (priv)[CD_WAIT] = newAV (); /* badbad */
+          AvARRAY (priv)[CD_TYPE] = newSViv (type);
+          AvARRAY (priv)[CD_OK  ] = &PL_sv_no;
+          AvARRAY (priv)[CD_HITS] = newSViv (0);
+          AvARRAY (priv)[CD_GOT ] = newSViv (0);
           SvREADONLY_on (priv);
 
           w->callback = coro_std_cb;
           w->ext_data = priv;
 
-          hv_store ((HV *)SvRV (self),
-                    EV_CLASS, strlen (EV_CLASS),
-                    rv, 0);
-
-          GEventAPI->start (w, 0);
+          /* make sure Event does not use PERL_MAGIC_uvar, which */
+          /* we abuse for non-uvar purposes. */
+          sv_magicext (SvRV (self), rv, PERL_MAGIC_uvar, 0, 0, 0);
         }
+}
 
 void
-_next(self)
-	SV *	self
+_next (SV *self)
         CODE:
+{
         pe_watcher *w = GEventAPI->sv_2watcher (self);
         AV *priv = (AV *)w->ext_data;
+
+        if (AvARRAY (priv)[CD_OK] == &PL_sv_yes)
+          {
+            AvARRAY (priv)[CD_OK] = &PL_sv_no;
+            XSRETURN_NO; /* got an event */
+          }
+
+        av_push ((AV *)AvARRAY (priv)[CD_WAIT], SvREFCNT_inc (CORO_CURRENT));
 
         if (!w->running)
           GEventAPI->start (w, 1);
 
-        if (AvARRAY(priv)[CD_OK] == &PL_sv_yes)
-          {
-            AvARRAY(priv)[CD_OK] = &PL_sv_no;
-            XSRETURN_NO;
-          }
-        else 
-          {
-            if (AvARRAY(priv)[CD_CORO] != &PL_sv_undef)
-              confess ("only one coroutine can wait for an event");
+        XSRETURN_YES; /* schedule */
+}
 
-            AvARRAY(priv)[CD_CORO] = SvREFCNT_inc (CORO_CURRENT);
-            XSRETURN_YES;
-          }
-
-MODULE = Coro::Event                PACKAGE = Coro
-
-# overwrite the ready function
-void
-ready(self)
-	SV *	self
-        PROTOTYPE: $
+SV *
+_event (SV *self)
 	CODE:
-        NEED_SCHEDULE;
-        CORO_READY (self);
+{
+        if (GIMME_V == G_VOID)
+          XSRETURN_EMPTY;
 
+        {
+          pe_watcher *w = GEventAPI->sv_2watcher (self);
+          AV *priv = (AV *)w->ext_data;
+
+          RETVAL = newRV_inc ((SV *)priv);
+        }
+}
+	OUTPUT:
+        RETVAL
 
