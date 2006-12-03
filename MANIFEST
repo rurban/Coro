@@ -35,7 +35,6 @@ Coro/libcoro/conftest.c
 t/00_basic.t
 t/01_process.t
 t/02_channel.t
-t/03_cont.t
 t/04_rwlock.t
 t/05_specific.t
 t/06_prio.t
@@ -56,7 +55,6 @@ eg/prodcons1
 eg/prodcons2
 eg/prodcons3
 eg/attributes
-eg/cont
 eg/event
 eg/lwp
 eg/dns
