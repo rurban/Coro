@@ -199,7 +199,6 @@ sub new {
 sub DESTROY {
    my $self = shift;
 
-   close $self->{fh}; # workaround
    --$::conns;
 }
 
