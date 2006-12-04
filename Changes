@@ -5,6 +5,7 @@ TODO: better (earlier) error messages on broken transfer's
 
 3.
 	- give a better error message on deadlock.
+        - enhanced testsuite.
 
 3.01 Sun Dec  3 23:47:42 CET 2006
 	- forgot to include Coro::Timer.
