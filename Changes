@@ -4,7 +4,10 @@ TODO: transfer flags must be per state
 TODO: better (earlier) error messages on broken transfer's
 
 3.
+        - INCOMPATIBLE CHANGE: $/ is now per-coroutine.
+        - incompatible change: transfer flags are now per-state.
 	- give a better error message on deadlock.
+        - document Coro::nready.
         - enhanced testsuite.
 
 3.01 Sun Dec  3 23:47:42 CET 2006

@@ -13,29 +13,32 @@
 #endif
 
 /* perl-related */
-#define TRANSFER_SAVE_DEFAV	0x00000001 /* @_ */
-#define TRANSFER_SAVE_DEFSV	0x00000002 /* $_ */
-#define TRANSFER_SAVE_ERRSV	0x00000004 /* $@ */
+#define CORO_SAVE_DEFAV	0x00000001 /* @_ */
+#define CORO_SAVE_DEFSV	0x00000002 /* $_ */
+#define CORO_SAVE_ERRSV	0x00000004 /* $@ */
+#define CORO_SAVE_IRSSV	0x00000008 /* $/ */
 
-#define TRANSFER_SAVE_ALL	( TRANSFER_SAVE_DEFAV \
-                                | TRANSFER_SAVE_DEFSV \
-                                | TRANSFER_SAVE_ERRSV )
+#define CORO_SAVE_ALL	( CORO_SAVE_DEFAV \
+                        | CORO_SAVE_DEFSV \
+                        | CORO_SAVE_ERRSV \
+                        | CORO_SAVE_IRSSV )
 
 /*struct coro;*/ /* opaque */
 
 /* private structure, always use the provided macros below */
 struct CoroAPI {
   I32 ver;
-#define CORO_API_VERSION 2
+#define CORO_API_VERSION 3
 #define CORO_API_REVISION 0
 
   /* internal */
   /*struct coro *(*sv_to_coro)(SV *arg, const char *funcname, const char *varname);*/
 
-  /* public API, Coro::State */
-  void (*transfer) (SV *prev, SV *next, int flags);
+  /* private API, Coro::State */
+  void (*transfer) (SV *prev_sv, SV *next_sv);
+  int (*save) (SV *coro_sv, int new_save);
 
-  /* public API, Coro */
+  /* private API, Coro */
   void (*schedule) (void);
   void (*cede) (void);
   int (*ready) (SV *coro_sv);
@@ -46,13 +49,16 @@ struct CoroAPI {
 
 static struct CoroAPI *GCoroAPI;
 
-#define CORO_TRANSFER(prev,next,flags) GCoroAPI->transfer (aTHX_ (prev), (next), (flags))
-#define CORO_SCHEDULE                  GCoroAPI->schedule ()
-#define CORO_CEDE                      GCoroAPI->cede ()
-#define CORO_READY(coro)               GCoroAPI->ready (coro)
-#define CORO_IS_READY(coro)            GCoroAPI->is_ready (coro)
-#define CORO_NREADY                    (*GCoroAPI->nready)
-#define CORO_CURRENT                   SvRV (GCoroAPI->current)
+/* public API macros */
+#define CORO_TRANSFER(prev,next) GCoroAPI->transfer (aTHX_ (prev), (next))
+#define CORO_SCHEDULE            GCoroAPI->schedule ()
+#define CORO_CEDE                GCoroAPI->cede ()
+#define CORO_READY(coro)         GCoroAPI->ready (coro)
+#define CORO_IS_READY(coro)      GCoroAPI->is_ready (coro)
+#define CORO_NREADY              (*GCoroAPI->nready)
+#define CORO_CURRENT             SvRV (GCoroAPI->current)
+#define CORO_GET_SAVE(coro)      GCoroAPI->save ((coro), -1)
+#define CORO_SET_SAVE(coro,save) GCoroAPI->save ((coro), (save))
 
 #define I_CORO_API(YourName)                                               \
 STMT_START {                                                               \

@@ -49,7 +49,7 @@ our @EXPORT = qw(async cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
-our @EXPORT_OK = @{$EXPORT_TAGS{prio}};
+our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
 
 {
    my @async;
@@ -350,9 +350,17 @@ sub desc {
 
 =back
 
-=head2 UTILITY FUNCTIONS
+=head2 GLOBAL FUNCTIONS
 
 =over 4
+
+=item Coro::nready
+
+Returns the number of coroutines that are currently in the ready state,
+i.e. that can be swicthed to. The value C<0> means that the only runnable
+coroutine is the currently running one, so C<cede> would have no effect,
+and C<schedule> would cause a deadlock unless there is an idle handler
+that wakes up some coroutines.
 
 =item unblock_sub { ... }
 

@@ -34,20 +34,20 @@ $main = $Coro::main;
 sub doit0 {
    while() {
       # some unrolling here as well..
-      transfer($c0, $main,  0); transfer($c0, $main,  0);
-      transfer($c0, $main,  0); transfer($c0, $main,  0);
-      transfer($c0, $main,  0); transfer($c0, $main,  0);
-      transfer($c0, $main,  0); transfer($c0, $main,  0);
+      transfer($c0, $main); transfer($c0, $main);
+      transfer($c0, $main); transfer($c0, $main);
+      transfer($c0, $main); transfer($c0, $main);
+      transfer($c0, $main); transfer($c0, $main);
    }
 }
 
 sub doit1 {
    while() {
       # some unrolling here as well..
-      transfer($c1, $main, -1); transfer($c1, $main, -1);
-      transfer($c1, $main, -1); transfer($c1, $main, -1);
-      transfer($c1, $main, -1); transfer($c1, $main, -1);
-      transfer($c1, $main, -1); transfer($c1, $main, -1);
+      transfer($c1, $main); transfer($c1, $main);
+      transfer($c1, $main); transfer($c1, $main);
+      transfer($c1, $main); transfer($c1, $main);
+      transfer($c1, $main); transfer($c1, $main);
    }
 }
 
@@ -59,15 +59,18 @@ $c1 = new Coro::State sub {
    doit1(1,2,3,4,5,6,7,8,9);
 };
 
-transfer($main, $c0, 0);
-transfer($main, $c1, -1);
+$c0->save (0);
+$c1->save (-1);
+
+transfer($main, $c0);
+transfer($main, $c1);
 
 timethese 1000000, {
    function  => 'a(5); a(6)',
    method    => '$a->b(5); $a->b(6)',
    cede      => 'cede',
-   transfer0 => 'transfer($main, $c0, 0)',
-   transfer1 => 'transfer($main, $c1, -1)',
+   transfer0 => 'transfer($main, $c0)',
+   transfer1 => 'transfer($main, $c1)',
 };
 
 
