@@ -1,6 +1,5 @@
 Revision history for Perl extension Coro.
 
-TODO: transfer flags must be per state
 TODO: better (earlier) error messages on broken transfer's
 
 3.

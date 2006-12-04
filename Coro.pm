@@ -20,13 +20,22 @@ Coro - coroutine process abstraction
 
 =head1 DESCRIPTION
 
-This module collection manages coroutines. Coroutines are similar to
-threads but don't run in parallel.
+This module collection manages coroutines. Coroutines are similar
+to threads but don't run in parallel at the same time even on SMP
+machines. The specific flavor of coroutine use din this module also
+guarentees you that it will not switch between coroutines unless
+necessary, at easily-identified points in your program, so locking and
+parallel access are rarely an issue, making coroutine programming much
+safer than threads programming.
 
-In this module, coroutines are defined as "callchain + lexical variables
-+ @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
-callchain, it's own set of lexicals and it's own set of perl's most
-important global variables.
+(Perl, however, does not natively support real threads but instead does a
+very slow and memory-intensive emulation of processes using threads. This
+is a performance win on Windows machines, and a loss everywhere else).
+
+In this module, coroutines are defined as "callchain + lexical variables +
+@_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own callchain,
+its own set of lexicals and its own set of perls most important global
+variables.
 
 =cut
 
@@ -43,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.01';
+our $VERSION = '3.1';
 
 our @EXPORT = qw(async cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (

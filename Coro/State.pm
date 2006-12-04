@@ -107,7 +107,7 @@ sub _coro_init {
       $coro or die "transfer() to empty coroutine $coro";
       &$coro;
    };
-   print STDERR $@ if $@;
+   print STDERR $@ || "FATAL: Coro::State callback returned unexpectedly, exiting.\n";
    _exit 254;
 }
 
@@ -126,7 +126,7 @@ ORing the following constants together:
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
-   SAVE_IRSSV  save/restore $/ (the input record separator)
+   SAVE_IRSSV  save/restore $/ (the Input Record Separator, slow)
    SAVE_ALL    everything that can be saved
 
 These constants are not exported by default. If you don't need any extra

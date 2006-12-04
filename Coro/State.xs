@@ -159,6 +159,7 @@ struct coro {
   SV *defsv; /* $_ */
   SV *errsv; /* $@ */
   SV *irssv; /* $/ */
+  SV *irssv_sv; /* real $/ cache */
   
 #define VAR(name,type) type name;
 # include "state.h"
@@ -303,7 +304,17 @@ load_perl (Coro__State c)
   if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
   if (c->defsv) REPLACE_SV (DEFSV          , c->defsv);
   if (c->errsv) REPLACE_SV (ERRSV          , c->errsv);
-  if (c->irssv) REPLACE_SV (PL_rs          , c->irssv);
+  if (c->irssv)
+    {
+      if (c->irssv == PL_rs || sv_eq (PL_rs, c->irssv))
+        SvREFCNT_dec (c->irssv);
+      else
+        {
+          REPLACE_SV (PL_rs, c->irssv);
+          if (!c->irssv_sv) c->irssv_sv = get_sv ("/", 0);
+          sv_setsv (c->irssv_sv, PL_rs);
+        }
+    }
 
   {
     dSP;
