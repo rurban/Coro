@@ -2,8 +2,8 @@ Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
 
-3.
-        - INCOMPATIBLE CHANGE: $/ is now per-coroutine.
+3.1  Mon Dec  4 23:03:40 CET 2006
+        - INCOMPATIBLE CHANGE: $/ is now per-coroutine (but slow).
         - incompatible change: transfer flags are now per-state.
 	- give a better error message on deadlock.
         - document Coro::nready.

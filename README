@@ -18,11 +18,21 @@ SYNOPSIS
 
 DESCRIPTION
     This module collection manages coroutines. Coroutines are similar to
-    threads but don't run in parallel.
+    threads but don't run in parallel at the same time even on SMP machines.
+    The specific flavor of coroutine use din this module also guarentees you
+    that it will not switch between coroutines unless necessary, at
+    easily-identified points in your program, so locking and parallel access
+    are rarely an issue, making coroutine programming much safer than
+    threads programming.
+
+    (Perl, however, does not natively support real threads but instead does
+    a very slow and memory-intensive emulation of processes using threads.
+    This is a performance win on Windows machines, and a loss everywhere
+    else).
 
     In this module, coroutines are defined as "callchain + lexical variables
-    + @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
-    callchain, it's own set of lexicals and it's own set of perl's most
+    + @_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own
+    callchain, its own set of lexicals and its own set of perls most
     important global variables.
 
     $main
@@ -166,7 +176,14 @@ DESCRIPTION
         this coroutine. This is just a free-form string you can associate
         with a coroutine.
 
-  UTILITY FUNCTIONS
+  GLOBAL FUNCTIONS
+    Coro::nready
+        Returns the number of coroutines that are currently in the ready
+        state, i.e. that can be swicthed to. The value 0 means that the only
+        runnable coroutine is the currently running one, so "cede" would
+        have no effect, and "schedule" would cause a deadlock unless there
+        is an idle handler that wakes up some coroutines.
+
     unblock_sub { ... }
         This utility function takes a BLOCK or code reference and "unblocks"
         it, returning the new coderef. This means that the new coderef will

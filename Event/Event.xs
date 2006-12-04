@@ -74,7 +74,7 @@ _install_std_cb (SV *self, int type)
           SV *rv = newRV_noinc ((SV *)priv);
 
           av_fill (priv, CD_MAX);
-          AvARRAY (priv)[CD_WAIT] = newAV (); /* badbad */
+          AvARRAY (priv)[CD_WAIT] = (SV *)newAV (); /* badbad */
           AvARRAY (priv)[CD_TYPE] = newSViv (type);
           AvARRAY (priv)[CD_OK  ] = &PL_sv_no;
           AvARRAY (priv)[CD_HITS] = newSViv (0);
