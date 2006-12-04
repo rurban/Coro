@@ -20,13 +20,22 @@ Coro - coroutine process abstraction
 
 =head1 DESCRIPTION
 
-This module collection manages coroutines. Coroutines are similar to
-threads but don't run in parallel.
+This module collection manages coroutines. Coroutines are similar
+to threads but don't run in parallel at the same time even on SMP
+machines. The specific flavor of coroutine use din this module also
+guarentees you that it will not switch between coroutines unless
+necessary, at easily-identified points in your program, so locking and
+parallel access are rarely an issue, making coroutine programming much
+safer than threads programming.
 
-In this module, coroutines are defined as "callchain + lexical variables
-+ @_ + $_ + $@ + $^W + C stack), that is, a coroutine has it's own
-callchain, it's own set of lexicals and it's own set of perl's most
-important global variables.
+(Perl, however, does not natively support real threads but instead does a
+very slow and memory-intensive emulation of processes using threads. This
+is a performance win on Windows machines, and a loss everywhere else).
+
+In this module, coroutines are defined as "callchain + lexical variables +
+@_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own callchain,
+its own set of lexicals and its own set of perls most important global
+variables.
 
 =cut
 
@@ -43,13 +52,13 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.0';
+our $VERSION = '3.1';
 
 our @EXPORT = qw(async cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
-our @EXPORT_OK = @{$EXPORT_TAGS{prio}};
+our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
 
 {
    my @async;
@@ -130,8 +139,8 @@ handlers), then it must be prepared to be called recursively.
 =cut
 
 $idle = sub {
-   print STDERR "FATAL: deadlock detected\n";
-   exit (51);
+   require Carp;
+   Carp::croak ("FATAL: deadlock detected");
 };
 
 # this coroutine is necessary because a coroutine
@@ -350,9 +359,17 @@ sub desc {
 
 =back
 
-=head2 UTILITY FUNCTIONS
+=head2 GLOBAL FUNCTIONS
 
 =over 4
+
+=item Coro::nready
+
+Returns the number of coroutines that are currently in the ready state,
+i.e. that can be swicthed to. The value C<0> means that the only runnable
+coroutine is the currently running one, so C<cede> would have no effect,
+and C<schedule> would cause a deadlock unless there is an idle handler
+that wakes up some coroutines.
 
 =item unblock_sub { ... }
 

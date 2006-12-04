@@ -26,6 +26,7 @@ Coro/LWP.pm
 Coro/Select.pm
 Coro/Handle.pm
 Coro/Socket.pm
+Coro/Timer.pm
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h
@@ -42,6 +43,7 @@ t/07_eval.t
 t/08_join.t
 t/09_timer.t
 t/10_bugs.t
+t/11_deadlock.t
 
 Event/Makefile.PL
 Event/Event.pm

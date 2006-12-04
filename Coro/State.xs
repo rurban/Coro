@@ -92,8 +92,6 @@ static long pagesize;
 
 #include "CoroAPI.h"
 
-#define TRANSFER_SET_STACKLEVEL 0x8bfbfbfb /* magic cookie */
-
 #ifdef USE_ITHREADS
 static perl_mutex coro_mutex;
 # define LOCK   do { MUTEX_LOCK   (&coro_mutex); } while (0)
@@ -153,12 +151,15 @@ struct coro {
   /* data associated with this coroutine (initial args) */
   AV *args;
   int refcnt;
-  int flags;
+  int save;  /* CORO_SAVE flags */
+  int flags; /* CF_ flags */
 
   /* optionally saved, might be zero */
-  AV *defav;
-  SV *defsv;
-  SV *errsv;
+  AV *defav; /* @_ */
+  SV *defsv; /* $_ */
+  SV *errsv; /* $@ */
+  SV *irssv; /* $/ */
+  SV *irssv_sv; /* real $/ cache */
   
 #define VAR(name,type) type name;
 # include "state.h"
@@ -291,13 +292,10 @@ put_padlist (CV *cv)
 #define SB do {
 #define SE } while (0)
 
-#define LOAD(state)       load_state ((state))
-#define SAVE(state,flags) save_state ((state),(flags))
-
 #define REPLACE_SV(sv,val) SB SvREFCNT_dec (sv); (sv) = (val); (val) = 0; SE
 
 static void
-load_state (Coro__State c)
+load_perl (Coro__State c)
 {
 #define VAR(name,type) PL_ ## name = c->name;
 # include "state.h"
@@ -306,6 +304,17 @@ load_state (Coro__State c)
   if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
   if (c->defsv) REPLACE_SV (DEFSV          , c->defsv);
   if (c->errsv) REPLACE_SV (ERRSV          , c->errsv);
+  if (c->irssv)
+    {
+      if (c->irssv == PL_rs || sv_eq (PL_rs, c->irssv))
+        SvREFCNT_dec (c->irssv);
+      else
+        {
+          REPLACE_SV (PL_rs, c->irssv);
+          if (!c->irssv_sv) c->irssv_sv = get_sv ("/", 0);
+          sv_setsv (c->irssv_sv, PL_rs);
+        }
+    }
 
   {
     dSP;
@@ -324,7 +333,7 @@ load_state (Coro__State c)
 }
 
 static void
-save_state (Coro__State c, int flags)
+save_perl (Coro__State c)
 {
   {
     dSP;
@@ -382,9 +391,10 @@ save_state (Coro__State c, int flags)
     PUTBACK;
   }
 
-  c->defav = flags & TRANSFER_SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
-  c->defsv = flags & TRANSFER_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
-  c->errsv = flags & TRANSFER_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
+  c->defav = c->save & CORO_SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
+  c->defsv = c->save & CORO_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
+  c->errsv = c->save & CORO_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
+  c->irssv = c->save & CORO_SAVE_IRSSV ?       SvREFCNT_inc (PL_rs)           : 0;
 
 #define VAR(name,type)c->name = PL_ ## name;
 # include "state.h"
@@ -690,12 +700,12 @@ cctx_put (coro_cctx *cctx)
 
 /* never call directly, always through the coro_state_transfer global variable */
 static void NOINLINE
-transfer (struct coro *prev, struct coro *next, int flags)
+transfer (struct coro *prev, struct coro *next)
 {
   dSTACKLEVEL;
 
   /* sometimes transfer is only called to set idle_sp */
-  if (flags == TRANSFER_SET_STACKLEVEL)
+  if (!next)
     ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
   else if (prev != next)
     {
@@ -727,7 +737,7 @@ transfer (struct coro *prev, struct coro *next, int flags)
           /* need to start coroutine */
           next->flags &= ~CF_NEW;
           /* first get rid of the old state */
-          SAVE (prev, -1);
+          save_perl (prev);
           /* setup coroutine call */
           setup_coro (next);
           /* need a new stack */
@@ -736,8 +746,8 @@ transfer (struct coro *prev, struct coro *next, int flags)
       else
         {
           /* coroutine already started */
-          SAVE (prev, flags);
-          LOAD (next);
+          save_perl (prev);
+          load_perl (next);
         }
 
       prev__cctx = prev->cctx;
@@ -777,10 +787,9 @@ transfer (struct coro *prev, struct coro *next, int flags)
 struct transfer_args
 {
   struct coro *prev, *next;
-  int flags;
 };
 
-#define TRANSFER(ta) transfer ((ta).prev, (ta).next, (ta).flags)
+#define TRANSFER(ta) transfer ((ta).prev, (ta).next)
 
 static void
 coro_state_destroy (struct coro *coro)
@@ -791,16 +800,18 @@ coro_state_destroy (struct coro *coro)
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
       struct coro temp;
+      Zero (&temp, 1, struct coro);
+      temp.save = CORO_SAVE_ALL;
 
       if (coro->flags & CF_RUNNING)
         croak ("FATAL: tried to destroy currently running coroutine");
 
-      SAVE ((&temp), TRANSFER_SAVE_ALL);
-      LOAD (coro);
+      save_perl (&temp);
+      load_perl (coro);
 
       coro_destroy_stacks ();
 
-      LOAD ((&temp)); /* this will get rid of defsv etc.. */
+      load_perl (&temp); /* this will get rid of defsv etc.. */
 
       coro->mainstack = 0;
     }
@@ -865,20 +876,31 @@ SvSTATE (SV *coro)
 }
 
 static void
-prepare_transfer (struct transfer_args *ta, SV *prev, SV *next, int flags)
+prepare_transfer (struct transfer_args *ta, SV *prev_sv, SV *next_sv)
 {
-  ta->prev  = SvSTATE (prev);
-  ta->next  = SvSTATE (next);
-  ta->flags = flags;
+  ta->prev = SvSTATE (prev_sv);
+  ta->next = SvSTATE (next_sv);
 }
 
 static void
-api_transfer (SV *prev, SV *next, int flags)
+api_transfer (SV *prev_sv, SV *next_sv)
 {
   struct transfer_args ta;
 
-  prepare_transfer (&ta, prev, next, flags);
+  prepare_transfer (&ta, prev_sv, next_sv);
   TRANSFER (ta);
+}
+
+static int
+api_save (SV *coro_sv, int new_save)
+{
+  struct coro *coro = SvSTATE (coro_sv);
+  int old_save = coro->save;
+
+  if (new_save >= 0)
+    coro->save = new_save;
+
+  return old_save;
 }
 
 /** Coro ********************************************************************/
@@ -997,9 +1019,8 @@ prepare_schedule (struct transfer_args *ta)
 
   ta->prev  = SvSTATE (prev);
   ta->next  = SvSTATE (next);
-  ta->flags = TRANSFER_SAVE_ALL;
 
-  assert (ta->flags & CF_READY);
+  assert (ta->next->flags & CF_READY);
   ta->next->flags &= ~CF_READY;
 }
 
@@ -1042,9 +1063,11 @@ BOOT:
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
-        newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (TRANSFER_SAVE_DEFAV));
-        newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (TRANSFER_SAVE_DEFSV));
-        newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (TRANSFER_SAVE_ERRSV));
+        newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (CORO_SAVE_DEFAV));
+        newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (CORO_SAVE_DEFSV));
+        newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (CORO_SAVE_ERRSV));
+        newCONSTSUB (coro_state_stash, "SAVE_IRSSV", newSViv (CORO_SAVE_IRSSV));
+        newCONSTSUB (coro_state_stash, "SAVE_ALL",   newSViv (CORO_SAVE_ALL));
 
         main_mainstack = PL_mainstack;
 
@@ -1064,6 +1087,7 @@ new (char *klass, ...)
 
         Newz (0, coro, 1, struct coro);
         coro->args = newAV ();
+        coro->save = CORO_SAVE_ALL;
         coro->flags = CF_NEW;
 
         hv = newHV ();
@@ -1074,6 +1098,13 @@ new (char *klass, ...)
           av_push (coro->args, newSVsv (ST (i)));
 }
         OUTPUT:
+        RETVAL
+
+int
+save (SV *coro, int new_save = -1)
+	CODE:
+        RETVAL = api_save (coro, new_save);
+	OUTPUT:
         RETVAL
 
 void
@@ -1091,14 +1122,13 @@ _set_stacklevel (...)
             case 0:
               ta.prev  = (struct coro *)INT2PTR (coro_cctx *, SvIV (ST (0)));
               ta.next  = 0;
-              ta.flags = TRANSFER_SET_STACKLEVEL;
               break;
 
             case 1:
-              if (items != 3)
-                croak ("Coro::State::transfer (prev,next,flags) expects three arguments, not %d", items);
+              if (items != 2)
+                croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
 
-              prepare_transfer (&ta, ST (0), ST (1), SvIV (ST (2)));
+              prepare_transfer (&ta, ST (0), ST (1));
               break;
 
             case 2:
@@ -1171,6 +1201,7 @@ BOOT:
           SV *sv = perl_get_sv("Coro::API", 1);
 
           coroapi.schedule = api_schedule;
+          coroapi.save     = api_save;
           coroapi.cede     = api_cede;
           coroapi.ready    = api_ready;
           coroapi.is_ready = api_is_ready;
@@ -1182,6 +1213,13 @@ BOOT:
           SvREADONLY_on (sv);
         }
 }
+
+void
+_set_current (SV *current)
+        PROTOTYPE: $
+	CODE:
+        SvREFCNT_dec (SvRV (coro_current));
+        SvRV_set (coro_current, SvREFCNT_inc (SvRV (current)));
 
 int
 prio (Coro::State coro, int newprio = 0)
@@ -1226,13 +1264,6 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
-
-void
-_set_current (SV *current)
-        PROTOTYPE: $
-	CODE:
-        SvREFCNT_dec (SvRV (coro_current));
-        SvRV_set (coro_current, SvREFCNT_inc (SvRV (current)));
 
 MODULE = Coro::State                PACKAGE = Coro::AIO
 

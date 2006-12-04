@@ -68,7 +68,7 @@ BEGIN {
 use Exporter;
 use base Exporter::;
 
-our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV);
+our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_IRSSV SAVE_ALL);
 
 =item $coro = new Coro::State [$coderef[, @args...]]
 
@@ -76,6 +76,9 @@ Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If the subroutine
 returns it will be executed again. If it throws an exception the program
 will terminate.
+
+The initial save flags for a new state is C<SAVE_ALL>, which can be
+changed using the C<save> method.
 
 Calling C<exit> in a coroutine will not work correctly, so do not do that.
 
@@ -104,29 +107,32 @@ sub _coro_init {
       $coro or die "transfer() to empty coroutine $coro";
       &$coro;
    };
-   print STDERR $@ if $@;
-   _exit 55;
+   print STDERR $@ || "FATAL: Coro::State callback returned unexpectedly, exiting.\n";
+   _exit 254;
 }
 
-=item $prev->transfer ($next, $flags)
+=item $old_save_flags = $state->save ([$new_save_flags])
 
-Save the state of the current subroutine in C<$prev> and switch to the
-coroutine saved in C<$next>.
+It is possible to "localise" certain global variables for each state:
+for example, it would be awkward if @_ or $_ would suddenly change just
+because you temporarily switched to another coroutine, so Coro::State can
+save those variables in the state object on transfers.
 
-The "state" of a subroutine includes the scope, i.e. lexical variables and
-the current execution state (subroutine, stack). The C<$flags> value can
-be used to specify that additional state to be saved (and later restored), by
-oring the following constants together:
+The C<$new_save_flags> value can be used to specify which variables (and
+other things) are to be saved (and later restored) on each transfer, by
+ORing the following constants together:
 
    Constant    Effect
    SAVE_DEFAV  save/restore @_
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
+   SAVE_IRSSV  save/restore $/ (the Input Record Separator, slow)
+   SAVE_ALL    everything that can be saved
 
 These constants are not exported by default. If you don't need any extra
-additional state saved, use C<0> as the flags value.
+additional variables saved, use C<0> as the flags value.
 
-If you feel that something important is missing then tell me.  Also
+If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
 as C<Coro::Channel::put>) might clobber any global and/or special
 variables. Yes, this is by design ;) You can always create your own
@@ -139,6 +145,14 @@ this:
      local ($_, $@, ...);
      $old->transfer ($new);
   }
+
+=item $prev->transfer ($next)
+
+Save the state of the current subroutine in C<$prev> and switch to the
+coroutine saved in C<$next>.
+
+The "state" of a subroutine includes the scope, i.e. lexical variables and
+the current execution state (subroutine, stack).
 
 =item Coro::State::cctx_count
 
