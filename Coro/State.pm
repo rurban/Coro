@@ -105,7 +105,7 @@ sub _coro_init {
       &$coro;
    };
    print STDERR $@ if $@;
-   _exit 55;
+   _exit 254;
 }
 
 =item $prev->transfer ($next, $flags)

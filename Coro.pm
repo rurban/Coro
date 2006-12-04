@@ -130,8 +130,8 @@ handlers), then it must be prepared to be called recursively.
 =cut
 
 $idle = sub {
-   print STDERR "FATAL: deadlock detected\n";
-   exit (51);
+   require Carp;
+   Carp::croak ("FATAL: deadlock detected");
 };
 
 # this coroutine is necessary because a coroutine
