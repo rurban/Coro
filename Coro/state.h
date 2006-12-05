@@ -2,7 +2,11 @@
 /* mostly copied from thrdvar.h */
 
 VAR(stack_sp,      SV **)          /* top of the stack */
+#ifdef OP_IN_REGISTER
+VAR(opsave,        OP *)           /* probably not necessary */
+#else
 VAR(op,            OP *)           /* currently executing op */
+#endif
 VAR(curpad,        SV **)          /* active pad (lexicals+tmps) */
 
 VAR(stack_base,    SV **)
@@ -32,6 +36,7 @@ VAR(retstack_ix,   I32)
 VAR(retstack_max,  I32)
 #endif
 
+VAR(tainted,       bool)           /* using variables controlled by $< */
 VAR(curpm,         PMOP *)         /* what to do \ interps in REs from */
 VAR(curcop,        COP *)
 
@@ -41,9 +46,12 @@ VAR(localizing,    int)            /* are we processing a local() list? */
 VAR(curstack,      AV *)           /* THE STACK */
 VAR(curstackinfo,  PERL_SI *)      /* current stack + context */
 VAR(mainstack,     AV *)           /* the stack when nothing funny is happening */
+
 VAR(sortcop,       OP *)           /* user defined sort routine */
 VAR(sortstash,     HV *)           /* which is in some package or other */
+#if !PERL_VERSION_ATLEAST (5,9,0)
 VAR(sortcxix,      I32)            /* from pp_ctl.c */
+#endif
 
 VAR(comppad,       AV *)           /* storage for lexically scoped temporaries */
 

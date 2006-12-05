@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.1';
+our $VERSION = '3.11';
 
 our @EXPORT = qw(async cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
