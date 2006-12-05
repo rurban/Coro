@@ -2,6 +2,15 @@ Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
 
+3.11 Tue Dec  5 13:11:24 CET 2006
+        - fixed some bogus assert's, but as perl.h disables assert even
+          without NDEBUG (thank you very much), not too many people should
+          notice (that did include myself). Andreas König noticed, though :)
+	- do not save/restore PL_sortcxix on >= 5.9.x, it doesn't seem to have
+          it. Also noticed by Andreas König :)
+        - save/restore tainted status.
+        - verified to pass the testsuite on my 5.9.5.
+
 3.1  Mon Dec  4 23:03:40 CET 2006
         - INCOMPATIBLE CHANGE: $/ is now per-coroutine (but slow).
         - incompatible change: transfer flags are now per-state.

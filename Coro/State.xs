@@ -42,6 +42,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <assert.h>
 
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef STACKGUARD
@@ -595,7 +596,7 @@ cctx_new ()
 
   ++cctx_count;
 
-  New (0, cctx, 1, coro_cctx);
+  Newz (0, cctx, 1, coro_cctx);
 
 #if HAVE_MMAP
 
@@ -706,7 +707,10 @@ transfer (struct coro *prev, struct coro *next)
 
   /* sometimes transfer is only called to set idle_sp */
   if (!next)
-    ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
+    {
+      ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
+      assert (((coro_cctx *)prev)->top_env = PL_top_env); /* just for the side effetc when assert is enabled */
+    }
   else if (prev != next)
     {
       coro_cctx *prev__cctx;
@@ -741,7 +745,7 @@ transfer (struct coro *prev, struct coro *next)
           /* setup coroutine call */
           setup_coro (next);
           /* need a new stack */
-          assert (!next->stack);
+          assert (!next->cctx);
         }
       else
         {
