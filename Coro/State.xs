@@ -40,6 +40,11 @@
 # endif
 #endif
 
+/* 5.8.7 */
+#ifndef SvRV_set
+# define SvRV_set(s,v) SvRV(s) = (v)
+#endif
+
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>

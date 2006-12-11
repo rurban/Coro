@@ -2,6 +2,8 @@ Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
 
+	- improve portability to slightly older perls.
+
 3.11 Tue Dec  5 13:11:24 CET 2006
         - fixed some bogus assert's, but as perl.h disables assert even
           without NDEBUG (thank you very much), not too many people should
