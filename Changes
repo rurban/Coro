@@ -2,6 +2,7 @@ Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
 TODO: "internals mode"
+TODO: "use defaults for everything"
 
 	- improve portability to slightly older perls.
         - use cleaner coroutine destruction.

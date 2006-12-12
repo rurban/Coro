@@ -352,6 +352,7 @@ save_perl (Coro__State c)
      * (and reinitialize) all cv's in the whole callchain :(
      */
 
+    EXTEND (SP, 3 + 1);
     PUSHs (Nullsv);
     /* this loop was inspired by pp_caller */
     for (;;)
@@ -367,7 +368,6 @@ save_perl (Coro__State c)
                 if (CvDEPTH (cv))
                   {
                     EXTEND (SP, 3);
-
                     PUSHs ((SV *)CvPADLIST (cv));
                     PUSHs (INT2PTR (SV *, CvDEPTH (cv)));
                     PUSHs ((SV *)cv);
@@ -376,14 +376,6 @@ save_perl (Coro__State c)
                     get_padlist (cv);
                   }
               }
-#ifdef CXt_FORMAT
-            else if (CxTYPE (cx) == CXt_FORMAT)
-              {
-                /* I never used formats, so how should I know how these are implemented? */
-                /* my bold guess is as a simple, plain sub... */
-                croak ("CXt_FORMAT not yet handled. Don't switch coroutines from within formats");
-              }
-#endif
           }
 
         if (top_si->si_type == PERLSI_MAIN)
@@ -413,6 +405,10 @@ save_perl (Coro__State c)
  * on the (sometimes correct) assumption that coroutines do
  * not usually need a lot of stackspace.
  */
+#if USE_PERL_INIT_STACKS
+# define coro_init_stacks init_stacks
+#else
+
 static void
 coro_init_stacks ()
 {
@@ -461,13 +457,15 @@ coro_destroy_stacks ()
 {
   if (!IN_DESTRUCT)
     {
-      /* is this ugly, I ask? */
+      /* restore all saved variables and stuff */
       LEAVE_SCOPE (0);
+      assert (PL_tmps_floor == -1);
 
-      /* sure it is, but more important: is it correct?? :/ */
+      /* free all temporaries */
       FREETMPS;
+      assert (PL_tmps_ix == -1);
 
-      /*POPSTACK_TO (PL_mainstack);*//*D*//*use*/
+      POPSTACK_TO (PL_mainstack);
     }
 
   while (PL_curstackinfo->si_next)
@@ -477,17 +475,8 @@ coro_destroy_stacks ()
     {
       PERL_SI *p = PL_curstackinfo->si_prev;
 
-      { /*D*//*remove*/
-        dSP;
-        SWITCHSTACK (PL_curstack, PL_curstackinfo->si_stack);
-        PUTBACK; /* possibly superfluous */
-      }
-
       if (!IN_DESTRUCT)
-        {
-          dounwind (-1);/*D*//*remove*/
-          SvREFCNT_dec (PL_curstackinfo->si_stack);
-        }
+        SvREFCNT_dec (PL_curstackinfo->si_stack);
 
       Safefree (PL_curstackinfo->si_cxstack);
       Safefree (PL_curstackinfo);
@@ -502,6 +491,7 @@ coro_destroy_stacks ()
   Safefree (PL_retstack);
 #endif
 }
+#endif
 
 static void
 setup_coro (struct coro *coro)
