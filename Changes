@@ -1,11 +1,13 @@
 Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
-TODO: "internals mode"
-TODO: "use defaults for everything"
 
+3.2
 	- improve portability to slightly older perls.
         - use cleaner coroutine destruction.
+        - simplify configuration for users.
+        - optionally (unrecommended) prefer perl functions over
+          their coro replacements.
 
 3.11 Tue Dec  5 13:11:24 CET 2006
         - fixed some bogus assert's, but as perl.h disables assert even

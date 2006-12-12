@@ -6,6 +6,33 @@
 
 #include "patchlevel.h"
 
+#include <stdio.h>
+#include <errno.h>
+#include <assert.h>
+
+#ifdef HAVE_MMAP
+# include <unistd.h>
+# include <sys/mman.h>
+# ifndef MAP_ANONYMOUS
+#  ifdef MAP_ANON
+#   define MAP_ANONYMOUS MAP_ANON
+#  else
+#   undef HAVE_MMAP
+#  endif
+# endif
+# include <limits.h>
+# ifndef PAGESIZE
+#  define PAGESIZE pagesize
+#  define BOOT_PAGESIZE pagesize = sysconf (_SC_PAGESIZE)
+static long pagesize;
+# else
+#  define BOOT_PAGESIZE (void)0
+# endif
+#else
+# define PAGESIZE 0
+# define BOOT_PAGESIZE (void)0
+#endif
+
 #if USE_VALGRIND
 # include <valgrind/valgrind.h>
 #endif
@@ -45,10 +72,6 @@
 # define SvRV_set(s,v) SvRV(s) = (v)
 #endif
 
-#include <stdio.h>
-#include <errno.h>
-#include <assert.h>
-
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef STACKGUARD
 #endif
@@ -57,27 +80,9 @@
 # define STACKGUARD 0
 #endif
 
-#ifdef HAVE_MMAP
-# include <unistd.h>
-# include <sys/mman.h>
-# ifndef MAP_ANONYMOUS
-#  ifdef MAP_ANON
-#   define MAP_ANONYMOUS MAP_ANON
-#  else
-#   undef HAVE_MMAP
-#  endif
-# endif
-# include <limits.h>
-# ifndef PAGESIZE
-#  define PAGESIZE pagesize
-#  define BOOT_PAGESIZE pagesize = sysconf (_SC_PAGESIZE)
-static long pagesize;
-# else
-#  define BOOT_PAGESIZE (void)0
-# endif
-#else
-# define PAGESIZE 0
-# define BOOT_PAGESIZE (void)0
+/* prefer perl internal functions over our own? */
+#ifndef PREFER_PERL_FUNCTIONS
+# define PREFER_PERL_FUNCTIONS 0
 #endif
 
 /* The next macro should declare a variable stacklevel that contains and approximation
@@ -261,7 +266,7 @@ get_padlist (CV *cv)
     CvPADLIST (cv) = (AV *)AvARRAY (av)[AvFILLp (av)--];
   else
    {
-#if 0
+#if PREFER_PERL_FUNCTIONS
      /* this is probably cleaner, but also slower? */
      CV *cp = Perl_cv_clone (cv);
      CvPADLIST (cv) = CvPADLIST (cp);
@@ -405,10 +410,9 @@ save_perl (Coro__State c)
  * on the (sometimes correct) assumption that coroutines do
  * not usually need a lot of stackspace.
  */
-#if USE_PERL_INIT_STACKS
+#if PREFER_PERL_FUNCTIONS
 # define coro_init_stacks init_stacks
 #else
-
 static void
 coro_init_stacks ()
 {
@@ -448,6 +452,7 @@ coro_init_stacks ()
     PL_retstack_max = 16;
 #endif
 }
+#endif
 
 /*
  * destroy the stacks, the callchain etc...
@@ -491,7 +496,6 @@ coro_destroy_stacks ()
   Safefree (PL_retstack);
 #endif
 }
-#endif
 
 static void
 setup_coro (struct coro *coro)
