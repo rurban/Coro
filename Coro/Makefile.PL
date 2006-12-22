@@ -20,7 +20,7 @@ maintainer :)
 
 EOF
 
-if (prompt ("Skip further questions and use defaults (y/n)", "y") =~ /[yY]/) {
+if (prompt ("Skip further questions and use defaults (y/n)?", "y") =~ /[yY]/) {
    $ENV{PERL_MM_USE_DEFAULT} = 1;
 }
 
@@ -145,7 +145,7 @@ The default should be fine.
 
 EOF
 
-my $stacksize = prompt ("C stack size factor", "16384");
+my $stacksize = prompt ("C stack size factor?", "16384");
 $DEFINE .= " -DSTACKSIZE=$stacksize";
 
 print "using a stacksize of $stacksize * sizeof(long)\n";
@@ -172,7 +172,7 @@ The default, as usual, should be just fine.
 
 EOF
 
-my $stackguard = prompt ("Number of guard pages (0 disables)", "4");
+my $stackguard = prompt ("Number of guard pages (0 disables)?", "4");
 $DEFINE .= " -DSTACKGUARD=$stackguard";
 
 print <<EOF;
@@ -190,7 +190,7 @@ the safe choice.
 
 EOF
 
-my $valgrind = prompt ("Enable valgrind support (y/n)",
+my $valgrind = prompt ("Enable valgrind support (y/n)?",
                        -r "/usr/include/valgrind/valgrind.h" ?  "y" : "n");
 $DEFINE .= " -DUSE_VALGRIND=1" if $valgrind =~ /[yY]/;
 
@@ -208,7 +208,7 @@ should enable it only as a last resort.
 
 EOF
 
-my $use_internals = prompt ("Prefer perl functions over coro functions (y/n)", "n");
+my $use_internals = prompt ("Prefer perl functions over coro functions (y/n)?", "n");
 $DEFINE .= " -DPREFER_PERL_FUNCTIONS=1" if $use_internals =~ /[yY]/;
 
 print <<EOF;
