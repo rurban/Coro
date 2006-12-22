@@ -959,11 +959,6 @@ api_ready (SV *coro_sv)
   if (coro->flags & CF_READY)
     return 0;
 
-#if 0 /* this is actually harmless */
-  if (coro->flags & CF_RUNNING)
-    croak ("Coro::ready called on currently running coroutine");
-#endif
-
   coro->flags |= CF_READY;
 
   LOCK;
