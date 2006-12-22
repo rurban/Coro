@@ -8,6 +8,23 @@ $|=1;
 
 $DEFINE = "";
 
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
+Coro has a number of configuration options. Due to its maturity, the
+defaults that Coro chooses are usually fine, so you can decide to skip
+these questions. Only if something went wrong you should select 'n'
+here and manually configure Coro, and, of course, report this to the
+maintainer :)
+
+EOF
+
+if (prompt ("Skip further questions and use defaults (y/n)?", "y") =~ /[yY]/) {
+   $ENV{PERL_MM_USE_DEFAULT} = 1;
+}
+
+
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
 if ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
@@ -31,8 +48,7 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
    $iface = "s";
 }
 
-if ($iface) {
-   print <<EOF;
+print <<EOF;
 
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
 
@@ -41,28 +57,28 @@ level. The default chosen is based on your current confguration and is
 correct in most cases, but you still can chose between these alternatives:
 
 u  The unix 'ucontext.h' functions are relatively new and not implemented
-   or well-tested in older unices. They allow very fast coroutine creation
-   and reasonably fast switching, and, most importantly, are very stable.
+or well-tested in older unices. They allow very fast coroutine creation
+and reasonably fast switching, and, most importantly, are very stable.
 
 s  If the ucontext functions are not working or you don't want
-   to use them for other reasons you can try a workaround using
-   setjmp/longjmp/sigaltstack (also standard unix functions). Coroutine
-   creation is rather slow, but switching is very fast as well (often much
-   faster than with the ucontext functions). Unfortunately, glibc-2.1 and
-   below don't even feature a working sigaltstack.
+to use them for other reasons you can try a workaround using
+setjmp/longjmp/sigaltstack (also standard unix functions). Coroutine
+creation is rather slow, but switching is very fast as well (often much
+faster than with the ucontext functions). Unfortunately, glibc-2.1 and
+below don't even feature a working sigaltstack.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
-   this hack. Since it is very linux-specific it is also quite fast and
-   recommended even for newer versions; when it works, that is (currently
-   x86 and a few others only. If it compiles, it's usually ok).
+this hack. Since it is very linux-specific it is also quite fast and
+recommended even for newer versions; when it works, that is (currently
+x86 and a few others only. If it compiles, it's usually ok).
 
 i  IRIX. For some reason, SGI really does not like to follow the single
-   unix specification (does that surprise you?), so this workaround might
-   be needed (it's fast), although [s] and [u] should also work now.
+unix specification (does that surprise you?), so this workaround might
+be needed (it's fast), although [s] and [u] should also work now.
 
 w  Microsoft Windows. Try this on Microsoft Windows, although, as there is
-   no standard on how to do this under windows, this might work only on
-   cygwin or specific versions of msvc. Your problem.
+no standard on how to do this under windows, this might work only on
+cygwin or specific versions of msvc. Your problem.
 
 For most systems, the default chosen should be OK. If you experience
 problems then you should experiment with this setting and/or turn off
@@ -72,34 +88,31 @@ EOF
 
 retry:
 
-   my $r = prompt "Use which implementation,\n" .
-                  "<s>etjmp/longjump, <u>context, <i>rix, <l>inux or <w>indows?",
-                  $iface;
-   $iface = lc $1 if $r =~ /(\S)/;
+my $r = prompt "Use which implementation,\n" .
+               "<s>etjmp/longjump, <u>context, <i>rix, <l>inux or <w>indows?",
+               $iface;
+$iface = lc $1 if $r =~ /(\S)/;
 
-   if ($iface eq "u") {
-      $DEFINE .= " -DCORO_UCONTEXT";
-      print "\nUsing ucontext implementation\n\n";
-      conftest("TEST_makecontext");
-   } elsif ($iface eq "s") {
-      $DEFINE .= " -DCORO_SJLJ";
-      print "\nUsing setjmp/longjmp/sigaltstack implementation\n\n";
-      conftest("TEST_sigaltstack");
-   } elsif ($iface eq "l") {
-      $DEFINE .= " -DCORO_LINUX";
-      print "\nUsing linux-specific implementation\n\n";
-   } elsif ($iface eq "i") {
-      $DEFINE .= " -DCORO_IRIX";
-      print "\nUsing irix-specific implementation\n\n";
-   } elsif ($iface eq "w") {
-      $DEFINE .= " -DCORO_LOSER";
-      print "\nUsing windows-specific implementation\n\n";
-   } else {
-      print "\nUnknown implementation \"$iface\"\n";
-      goto retry;
-   }
+if ($iface eq "u") {
+   $DEFINE .= " -DCORO_UCONTEXT";
+   print "\nUsing ucontext implementation\n\n";
+   conftest("TEST_makecontext");
+} elsif ($iface eq "s") {
+   $DEFINE .= " -DCORO_SJLJ";
+   print "\nUsing setjmp/longjmp/sigaltstack implementation\n\n";
+   conftest("TEST_sigaltstack");
+} elsif ($iface eq "l") {
+   $DEFINE .= " -DCORO_LINUX";
+   print "\nUsing linux-specific implementation\n\n";
+} elsif ($iface eq "i") {
+   $DEFINE .= " -DCORO_IRIX";
+   print "\nUsing irix-specific implementation\n\n";
+} elsif ($iface eq "w") {
+   $DEFINE .= " -DCORO_LOSER";
+   print "\nUsing windows-specific implementation\n\n";
 } else {
-   print "\nUsing microsoft compatible coroutines\n\n";
+   print "\nUnknown implementation \"$iface\"\n";
+   goto retry;
 }
 
 print <<EOF;
@@ -132,7 +145,7 @@ The default should be fine.
 
 EOF
 
-my $stacksize = prompt ("C stack size factor", "16384");
+my $stacksize = prompt ("C stack size factor?", "16384");
 $DEFINE .= " -DSTACKSIZE=$stacksize";
 
 print "using a stacksize of $stacksize * sizeof(long)\n";
@@ -159,7 +172,7 @@ The default, as usual, should be just fine.
 
 EOF
 
-my $stackguard = prompt ("Number of guard pages (0 disables)", "4");
+my $stackguard = prompt ("Number of guard pages (0 disables)?", "4");
 $DEFINE .= " -DSTACKGUARD=$stackguard";
 
 print <<EOF;
@@ -177,8 +190,26 @@ the safe choice.
 
 EOF
 
-my $valgrind = prompt ("Enable valgrind support (y/n)", "n");
+my $valgrind = prompt ("Enable valgrind support (y/n)?",
+                       -r "/usr/include/valgrind/valgrind.h" ?  "y" : "n");
 $DEFINE .= " -DUSE_VALGRIND=1" if $valgrind =~ /[yY]/;
+
+
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
+Coro can use (or even trick) some perl functions into doing what it needs
+instead of relying on (some) of its own functions. This might increase
+chances that it compiles and works, but it could just as well result in
+memory leaks, crashes or silent data corruption. It certainly does result
+in slightly slower speed and higher memory consumption, though, so you
+should enable it only as a last resort.
+
+EOF
+
+my $use_internals = prompt ("Prefer perl functions over coro functions (y/n)?", "n");
+$DEFINE .= " -DPREFER_PERL_FUNCTIONS=1" if $use_internals =~ /[yY]/;
 
 print <<EOF;
 
