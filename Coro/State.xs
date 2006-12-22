@@ -1230,7 +1230,7 @@ prio (Coro::State coro, int newprio = 0)
         if (items > 1)
           {
             if (ix)
-              newprio += coro->prio;
+              newprio = coro->prio - newprio;
 
             if (newprio < PRIO_MIN) newprio = PRIO_MIN;
             if (newprio > PRIO_MAX) newprio = PRIO_MAX;
