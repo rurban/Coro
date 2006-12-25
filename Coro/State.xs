@@ -971,7 +971,7 @@ api_ready (SV *coro_sv)
 static int
 api_is_ready (SV *coro_sv)
 {
-  return !!SvSTATE (coro_sv)->flags & CF_READY;
+  return !!(SvSTATE (coro_sv)->flags & CF_READY);
 }
 
 static void
@@ -1238,6 +1238,8 @@ prio (Coro::State coro, int newprio = 0)
             coro->prio = newprio;
           }
 }
+	OUTPUT:
+        RETVAL
 
 SV *
 ready (SV *self)

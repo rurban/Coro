@@ -3,6 +3,7 @@ Revision history for Perl extension Coro.
 TODO: better (earlier) error messages on broken transfer's
 
 	- fix nice adding, not subtracting, from priority.
+        - fix ->prio and api_is_ready (patch by Mark Hinds).
 
 3.2  Fri Dec 22 05:07:09 CET 2006
 	- improve portability to slightly older perls.
