@@ -28,7 +28,7 @@
 /* private structure, always use the provided macros below */
 struct CoroAPI {
   I32 ver;
-#define CORO_API_VERSION 3
+#define CORO_API_VERSION 4
 #define CORO_API_REVISION 0
 
   /* internal */
@@ -40,7 +40,8 @@ struct CoroAPI {
 
   /* private API, Coro */
   void (*schedule) (void);
-  void (*cede) (void);
+  int (*cede) (void);
+  int (*cede_notself) (void);
   int (*ready) (SV *coro_sv);
   int (*is_ready) (SV *coro_sv);
   int *nready;
@@ -53,6 +54,7 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_TRANSFER(prev,next) GCoroAPI->transfer (aTHX_ (prev), (next))
 #define CORO_SCHEDULE            GCoroAPI->schedule ()
 #define CORO_CEDE                GCoroAPI->cede ()
+#define CORO_CEDE_NOTSELF        GCoroAPI->cede_notself ()
 #define CORO_READY(coro)         GCoroAPI->ready (coro)
 #define CORO_IS_READY(coro)      GCoroAPI->is_ready (coro)
 #define CORO_NREADY              (*GCoroAPI->nready)

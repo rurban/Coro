@@ -1,10 +1,10 @@
 Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
-TODO: give some sensible deifnition to running an event loop
-as coroutine with higher priority.
 
 	- implement $coro->on_destroy.
+        - Coro::Event blocking semantics have been changed,
+          documented and - hopefully - improved.
 	- fix nice adding, not subtracting, from priority.
         - fix ->prio and api_is_ready (patch by Mark Hinds).
 

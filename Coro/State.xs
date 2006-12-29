@@ -95,8 +95,10 @@ static long pagesize;
 
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
+# define BARRIER __asm__ __volatile__ ("" : : : "memory")
 #else
 # define attribute(x)
+# define BARRIER
 #endif
 
 #define NOINLINE attribute ((noinline))
@@ -1026,8 +1028,21 @@ static void
 prepare_cede (struct transfer_args *ta)
 {
   api_ready (coro_current);
-
   prepare_schedule (ta);
+}
+
+static int
+prepare_cede_notself (struct transfer_args *ta)
+{
+  if (coro_nready)
+    {
+      SV *prev = SvRV (coro_current);
+      prepare_schedule (ta);
+      api_ready (prev);
+      return 1;
+    }
+  else
+    return 0;
 }
 
 static void
@@ -1039,13 +1054,34 @@ api_schedule (void)
   TRANSFER (ta);
 }
 
-static void
+static int
 api_cede (void)
 {
   struct transfer_args ta;
 
   prepare_cede (&ta);
-  TRANSFER (ta);
+
+  if (ta.prev != ta.next)
+    {
+      TRANSFER (ta);
+      return 1;
+    }
+  else
+    return 0;
+}
+
+static int
+api_cede_notself (void)
+{
+  struct transfer_args ta;
+
+  if (prepare_cede_notself (&ta))
+    {
+      TRANSFER (ta);
+      return 1;
+    }
+  else
+    return 0;
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State
@@ -1111,6 +1147,7 @@ _set_stacklevel (...)
         Coro::State::transfer = 1
         Coro::schedule        = 2
         Coro::cede            = 3
+        Coro::cede_notself    = 4
         CODE:
 {
 	struct transfer_args ta;
@@ -1136,8 +1173,15 @@ _set_stacklevel (...)
             case 3:
               prepare_cede (&ta);
               break;
+
+            case 4:
+              if (!prepare_cede_notself (&ta))
+                XSRETURN_EMPTY;
+
+              break;
           }
 
+        BARRIER;
         TRANSFER (ta);
 }
 
@@ -1198,13 +1242,14 @@ BOOT:
         {
           SV *sv = perl_get_sv("Coro::API", 1);
 
-          coroapi.schedule = api_schedule;
-          coroapi.save     = api_save;
-          coroapi.cede     = api_cede;
-          coroapi.ready    = api_ready;
-          coroapi.is_ready = api_is_ready;
-          coroapi.nready   = &coro_nready;
-          coroapi.current  = coro_current;
+          coroapi.schedule     = api_schedule;
+          coroapi.save         = api_save;
+          coroapi.cede         = api_cede;
+          coroapi.cede_notself = api_cede_notself;
+          coroapi.ready        = api_ready;
+          coroapi.is_ready     = api_is_ready;
+          coroapi.nready       = &coro_nready;
+          coroapi.current      = coro_current;
 
           GCoroAPI = &coroapi;
           sv_setiv (sv, (IV)&coroapi);

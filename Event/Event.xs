@@ -43,9 +43,27 @@ coro_std_cb (pe_event *pe)
 static void
 asynccheck_hook (void *data)
 {
-  /* ceding from C means allocating a stack, but we assume this is a rare case */
-  while (CORO_NREADY)
-    CORO_CEDE;
+  /* this loops as long as we have _other_ coros with the same or higher priority */
+  while (CORO_NREADY && CORO_CEDE)
+    ;
+}
+
+static double
+prepare_hook (void *data)
+{
+  /* this yields once to another coro with any priority */
+  if (CORO_NREADY)
+    {
+      CORO_CEDE_NOTSELF;
+      /*
+       * timers might have changed, and Event fails to notice this
+       * so we have to assume the worst. If Event didn't have that bug,
+       * we would only need to do this if CORO_NREADY is != 0 now.
+       */
+      return 0.;
+    }
+  else
+    return 85197.73; /* this is as good as any value, but it factors badly with common values */
 }
 
 MODULE = Coro::Event                PACKAGE = Coro::Event
@@ -58,6 +76,7 @@ BOOT:
 	I_CORO_API ("Coro::Event");
 
         GEventAPI->add_hook ("asynccheck", (void *)asynccheck_hook, 0);
+        GEventAPI->add_hook ("prepare",    (void *)prepare_hook,    0);
 }
 
 void

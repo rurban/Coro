@@ -49,6 +49,18 @@ the current coroutine.
 While this seems to work superficially, it will eventually cause memory
 corruption.
 
+=head1 SEMANTICS
+
+Whenever Event blocks (e.g. in a call to C<one_event>, C<loop< etc.),
+this module cede's to all other coroutines with the same or higher
+priority. When any coroutines of lower priority are ready, it will not
+block but run one of them and then check for events.
+
+The effect is that coroutines with the same or higher priority than
+the blocking coroutine will keep Event from checking for events, while
+coroutines with lower priority are being run, but Event checks for new
+events after every cede.
+
 =head1 FUNCTIONS
 
 =over 4
