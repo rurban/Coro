@@ -2,6 +2,7 @@ Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
 
+3.3
 	- implement $coro->on_destroy.
         - Coro::Event blocking semantics have been changed,
           documented and - hopefully - improved.
