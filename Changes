@@ -8,6 +8,8 @@ TODO: better (earlier) error messages on broken transfer's
           documented and - hopefully - improved.
 	- fix nice adding, not subtracting, from priority.
         - fix ->prio and api_is_ready (patch by Mark Hinds).
+        - fixed an assert ("... == prev__cctx->idle_te")
+          that could errronously trigger.
 
 3.2  Fri Dec 22 05:07:09 CET 2006
 	- improve portability to slightly older perls.

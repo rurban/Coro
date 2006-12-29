@@ -139,7 +139,8 @@ typedef struct coro_cctx {
   long ssize; /* positive == mmap, otherwise malloc */
 
   /* cpu state */
-  void *idle_sp; /* sp of top-level transfer/schedule/cede call */
+  void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
+  JMPENV *idle_te; /* same as idle_sp, but for top_env, TODO: remove once stable */
   JMPENV *top_env;
   coro_context cctx;
 
@@ -710,7 +711,7 @@ transfer (struct coro *prev, struct coro *next)
   if (!next)
     {
       ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
-      assert (((coro_cctx *)prev)->top_env = PL_top_env); /* just for the side effetc when assert is enabled */
+      assert (((coro_cctx *)prev)->idle_te = PL_top_env); /* just for the side-effect when asserts are enabled */
     }
   else if (prev != next)
     {
@@ -761,7 +762,7 @@ transfer (struct coro *prev, struct coro *next)
       if (prev__cctx->idle_sp == STACKLEVEL)
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
-          assert (PL_top_env == prev__cctx->top_env);
+          assert (("ERROR: current top_env must equal previous top_env", PL_top_env == prev__cctx->idle_te));
 
           prev->cctx = 0;
 
