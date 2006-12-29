@@ -51,7 +51,7 @@ corruption.
 
 =head1 SEMANTICS
 
-Whenever Event blocks (e.g. in a call to C<one_event>, C<loop< etc.),
+Whenever Event blocks (e.g. in a call to C<one_event>, C<loop> etc.),
 this module cede's to all other coroutines with the same or higher
 priority. When any coroutines of lower priority are ready, it will not
 block but run one of them and then check for events.
@@ -85,7 +85,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = 1.9;
+   our $VERSION = '2.0';
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
