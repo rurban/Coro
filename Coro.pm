@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.2';
+our $VERSION = '3.3';
 
 our @EXPORT = qw(async cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -155,8 +155,11 @@ my $manager; $manager = new Coro sub {
       # remove itself from the runqueue
       while (@destroy) {
          my $coro = pop @destroy;
+
          $coro->{status} ||= [];
-         $_->ready for @{delete $coro->{join} || []};
+
+         $_->ready                for @{(delete $coro->{join}      ) || []};
+         $_->(@{$coro->{status}}) for @{(delete $coro->{destroy_cb}) || []};
 
          # the next line destroys the coro state, but keeps the
          # coroutine itself intact (we basically make it a zombie
@@ -315,6 +318,20 @@ sub join {
       &schedule;
    }
    wantarray ? @{$self->{status}} : $self->{status}[0];
+}
+
+=item $coroutine->on_destroy (\&cb)
+
+Registers a callback that is called when this coroutine gets destroyed,
+but before it is joined. The callback gets passed the terminate arguments,
+if any.
+
+=cut
+
+sub on_destroy {
+   my ($self, $cb) = @_;
+
+   push @{ $self->{destroy_cb} }, $cb;
 }
 
 =item $oldprio = $coroutine->prio ($newprio)
