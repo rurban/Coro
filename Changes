@@ -1,6 +1,7 @@
 Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
+TODO: destroy gets only called on cancel: fix(?)
 
 3.3
 	- implement $coro->on_destroy.
@@ -10,6 +11,9 @@ TODO: better (earlier) error messages on broken transfer's
         - fix ->prio and api_is_ready (patch by Mark Hinds).
         - fixed an assert ("... == prev__cctx->idle_te")
           that could errronously trigger.
+        - use a (hopefully) more stable cancel implementation
+          that immediately frees the coroutine data.
+        - added Coro::guard function.
 
 3.2  Fri Dec 22 05:07:09 CET 2006
 	- improve portability to slightly older perls.

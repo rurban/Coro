@@ -143,33 +143,33 @@ $idle = sub {
    Carp::croak ("FATAL: deadlock detected");
 };
 
+sub _cancel {
+   my ($self) = @_;
+
+   # free coroutine data and mark as destructed
+   $self->_destroy
+      or return;
+
+   # call all destruction callbacks
+   $_->(@{$self->{status}})
+      for @{(delete $self->{destroy_cb}) || []};
+}
+
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 my @destroy;
-my $manager; $manager = new Coro sub {
+my $manager;
+
+$manager = new Coro sub {
    while () {
-      # by overwriting the state object with the manager we destroy it
-      # while still being able to schedule this coroutine (in case it has
-      # been readied multiple times. this is harmless since the manager
-      # can be called as many times as neccessary and will always
-      # remove itself from the runqueue
-      while (@destroy) {
-         my $coro = pop @destroy;
+      (shift @destroy)->_cancel
+         while @destroy;
 
-         $coro->{status} ||= [];
-
-         $_->ready                for @{(delete $coro->{join}      ) || []};
-         $_->(@{$coro->{status}}) for @{(delete $coro->{destroy_cb}) || []};
-
-         # the next line destroys the coro state, but keeps the
-         # coroutine itself intact (we basically make it a zombie
-         # coroutine that always runs the manager thread, so it's possible
-         # to transfer() to this coroutine).
-         $coro->_clone_state_from ($manager);
-      }
       &schedule;
    }
 };
+
+$manager->prio (PRIO_MAX);
 
 # static methods. not really.
 
@@ -296,16 +296,22 @@ Return wether the coroutine is currently the ready queue or not,
 =item $coroutine->cancel (arg...)
 
 Terminates the given coroutine and makes it return the given arguments as
-status (default: the empty list).
+status (default: the empty list). Never returns if the coroutine is the
+current coroutine.
 
 =cut
 
 sub cancel {
    my $self = shift;
    $self->{status} = [@_];
-   push @destroy, $self;
-   $manager->ready;
-   &schedule if $current == $self;
+
+   if ($current == $self) {
+      push @destroy, $self;
+      $manager->ready;
+      &schedule while 1;
+   } else {
+      $self->_cancel;
+   }
 }
 
 =item $coroutine->join
@@ -318,10 +324,18 @@ from multiple coroutine.
 
 sub join {
    my $self = shift;
+
    unless ($self->{status}) {
-      push @{$self->{join}}, $current;
-      &schedule;
+      my $current = $current;
+
+      push @{$self->{destroy_cb}}, sub {
+         $current->ready;
+         undef $current;
+      };
+
+      &schedule while $current;
    }
+
    wantarray ? @{$self->{status}} : $self->{status}[0];
 }
 
@@ -392,6 +406,40 @@ i.e. that can be swicthed to. The value C<0> means that the only runnable
 coroutine is the currently running one, so C<cede> would have no effect,
 and C<schedule> would cause a deadlock unless there is an idle handler
 that wakes up some coroutines.
+
+=item my $guard = Coro::guard { ... }
+
+This creates and returns a guard object. Nothing happens until the objetc
+gets destroyed, in which case the codeblock given as argument will be
+executed. This is useful to free locks or other resources in case of a
+runtime error or when the coroutine gets canceled, as in both cases the
+guard block will be executed. The guard object supports only one method,
+C<< ->cancel >>, which will keep the codeblock from being executed.
+
+Example: set some flag and clear it again when the coroutine gets canceled
+or the function returns:
+
+   sub do_something {
+      my $guard = Coro::guard { $busy = 0 };
+      $busy = 1;
+
+      # do something that requires $busy to be true
+   }
+
+=cut
+
+sub guard(&) {
+   bless \(my $cb = $_[0]), "Coro::guard"
+}
+
+sub Coro::guard::cancel {
+   ${$_[0]} = sub { };
+}
+
+sub Coro::guard::DESTROY {
+   ${$_[0]}->();
+}
+
 
 =item unblock_sub { ... }
 

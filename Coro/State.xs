@@ -152,9 +152,10 @@ typedef struct coro_cctx {
 } coro_cctx;
 
 enum {
-  CF_RUNNING = 0x0001, /* coroutine is running */
-  CF_READY   = 0x0002, /* coroutine is ready */
-  CF_NEW     = 0x0004, /* ahs never been switched to */
+  CF_RUNNING   = 0x0001, /* coroutine is running */
+  CF_READY     = 0x0002, /* coroutine is ready */
+  CF_NEW       = 0x0004, /* has never been switched to */
+  CF_DESTROYED = 0x0008, /* coroutine data has been freed */
 };
 
 /* this is a structure representing a perl-level coroutine */
@@ -733,6 +734,9 @@ transfer (struct coro *prev, struct coro *next)
       if (next->flags & CF_RUNNING)
         croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states");
 
+      if (next->flags & CF_DESTROYED)
+        croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
+
       prev->flags &= ~CF_RUNNING;
       next->flags |=  CF_RUNNING;
 
@@ -785,7 +789,6 @@ transfer (struct coro *prev, struct coro *next)
         }
 
       free_coro_mortal ();
-
       UNLOCK;
     }
 }
@@ -797,14 +800,21 @@ struct transfer_args
 
 #define TRANSFER(ta) transfer ((ta).prev, (ta).next)
 
-static void
+static int
 coro_state_destroy (struct coro *coro)
 {
   if (coro->refcnt--)
-    return;
+    return 0;
+
+  if (coro->flags & CF_DESTROYED)
+    return 0;
+
+  coro->flags |= CF_DESTROYED;
 
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
+      assert (!(coro->flags & CF_RUNNING));
+
       struct coro temp;
       Zero (&temp, 1, struct coro);
       temp.save = CORO_SAVE_ALL;
@@ -824,7 +834,8 @@ coro_state_destroy (struct coro *coro)
 
   cctx_destroy (coro->cctx);
   SvREFCNT_dec (coro->args);
-  Safefree (coro);
+
+  return 1;
 }
 
 static int
@@ -834,6 +845,9 @@ coro_state_clear (pTHX_ SV *sv, MAGIC *mg)
   mg->mg_ptr = 0;
 
   coro_state_destroy (coro);
+
+  if (!coro->refcnt)
+    Safefree (coro);
 
   return 0;
 }
@@ -980,49 +994,55 @@ api_is_ready (SV *coro_sv)
 static void
 prepare_schedule (struct transfer_args *ta)
 {
-  SV *prev, *next;
+  SV *prev_sv, *next_sv;
 
   for (;;)
     {
       LOCK;
-      next = coro_deq (PRIO_MIN);
+      next_sv = coro_deq (PRIO_MIN);
       UNLOCK;
 
-      if (next)
-        break;
+      /* nothing to schedule: call the idle handler */
+      if (!next_sv)
+        {
+          dSP;
 
-      {
-        dSP;
+          ENTER;
+          SAVETMPS;
 
-        ENTER;
-        SAVETMPS;
+          PUSHMARK (SP);
+          PUTBACK;
+          call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
 
-        PUSHMARK (SP);
-        PUTBACK;
-        call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
+          FREETMPS;
+          LEAVE;
+          continue;
+        }
 
-        FREETMPS;
-        LEAVE;
-      }
+      ta->next = SvSTATE (next_sv);
+
+      /* cannot transfer to destroyed coros, skip and look for next */
+      if (ta->next->flags & CF_DESTROYED)
+        {
+          SvREFCNT_dec (next_sv);
+          continue;
+        }
+
+      break;
     }
 
-  prev = SvRV (coro_current);
-  SvRV_set (coro_current, next);
-
   /* free this only after the transfer */
-  LOCK;
-  free_coro_mortal ();
-  UNLOCK;
-  coro_mortal = prev;
-
-  assert (!SvROK(prev));//D
-  assert (!SvROK(next));//D
-
-  ta->prev  = SvSTATE (prev);
-  ta->next  = SvSTATE (next);
+  prev_sv = SvRV (coro_current);
+  SvRV_set (coro_current, next_sv);
+  ta->prev = SvSTATE (prev_sv);
 
   assert (ta->next->flags & CF_READY);
   ta->next->flags &= ~CF_READY;
+
+  LOCK;
+  free_coro_mortal ();
+  coro_mortal = prev_sv;
+  UNLOCK;
 }
 
 static void
@@ -1186,17 +1206,12 @@ _set_stacklevel (...)
         TRANSFER (ta);
 }
 
-void
-_clone_state_from (SV *dst, SV *src)
+bool
+_destroy (SV *coro_sv)
 	CODE:
-{
-	struct coro *coro_src = SvSTATE (src);
-
-        sv_unmagic (SvRV (dst), PERL_MAGIC_ext);
-
-        ++coro_src->refcnt;
-        sv_magicext (SvRV (dst), 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro_src, 0)->mg_flags |= MGf_DUP;
-}
+	RETVAL = coro_state_destroy (SvSTATE (coro_sv));
+	OUTPUT:
+        RETVAL
 
 void
 _exit (code)
