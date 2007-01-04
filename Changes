@@ -11,6 +11,7 @@ TODO: destroy gets only called on cancel: fix(?)
         - fix ->prio and api_is_ready (patch by Mark Hinds).
         - fixed an assert ("... == prev__cctx->idle_te")
           that could errronously trigger.
+        - fix various large and small memleaks.
         - use a (hopefully) more stable cancel implementation
           that immediately frees the coroutine data.
         - added Coro::guard function.

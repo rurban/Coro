@@ -200,9 +200,9 @@ program.
 =cut
 
 sub async(&@) {
-   my $pid = new Coro @_;
-   $pid->ready;
-   $pid
+   my $coro = new Coro @_;
+   $coro->ready;
+   $coro
 }
 
 =item schedule

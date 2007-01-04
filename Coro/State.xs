@@ -474,7 +474,11 @@ coro_destroy_stacks ()
       FREETMPS;
       assert (PL_tmps_ix == -1);
 
+      /* unwind all extra stacks */
       POPSTACK_TO (PL_mainstack);
+
+      /* unwind main stack */
+      dounwind (-1);
     }
 
   while (PL_curstackinfo->si_next)
@@ -803,9 +807,6 @@ struct transfer_args
 static int
 coro_state_destroy (struct coro *coro)
 {
-  if (coro->refcnt--)
-    return 0;
-
   if (coro->flags & CF_DESTROYED)
     return 0;
 
@@ -839,15 +840,16 @@ coro_state_destroy (struct coro *coro)
 }
 
 static int
-coro_state_clear (pTHX_ SV *sv, MAGIC *mg)
+coro_state_free (pTHX_ SV *sv, MAGIC *mg)
 {
   struct coro *coro = (struct coro *)mg->mg_ptr;
   mg->mg_ptr = 0;
 
-  coro_state_destroy (coro);
-
-  if (!coro->refcnt)
-    Safefree (coro);
+  if (--coro->refcnt < 0)
+    {
+      coro_state_destroy (coro);
+      Safefree (coro);
+    }
 
   return 0;
 }
@@ -864,7 +866,7 @@ coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
 
 static MGVTBL coro_state_vtbl = {
   0, 0, 0, 0,
-  coro_state_clear,
+  coro_state_free,
   0,
 #ifdef MGf_DUP
   coro_state_dup,
