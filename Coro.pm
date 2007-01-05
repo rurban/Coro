@@ -212,7 +212,10 @@ terminate or join (although you are allowed to), and you get a coroutine
 that might have executed other code already (which can be good or bad :).
 
 Also, the block is executed in an C<eval> context and a warning will be
-issued in case of an exception instead of terminating the program, as C<async> does.
+issued in case of an exception instead of terminating the program, as
+C<async> does. As the coroutine is being reused, stuff like C<on_destroy>
+will not work in the expected way, unless you call terminate or cancel,
+which somehow defeats the purpose of pooling.
 
 The priority will be reset to C<0> after each job, otherwise the coroutine
 will be re-used "as-is".
