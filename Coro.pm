@@ -54,7 +54,7 @@ our $current; # current coroutine
 
 our $VERSION = '3.3';
 
-our @EXPORT = qw(async cede schedule terminate current unblock_sub);
+our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
@@ -202,6 +202,58 @@ program.
 sub async(&@) {
    my $coro = new Coro @_;
    $coro->ready;
+   $coro
+}
+
+=item async_pool { ... } [@args...]
+
+Similar to C<async>, but uses a coroutine pool, so you should not call
+terminate or join (although you are allowed to), and you get a coroutine
+that might have executed other code already (which can be good or bad :).
+
+Also, the block is executed in an C<eval> context and a warning will be
+issued in case of an exception instead of terminating the program, as C<async> does.
+
+The priority will be reset to C<0> after each job, otherwise the coroutine
+will be re-used "as-is".
+
+The pool size is limited to 8 idle coroutines (this can be adjusted by
+changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
+required.
+
+If you are concerned about pooled coroutines growing a lot because a
+single C<async_pool> used a lot of stackspace you can e.g. C<async_pool {
+terminate }> once per second or so to slowly replenish the pool.
+
+=cut
+
+our $POOL_SIZE = 8;
+our @pool;
+
+sub pool_handler {
+   while () {
+      my ($cb, @arg) = @{ delete $current->{_invoke} };
+
+      eval {
+         $cb->(@arg);
+      };
+      warn $@ if $@;
+
+      last if @pool >= $POOL_SIZE;
+      push @pool, $current;
+
+      $current->prio (0);
+      schedule;
+   }        
+}           
+
+sub async_pool(&@) {
+   # this is also inlined into the unlock_scheduler
+   my $coro = (pop @pool or new Coro \&pool_handler);
+
+   $coro->{_invoke} = [@_];
+   $coro->ready;
+
    $coro
 }
 
@@ -463,31 +515,23 @@ creating event callbacks that want to block.
 
 =cut
 
-our @unblock_pool;
 our @unblock_queue;
-our $UNBLOCK_POOL_SIZE = 2;
 
-sub unblock_handler_ {
-   while () {
-      my ($cb, @arg) = @{ delete $Coro::current->{arg} };
-      $cb->(@arg);
-
-      last if @unblock_pool >= $UNBLOCK_POOL_SIZE;
-      push @unblock_pool, $Coro::current;
-      schedule;
-   }        
-}           
-
+# we create a special coro because we want to cede,
+# to reduce pressure on the coro pool (because most callbacks
+# return immediately and can be reused) and because we cannot cede
+# inside an event callback.
 our $unblock_scheduler = async {
    while () {
       while (my $cb = pop @unblock_queue) {
-         my $handler = (pop @unblock_pool or new Coro \&unblock_handler_);
-         $handler->{arg} = $cb;
-         $handler->ready;
-         cede;
-      }
+         # this is an inlined copy of async_pool
+         my $coro = (pop @pool or new Coro \&pool_handler);
 
-      schedule;
+         $coro->{_invoke} = $cb;
+         $coro->ready;
+         cede; # for short-lived callbacks, this reduces pressure on the coro pool
+      }
+      schedule; # sleep well
    }
 };
 
@@ -495,7 +539,7 @@ sub unblock_sub(&) {
    my $cb = shift;
 
    sub {
-      push @unblock_queue, [$cb, @_];
+      unshift @unblock_queue, [$cb, @_];
       $unblock_scheduler->ready;
    }
 }

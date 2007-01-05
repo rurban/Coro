@@ -15,6 +15,9 @@ TODO: destroy gets only called on cancel: fix(?)
         - use a (hopefully) more stable cancel implementation
           that immediately frees the coroutine data.
         - added Coro::guard function.
+        - added a global coroutine pool for jobs (on my machine,
+          I can create and execute 48k simple coros/s with async,
+          and 128k coros with async_pool).
 
 3.2  Fri Dec 22 05:07:09 CET 2006
 	- improve portability to slightly older perls.
