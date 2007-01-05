@@ -244,8 +244,8 @@ sub pool_handler {
 
       $current->prio (0);
       schedule;
-   }        
-}           
+   }
+}
 
 sub async_pool(&@) {
    # this is also inlined into the unlock_scheduler
