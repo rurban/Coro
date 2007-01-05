@@ -14,6 +14,7 @@ TODO: destroy gets only called on cancel: fix(?)
         - fix various large and small memleaks.
         - use a (hopefully) more stable cancel implementation
           that immediately frees the coroutine data.
+        - cede/cede_notself return a status now.
         - added Coro::guard function.
         - added a global coroutine pool for jobs (on my machine,
           I can create and execute 48k simple coros/s with async,

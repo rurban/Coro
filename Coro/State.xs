@@ -1206,6 +1206,9 @@ _set_stacklevel (...)
 
         BARRIER;
         TRANSFER (ta);
+
+        if (GIMME_V != G_VOID && ta.next != ta.prev)
+          XSRETURN_YES;
 }
 
 bool
