@@ -1,6 +1,25 @@
 Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
+TODO: destroy gets only called on cancel: fix(?)
+
+3.3  Sat Jan  6 03:45:00 CET 2007
+	- implement $coro->on_destroy.
+        - Coro::Event blocking semantics have been changed,
+          documented and - hopefully - improved.
+	- fix nice adding, not subtracting, from priority.
+        - fix ->prio and api_is_ready (patch by Mark Hinds).
+        - fixed an assert ("... == prev__cctx->idle_te")
+          that could errronously trigger.
+        - fix various large and small memleaks.
+        - use a (hopefully) more stable cancel implementation
+          that immediately frees the coroutine data.
+        - cede/cede_notself return a status now.
+        - added Coro::guard function.
+        - added a global coroutine pool for jobs (on my machine,
+          I can create and execute 48k simple coros/s with async,
+          and 128k coros with async_pool).
+        - Coro::AIO now uses the coroutine priority as io priority.
 
 3.2  Fri Dec 22 05:07:09 CET 2006
 	- improve portability to slightly older perls.

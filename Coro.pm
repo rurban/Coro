@@ -52,9 +52,9 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.2';
+our $VERSION = '3.3';
 
-our @EXPORT = qw(async cede schedule terminate current unblock_sub);
+our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
@@ -143,30 +143,33 @@ $idle = sub {
    Carp::croak ("FATAL: deadlock detected");
 };
 
+sub _cancel {
+   my ($self) = @_;
+
+   # free coroutine data and mark as destructed
+   $self->_destroy
+      or return;
+
+   # call all destruction callbacks
+   $_->(@{$self->{status}})
+      for @{(delete $self->{destroy_cb}) || []};
+}
+
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 my @destroy;
-my $manager; $manager = new Coro sub {
-   while () {
-      # by overwriting the state object with the manager we destroy it
-      # while still being able to schedule this coroutine (in case it has
-      # been readied multiple times. this is harmless since the manager
-      # can be called as many times as neccessary and will always
-      # remove itself from the runqueue
-      while (@destroy) {
-         my $coro = pop @destroy;
-         $coro->{status} ||= [];
-         $_->ready for @{delete $coro->{join} || []};
+my $manager;
 
-         # the next line destroys the coro state, but keeps the
-         # coroutine itself intact (we basically make it a zombie
-         # coroutine that always runs the manager thread, so it's possible
-         # to transfer() to this coroutine).
-         $coro->_clone_state_from ($manager);
-      }
+$manager = new Coro sub {
+   while () {
+      (shift @destroy)->_cancel
+         while @destroy;
+
       &schedule;
    }
 };
+
+$manager->prio (PRIO_MAX);
 
 # static methods. not really.
 
@@ -197,9 +200,64 @@ program.
 =cut
 
 sub async(&@) {
-   my $pid = new Coro @_;
-   $pid->ready;
-   $pid
+   my $coro = new Coro @_;
+   $coro->ready;
+   $coro
+}
+
+=item async_pool { ... } [@args...]
+
+Similar to C<async>, but uses a coroutine pool, so you should not call
+terminate or join (although you are allowed to), and you get a coroutine
+that might have executed other code already (which can be good or bad :).
+
+Also, the block is executed in an C<eval> context and a warning will be
+issued in case of an exception instead of terminating the program, as
+C<async> does. As the coroutine is being reused, stuff like C<on_destroy>
+will not work in the expected way, unless you call terminate or cancel,
+which somehow defeats the purpose of pooling.
+
+The priority will be reset to C<0> after each job, otherwise the coroutine
+will be re-used "as-is".
+
+The pool size is limited to 8 idle coroutines (this can be adjusted by
+changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
+required.
+
+If you are concerned about pooled coroutines growing a lot because a
+single C<async_pool> used a lot of stackspace you can e.g. C<async_pool {
+terminate }> once per second or so to slowly replenish the pool.
+
+=cut
+
+our $POOL_SIZE = 8;
+our @pool;
+
+sub pool_handler {
+   while () {
+      my ($cb, @arg) = @{ delete $current->{_invoke} };
+
+      eval {
+         $cb->(@arg);
+      };
+      warn $@ if $@;
+
+      last if @pool >= $POOL_SIZE;
+      push @pool, $current;
+
+      $current->prio (0);
+      schedule;
+   }
+}
+
+sub async_pool(&@) {
+   # this is also inlined into the unlock_scheduler
+   my $coro = (pop @pool or new Coro \&pool_handler);
+
+   $coro->{_invoke} = [@_];
+   $coro->ready;
+
+   $coro
 }
 
 =item schedule
@@ -233,6 +291,15 @@ The canonical way to wait on external events is this:
 "Cede" to other coroutines. This function puts the current coroutine into the
 ready queue and calls C<schedule>, which has the effect of giving up the
 current "timeslice" to other coroutines of the same or higher priority.
+
+Returns true if at least one coroutine switch has happened.
+
+=item Coro::cede_notself
+
+Works like cede, but is not exported by default and will cede to any
+coroutine, regardless of priority, once.
+
+Returns true if at least one coroutine switch has happened.
 
 =item terminate [arg...]
 
@@ -288,16 +355,22 @@ Return wether the coroutine is currently the ready queue or not,
 =item $coroutine->cancel (arg...)
 
 Terminates the given coroutine and makes it return the given arguments as
-status (default: the empty list).
+status (default: the empty list). Never returns if the coroutine is the
+current coroutine.
 
 =cut
 
 sub cancel {
    my $self = shift;
    $self->{status} = [@_];
-   push @destroy, $self;
-   $manager->ready;
-   &schedule if $current == $self;
+
+   if ($current == $self) {
+      push @destroy, $self;
+      $manager->ready;
+      &schedule while 1;
+   } else {
+      $self->_cancel;
+   }
 }
 
 =item $coroutine->join
@@ -310,11 +383,33 @@ from multiple coroutine.
 
 sub join {
    my $self = shift;
+
    unless ($self->{status}) {
-      push @{$self->{join}}, $current;
-      &schedule;
+      my $current = $current;
+
+      push @{$self->{destroy_cb}}, sub {
+         $current->ready;
+         undef $current;
+      };
+
+      &schedule while $current;
    }
+
    wantarray ? @{$self->{status}} : $self->{status}[0];
+}
+
+=item $coroutine->on_destroy (\&cb)
+
+Registers a callback that is called when this coroutine gets destroyed,
+but before it is joined. The callback gets passed the terminate arguments,
+if any.
+
+=cut
+
+sub on_destroy {
+   my ($self, $cb) = @_;
+
+   push @{ $self->{destroy_cb} }, $cb;
 }
 
 =item $oldprio = $coroutine->prio ($newprio)
@@ -371,6 +466,40 @@ coroutine is the currently running one, so C<cede> would have no effect,
 and C<schedule> would cause a deadlock unless there is an idle handler
 that wakes up some coroutines.
 
+=item my $guard = Coro::guard { ... }
+
+This creates and returns a guard object. Nothing happens until the objetc
+gets destroyed, in which case the codeblock given as argument will be
+executed. This is useful to free locks or other resources in case of a
+runtime error or when the coroutine gets canceled, as in both cases the
+guard block will be executed. The guard object supports only one method,
+C<< ->cancel >>, which will keep the codeblock from being executed.
+
+Example: set some flag and clear it again when the coroutine gets canceled
+or the function returns:
+
+   sub do_something {
+      my $guard = Coro::guard { $busy = 0 };
+      $busy = 1;
+
+      # do something that requires $busy to be true
+   }
+
+=cut
+
+sub guard(&) {
+   bless \(my $cb = $_[0]), "Coro::guard"
+}
+
+sub Coro::guard::cancel {
+   ${$_[0]} = sub { };
+}
+
+sub Coro::guard::DESTROY {
+   ${$_[0]}->();
+}
+
+
 =item unblock_sub { ... }
 
 This utility function takes a BLOCK or code reference and "unblocks" it,
@@ -393,31 +522,23 @@ creating event callbacks that want to block.
 
 =cut
 
-our @unblock_pool;
 our @unblock_queue;
-our $UNBLOCK_POOL_SIZE = 2;
 
-sub unblock_handler_ {
-   while () {
-      my ($cb, @arg) = @{ delete $Coro::current->{arg} };
-      $cb->(@arg);
-
-      last if @unblock_pool >= $UNBLOCK_POOL_SIZE;
-      push @unblock_pool, $Coro::current;
-      schedule;
-   }        
-}           
-
+# we create a special coro because we want to cede,
+# to reduce pressure on the coro pool (because most callbacks
+# return immediately and can be reused) and because we cannot cede
+# inside an event callback.
 our $unblock_scheduler = async {
    while () {
       while (my $cb = pop @unblock_queue) {
-         my $handler = (pop @unblock_pool or new Coro \&unblock_handler_);
-         $handler->{arg} = $cb;
-         $handler->ready;
-         cede;
-      }
+         # this is an inlined copy of async_pool
+         my $coro = (pop @pool or new Coro \&pool_handler);
 
-      schedule;
+         $coro->{_invoke} = $cb;
+         $coro->ready;
+         cede; # for short-lived callbacks, this reduces pressure on the coro pool
+      }
+      schedule; # sleep well
    }
 };
 
@@ -425,7 +546,7 @@ sub unblock_sub(&) {
    my $cb = shift;
 
    sub {
-      push @unblock_queue, [$cb, @_];
+      unshift @unblock_queue, [$cb, @_];
       $unblock_scheduler->ready;
    }
 }

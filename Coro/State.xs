@@ -95,8 +95,10 @@ static long pagesize;
 
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
+# define BARRIER __asm__ __volatile__ ("" : : : "memory")
 #else
 # define attribute(x)
+# define BARRIER
 #endif
 
 #define NOINLINE attribute ((noinline))
@@ -137,7 +139,8 @@ typedef struct coro_cctx {
   long ssize; /* positive == mmap, otherwise malloc */
 
   /* cpu state */
-  void *idle_sp; /* sp of top-level transfer/schedule/cede call */
+  void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
+  JMPENV *idle_te; /* same as idle_sp, but for top_env, TODO: remove once stable */
   JMPENV *top_env;
   coro_context cctx;
 
@@ -149,9 +152,10 @@ typedef struct coro_cctx {
 } coro_cctx;
 
 enum {
-  CF_RUNNING = 0x0001, /* coroutine is running */
-  CF_READY   = 0x0002, /* coroutine is ready */
-  CF_NEW     = 0x0004, /* ahs never been switched to */
+  CF_RUNNING   = 0x0001, /* coroutine is running */
+  CF_READY     = 0x0002, /* coroutine is ready */
+  CF_NEW       = 0x0004, /* has never been switched to */
+  CF_DESTROYED = 0x0008, /* coroutine data has been freed */
 };
 
 /* this is a structure representing a perl-level coroutine */
@@ -470,7 +474,11 @@ coro_destroy_stacks ()
       FREETMPS;
       assert (PL_tmps_ix == -1);
 
+      /* unwind all extra stacks */
       POPSTACK_TO (PL_mainstack);
+
+      /* unwind main stack */
+      dounwind (-1);
     }
 
   while (PL_curstackinfo->si_next)
@@ -708,7 +716,7 @@ transfer (struct coro *prev, struct coro *next)
   if (!next)
     {
       ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
-      assert (((coro_cctx *)prev)->top_env = PL_top_env); /* just for the side effetc when assert is enabled */
+      assert (((coro_cctx *)prev)->idle_te = PL_top_env); /* just for the side-effect when asserts are enabled */
     }
   else if (prev != next)
     {
@@ -729,6 +737,9 @@ transfer (struct coro *prev, struct coro *next)
 
       if (next->flags & CF_RUNNING)
         croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states");
+
+      if (next->flags & CF_DESTROYED)
+        croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
 
       prev->flags &= ~CF_RUNNING;
       next->flags |=  CF_RUNNING;
@@ -759,7 +770,7 @@ transfer (struct coro *prev, struct coro *next)
       if (prev__cctx->idle_sp == STACKLEVEL)
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
-          assert (PL_top_env == prev__cctx->top_env);
+          assert (("ERROR: current top_env must equal previous top_env", PL_top_env == prev__cctx->idle_te));
 
           prev->cctx = 0;
 
@@ -782,7 +793,6 @@ transfer (struct coro *prev, struct coro *next)
         }
 
       free_coro_mortal ();
-
       UNLOCK;
     }
 }
@@ -794,14 +804,18 @@ struct transfer_args
 
 #define TRANSFER(ta) transfer ((ta).prev, (ta).next)
 
-static void
+static int
 coro_state_destroy (struct coro *coro)
 {
-  if (coro->refcnt--)
-    return;
+  if (coro->flags & CF_DESTROYED)
+    return 0;
+
+  coro->flags |= CF_DESTROYED;
 
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
+      assert (!(coro->flags & CF_RUNNING));
+
       struct coro temp;
       Zero (&temp, 1, struct coro);
       temp.save = CORO_SAVE_ALL;
@@ -821,16 +835,21 @@ coro_state_destroy (struct coro *coro)
 
   cctx_destroy (coro->cctx);
   SvREFCNT_dec (coro->args);
-  Safefree (coro);
+
+  return 1;
 }
 
 static int
-coro_state_clear (pTHX_ SV *sv, MAGIC *mg)
+coro_state_free (pTHX_ SV *sv, MAGIC *mg)
 {
   struct coro *coro = (struct coro *)mg->mg_ptr;
   mg->mg_ptr = 0;
 
-  coro_state_destroy (coro);
+  if (--coro->refcnt < 0)
+    {
+      coro_state_destroy (coro);
+      Safefree (coro);
+    }
 
   return 0;
 }
@@ -847,7 +866,7 @@ coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
 
 static MGVTBL coro_state_vtbl = {
   0, 0, 0, 0,
-  coro_state_clear,
+  coro_state_free,
   0,
 #ifdef MGf_DUP
   coro_state_dup,
@@ -959,11 +978,6 @@ api_ready (SV *coro_sv)
   if (coro->flags & CF_READY)
     return 0;
 
-#if 0 /* this is actually harmless */
-  if (coro->flags & CF_RUNNING)
-    croak ("Coro::ready called on currently running coroutine");
-#endif
-
   coro->flags |= CF_READY;
 
   LOCK;
@@ -976,63 +990,82 @@ api_ready (SV *coro_sv)
 static int
 api_is_ready (SV *coro_sv)
 {
-  return !!SvSTATE (coro_sv)->flags & CF_READY;
+  return !!(SvSTATE (coro_sv)->flags & CF_READY);
 }
 
 static void
 prepare_schedule (struct transfer_args *ta)
 {
-  SV *prev, *next;
+  SV *prev_sv, *next_sv;
 
   for (;;)
     {
       LOCK;
-      next = coro_deq (PRIO_MIN);
+      next_sv = coro_deq (PRIO_MIN);
       UNLOCK;
 
-      if (next)
-        break;
+      /* nothing to schedule: call the idle handler */
+      if (!next_sv)
+        {
+          dSP;
 
-      {
-        dSP;
+          ENTER;
+          SAVETMPS;
 
-        ENTER;
-        SAVETMPS;
+          PUSHMARK (SP);
+          PUTBACK;
+          call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
 
-        PUSHMARK (SP);
-        PUTBACK;
-        call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
+          FREETMPS;
+          LEAVE;
+          continue;
+        }
 
-        FREETMPS;
-        LEAVE;
-      }
+      ta->next = SvSTATE (next_sv);
+
+      /* cannot transfer to destroyed coros, skip and look for next */
+      if (ta->next->flags & CF_DESTROYED)
+        {
+          SvREFCNT_dec (next_sv);
+          continue;
+        }
+
+      break;
     }
 
-  prev = SvRV (coro_current);
-  SvRV_set (coro_current, next);
-
   /* free this only after the transfer */
-  LOCK;
-  free_coro_mortal ();
-  UNLOCK;
-  coro_mortal = prev;
-
-  assert (!SvROK(prev));//D
-  assert (!SvROK(next));//D
-
-  ta->prev  = SvSTATE (prev);
-  ta->next  = SvSTATE (next);
+  prev_sv = SvRV (coro_current);
+  SvRV_set (coro_current, next_sv);
+  ta->prev = SvSTATE (prev_sv);
 
   assert (ta->next->flags & CF_READY);
   ta->next->flags &= ~CF_READY;
+
+  LOCK;
+  free_coro_mortal ();
+  coro_mortal = prev_sv;
+  UNLOCK;
 }
 
 static void
 prepare_cede (struct transfer_args *ta)
 {
   api_ready (coro_current);
-
   prepare_schedule (ta);
+}
+
+static int
+prepare_cede_notself (struct transfer_args *ta)
+{
+  if (coro_nready)
+    {
+      SV *prev = SvRV (coro_current);
+      prepare_schedule (ta);
+      api_ready (prev);
+      return 1;
+    }
+  else
+    return 0;
 }
 
 static void
@@ -1044,13 +1077,34 @@ api_schedule (void)
   TRANSFER (ta);
 }
 
-static void
+static int
 api_cede (void)
 {
   struct transfer_args ta;
 
   prepare_cede (&ta);
-  TRANSFER (ta);
+
+  if (ta.prev != ta.next)
+    {
+      TRANSFER (ta);
+      return 1;
+    }
+  else
+    return 0;
+}
+
+static int
+api_cede_notself (void)
+{
+  struct transfer_args ta;
+
+  if (prepare_cede_notself (&ta))
+    {
+      TRANSFER (ta);
+      return 1;
+    }
+  else
+    return 0;
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State
@@ -1116,6 +1170,7 @@ _set_stacklevel (...)
         Coro::State::transfer = 1
         Coro::schedule        = 2
         Coro::cede            = 3
+        Coro::cede_notself    = 4
         CODE:
 {
 	struct transfer_args ta;
@@ -1141,22 +1196,27 @@ _set_stacklevel (...)
             case 3:
               prepare_cede (&ta);
               break;
+
+            case 4:
+              if (!prepare_cede_notself (&ta))
+                XSRETURN_EMPTY;
+
+              break;
           }
 
+        BARRIER;
         TRANSFER (ta);
+
+        if (GIMME_V != G_VOID && ta.next != ta.prev)
+          XSRETURN_YES;
 }
 
-void
-_clone_state_from (SV *dst, SV *src)
+bool
+_destroy (SV *coro_sv)
 	CODE:
-{
-	struct coro *coro_src = SvSTATE (src);
-
-        sv_unmagic (SvRV (dst), PERL_MAGIC_ext);
-
-        ++coro_src->refcnt;
-        sv_magicext (SvRV (dst), 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro_src, 0)->mg_flags |= MGf_DUP;
-}
+	RETVAL = coro_state_destroy (SvSTATE (coro_sv));
+	OUTPUT:
+        RETVAL
 
 void
 _exit (code)
@@ -1203,13 +1263,14 @@ BOOT:
         {
           SV *sv = perl_get_sv("Coro::API", 1);
 
-          coroapi.schedule = api_schedule;
-          coroapi.save     = api_save;
-          coroapi.cede     = api_cede;
-          coroapi.ready    = api_ready;
-          coroapi.is_ready = api_is_ready;
-          coroapi.nready   = &coro_nready;
-          coroapi.current  = coro_current;
+          coroapi.schedule     = api_schedule;
+          coroapi.save         = api_save;
+          coroapi.cede         = api_cede;
+          coroapi.cede_notself = api_cede_notself;
+          coroapi.ready        = api_ready;
+          coroapi.is_ready     = api_is_ready;
+          coroapi.nready       = &coro_nready;
+          coroapi.current      = coro_current;
 
           GCoroAPI = &coroapi;
           sv_setiv (sv, (IV)&coroapi);
@@ -1235,7 +1296,7 @@ prio (Coro::State coro, int newprio = 0)
         if (items > 1)
           {
             if (ix)
-              newprio += coro->prio;
+              newprio = coro->prio - newprio;
 
             if (newprio < PRIO_MIN) newprio = PRIO_MIN;
             if (newprio > PRIO_MAX) newprio = PRIO_MAX;
@@ -1243,6 +1304,8 @@ prio (Coro::State coro, int newprio = 0)
             coro->prio = newprio;
           }
 }
+	OUTPUT:
+        RETVAL
 
 SV *
 ready (SV *self)

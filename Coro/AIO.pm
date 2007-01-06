@@ -41,6 +41,10 @@ will be exported by default by Coro::AIO, too.
 Functions that can be optionally imported from IO::AIO can be imported
 from Coro::AIO or can be called directly, e.g. C<Coro::AIO::nreqs>.
 
+You cannot specify priorities with C<aioreq_pri>, as this module
+overwrites the request priority with the current coroutine priority at all
+times.
+
 For your convienience, here are the changed function signatures for most
 of the requests, for documentation of these functions please have a look
 at L<IO::AIO|the IO::AIO manual>.
@@ -101,6 +105,7 @@ our $AUTOLOAD;
                \$current->ready;
             };
 
+            aioreq_pri \$Coro::current->prio;
             &$iosub;
 
             &Coro::schedule;
