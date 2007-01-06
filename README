@@ -79,6 +79,30 @@ DESCRIPTION
               print "@_\n";
            } 1,2,3,4;
 
+    async_pool { ... } [@args...]
+        Similar to "async", but uses a coroutine pool, so you should not
+        call terminate or join (although you are allowed to), and you get a
+        coroutine that might have executed other code already (which can be
+        good or bad :).
+
+        Also, the block is executed in an "eval" context and a warning will
+        be issued in case of an exception instead of terminating the
+        program, as "async" does. As the coroutine is being reused, stuff
+        like "on_destroy" will not work in the expected way, unless you call
+        terminate or cancel, which somehow defeats the purpose of pooling.
+
+        The priority will be reset to 0 after each job, otherwise the
+        coroutine will be re-used "as-is".
+
+        The pool size is limited to 8 idle coroutines (this can be adjusted
+        by changing $Coro::POOL_SIZE), and there can be as many non-idle
+        coros as required.
+
+        If you are concerned about pooled coroutines growing a lot because a
+        single "async_pool" used a lot of stackspace you can e.g.
+        "async_pool { terminate }" once per second or so to slowly replenish
+        the pool.
+
     schedule
         Calls the scheduler. Please note that the current coroutine will not
         be put into the ready queue, so calling this function usually means
@@ -110,6 +134,14 @@ DESCRIPTION
         giving up the current "timeslice" to other coroutines of the same or
         higher priority.
 
+        Returns true if at least one coroutine switch has happened.
+
+    Coro::cede_notself
+        Works like cede, but is not exported by default and will cede to any
+        coroutine, regardless of priority, once.
+
+        Returns true if at least one coroutine switch has happened.
+
     terminate [arg...]
         Terminates the current coroutine with the given status values (see
         cancel).
@@ -138,12 +170,18 @@ DESCRIPTION
 
     $coroutine->cancel (arg...)
         Terminates the given coroutine and makes it return the given
-        arguments as status (default: the empty list).
+        arguments as status (default: the empty list). Never returns if the
+        coroutine is the current coroutine.
 
     $coroutine->join
         Wait until the coroutine terminates and return any values given to
         the "terminate" or "cancel" functions. "join" can be called multiple
         times from multiple coroutine.
+
+    $coroutine->on_destroy (\&cb)
+        Registers a callback that is called when this coroutine gets
+        destroyed, but before it is joined. The callback gets passed the
+        terminate arguments, if any.
 
     $oldprio = $coroutine->prio ($newprio)
         Sets (or gets, if the argument is missing) the priority of the
@@ -183,6 +221,25 @@ DESCRIPTION
         runnable coroutine is the currently running one, so "cede" would
         have no effect, and "schedule" would cause a deadlock unless there
         is an idle handler that wakes up some coroutines.
+
+    my $guard = Coro::guard { ... }
+        This creates and returns a guard object. Nothing happens until the
+        objetc gets destroyed, in which case the codeblock given as argument
+        will be executed. This is useful to free locks or other resources in
+        case of a runtime error or when the coroutine gets canceled, as in
+        both cases the guard block will be executed. The guard object
+        supports only one method, "->cancel", which will keep the codeblock
+        from being executed.
+
+        Example: set some flag and clear it again when the coroutine gets
+        canceled or the function returns:
+
+           sub do_something {
+              my $guard = Coro::guard { $busy = 0 };
+              $busy = 1;
+
+              # do something that requires $busy to be true
+           }
 
     unblock_sub { ... }
         This utility function takes a BLOCK or code reference and "unblocks"
