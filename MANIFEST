@@ -41,7 +41,6 @@ t/05_specific.t
 t/06_prio.t
 t/07_eval.t
 t/08_join.t
-t/09_timer.t
 t/10_bugs.t
 t/11_deadlock.t
 
