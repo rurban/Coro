@@ -49,7 +49,7 @@ sub new {
 Wait for the signal to occur. Returns immediately if the signal has been
 sent before.
 
-Signals are not reliable, so this function might rewturn
+Signals are not reliable, so this function might return
 spuriously. Always test for the condition you are waiting on.
 
 =item $status = $s->timed_wait ($timeout)
