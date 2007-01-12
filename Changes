@@ -5,6 +5,8 @@ TODO: destroy gets only called on cancel: fix(?)
 
 	- remove t/09_timer.t, as it isn't really testing much
           but was rather flaky in practise.
+        - async_pool coro would keep arguments and callback alive until
+          it was reused.
 
 3.3  Sat Jan  6 03:45:00 CET 2007
 	- implement $coro->on_destroy.
