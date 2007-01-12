@@ -114,6 +114,7 @@ static perl_mutex coro_mutex;
 # define UNLOCK (void)0
 #endif
 
+/* helper storage struct for Coro::AIO */
 struct io_state
 {
   int errorno;
