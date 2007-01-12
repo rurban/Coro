@@ -236,7 +236,7 @@ our @pool;
 sub pool_handler {
    while () {
       eval {
-         my ($cb, @arg) = @{ delete $current->{_invoke} };
+         my ($cb, @arg) = @{ delete $current->{_invoke} or return };
          $cb->(@arg);
       };
       warn $@ if $@;
