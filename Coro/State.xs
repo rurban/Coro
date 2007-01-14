@@ -1023,11 +1023,11 @@ prepare_schedule (struct transfer_args *ta)
     {
       LOCK;
       next_sv = coro_deq (PRIO_MIN);
-      UNLOCK;
 
       /* nothing to schedule: call the idle handler */
       if (!next_sv)
         {
+          UNLOCK;
           dSP;
 
           ENTER;
@@ -1047,12 +1047,12 @@ prepare_schedule (struct transfer_args *ta)
       /* cannot transfer to destroyed coros, skip and look for next */
       if (ta->next->flags & CF_DESTROYED)
         {
+          UNLOCK;
           SvREFCNT_dec (next_sv);
           /* coro_nready is already taken care of by destroy */
           continue;
         }
 
-      LOCK;
       --coro_nready;
       UNLOCK;
       break;
