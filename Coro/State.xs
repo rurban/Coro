@@ -840,7 +840,7 @@ coro_state_destroy (struct coro *coro)
   if (coro->flags & CF_READY)
     {
       /* reduce nready, as destroying a ready coro effectively unreadies it */
-      /* alternative: look through all ready queues and remove it */
+      /* alternative: look through all ready queues and remove the coro */
       LOCK;
       --coro_nready;
       UNLOCK;
