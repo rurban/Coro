@@ -114,6 +114,7 @@ static perl_mutex coro_mutex;
 # define UNLOCK (void)0
 #endif
 
+/* helper storage struct for Coro::AIO */
 struct io_state
 {
   int errorno;
@@ -186,6 +187,22 @@ struct coro {
 
 typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
+
+/** Coro ********************************************************************/
+
+#define PRIO_MAX     3
+#define PRIO_HIGH    1
+#define PRIO_NORMAL  0
+#define PRIO_LOW    -1
+#define PRIO_IDLE   -3
+#define PRIO_MIN    -4
+
+/* for Coro.pm */
+static SV *coro_current;
+static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
+static int coro_nready;
+
+/** lowlevel stuff **********************************************************/
 
 static AV *
 coro_clone_padlist (CV *cv)
@@ -303,6 +320,8 @@ put_padlist (CV *cv)
 
   AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
 }
+
+/** load & save, init *******************************************************/
 
 #define SB do {
 #define SE } while (0)
@@ -505,6 +524,8 @@ coro_destroy_stacks ()
 #endif
 }
 
+/** coroutine stack handling ************************************************/
+
 static void
 setup_coro (struct coro *coro)
 {
@@ -706,6 +727,8 @@ cctx_put (coro_cctx *cctx)
   cctx_first = cctx;
 }
 
+/** coroutine switching *****************************************************/
+
 /* never call directly, always through the coro_state_transfer global variable */
 static void NOINLINE
 transfer (struct coro *prev, struct coro *next)
@@ -804,6 +827,8 @@ struct transfer_args
 
 #define TRANSFER(ta) transfer ((ta).prev, (ta).next)
 
+/** high level stuff ********************************************************/
+
 static int
 coro_state_destroy (struct coro *coro)
 {
@@ -811,6 +836,17 @@ coro_state_destroy (struct coro *coro)
     return 0;
 
   coro->flags |= CF_DESTROYED;
+  
+  if (coro->flags & CF_READY)
+    {
+      /* reduce nready, as destroying a ready coro effectively unreadies it */
+      /* alternative: look through all ready queues and remove the coro */
+      LOCK;
+      --coro_nready;
+      UNLOCK;
+    }
+  else
+    coro->flags |= CF_READY; /* make sure it is NOT put into the readyqueue */
 
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
@@ -927,23 +963,10 @@ api_save (SV *coro_sv, int new_save)
 
 /** Coro ********************************************************************/
 
-#define PRIO_MAX     3
-#define PRIO_HIGH    1
-#define PRIO_NORMAL  0
-#define PRIO_LOW    -1
-#define PRIO_IDLE   -3
-#define PRIO_MIN    -4
-
-/* for Coro.pm */
-static SV *coro_current;
-static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
-static int coro_nready;
-
 static void
 coro_enq (SV *coro_sv)
 {
   av_push (coro_ready [SvSTATE (coro_sv)->prio - PRIO_MIN], coro_sv);
-  coro_nready++;
 }
 
 static SV *
@@ -957,10 +980,7 @@ coro_deq (int min_prio)
 
   for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= min_prio; )
     if (AvFILLp (coro_ready [prio]) >= 0)
-      {
-        coro_nready--;
-        return av_shift (coro_ready [prio]);
-      }
+      return av_shift (coro_ready [prio]);
 
   return 0;
 }
@@ -982,6 +1002,7 @@ api_ready (SV *coro_sv)
 
   LOCK;
   coro_enq (SvREFCNT_inc (coro_sv));
+  ++coro_nready;
   UNLOCK;
 
   return 1;
@@ -1002,11 +1023,11 @@ prepare_schedule (struct transfer_args *ta)
     {
       LOCK;
       next_sv = coro_deq (PRIO_MIN);
-      UNLOCK;
 
       /* nothing to schedule: call the idle handler */
       if (!next_sv)
         {
+          UNLOCK;
           dSP;
 
           ENTER;
@@ -1026,10 +1047,14 @@ prepare_schedule (struct transfer_args *ta)
       /* cannot transfer to destroyed coros, skip and look for next */
       if (ta->next->flags & CF_DESTROYED)
         {
+          UNLOCK;
           SvREFCNT_dec (next_sv);
+          /* coro_nready is already taken care of by destroy */
           continue;
         }
 
+      --coro_nready;
+      UNLOCK;
       break;
     }
 

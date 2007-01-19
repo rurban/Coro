@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.3';
+our $VERSION = '3.4';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -235,9 +235,8 @@ our @pool;
 
 sub pool_handler {
    while () {
-      my ($cb, @arg) = @{ delete $current->{_invoke} };
-
       eval {
+         my ($cb, @arg) = @{ delete $current->{_invoke} or return };
          $cb->(@arg);
       };
       warn $@ if $@;
