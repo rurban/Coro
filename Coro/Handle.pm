@@ -462,19 +462,21 @@ sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
 
    while() {
-      my $pos = index $_[0][3], $irs;
-      if ($pos >= 0) {
-         $pos += length $irs;
-         my $res = substr $_[0][3], 0, $pos;
-         substr ($_[0][3], 0, $pos) = "";
-         return $res;
+      if (defined $irs) {
+         my $pos = index $_[0][3], $irs;
+         if ($pos >= 0) {
+            $pos += length $irs;
+            my $res = substr $_[0][3], 0, $pos;
+            substr ($_[0][3], 0, $pos) = "";
+            return $res;
+         }
       }
 
       my $r = sysread $_[0][0], $_[0][3], 8192, length $_[0][3];
       if (defined $r) {
-         return undef unless $r;
+         return length $_[0][3] ? delete $_[0][3] : undef unless $r;
       } elsif ($! != Errno::EAGAIN || !&readable) {
-         return undef;
+         return length $_[0][3] ? delete $_[0][3] : undef;
       }
    }
 }

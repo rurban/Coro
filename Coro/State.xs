@@ -850,9 +850,10 @@ coro_state_destroy (struct coro *coro)
 
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
+      struct coro temp;
+
       assert (!(coro->flags & CF_RUNNING));
 
-      struct coro temp;
       Zero (&temp, 1, struct coro);
       temp.save = CORO_SAVE_ALL;
 
@@ -1027,8 +1028,8 @@ prepare_schedule (struct transfer_args *ta)
       /* nothing to schedule: call the idle handler */
       if (!next_sv)
         {
-          UNLOCK;
           dSP;
+          UNLOCK;
 
           ENTER;
           SAVETMPS;
