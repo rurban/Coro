@@ -4,6 +4,15 @@ TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 TODO: fast reloads in cf cause segfaults (coro_state_free->destroy->crash)
 
+3.41 Mon Jan 22 19:19:49 CET 2007
+	- readline on Coro::Handle did not support undefined $/,
+          nor did it deliver partial lines on EOF or error.
+        - implement malloc fallback for stack allocation because
+          stupid broken idiotic OSX has a stupid broken
+          idiotic fits-the-whole-os mmap "implementation" and
+          my dick feels longer if Coro is portable even to
+          obsolete platforms.
+
 3.4  Fri Jan 19 21:52:54 CET 2007
 	- remove t/09_timer.t, as it isn't really testing much
           but was rather flaky in practise.

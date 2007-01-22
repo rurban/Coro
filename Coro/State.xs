@@ -35,6 +35,9 @@ static long pagesize;
 
 #if USE_VALGRIND
 # include <valgrind/valgrind.h>
+# define REGISTER_STACK(cctx,start,end) (cctx)->valgrind_id = VALGRIND_STACK_REGISTER ((start), (end))
+#else
+# define REGISTER_STACK(cctx,start,end)
 #endif
 
 /* the maximum number of idle cctx that will be pooled */
@@ -137,7 +140,7 @@ typedef struct coro_cctx {
 
   /* the stack */
   void *sptr;
-  long ssize; /* positive == mmap, otherwise malloc */
+  ssize_t ssize; /* positive == mmap, otherwise malloc */
 
   /* cpu state */
   void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
@@ -632,37 +635,39 @@ cctx_new ()
   /* mmap supposedly does allocate-on-write for us */
   cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
-  if (cctx->sptr == (void *)-1)
+  if (cctx->sptr != (void *)-1)
     {
-      perror ("FATAL: unable to mmap stack for coroutine");
-      _exit (EXIT_FAILURE);
-    }
-
 # if STACKGUARD
-  mprotect (cctx->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
+      mprotect (cctx->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
 # endif
+      REGISTER_STACK (
+        cctx,
+        STACKGUARD * PAGESIZE + (char *)cctx->sptr,
+        cctx->ssize + (char *)cctx->sptr
+      );
 
-#else
-
-  cctx->ssize = STACKSIZE * (long)sizeof (long);
-  New (0, cctx->sptr, STACKSIZE, long);
-
-  if (!cctx->sptr)
-    {
-      perror ("FATAL: unable to malloc stack for coroutine");
-      _exit (EXIT_FAILURE);
+      coro_create (&cctx->cctx, coro_run, (void *)cctx, cctx->sptr, cctx->ssize);
     }
-
+  else
 #endif
+    {
+      cctx->ssize = -STACKSIZE * (long)sizeof (long);
+      New (0, cctx->sptr, STACKSIZE, long);
 
-#if USE_VALGRIND
-  cctx->valgrind_id = VALGRIND_STACK_REGISTER (
-     STACKGUARD * PAGESIZE + (char *)cctx->sptr,
-     cctx->ssize           + (char *)cctx->sptr
-  );
-#endif
+      if (!cctx->sptr)
+        {
+          perror ("FATAL: unable to allocate stack for coroutine");
+          _exit (EXIT_FAILURE);
+        }
 
-  coro_create (&cctx->cctx, coro_run, (void *)cctx, cctx->sptr, cctx->ssize);
+      REGISTER_STACK (
+        cctx,
+        (char *)cctx->sptr,
+        (char *)cctx->sptr - cctx->ssize
+      );
+
+      coro_create (&cctx->cctx, coro_run, (void *)cctx, cctx->sptr, -cctx->ssize);
+    }
 
   return cctx;
 }
@@ -680,10 +685,11 @@ cctx_destroy (coro_cctx *cctx)
 #endif
 
 #if HAVE_MMAP
-  munmap (cctx->sptr, cctx->ssize);
-#else
-  Safefree (cctx->sptr);
+  if (cctx->ssize > 0)
+    munmap (cctx->sptr, cctx->ssize);
+  else
 #endif
+    Safefree (cctx->sptr);
 
   Safefree (cctx);
 }
@@ -850,9 +856,10 @@ coro_state_destroy (struct coro *coro)
 
   if (coro->mainstack && coro->mainstack != main_mainstack)
     {
+      struct coro temp;
+
       assert (!(coro->flags & CF_RUNNING));
 
-      struct coro temp;
       Zero (&temp, 1, struct coro);
       temp.save = CORO_SAVE_ALL;
 
@@ -1027,8 +1034,8 @@ prepare_schedule (struct transfer_args *ta)
       /* nothing to schedule: call the idle handler */
       if (!next_sv)
         {
-          UNLOCK;
           dSP;
+          UNLOCK;
 
           ENTER;
           SAVETMPS;
