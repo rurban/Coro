@@ -389,14 +389,14 @@ for my $rw (qw(readable writable)) {
    no strict 'refs';
 
    *$rw = sub {
-      my $res = &{"$rw\_anyevent"};
+      AnyEvent::detect;
       if ($AnyEvent::MODEL eq "AnyEvent::Impl::Coro" or $AnyEvent::MODEL eq "AnyEvent::Impl::Event") {
          require Coro::Event;
          *$rw = \&{"$rw\_coro"};
       } else {
          *$rw = \&{"$rw\_anyevent"};
       }
-      $res
+      goto &$rw
    };
 };
 

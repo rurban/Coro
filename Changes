@@ -4,6 +4,9 @@ TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 TODO: fast reloads in cf cause segfaults (coro_state_free->destroy->crash)
 
+	- do AnyEvent model detection earlier, avoiding problems
+          caused by first using AnyEvent and later Coro::Event.
+
 3.41 Mon Jan 22 19:19:49 CET 2007
 	- readline on Coro::Handle did not support undefined $/,
           nor did it deliver partial lines on EOF or error.

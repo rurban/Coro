@@ -51,11 +51,11 @@ WriteMakefile(
        Scalar::Util	=> 0.00,
 
        # for Coro::Event
-       Event		=> 0.86,
+       Event		=> 1.06,
 
        # for Coro::AIO, Coro::Util
-       IO::AIO          => 1.6,
-       AnyEvent         => 2.1,
+       IO::AIO          => 2.3,
+       AnyEvent         => 2.51,
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
