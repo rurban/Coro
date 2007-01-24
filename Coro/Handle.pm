@@ -372,7 +372,7 @@ sub readable_coro {
       desc    => "fh $_[0][1] read watcher",
       timeout => $_[0][2],
       poll    => &Event::Watcher::R + &Event::Watcher::E + &Event::Watcher::T,
-   ))->next->[5] & &Event::Watcher::R
+   ))->next->[4] & &Event::Watcher::R
 }
 
 sub writable_coro {
@@ -381,7 +381,7 @@ sub writable_coro {
       desc    => "fh $_[0][1] write watcher",
       timeout => $_[0][2],
       poll    => &Event::Watcher::W + &Event::Watcher::E + &Event::Watcher::T,
-   ))->next->[5] & &Event::Watcher::W
+   ))->next->[4] & &Event::Watcher::W
 }
 
 # decide on event model at runtime

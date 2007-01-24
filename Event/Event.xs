@@ -11,10 +11,11 @@
 #define CD_WAIT	0 /* wait queue */
 #define CD_TYPE	1
 #define CD_OK	2
+#define CD_HITS	3 /* hardcoded in Coro::Event */
+#define CD_GOT	4 /* hardcoded in Coro::Event, Coro::Handle */
+#define CD_MAX	4
 
-#define CD_HITS	4 /* hardcoded in Coro::Event */
-#define CD_GOT	5 /* hardcoded in Coro::Event, Coro::Handle */
-#define CD_MAX	5
+static HV *coro_event_event_stash;
 
 static void
 coro_std_cb (pe_event *pe)
@@ -30,14 +31,16 @@ coro_std_cb (pe_event *pe)
   AvARRAY (priv)[CD_OK] = &PL_sv_yes;
 
   cd_wait = (AV *)AvARRAY(priv)[CD_WAIT];
-  if ((coro = av_shift (cd_wait)))
-    {
-      if (av_len (cd_wait) < 0)
-        GEventAPI->stop (pe->up, 0);
 
+  coro = av_shift (cd_wait);
+  if (coro != &PL_sv_undef)
+    {
       CORO_READY (coro);
       SvREFCNT_dec (coro);
     }
+
+  if (av_len (cd_wait) < 0)
+    GEventAPI->stop (pe->up, 0);
 }
 
 static void
@@ -72,6 +75,8 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {
+	coro_event_event_stash = gv_stashpv ("Coro::Event::Event", TRUE);
+
         I_EVENT_API ("Coro::Event");
 	I_CORO_API ("Coro::Event");
 
@@ -90,10 +95,9 @@ _install_std_cb (SV *self, int type)
 
         {
           AV *priv = newAV ();
-          SV *rv = newRV_noinc ((SV *)priv);
 
           av_fill (priv, CD_MAX);
-          AvARRAY (priv)[CD_WAIT] = (SV *)newAV (); /* badbad */
+          AvARRAY (priv)[CD_WAIT] = (SV *)newAV (); /* AV in AV _should_ not be exposed to perl */
           AvARRAY (priv)[CD_TYPE] = newSViv (type);
           AvARRAY (priv)[CD_OK  ] = &PL_sv_no;
           AvARRAY (priv)[CD_HITS] = newSViv (0);
@@ -105,7 +109,7 @@ _install_std_cb (SV *self, int type)
 
           /* make sure Event does not use PERL_MAGIC_uvar, which */
           /* we abuse for non-uvar purposes. */
-          sv_magicext (SvRV (self), rv, PERL_MAGIC_uvar, 0, 0, 0);
+          sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_uvar, 0, 0, 0);
         }
 }
 
@@ -142,6 +146,14 @@ _event (SV *self)
           AV *priv = (AV *)w->ext_data;
 
           RETVAL = newRV_inc ((SV *)priv);
+
+          /* may need to bless it now */
+          if (!SvOBJECT (priv))
+            {
+              SvREADONLY_off ((SV *)priv);
+              sv_bless (RETVAL, coro_event_event_stash);
+              SvREADONLY_on ((SV *)priv);
+            }
         }
 }
 	OUTPUT:
