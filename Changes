@@ -8,6 +8,8 @@ TODO: destroy gets only called on cancel: fix(?)
           caused by first using AnyEvent and later Coro::Event.
         - implement and document Coro::Event event objects.
         - fix a potential problem in Coro::Event causing crashes.
+        - initialise PL_comppad when creating a new coroutine,
+          avoids crashes on early coro destruction.
 
 3.41 Mon Jan 22 19:19:49 CET 2007
 	- readline on Coro::Handle did not support undefined $/,
