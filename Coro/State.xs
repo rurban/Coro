@@ -367,11 +367,13 @@ load_perl (Coro__State c)
 
     PUTBACK;
   }
+  assert (!PL_comppad || AvARRAY (PL_comppad));//D
 }
 
 static void
 save_perl (Coro__State c)
 {
+  assert (!PL_comppad || AvARRAY (PL_comppad));//D
   {
     dSP;
     I32 cxix = cxstack_ix;
@@ -540,6 +542,7 @@ setup_coro (struct coro *coro)
 
   PL_curcop     = &PL_compiling;
   PL_in_eval    = EVAL_NULL;
+  PL_comppad    = 0;
   PL_curpm      = 0;
   PL_localizing = 0;
   PL_dirty      = 0;
