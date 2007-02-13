@@ -2,7 +2,14 @@ Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
-TODO: fast reloads in cf cause segfaults (coro_state_free->destroy->crash)
+
+3.5 Tue Feb 13 20:22:53 CET 2007
+	- do AnyEvent model detection earlier, avoiding problems
+          caused by first using AnyEvent and later Coro::Event.
+        - implement and document Coro::Event event objects.
+        - fix a potential problem in Coro::Event causing crashes.
+        - initialise PL_comppad when creating a new coroutine,
+          avoids crashes on early coro destruction.
 
 3.41 Mon Jan 22 19:19:49 CET 2007
 	- readline on Coro::Handle did not support undefined $/,

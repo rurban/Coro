@@ -20,6 +20,11 @@ Coro::Event - do events the coro-way
 
  loop;
 
+ # wait for input on stdin for one second
+ 
+ Coro::Event::do_io (fd => \*STDIN, timeout => 1) & Event::Watcher::R
+    or die "no input received";
+
 =head1 DESCRIPTION
 
 This module enables you to create programs using the powerful Event model
@@ -85,7 +90,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = '2.0';
+   our $VERSION = '2.1';
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -104,15 +109,20 @@ Examples:
 
 =item $w->next
 
-Return the next event of the event queue of the watcher.
+Wait for and return the next event of the event queue of the watcher. The
+returned event objects support two methods only: C<hits> and C<got>, both
+of which return integers: the number this watcher was hit for this event,
+and the mask of poll events received.
 
 =cut
 
 =item do_flavour args...
 
-Create a watcher of the given type and immediately call it's next
-method. This is less efficient then calling the constructor once and the
-next method often, but it does save typing sometimes.
+Create a watcher of the given type and immediately call it's next method,
+returning the event.
+
+This is less efficient then calling the constructor once and the next
+method often, but it does save typing sometimes.
 
 =cut
 
@@ -158,10 +168,8 @@ sub next($) {
    &_event
 }
 
-sub Coro::Event::w    { $_[0] }
-sub Coro::Event::prio { $_[0]{Coro::Event}[3] }
-sub Coro::Event::hits { $_[0]{Coro::Event}[4] }
-sub Coro::Event::got  { $_[0]{Coro::Event}[5] }
+sub Coro::Event::Event::hits { $_[0][3] }
+sub Coro::Event::Event::got  { $_[0][4] }
 
 =item sweep
 
