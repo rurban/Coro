@@ -33,7 +33,7 @@ static long pagesize;
 # define BOOT_PAGESIZE (void)0
 #endif
 
-#if USE_VALGRIND
+#if CORO_USE_VALGRIND
 # include <valgrind/valgrind.h>
 # define REGISTER_STACK(cctx,start,end) (cctx)->valgrind_id = VALGRIND_STACK_REGISTER ((start), (end))
 #else
@@ -76,16 +76,16 @@ static long pagesize;
 #endif
 
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
-# undef STACKGUARD
+# undef CORO_STACKGUARD
 #endif
 
-#ifndef STACKGUARD
-# define STACKGUARD 0
+#ifndef CORO_STACKGUARD
+# define CORO_STACKGUARD 0
 #endif
 
 /* prefer perl internal functions over our own? */
-#ifndef PREFER_PERL_FUNCTIONS
-# define PREFER_PERL_FUNCTIONS 0
+#ifndef CORO_PREFER_PERL_FUNCTIONS
+# define CORO_PREFER_PERL_FUNCTIONS 0
 #endif
 
 /* The next macro should declare a variable stacklevel that contains and approximation
@@ -150,7 +150,7 @@ typedef struct coro_cctx {
 
   int inuse;
 
-#if USE_VALGRIND
+#if CORO_USE_VALGRIND
   int valgrind_id;
 #endif
 } coro_cctx;
@@ -290,7 +290,7 @@ get_padlist (CV *cv)
     CvPADLIST (cv) = (AV *)AvARRAY (av)[AvFILLp (av)--];
   else
    {
-#if PREFER_PERL_FUNCTIONS
+#if CORO_PREFER_PERL_FUNCTIONS
      /* this is probably cleaner, but also slower? */
      CV *cp = Perl_cv_clone (cv);
      CvPADLIST (cv) = CvPADLIST (cp);
@@ -438,7 +438,7 @@ save_perl (Coro__State c)
  * on the (sometimes correct) assumption that coroutines do
  * not usually need a lot of stackspace.
  */
-#if PREFER_PERL_FUNCTIONS
+#if CORO_PREFER_PERL_FUNCTIONS
 # define coro_init_stacks init_stacks
 #else
 static void
@@ -634,18 +634,18 @@ cctx_new ()
 
 #if HAVE_MMAP
 
-  cctx->ssize = ((STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + STACKGUARD) * PAGESIZE;
+  cctx->ssize = ((CORO_STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
   /* mmap supposedly does allocate-on-write for us */
   cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
   if (cctx->sptr != (void *)-1)
     {
-# if STACKGUARD
-      mprotect (cctx->sptr, STACKGUARD * PAGESIZE, PROT_NONE);
+# if CORO_STACKGUARD
+      mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
 # endif
       REGISTER_STACK (
         cctx,
-        STACKGUARD * PAGESIZE + (char *)cctx->sptr,
+        CORO_STACKGUARD * PAGESIZE + (char *)cctx->sptr,
         cctx->ssize + (char *)cctx->sptr
       );
 
@@ -654,8 +654,8 @@ cctx_new ()
   else
 #endif
     {
-      cctx->ssize = -STACKSIZE * (long)sizeof (long);
-      New (0, cctx->sptr, STACKSIZE, long);
+      cctx->ssize = -CORO_STACKSIZE * (long)sizeof (long);
+      New (0, cctx->sptr, CORO_STACKSIZE, long);
 
       if (!cctx->sptr)
         {
@@ -683,7 +683,7 @@ cctx_destroy (coro_cctx *cctx)
 
   --cctx_count;
 
-#if USE_VALGRIND
+#if CORO_USE_VALGRIND
   VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
 #endif
 
