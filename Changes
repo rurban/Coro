@@ -3,6 +3,10 @@ Revision history for Perl extension Coro.
 TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 
+3.51
+	- fixed a problem when you weakened references to Coro::State's
+          (patch by Yuval Kogman).
+
 3.501 Wed Feb 28 12:44:07 CET 2007
 	- rename some global symbols as macosx from hell redefines
           them without asking.

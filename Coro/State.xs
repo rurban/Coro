@@ -938,8 +938,7 @@ SvSTATE (SV *coro)
         croak ("Coro::State object required");
     }
 
-  mg = SvMAGIC (coro);
-  assert (mg->mg_type == PERL_MAGIC_ext);
+  mg = CORO_MAGIC (coro);
   return (struct coro *)mg->mg_ptr;
 }
 
