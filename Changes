@@ -3,6 +3,9 @@ Revision history for Perl extension Coro.
 TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 
+3.52
+	- add count accessor to Coro::Semaphore.
+
 3.51  Sun Mar  4 14:18:04 CET 2007
 	- fixed a problem when you weakened references to Coro::State's
           (patch by Yuval Kogman).
