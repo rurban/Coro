@@ -126,6 +126,7 @@ struct io_state
   Stat_t statcache;
 };
 
+static size_t coro_stacksize = CORO_STACKSIZE;
 static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static HV *coro_state_stash, *coro_stash;
@@ -140,7 +141,7 @@ typedef struct coro_cctx {
 
   /* the stack */
   void *sptr;
-  ssize_t ssize; /* positive == mmap, otherwise malloc */
+  size_t ssize;
 
   /* cpu state */
   void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
@@ -148,11 +149,10 @@ typedef struct coro_cctx {
   JMPENV *top_env;
   coro_context cctx;
 
-  int inuse;
-
 #if CORO_USE_VALGRIND
   int valgrind_id;
 #endif
+  char inuse, mapped;
 } coro_cctx;
 
 enum {
@@ -627,6 +627,8 @@ static coro_cctx *
 cctx_new ()
 {
   coro_cctx *cctx;
+  void *stack_start;
+  size_t stack_size;
 
   ++cctx_count;
 
@@ -634,7 +636,7 @@ cctx_new ()
 
 #if HAVE_MMAP
 
-  cctx->ssize = ((CORO_STACKSIZE * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
+  cctx->ssize = ((coro_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
   /* mmap supposedly does allocate-on-write for us */
   cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
@@ -643,19 +645,15 @@ cctx_new ()
 # if CORO_STACKGUARD
       mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
 # endif
-      REGISTER_STACK (
-        cctx,
-        CORO_STACKGUARD * PAGESIZE + (char *)cctx->sptr,
-        cctx->ssize + (char *)cctx->sptr
-      );
-
-      coro_create (&cctx->cctx, coro_run, (void *)cctx, cctx->sptr, cctx->ssize);
+      stack_start = CORO_STACKGUARD * PAGESIZE + (char *)cctx->sptr;
+      stack_size  = cctx->ssize - CORO_STACKGUARD * PAGESIZE;
+      cctx->mapped = 1;
     }
   else
 #endif
     {
-      cctx->ssize = -CORO_STACKSIZE * (long)sizeof (long);
-      New (0, cctx->sptr, CORO_STACKSIZE, long);
+      cctx->ssize = coro_stacksize * (long)sizeof (long);
+      New (0, cctx->sptr, coro_stacksize, long);
 
       if (!cctx->sptr)
         {
@@ -663,14 +661,12 @@ cctx_new ()
           _exit (EXIT_FAILURE);
         }
 
-      REGISTER_STACK (
-        cctx,
-        (char *)cctx->sptr,
-        (char *)cctx->sptr - cctx->ssize
-      );
-
-      coro_create (&cctx->cctx, coro_run, (void *)cctx, cctx->sptr, -cctx->ssize);
+      stack_start = cctx->sptr;
+      stack_size  = cctx->ssize;
     }
+
+  REGISTER_STACK (cctx, (char *)stack_start, (char *)stack_start + stack_size);
+  coro_create (&cctx->cctx, coro_run, (void *)cctx, stack_start, stack_size);
 
   return cctx;
 }
@@ -688,7 +684,7 @@ cctx_destroy (coro_cctx *cctx)
 #endif
 
 #if HAVE_MMAP
-  if (cctx->ssize > 0)
+  if (cctx->mapped)
     munmap (cctx->sptr, cctx->ssize);
   else
 #endif
@@ -700,21 +696,20 @@ cctx_destroy (coro_cctx *cctx)
 static coro_cctx *
 cctx_get ()
 {
-  coro_cctx *cctx;
-
-  if (cctx_first)
+  while (cctx_first)
     {
-      cctx = cctx_first;
+      coro_cctx *cctx = cctx_first;
       cctx_first = cctx->next;
       --cctx_idle;
-    }
-  else
-   {
-     cctx = cctx_new ();
-     PL_op = PL_op->op_next;
-   }
 
-  return cctx;
+      if (cctx->ssize >= coro_stacksize)
+        return cctx;
+
+      cctx_destroy (cctx);
+    }
+
+  PL_op = PL_op->op_next;
+  return cctx_new ();
 }
 
 static void
@@ -1258,6 +1253,15 @@ _exit (code)
         PROTOTYPE: $
 	CODE:
 	_exit (code);
+
+int
+cctx_stacksize (int new_stacksize = 0)
+	CODE:
+        RETVAL = coro_stacksize;
+        if (new_stacksize)
+          coro_stacksize = new_stacksize;
+	OUTPUT:
+        RETVAL
 
 int
 cctx_count ()

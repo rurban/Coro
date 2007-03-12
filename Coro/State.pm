@@ -166,6 +166,16 @@ Returns the number of allocated but idle (free for reuse) C level
 coroutines. As C level coroutines are curretly rarely being deallocated, a
 high number means that you used many C coroutines in the past.
 
+=item Coro::State::cctx_stacksize [$new_stacksize]
+
+Returns the current C stack size and optionally sets the new I<minimum>
+stack size to C<$new_stacksize> I<long>s. Existing stacks will not
+be changed, but Coro will try to replace smaller stacks as soon as
+possible. Any Coro::State's that starts to use a stack after this call is
+guarenteed this minimum size. Please note that Coroutines will only need
+to use a C-level stack if the interpreter recurses or calls a function in
+a module that calls back into the interpreter.
+
 =cut
 
 1;

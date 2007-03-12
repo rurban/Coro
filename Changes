@@ -5,6 +5,7 @@ TODO: destroy gets only called on cancel: fix(?)
 
 3.52
 	- add count accessor to Coro::Semaphore.
+        - add Coro::State::cctx_stacksize.
 
 3.51  Sun Mar  4 14:18:04 CET 2007
 	- fixed a problem when you weakened references to Coro::State's
