@@ -1,5 +1,7 @@
 #include "libcoro/coro.c"
 
+#define PERL_NO_GET_CONTEXT
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -208,7 +210,7 @@ static int coro_nready;
 /** lowlevel stuff **********************************************************/
 
 static AV *
-coro_clone_padlist (CV *cv)
+coro_clone_padlist (pTHX_ CV *cv)
 {
   AV *padlist = CvPADLIST (cv);
   AV *newpadlist, *newpad;
@@ -230,7 +232,7 @@ coro_clone_padlist (CV *cv)
 }
 
 static void
-free_padlist (AV *padlist)
+free_padlist (pTHX_ AV *padlist)
 {
   /* may be during global destruction */
   if (SvREFCNT (padlist))
@@ -261,7 +263,7 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 
   /* casting is fun. */
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-    free_padlist (padlist);
+    free_padlist (aTHX_ padlist);
 
   SvREFCNT_dec (av);
 
@@ -281,7 +283,7 @@ static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
 
 /* the next two functions merely cache the padlists */
 static void
-get_padlist (CV *cv)
+get_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC (cv);
   AV *av;
@@ -297,13 +299,13 @@ get_padlist (CV *cv)
      CvPADLIST (cp) = 0;
      SvREFCNT_dec (cp);
 #else
-     CvPADLIST (cv) = coro_clone_padlist (cv);
+     CvPADLIST (cv) = coro_clone_padlist (aTHX_ cv);
 #endif
    }
 }
 
 static void
-put_padlist (CV *cv)
+put_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC (cv);
   AV *av;
@@ -332,7 +334,7 @@ put_padlist (CV *cv)
 #define REPLACE_SV(sv,val) SB SvREFCNT_dec (sv); (sv) = (val); (val) = 0; SE
 
 static void
-load_perl (Coro__State c)
+load_perl (pTHX_ Coro__State c)
 {
 #define VAR(name,type) PL_ ## name = c->name;
 # include "state.h"
@@ -360,7 +362,7 @@ load_perl (Coro__State c)
     /* now do the ugly restore mess */
     while ((cv = (CV *)POPs))
       {
-        put_padlist (cv); /* mark this padlist as available */
+        put_padlist (aTHX_ cv); /* mark this padlist as available */
         CvDEPTH (cv) = PTR2IV (POPs);
         CvPADLIST (cv) = (AV *)POPs;
       }
@@ -371,7 +373,7 @@ load_perl (Coro__State c)
 }
 
 static void
-save_perl (Coro__State c)
+save_perl (pTHX_ Coro__State c)
 {
   assert (!PL_comppad || AvARRAY (PL_comppad));//D
   {
@@ -406,7 +408,7 @@ save_perl (Coro__State c)
                     PUSHs ((SV *)cv);
 
                     CvDEPTH (cv) = 0;
-                    get_padlist (cv);
+                    get_padlist (aTHX_ cv);
                   }
               }
           }
@@ -442,7 +444,7 @@ save_perl (Coro__State c)
 # define coro_init_stacks init_stacks
 #else
 static void
-coro_init_stacks ()
+coro_init_stacks (pTHX)
 {
     PL_curstackinfo = new_stackinfo(128, 1024/sizeof(PERL_CONTEXT));
     PL_curstackinfo->si_type = PERLSI_MAIN;
@@ -486,7 +488,7 @@ coro_init_stacks ()
  * destroy the stacks, the callchain etc...
  */
 static void
-coro_destroy_stacks ()
+coro_destroy_stacks (pTHX)
 {
   if (!IN_DESTRUCT)
     {
@@ -532,13 +534,12 @@ coro_destroy_stacks ()
 /** coroutine stack handling ************************************************/
 
 static void
-setup_coro (struct coro *coro)
+setup_coro (pTHX_ struct coro *coro)
 {
   /*
    * emulate part of the perl startup here.
    */
-
-  coro_init_stacks ();
+  coro_init_stacks (aTHX);
 
   PL_curcop     = &PL_compiling;
   PL_in_eval    = EVAL_NULL;
@@ -571,7 +572,7 @@ setup_coro (struct coro *coro)
 }
 
 static void
-free_coro_mortal ()
+free_coro_mortal (pTHX)
 {
   if (coro_mortal)
     {
@@ -582,7 +583,7 @@ free_coro_mortal ()
 
 /* inject a fake call to Coro::State::_cctx_init into the execution */
 static void NOINLINE
-prepare_cctx (coro_cctx *cctx)
+prepare_cctx (pTHX_ coro_cctx *cctx)
 {
   dSP;
   LOGOP myop;
@@ -604,6 +605,8 @@ prepare_cctx (coro_cctx *cctx)
 static void
 coro_run (void *arg)
 {
+  dTHX;
+
   /* coro_run is the alternative tail of transfer(), so unlock here. */
   UNLOCK;
 
@@ -613,7 +616,7 @@ coro_run (void *arg)
   PL_top_env = &PL_start_env;
 
   /* inject call to cctx_init */
-  prepare_cctx ((coro_cctx *)arg);
+  prepare_cctx (aTHX_ (coro_cctx *)arg);
 
   /* somebody will hit me for both perl_run and PL_restartop */
   PL_restartop = PL_op;
@@ -694,7 +697,7 @@ cctx_destroy (coro_cctx *cctx)
 }
 
 static coro_cctx *
-cctx_get ()
+cctx_get (pTHX)
 {
   while (cctx_first)
     {
@@ -735,7 +738,7 @@ cctx_put (coro_cctx *cctx)
 
 /* never call directly, always through the coro_state_transfer global variable */
 static void NOINLINE
-transfer (struct coro *prev, struct coro *next)
+transfer (pTHX_ struct coro *prev, struct coro *next)
 {
   dSTACKLEVEL;
 
@@ -778,17 +781,17 @@ transfer (struct coro *prev, struct coro *next)
           /* need to start coroutine */
           next->flags &= ~CF_NEW;
           /* first get rid of the old state */
-          save_perl (prev);
+          save_perl (aTHX_ prev);
           /* setup coroutine call */
-          setup_coro (next);
+          setup_coro (aTHX_ next);
           /* need a new stack */
           assert (!next->cctx);
         }
       else
         {
           /* coroutine already started */
-          save_perl (prev);
-          load_perl (next);
+          save_perl (aTHX_ prev);
+          load_perl (aTHX_ next);
         }
 
       prev__cctx = prev->cctx;
@@ -807,7 +810,7 @@ transfer (struct coro *prev, struct coro *next)
 
       if (!next->cctx)
         {
-          next->cctx = cctx_get ();
+          next->cctx = cctx_get (aTHX);
           assert (!next->cctx->inuse);
           next->cctx->inuse = 1;
         }
@@ -819,7 +822,7 @@ transfer (struct coro *prev, struct coro *next)
           coro_transfer (&prev__cctx->cctx, &next->cctx->cctx);
         }
 
-      free_coro_mortal ();
+      free_coro_mortal (aTHX);
       UNLOCK;
     }
 }
@@ -829,12 +832,12 @@ struct transfer_args
   struct coro *prev, *next;
 };
 
-#define TRANSFER(ta) transfer ((ta).prev, (ta).next)
+#define TRANSFER(ta) transfer (aTHX_ (ta).prev, (ta).next)
 
 /** high level stuff ********************************************************/
 
 static int
-coro_state_destroy (struct coro *coro)
+coro_state_destroy (pTHX_ struct coro *coro)
 {
   if (coro->flags & CF_DESTROYED)
     return 0;
@@ -864,12 +867,12 @@ coro_state_destroy (struct coro *coro)
       if (coro->flags & CF_RUNNING)
         croak ("FATAL: tried to destroy currently running coroutine");
 
-      save_perl (&temp);
-      load_perl (coro);
+      save_perl (aTHX_ &temp);
+      load_perl (aTHX_ coro);
 
-      coro_destroy_stacks ();
+      coro_destroy_stacks (aTHX);
 
-      load_perl (&temp); /* this will get rid of defsv etc.. */
+      load_perl (aTHX_ &temp); /* this will get rid of defsv etc.. */
 
       coro->mainstack = 0;
     }
@@ -888,7 +891,7 @@ coro_state_free (pTHX_ SV *sv, MAGIC *mg)
 
   if (--coro->refcnt < 0)
     {
-      coro_state_destroy (coro);
+      coro_state_destroy (aTHX_ coro);
       Safefree (coro);
     }
 
@@ -917,7 +920,7 @@ static MGVTBL coro_state_vtbl = {
 };
 
 static struct coro *
-SvSTATE (SV *coro)
+SvSTATE_ (pTHX_ SV *coro)
 {
   HV *stash;
   MAGIC *mg;
@@ -937,8 +940,10 @@ SvSTATE (SV *coro)
   return (struct coro *)mg->mg_ptr;
 }
 
+#define SvSTATE(sv) SvSTATE_ (aTHX_ (sv))
+
 static void
-prepare_transfer (struct transfer_args *ta, SV *prev_sv, SV *next_sv)
+prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev_sv, SV *next_sv)
 {
   ta->prev = SvSTATE (prev_sv);
   ta->next = SvSTATE (next_sv);
@@ -947,15 +952,17 @@ prepare_transfer (struct transfer_args *ta, SV *prev_sv, SV *next_sv)
 static void
 api_transfer (SV *prev_sv, SV *next_sv)
 {
+  dTHX;
   struct transfer_args ta;
 
-  prepare_transfer (&ta, prev_sv, next_sv);
+  prepare_transfer (aTHX_ &ta, prev_sv, next_sv);
   TRANSFER (ta);
 }
 
 static int
 api_save (SV *coro_sv, int new_save)
 {
+  dTHX;
   struct coro *coro = SvSTATE (coro_sv);
   int old_save = coro->save;
 
@@ -968,13 +975,13 @@ api_save (SV *coro_sv, int new_save)
 /** Coro ********************************************************************/
 
 static void
-coro_enq (SV *coro_sv)
+coro_enq (pTHX_ SV *coro_sv)
 {
   av_push (coro_ready [SvSTATE (coro_sv)->prio - PRIO_MIN], coro_sv);
 }
 
 static SV *
-coro_deq (int min_prio)
+coro_deq (pTHX_ int min_prio)
 {
   int prio = PRIO_MAX - PRIO_MIN;
 
@@ -992,6 +999,7 @@ coro_deq (int min_prio)
 static int
 api_ready (SV *coro_sv)
 {
+  dTHX;
   struct coro *coro;
 
   if (SvROK (coro_sv))
@@ -1005,7 +1013,7 @@ api_ready (SV *coro_sv)
   coro->flags |= CF_READY;
 
   LOCK;
-  coro_enq (SvREFCNT_inc (coro_sv));
+  coro_enq (aTHX_ SvREFCNT_inc (coro_sv));
   ++coro_nready;
   UNLOCK;
 
@@ -1015,18 +1023,19 @@ api_ready (SV *coro_sv)
 static int
 api_is_ready (SV *coro_sv)
 {
+  dTHX;
   return !!(SvSTATE (coro_sv)->flags & CF_READY);
 }
 
 static void
-prepare_schedule (struct transfer_args *ta)
+prepare_schedule (pTHX_ struct transfer_args *ta)
 {
   SV *prev_sv, *next_sv;
 
   for (;;)
     {
       LOCK;
-      next_sv = coro_deq (PRIO_MIN);
+      next_sv = coro_deq (aTHX_ PRIO_MIN);
 
       /* nothing to schedule: call the idle handler */
       if (!next_sv)
@@ -1071,25 +1080,25 @@ prepare_schedule (struct transfer_args *ta)
   ta->next->flags &= ~CF_READY;
 
   LOCK;
-  free_coro_mortal ();
+  free_coro_mortal (aTHX);
   coro_mortal = prev_sv;
   UNLOCK;
 }
 
 static void
-prepare_cede (struct transfer_args *ta)
+prepare_cede (pTHX_ struct transfer_args *ta)
 {
   api_ready (coro_current);
-  prepare_schedule (ta);
+  prepare_schedule (aTHX_ ta);
 }
 
 static int
-prepare_cede_notself (struct transfer_args *ta)
+prepare_cede_notself (pTHX_ struct transfer_args *ta)
 {
   if (coro_nready)
     {
       SV *prev = SvRV (coro_current);
-      prepare_schedule (ta);
+      prepare_schedule (aTHX_ ta);
       api_ready (prev);
       return 1;
     }
@@ -1100,18 +1109,20 @@ prepare_cede_notself (struct transfer_args *ta)
 static void
 api_schedule (void)
 {
+  dTHX;
   struct transfer_args ta;
 
-  prepare_schedule (&ta);
+  prepare_schedule (aTHX_ &ta);
   TRANSFER (ta);
 }
 
 static int
 api_cede (void)
 {
+  dTHX;
   struct transfer_args ta;
 
-  prepare_cede (&ta);
+  prepare_cede (aTHX_ &ta);
 
   if (ta.prev != ta.next)
     {
@@ -1125,9 +1136,10 @@ api_cede (void)
 static int
 api_cede_notself (void)
 {
+  dTHX;
   struct transfer_args ta;
 
-  if (prepare_cede_notself (&ta))
+  if (prepare_cede_notself (aTHX_ &ta))
     {
       TRANSFER (ta);
       return 1;
@@ -1215,19 +1227,19 @@ _set_stacklevel (...)
               if (items != 2)
                 croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
 
-              prepare_transfer (&ta, ST (0), ST (1));
+              prepare_transfer (aTHX_ &ta, ST (0), ST (1));
               break;
 
             case 2:
-              prepare_schedule (&ta);
+              prepare_schedule (aTHX_ &ta);
               break;
 
             case 3:
-              prepare_cede (&ta);
+              prepare_cede (aTHX_ &ta);
               break;
 
             case 4:
-              if (!prepare_cede_notself (&ta))
+              if (!prepare_cede_notself (aTHX_ &ta))
                 XSRETURN_EMPTY;
 
               break;
@@ -1243,7 +1255,7 @@ _set_stacklevel (...)
 bool
 _destroy (SV *coro_sv)
 	CODE:
-	RETVAL = coro_state_destroy (SvSTATE (coro_sv));
+	RETVAL = coro_state_destroy (aTHX_ SvSTATE (coro_sv));
 	OUTPUT:
         RETVAL
 
