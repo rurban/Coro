@@ -179,6 +179,7 @@ struct coro {
   AV *defav; /* @_ */
   SV *defsv; /* $_ */
   SV *errsv; /* $@ */
+  GV *deffh; /* default filehandle */
   SV *irssv; /* $/ */
   SV *irssv_sv; /* real $/ cache */
   
@@ -343,10 +344,15 @@ load_perl (pTHX_ Coro__State c)
   if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
   if (c->defsv) REPLACE_SV (DEFSV          , c->defsv);
   if (c->errsv) REPLACE_SV (ERRSV          , c->errsv);
+  if (c->deffh) REPLACE_SV (PL_defoutgv    , c->deffh);
+
   if (c->irssv)
     {
       if (c->irssv == PL_rs || sv_eq (PL_rs, c->irssv))
-        SvREFCNT_dec (c->irssv);
+        {
+          SvREFCNT_dec (c->irssv);
+          c->irssv = 0;
+        }
       else
         {
           REPLACE_SV (PL_rs, c->irssv);
@@ -427,6 +433,7 @@ save_perl (pTHX_ Coro__State c)
   c->defav = c->save & CORO_SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
   c->defsv = c->save & CORO_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
   c->errsv = c->save & CORO_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
+  c->deffh = c->save & CORO_SAVE_DEFFH ? (GV *)SvREFCNT_inc (PL_defoutgv)     : 0;
   c->irssv = c->save & CORO_SAVE_IRSSV ?       SvREFCNT_inc (PL_rs)           : 0;
 
 #define VAR(name,type)c->name = PL_ ## name;
@@ -862,7 +869,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
       assert (!(coro->flags & CF_RUNNING));
 
       Zero (&temp, 1, struct coro);
-      temp.save = CORO_SAVE_ALL;
+      temp.save = CORO_SAVE_DEF;
 
       if (coro->flags & CF_RUNNING)
         croak ("FATAL: tried to destroy currently running coroutine");
@@ -1165,6 +1172,8 @@ BOOT:
         newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (CORO_SAVE_DEFSV));
         newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (CORO_SAVE_ERRSV));
         newCONSTSUB (coro_state_stash, "SAVE_IRSSV", newSViv (CORO_SAVE_IRSSV));
+        newCONSTSUB (coro_state_stash, "SAVE_DEFFH", newSViv (CORO_SAVE_DEFFH));
+        newCONSTSUB (coro_state_stash, "SAVE_DEF",   newSViv (CORO_SAVE_DEF));
         newCONSTSUB (coro_state_stash, "SAVE_ALL",   newSViv (CORO_SAVE_ALL));
 
         main_mainstack = PL_mainstack;
@@ -1185,7 +1194,7 @@ new (char *klass, ...)
 
         Newz (0, coro, 1, struct coro);
         coro->args = newAV ();
-        coro->save = CORO_SAVE_ALL;
+        coro->save = CORO_SAVE_DEF;
         coro->flags = CF_NEW;
 
         hv = newHV ();
@@ -1202,6 +1211,17 @@ int
 save (SV *coro, int new_save = -1)
 	CODE:
         RETVAL = api_save (coro, new_save);
+	OUTPUT:
+        RETVAL
+
+int
+save_also (SV *coro_sv, int save_also)
+	CODE:
+{
+        struct coro *coro = SvSTATE (coro_sv);
+        RETVAL = coro->save;
+        coro->save |= save_also;
+}
 	OUTPUT:
         RETVAL
 

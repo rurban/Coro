@@ -68,7 +68,7 @@ BEGIN {
 use Exporter;
 use base Exporter::;
 
-our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_IRSSV SAVE_ALL);
+our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_IRSSV SAVE_DEFFH SAVE_DEFAULT SAVE_ALL);
 
 =item $coro = new Coro::State [$coderef[, @args...]]
 
@@ -77,7 +77,7 @@ coroutine will start execution at the given coderef. If the subroutine
 returns it will be executed again. If it throws an exception the program
 will terminate.
 
-The initial save flags for a new state is C<SAVE_ALL>, which can be
+The initial save flags for a new state is C<SAVE_DEFAULT>, which can be
 changed using the C<save> method.
 
 Calling C<exit> in a coroutine will not work correctly, so do not do that.
@@ -127,6 +127,8 @@ ORing the following constants together:
    SAVE_DEFSV  save/restore $_
    SAVE_ERRSV  save/restore $@
    SAVE_IRSSV  save/restore $/ (the Input Record Separator, slow)
+   SAVE_DEFFH  save/restore default filehandle (select)
+   SAVE_DEF    the default set of saves
    SAVE_ALL    everything that can be saved
 
 These constants are not exported by default. If you don't need any extra
@@ -145,6 +147,30 @@ this:
      local ($_, $@, ...);
      $old->transfer ($new);
   }
+
+=item $old_save_flags = $state->save_also ($new_save_flags)
+
+Like C<save>, but adds the given flags to the existing save flags, and
+still returns the old flag set.
+
+=item $guard = $state->guarded_save ($new_save_flags)
+
+Like C<save_also>, but returns a guard that resets the save flags when
+destroyed.
+
+This is useful when you need to save additional state in a lexically
+scoped block.
+
+=cut
+
+sub Coro::State::save_guard::DESTROY {
+   $_[0][0]->save ($_[0][1]);
+
+}
+
+sub guarded_save {
+   bless [$_[0], $_[0]->save_also ($_[1])], Coro::State::save_guard::
+}
 
 =item $prev->transfer ($next)
 
