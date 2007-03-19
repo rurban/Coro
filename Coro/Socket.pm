@@ -168,46 +168,6 @@ sub configure {
    $self
 }
 
-=item connect, listen, bind, getsockopt, setsockopt,
-send, recv, peername, sockname, shutdown, peerport, peerhost
-
-Do the same thing as the perl builtins or IO::Socket methods (but return
-true on EINPROGRESS). Remember that these must be method calls.
-
-=cut
-
-sub connect	{ connect tied(${$_[0]})->[0], $_[1] or $! == Errno::EINPROGRESS }
-sub bind	{ bind    tied(${$_[0]})->[0], $_[1] }
-sub listen	{ listen  tied(${$_[0]})->[0], $_[1] }
-sub getsockopt	{ getsockopt tied(${$_[0]})->[0], $_[1], $_[2] }
-sub setsockopt	{ setsockopt tied(${$_[0]})->[0], $_[1], $_[2], $_[3] }
-sub send	{ send tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub recv	{ recv tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub sockname	{ getsockname tied(${$_[0]})->[0] }
-sub peername	{ getpeername tied(${$_[0]})->[0] }
-sub shutdown	{ shutdown tied(${$_[0]})->[0], $_[1] }
-
-=item ($fh, $peername) = $listen_fh->accept
-
-In scalar context, returns the newly accepted socket (or undef) and in
-list context return the ($fh, $peername) pair (or nothing).
-
-=cut
-
-sub accept {
-   my ($peername, $fh);
-   while () {
-      $peername = accept $fh, tied(${$_[0]})->[0]
-         and return wantarray 
-                    ? ($_[0]->new_from_fh($fh), $peername)
-                    :  $_[0]->new_from_fh($fh);
-
-      return unless $!{EAGAIN};
-
-      $_[0]->readable or return;
-   }
-}
-
 1;
 
 =back
