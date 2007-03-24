@@ -91,8 +91,6 @@ sub new {
 
 1;
 
-=cut
-
 =head1 AUTHOR
 
  Marc Lehmann <schmorp@schmorp.de>

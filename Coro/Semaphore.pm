@@ -52,6 +52,16 @@ sub new {
    bless [defined $_[1] ? $_[1] : 1], $_[0];
 }
 
+=item $sem->count
+
+Returns the current semaphore count.
+
+=cut
+
+sub count {
+   $_[0][0]
+}
+
 =item $sem->down
 
 Decrement the counter, therefore "locking" the semaphore. This method

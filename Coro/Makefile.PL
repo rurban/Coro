@@ -141,7 +141,8 @@ need much, much more: If Coro segfaults with weird backtraces (e.g. in a
 function prologue) or in t/10_bugs.t, you might want to increase this to
 65536 or more.
 
-The default should be fine.
+The default should be fine, and can be changed at runtime with
+Coro::State::cctx_stacksize.
 
 EOF
 

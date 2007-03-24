@@ -17,11 +17,15 @@
 #define CORO_SAVE_DEFSV	0x00000002 /* $_ */
 #define CORO_SAVE_ERRSV	0x00000004 /* $@ */
 #define CORO_SAVE_IRSSV	0x00000008 /* $/ */
+#define CORO_SAVE_DEFFH	0x00000010 /* default filehandle */
 
 #define CORO_SAVE_ALL	( CORO_SAVE_DEFAV \
                         | CORO_SAVE_DEFSV \
                         | CORO_SAVE_ERRSV \
-                        | CORO_SAVE_IRSSV )
+                        | CORO_SAVE_IRSSV \
+                        | CORO_SAVE_DEFFH)
+
+#define CORO_SAVE_DEF CORO_SAVE_ALL
 
 /*struct coro;*/ /* opaque */
 

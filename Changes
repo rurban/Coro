@@ -3,6 +3,19 @@ Revision history for Perl extension Coro.
 TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 
+3.55  Sun Mar 25 01:20:47 CET 2007
+	- add SAVE_DEFFH to save the default filehandle and enable
+          it by default.
+        - finally move socket-operations from Coro::Socket to Coro::Handle
+          to be able to unblock foreign sockets.
+	- add Coro::State::save_also and guarded_save.
+	- add count accessor to Coro::Semaphore.
+        - add Coro::State::cctx_stacksize.
+        - just for the fun of it, do not rely on implicit context,
+          which can dramatically improve performance, but people
+          using windows-process-emulation perls do not care much about
+          performance.
+
 3.51  Sun Mar  4 14:18:04 CET 2007
 	- fixed a problem when you weakened references to Coro::State's
           (patch by Yuval Kogman).

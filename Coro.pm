@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.51';
+our $VERSION = '3.55';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -244,6 +244,7 @@ sub pool_handler {
       last if @pool >= $POOL_SIZE;
       push @pool, $current;
 
+      $current->save (Coro::State::SAVE_DEF);
       $current->prio (0);
       schedule;
    }

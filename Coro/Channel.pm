@@ -26,8 +26,9 @@ read/written from as many coroutines as you want.
 
 package Coro::Channel;
 
+no warnings;
+
 use Coro ();
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 $VERSION = 1.9;
 
