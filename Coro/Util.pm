@@ -124,6 +124,8 @@ sub inet_aton {
 
 1;
 
+=back
+
 =head1 AUTHOR
 
  Marc Lehmann <schmorp@schmorp.de>
