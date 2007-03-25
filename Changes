@@ -3,7 +3,7 @@ Revision history for Perl extension Coro.
 TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 
-3.55
+3.55  Sun Mar 25 01:20:47 CET 2007
 	- add SAVE_DEFFH to save the default filehandle and enable
           it by default.
         - finally move socket-operations from Coro::Socket to Coro::Handle
