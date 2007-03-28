@@ -468,7 +468,7 @@ that wakes up some coroutines.
 
 =item my $guard = Coro::guard { ... }
 
-This creates and returns a guard object. Nothing happens until the objetc
+This creates and returns a guard object. Nothing happens until the object
 gets destroyed, in which case the codeblock given as argument will be
 executed. This is useful to free locks or other resources in case of a
 runtime error or when the coroutine gets canceled, as in both cases the
