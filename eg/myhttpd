@@ -64,6 +64,7 @@ sub handler {
    }
 }
 
+# move the event main loop into a coroutine
 async { loop };
 
 slog 1, "accepting connections";
