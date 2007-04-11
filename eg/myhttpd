@@ -64,24 +64,20 @@ sub handler {
    }
 }
 
-async {
-   slog 1, "accepting connections";
-   while () {
-      $connections->down;
-      push @fh, $port->accept;
-      #slog 3, "accepted @$connections ".scalar(@pool);
-      if (@pool) {
-         (pop @pool)->ready;
-      } else {
-         async \&handler;
-      }
+async { loop };
 
+slog 1, "accepting connections";
+while () {
+   $connections->down;
+   push @fh, $port->accept;
+   #slog 3, "accepted @$connections ".scalar(@pool);
+   if (@pool) {
+      (pop @pool)->ready;
+   } else {
+      async \&handler;
    }
-};
 
-cede;
-loop;
-print "ende\n";#d#
+}
 
 package conn;
 
