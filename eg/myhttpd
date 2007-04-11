@@ -44,25 +44,6 @@ sub slog {
 my $connections = new Coro::Semaphore $MAX_CONNECTS;
 
 my @fh;
-my @pool;
-
-sub handler {
-   while () {
-      my $fh = pop @fh;
-      if ($fh) {
-         eval {
-            conn->new($fh)->handle;
-         };
-         close $fh;
-         slog 1, "$@" if $@ && !ref $@;
-         $connections->up;
-      } else {
-         last if @pool >= $MAX_POOL;
-         push @pool, $Coro::current;
-         schedule;
-      }
-   }
-}
 
 # move the event main loop into a coroutine
 async { loop };
@@ -70,14 +51,17 @@ async { loop };
 slog 1, "accepting connections";
 while () {
    $connections->down;
-   push @fh, $port->accept;
-   #slog 3, "accepted @$connections ".scalar(@pool);
-   if (@pool) {
-      (pop @pool)->ready;
-   } else {
-      async \&handler;
+   if (my $fh = $port->accept) {
+      #slog 3, "accepted @$connections ".scalar(@pool);
+      async_pool {
+         eval {
+            conn->new($fh)->handle;
+         };
+         close $fh;
+         slog 1, "$@" if $@ && !ref $@;
+         $connections->up;
+      };
    }
-
 }
 
 package conn;
