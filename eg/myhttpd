@@ -79,6 +79,7 @@ async {
    }
 };
 
+cede;
 loop;
 print "ende\n";#d#
 
@@ -365,3 +366,4 @@ ignore:
 
    close $fh;
 }
+
