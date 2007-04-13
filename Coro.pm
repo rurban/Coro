@@ -187,7 +187,9 @@ Create a new asynchronous coroutine and return it's coroutine object
 (usually unused). When the sub returns the new coroutine is automatically
 terminated.
 
-Calling C<exit> in a coroutine will not work correctly, so do not do that.
+Calling C<exit> in a coroutine will try to do the same as calling exit
+outside the coroutine, but this is experimental. It is best not to rely on
+exit doing any cleanups or even not crashing.
 
 When the coroutine dies, the program will exit, just as in the main
 program.
@@ -328,7 +330,7 @@ automatically terminates as if C<terminate> with the returned values were
 called. To make the coroutine run you must first put it into the ready queue
 by calling the ready method.
 
-Calling C<exit> in a coroutine will not work correctly, so do not do that.
+See C<async> for additional discussion.
 
 =cut
 

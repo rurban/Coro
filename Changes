@@ -2,11 +2,12 @@ Revision history for Perl extension Coro.
 
 TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
-TODO: exit in a coroutine should somehow do the real thing. but how?
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 
    	- added some bugfixes to get eg/myhttpd working again.
         - added Coro::Storable for often-cede'ing freeze/thaw.
+        - try to do a clean exit when a coroutine calls exit
+          (EXPERIMENTAL).
 
 3.55  Sun Mar 25 01:20:47 CET 2007
 	- add SAVE_DEFFH to save the default filehandle and enable
