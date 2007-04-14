@@ -8,15 +8,16 @@ use Socket;
 
 # do some asynchronous hostname resolution
 
-async {
-   for my $x (1..255) {
-      use Data::Dumper;
-      async {
-         my $addr = "129.13.162.$x";
-         print "$addr => ",(scalar gethostbyaddr inet_aton($addr), AF_INET),"\n";
-      };
-   }
+async { loop }; # run the Event loop as a separate coroutine
 
-};
+my @pid;
 
-loop;
+for my $x (1..255) {
+   push @pid, async {
+      my $addr = "129.13.162.$x";
+      print "$addr => ",(scalar gethostbyaddr inet_aton($addr), AF_INET),"\n";
+   };
+}
+
+$_->join for @pid;
+

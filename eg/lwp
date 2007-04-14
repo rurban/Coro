@@ -7,18 +7,19 @@ use LWP::Simple;
 
 $SIG{PIPE} = 'IGNORE';
 
-async {
-   print "hi2\n";
+my @pids;
+
+push @pid, async {
+   print "starting to fetch http://www.google.de/\n";
    get "http://www.google.de/";
-   print "ho2\n";
+   print "fetched http://www.google.de/\n";
 };
 
-async {
-   print "hi\n";
+push @pid, async {
+   print "starting to fetch http://www.yahoo.com/\n";
    get "http://www.yahoo.com/";
-   print "ho\n";
-
+   print "fetched http://www.yahoo.com/\n";
 };
 
-loop;
+$_->join for @pid;
 

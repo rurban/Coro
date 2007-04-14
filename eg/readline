@@ -36,5 +36,6 @@ async {
    }
 };
 
+cede; # make sure the watchers are installed
 loop;
 

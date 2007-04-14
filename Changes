@@ -4,7 +4,6 @@ TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 
-TODO: eg/event
    	- added some bugfixes to get eg/myhttpd working again.
         - added Coro::Storable for often-cede'ing freeze/thaw.
         - try to do a clean exit when a coroutine calls exit
