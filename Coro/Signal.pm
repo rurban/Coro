@@ -65,22 +65,22 @@ sub wait {
    unless ($_[0][0]) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
-      $_[0][0] = 0;
    }
+   $_[0][0] = 0;
 }
 
 sub timed_wait {
-
    unless ($_[0][0]) {
       require Coro::Timer;
       my $timeout = Coro::Timer::timeout($_[1]);
 
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
-      $_[0][0] = 0;
 
       return 0 if $timeout;
    }
+
+   $_[0][0] = 0;
 
    1
 }
@@ -93,6 +93,7 @@ if no process is waiting.
 =cut
 
 sub send {
+   $_[0][0] = 1;
    (shift @{$_[0][1]})->ready if @{$_[0][1]};
 }
 

@@ -569,7 +569,7 @@ setup_coro (pTHX_ struct coro *coro)
     myop.op_flags = OPf_WANT_VOID;
 
     PUSHMARK (SP);
-    XPUSHs ((SV *)get_cv ("Coro::State::_coro_init", FALSE));
+    XPUSHs (av_shift (GvAV (PL_defgv)));
     PUTBACK;
     PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
@@ -632,10 +632,13 @@ coro_run (void *arg)
   PL_restartop = PL_op;
   perl_run (PL_curinterp);
 
-  /* If perl-run returns we assume exit() was being called, which */
-  /* seems to be the only valid (non-bug) reason for perl_run to return. */
-  /* We try to exit by jumping to the bootstrap-time "top" top_env, as */
-  /* we cannot restore the "main" coroutine as Coro has no such concept */
+  /*
+   * If perl-run returns we assume exit() was being called or the coro
+   * fell off the end, which seems to be the only valid (non-bug)
+   * reason for perl_run to return. We try to exit by jumping to the
+   * bootstrap-time "top" top_env, as we cannot restore the "main"
+   * coroutine as Coro has no such concept
+   */
   PL_top_env = main_top_env;
   JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
 }

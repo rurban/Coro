@@ -52,5 +52,6 @@ sub timer : Coro {
    };
 }
 
+cede; # make sure the watchers are installed
 print "unlooped with value: ",loop(),"\n";
 
