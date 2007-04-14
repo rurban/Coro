@@ -8,6 +8,10 @@ TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
         - added Coro::Storable for often-cede'ing freeze/thaw.
         - try to do a clean exit when a coroutine calls exit
           (EXPERIMENTAL).
+        - got rid of indirect call through _coro_init.
+        - updated the partly antique examples in eg/ to
+          work again and be a bit less magic, too.
+        - fixed Coro::Signal semantics to work as documented again.
 
 3.55  Sun Mar 25 01:20:47 CET 2007
 	- add SAVE_DEFFH to save the default filehandle and enable
