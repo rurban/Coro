@@ -44,43 +44,25 @@ sub slog {
 my $connections = new Coro::Semaphore $MAX_CONNECTS;
 
 my @fh;
-my @pool;
 
-sub handler {
-   while () {
-      my $fh = pop @fh;
-      if ($fh) {
+# move the event main loop into a coroutine
+async { loop };
+
+slog 1, "accepting connections";
+while () {
+   $connections->down;
+   if (my $fh = $port->accept) {
+      #slog 3, "accepted @$connections ".scalar(@pool);
+      async_pool {
          eval {
             conn->new($fh)->handle;
          };
          close $fh;
          slog 1, "$@" if $@ && !ref $@;
          $connections->up;
-      } else {
-         last if @pool >= $MAX_POOL;
-         push @pool, $Coro::current;
-         schedule;
-      }
+      };
    }
 }
-
-async {
-   slog 1, "accepting connections";
-   while () {
-      $connections->down;
-      push @fh, $port->accept;
-      #slog 3, "accepted @$connections ".scalar(@pool);
-      if (@pool) {
-         (pop @pool)->ready;
-      } else {
-         async \&handler;
-      }
-
-   }
-};
-
-loop;
-print "ende\n";#d#
 
 package conn;
 
@@ -365,3 +347,4 @@ ignore:
 
    close $fh;
 }
+

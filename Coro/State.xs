@@ -131,6 +131,7 @@ struct io_state
 static size_t coro_stacksize = CORO_STACKSIZE;
 static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
+static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
@@ -568,7 +569,7 @@ setup_coro (pTHX_ struct coro *coro)
     myop.op_flags = OPf_WANT_VOID;
 
     PUSHMARK (SP);
-    XPUSHs ((SV *)get_cv ("Coro::State::_coro_init", FALSE));
+    XPUSHs (av_shift (GvAV (PL_defgv)));
     PUTBACK;
     PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
@@ -589,6 +590,8 @@ free_coro_mortal (pTHX)
 }
 
 /* inject a fake call to Coro::State::_cctx_init into the execution */
+/* _cctx_init shoukld be careful, as it could be called at almost any time */
+/* during execution of a pelr program */
 static void NOINLINE
 prepare_cctx (pTHX_ coro_cctx *cctx)
 {
@@ -609,6 +612,9 @@ prepare_cctx (pTHX_ coro_cctx *cctx)
   SPAGAIN;
 }
 
+/*
+ * this is a _very_ stripped down perl interpreter ;)
+ */
 static void
 coro_run (void *arg)
 {
@@ -617,20 +623,24 @@ coro_run (void *arg)
   /* coro_run is the alternative tail of transfer(), so unlock here. */
   UNLOCK;
 
-  /*
-   * this is a _very_ stripped down perl interpreter ;)
-   */
   PL_top_env = &PL_start_env;
 
-  /* inject call to cctx_init */
+  /* inject a fake subroutine call to cctx_init */
   prepare_cctx (aTHX_ (coro_cctx *)arg);
 
-  /* somebody will hit me for both perl_run and PL_restartop */
+  /* somebody or something will hit me for both perl_run and PL_restartop */
   PL_restartop = PL_op;
   perl_run (PL_curinterp);
 
-  fputs ("FATAL: C coroutine fell over the edge of the world, aborting. Did you call exit in a coroutine?\n", stderr);
-  abort ();
+  /*
+   * If perl-run returns we assume exit() was being called or the coro
+   * fell off the end, which seems to be the only valid (non-bug)
+   * reason for perl_run to return. We try to exit by jumping to the
+   * bootstrap-time "top" top_env, as we cannot restore the "main"
+   * coroutine as Coro has no such concept
+   */
+  PL_top_env = main_top_env;
+  JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
 }
 
 static coro_cctx *
@@ -1177,6 +1187,10 @@ BOOT:
         newCONSTSUB (coro_state_stash, "SAVE_ALL",   newSViv (CORO_SAVE_ALL));
 
         main_mainstack = PL_mainstack;
+        main_top_env   = PL_top_env;
+
+        while (main_top_env->je_prev)
+          main_top_env = main_top_env->je_prev;
 
         coroapi.ver      = CORO_API_VERSION;
         coroapi.transfer = api_transfer;

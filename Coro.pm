@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.55';
+our $VERSION = '3.6';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -187,10 +187,9 @@ Create a new asynchronous coroutine and return it's coroutine object
 (usually unused). When the sub returns the new coroutine is automatically
 terminated.
 
-Calling C<exit> in a coroutine will not work correctly, so do not do that.
-
-When the coroutine dies, the program will exit, just as in the main
-program.
+Calling C<exit> in a coroutine will do the same as calling exit outside
+the coroutine. Likewise, when the coroutine dies, the program will exit,
+just as it would in the main program.
 
    # create a new coroutine that just prints its arguments
    async {
@@ -328,7 +327,7 @@ automatically terminates as if C<terminate> with the returned values were
 called. To make the coroutine run you must first put it into the ready queue
 by calling the ready method.
 
-Calling C<exit> in a coroutine will not work correctly, so do not do that.
+See C<async> for additional discussion.
 
 =cut
 
@@ -468,7 +467,7 @@ that wakes up some coroutines.
 
 =item my $guard = Coro::guard { ... }
 
-This creates and returns a guard object. Nothing happens until the objetc
+This creates and returns a guard object. Nothing happens until the object
 gets destroyed, in which case the codeblock given as argument will be
 executed. This is useful to free locks or other resources in case of a
 runtime error or when the coroutine gets canceled, as in both cases the

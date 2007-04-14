@@ -3,8 +3,11 @@
 # this crap is an asynchronous finger client. it's rather idiotic ;)
 
 use Coro;
-use Coro::Event;
 use Coro::Socket;
+use Coro::Event;
+use AnyEvent;
+
+my $quit = AnyEvent->condvar;
 
 # this gets started everytime a user enters a finger command
 sub finger {
@@ -20,37 +23,31 @@ sub finger {
    print "$user\@$host: done\n";
 }
 
-my $stdin = new_from_fh Coro::Handle \*STDIN;
-
-# this is the main task
-sub keyboard : Coro {
-   $|=1;
-   while() {
-      print "cmd> "; my $cmd = <$stdin>; chomp $cmd;
-      if ($cmd eq "finger") {
-         print "user> "; my $user = <$stdin>; chomp $user;
-         print "host> "; my $host = <$stdin>; chomp $host;
-         async { finger($user, $host) };
-      } elsif ($cmd eq "quit") {
-         unloop(777);
-         terminate;
-      } else {
-         print "unknown command '$cmd', either 'finger' or 'quit'\n";
-      }
-   }
-}
-
-async { finger("root", "localhost") };
-
 # display the time or garble the display, YMMV.
 sub timer : Coro {
-   my $w = Coro::Event->timer(interval => 0.001, hard => 1);
+   my $w = Coro::Event->timer (interval => 0.001, hard => 1);
    use Time::HiRes qw(time);
    while () {
       $w->next;
-      print "\e7\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C   <time ",time,">   \e8";
+      print "\e7\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C   <time ", time, ">   \e8";
    };
 }
 
-print "unlooped with value: ",loop(),"\n";
+my $stdin = new_from_fh Coro::Handle \*STDIN;
+
+$SIG{PIPE} = 'IGNORE';
+
+$| = 1;
+while() {
+   print "cmd (finger|quit)> "; my $cmd = <$stdin>; chomp $cmd;
+   if ($cmd eq "finger") {
+      print "user> "; my $user = <$stdin>; chomp $user;
+      print "host> "; my $host = <$stdin>; chomp $host;
+      async { finger $user, $host };
+   } elsif ($cmd eq "quit") {
+      $quit->send;
+   } else {
+      print "unknown command '$cmd', either 'finger' or 'quit'\n";
+   }
+}
 

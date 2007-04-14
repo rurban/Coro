@@ -74,13 +74,14 @@ our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_IRSSV SAVE_DEFFH SAVE_
 
 Create a new coroutine and return it. The first C<transfer> call to this
 coroutine will start execution at the given coderef. If the subroutine
-returns it will be executed again. If it throws an exception the program
-will terminate.
+returns the program will be terminated as if execution of the main program
+ended. If it throws an exception the program will terminate.
+
+Calling C<exit> in a coroutine does the same as calling it in the main
+program.
 
 The initial save flags for a new state is C<SAVE_DEFAULT>, which can be
 changed using the C<save> method.
-
-Calling C<exit> in a coroutine will not work correctly, so do not do that.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
@@ -97,18 +98,6 @@ whatsoever, for example when subclassing Coro::State.
 # the stop level stack frame for stack sharing.
 sub _cctx_init {
    _set_stacklevel $_[0];
-}
-
-# this is called (or rather: goto'ed) for each and every
-# new coroutine. IT MUST NEVER RETURN!
-sub _coro_init {
-   eval {
-      my $coro = shift;
-      $coro or die "transfer() to empty coroutine $coro";
-      &$coro;
-   };
-   print STDERR $@ || "FATAL: Coro::State callback returned unexpectedly, exiting.\n";
-   _exit 254;
 }
 
 =item $old_save_flags = $state->save ([$new_save_flags])

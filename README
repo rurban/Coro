@@ -68,11 +68,9 @@ DESCRIPTION
         (usually unused). When the sub returns the new coroutine is
         automatically terminated.
 
-        Calling "exit" in a coroutine will not work correctly, so do not do
-        that.
-
-        When the coroutine dies, the program will exit, just as in the main
-        program.
+        Calling "exit" in a coroutine will do the same as calling exit
+        outside the coroutine. Likewise, when the coroutine dies, the
+        program will exit, just as it would in the main program.
 
            # create a new coroutine that just prints its arguments
            async {
@@ -157,8 +155,7 @@ DESCRIPTION
         returned values were called. To make the coroutine run you must
         first put it into the ready queue by calling the ready method.
 
-        Calling "exit" in a coroutine will not work correctly, so do not do
-        that.
+        See "async" for additional discussion.
 
     $success = $coroutine->ready
         Put the given coroutine into the ready queue (according to it's
@@ -224,7 +221,7 @@ DESCRIPTION
 
     my $guard = Coro::guard { ... }
         This creates and returns a guard object. Nothing happens until the
-        objetc gets destroyed, in which case the codeblock given as argument
+        object gets destroyed, in which case the codeblock given as argument
         will be executed. This is useful to free locks or other resources in
         case of a runtime error or when the coroutine gets canceled, as in
         both cases the guard block will be executed. The guard object

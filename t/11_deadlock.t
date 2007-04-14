@@ -13,11 +13,12 @@ my $pid = fork or do {
       $old_idle->();
    };
    schedule;
-   exit(253);
+   exit 3;
 };
 
+waitpid $pid, 0;
 print
-   253 == (waitpid $pid, 0) >> 8
+   3 == $? >> 8
       ? "not " : "", "ok 3\n";
 
 my $coro = new Coro sub {

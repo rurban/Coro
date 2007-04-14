@@ -83,6 +83,7 @@ WriteMakefile(
 
     		    'Coro/AIO.pm'	=> '$(INST_LIBDIR)/Coro/AIO.pm',
     		    'Coro/LWP.pm'	=> '$(INST_LIBDIR)/Coro/LWP.pm',
+    		    'Coro/Storable.pm'	=> '$(INST_LIBDIR)/Coro/Storable.pm',
                     },
 );
 
