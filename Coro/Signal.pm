@@ -62,7 +62,7 @@ See C<wait> for reliability concerns.
 =cut
 
 sub wait {
-   unless ($_[0][0]) {
+   while (!$_[0][0]) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
    }
@@ -70,10 +70,10 @@ sub wait {
 }
 
 sub timed_wait {
-   unless ($_[0][0]) {
-      require Coro::Timer;
-      my $timeout = Coro::Timer::timeout($_[1]);
+   require Coro::Timer;
+   my $timeout = Coro::Timer::timeout($_[1]);
 
+   while (!$_[0][0]) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
 

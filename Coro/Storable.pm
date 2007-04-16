@@ -13,6 +13,9 @@ so that it cede's more often. Some applications (such as the Crossfire
 game server) sometimes need to load large Storable objects without
 blocking the server for a long time.
 
+As it seems that Storable is not reentrant, this module also serialises
+calls to freeze and thaw between coroutines.
+
 =head1 FUNCTIONS
 
 =over 4
@@ -43,6 +46,7 @@ package Coro::Storable;
 use strict;
 
 use Coro ();
+use Coro::Semaphore ();
 
 use Storable;
 use base "Exporter";
@@ -50,7 +54,11 @@ use base "Exporter";
 our $VERSION = '0.1';
 our @EXPORT = qw(freeze thaw);
 
+my $lock = new Coro::Semaphore;
+
 sub freeze($) {
+   my $guard = $lock->guard;
+
    open my $fh, ">:via(CoroCede)", \my $buf
       or die "cannot open pst via CoroCede: $!";
    Storable::nstore_fd $_[0], $fh;
@@ -58,6 +66,8 @@ sub freeze($) {
 }
 
 sub thaw($) {
+   my $guard = $lock->guard;
+
    open my $fh, "<:via(CoroCede)", \$_[0]
       or die "cannot open pst via CoroCede: $!";
    Storable::fd_retrieve $fh
