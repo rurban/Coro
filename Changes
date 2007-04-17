@@ -4,11 +4,12 @@ TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 
-TODO: fix Coro::Signal once and for all
-
 3.61
 	- use a Semaphore in Coro::Storable, as Storable doesn't
-          seem to be reentrant (although it should be...).
+          seem to be reentrant (although it is documented to
+          be threadsafe...).
+        - fix Coro::Signal to bring back the original unreliable
+          but stateful semantics.
 
 3.6  Sat Apr 14 17:13:31 CEST 2007
    	- added some bugfixes to get eg/myhttpd working again.
