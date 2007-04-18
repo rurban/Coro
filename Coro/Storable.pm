@@ -26,7 +26,7 @@ Retrieve an object from the given $pst, which must have been created with
 C<Coro::Storable::freeze> or C<Storable::store_fd>/C<Storable::store>
 (sorry, but Storable uses incompatible formats for disk/mem objects).
 
-This works by calling C<Coro::cede> for every 512 bytes read in.
+This works by calling C<Coro::cede> for every 4096 bytes read in.
 
 =item $pst = freeze $ref
 
@@ -83,7 +83,7 @@ sub PUSHED {
 
 sub FILL {
    Coro::cede;
-   read $_[1], my $buf, 512
+   read $_[1], my $buf, 4096
       or return undef;
    $buf
 }
