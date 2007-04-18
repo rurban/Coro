@@ -83,7 +83,8 @@ sub PUSHED {
 
 sub FILL {
    Coro::cede;
-   read $_[1], my $buf, 512;
+   read $_[1], my $buf, 512
+      or return undef;
    $buf
 }
 

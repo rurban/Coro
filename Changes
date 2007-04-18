@@ -5,6 +5,8 @@ TODO: destroy gets only called on cancel: fix(?)
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 
 3.61
+	- Coro::Storable caused an endless loop when thawing invalid
+          pst's sometimes.
 	- use a Semaphore in Coro::Storable, as Storable doesn't
           seem to be reentrant (although it is documented to
           be threadsafe...).
