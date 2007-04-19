@@ -22,8 +22,8 @@ Coro - coroutine process abstraction
 
 This module collection manages coroutines. Coroutines are similar
 to threads but don't run in parallel at the same time even on SMP
-machines. The specific flavor of coroutine use din this module also
-guarentees you that it will not switch between coroutines unless
+machines. The specific flavor of coroutine used in this module also
+guarantees you that it will not switch between coroutines unless
 necessary, at easily-identified points in your program, so locking and
 parallel access are rarely an issue, making coroutine programming much
 safer than threads programming.
@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.6';
+our $VERSION = '3.61';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -110,7 +110,7 @@ The current coroutine (the last coroutine switched to). The initial value
 is C<$main> (of course).
 
 This variable is B<strictly> I<read-only>. It is provided for performance
-reasons. If performance is not essentiel you are encouraged to use the
+reasons. If performance is not essential you are encouraged to use the
 C<Coro::current> function instead.
 
 =cut
@@ -279,7 +279,7 @@ The canonical way to wait on external events is this:
          undef $current;
       };
 
-      # call schedule until event occured.
+      # call schedule until event occurred.
       # in case we are woken up for other reasons
       # (current still defined), loop.
       Coro::schedule while $current;
@@ -460,7 +460,7 @@ sub desc {
 =item Coro::nready
 
 Returns the number of coroutines that are currently in the ready state,
-i.e. that can be swicthed to. The value C<0> means that the only runnable
+i.e. that can be switched to. The value C<0> means that the only runnable
 coroutine is the currently running one, so C<cede> would have no effect,
 and C<schedule> would cause a deadlock unless there is an idle handler
 that wakes up some coroutines.
@@ -506,7 +506,7 @@ returning the new coderef. This means that the new coderef will return
 immediately without blocking, returning nothing, while the original code
 ref will be called (with parameters) from within its own coroutine.
 
-The reason this fucntion exists is that many event libraries (such as the
+The reason this function exists is that many event libraries (such as the
 venerable L<Event|Event> module) are not coroutine-safe (a weaker form
 of thread-safety). This means you must not block within event callbacks,
 otherwise you might suffer from crashes or worse.
@@ -562,7 +562,7 @@ sub unblock_sub(&) {
    destruction. very bad things might happen otherwise (usually segfaults).
 
  - this module is not thread-safe. You should only ever use this module
-   from the same thread (this requirement might be losened in the future
+   from the same thread (this requirement might be loosened in the future
    to allow per-thread schedulers, but Coro::State does not yet allow
    this).
 

@@ -49,38 +49,39 @@ sub new {
 Wait for the signal to occur. Returns immediately if the signal has been
 sent before.
 
-Signals are not reliable, so this function might return
-spuriously. Always test for the condition you are waiting on.
+Signals are not reliable: this function might return spuriously without
+the signal being sent. This means you must always test for the condition
+you are waiting for.
+
+(If this is a real problem for you the situation might be remedied in a
+future version).
 
 =item $status = $s->timed_wait ($timeout)
 
 Like C<wait>, but returns false if no signal happens within $timeout
 seconds, otherwise true.
 
-See C<wait> for reliability concerns.
+See C<wait> for some reliability concerns.
 
 =cut
 
 sub wait {
-   unless ($_[0][0]) {
+   unless (delete $_[0][0]) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
    }
-   $_[0][0] = 0;
 }
 
 sub timed_wait {
-   unless ($_[0][0]) {
-      require Coro::Timer;
-      my $timeout = Coro::Timer::timeout($_[1]);
+   require Coro::Timer;
+   my $timeout = Coro::Timer::timeout($_[1]);
 
+   unless (delete $_[0][0]) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
 
       return 0 if $timeout;
    }
-
-   $_[0][0] = 0;
 
    1
 }

@@ -3,6 +3,20 @@ Revision history for Perl extension Coro.
 TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
+TODO: maybe implement a default message channel, very much like Erlang
+      (which is cool in a lot of important aspects (failures!),
+      but very lacking in others).
+
+3.61 Thu Apr 19 12:36:18 CEST 2007
+	- Coro::Storable caused an endless loop when thawing invalid
+          pst's sometimes.
+	- use a Semaphore in Coro::Storable, as Storable doesn't
+          seem to be reentrant (although it is documented to
+          be threadsafe...).
+        - fix Coro::Signal to bring back the original unreliable
+          but stateful semantics.
+        - fixed a lot of typos in Coro.pm (patch submitted by David
+          Steinbrunner, which applied flawlessly).
 
 3.6  Sat Apr 14 17:13:31 CEST 2007
    	- added some bugfixes to get eg/myhttpd working again.
