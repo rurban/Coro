@@ -7,6 +7,8 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others).
 
+	- upgrade libcoro.
+
 3.61 Thu Apr 19 12:36:18 CEST 2007
 	- Coro::Storable caused an endless loop when thawing invalid
           pst's sometimes.
