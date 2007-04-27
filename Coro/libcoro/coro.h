@@ -39,6 +39,8 @@
  * 2006-10-26 Include stddef.h on OS X to work around one of its bugs.
  *            Reported by Michael_G_Schwern.
  * 2006-11-26 Use _setjmp instead of setjmp on GNU/Linux.
+ * 2007-04-27 Set unwind frame info if gcc 3+ and ELF is detected.
+ *            Use _setjmp instead of setjmp on _XOPEN_SOURCE >= 600.
  */
 
 #ifndef CORO_H
@@ -173,7 +175,7 @@ struct coro_context {
   jmp_buf env;
 };
 
-#if CORO_LINUX
+#if CORO_LINUX || (_XOPEN_SOURCE >= 600)
 # define coro_transfer(p,n) do { if (!_setjmp ((p)->env)) _longjmp ((n)->env, 1); } while (0)
 #else
 # define coro_transfer(p,n) do { if (!setjmp  ((p)->env)) longjmp  ((n)->env, 1); } while (0)

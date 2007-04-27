@@ -32,8 +32,11 @@ if ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
 } elsif ($^O =~ /irix/) {
    $iface = "i";
 } elsif ($^O =~ /linux/) {
-   # default to setjmp/longjmp on non-x86...
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "l" : "s";
+   ## default to setjmp/longjmp on non-x86...
+   #$iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "l" : "s";
+
+   # default to setjmp/longjmp everywhere as newer libc change everything around
+   $iface = "s";
 } elsif ($^O =~ /(free|net|open)bsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
@@ -57,28 +60,29 @@ level. The default chosen is based on your current confguration and is
 correct in most cases, but you still can chose between these alternatives:
 
 u  The unix 'ucontext.h' functions are relatively new and not implemented
-or well-tested in older unices. They allow very fast coroutine creation
-and reasonably fast switching, and, most importantly, are very stable.
+   or well-tested in older unices. They allow very fast coroutine creation
+   and reasonably fast switching, and, most importantly, are very stable.
 
 s  If the ucontext functions are not working or you don't want
-to use them for other reasons you can try a workaround using
-setjmp/longjmp/sigaltstack (also standard unix functions). Coroutine
-creation is rather slow, but switching is very fast as well (often much
-faster than with the ucontext functions). Unfortunately, glibc-2.1 and
-below don't even feature a working sigaltstack.
+   to use them for other reasons you can try a workaround using
+   setjmp/longjmp/sigaltstack (also standard unix functions). Coroutine
+   creation is rather slow, but switching is very fast as well (often much
+   faster than with the ucontext functions). Unfortunately, glibc-2.1 and
+   below don't even feature a working sigaltstack.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
-this hack. Since it is very linux-specific it is also quite fast and
-recommended even for newer versions; when it works, that is (currently
-x86 and a few others only. If it compiles, it's usually ok).
+   this hack. Since it is very linux-specific it is also quite fast and
+   recommended even for newer versions; when it works, that is (currently
+   x86 and a few others only. If it compiles, it's usually ok). Newer
+   glibc versions require setjmp/longjmp again.
 
 i  IRIX. For some reason, SGI really does not like to follow the single
-unix specification (does that surprise you?), so this workaround might
-be needed (it's fast), although [s] and [u] should also work now.
+   unix specification (does that surprise you?), so this workaround might
+   be needed (it's fast), although [s] and [u] should also work now.
 
 w  Microsoft Windows. Try this on Microsoft Windows, although, as there is
-no standard on how to do this under windows, this might work only on
-cygwin or specific versions of msvc. Your problem.
+   no standard on how to do this under windows, this might work only on
+   cygwin or specific versions of msvc. Your problem, your fix, our patch.
 
 For most systems, the default chosen should be OK. If you experience
 problems then you should experiment with this setting and/or turn off

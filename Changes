@@ -7,6 +7,10 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others).
 
+3.62 Fri Apr 27 21:36:06 CEST 2007
+	- upgrade libcoro (which might set unwind info correctly).
+        - change default on linux to setjmp/longjmp.
+
 3.61 Thu Apr 19 12:36:18 CEST 2007
 	- Coro::Storable caused an endless loop when thawing invalid
           pst's sometimes.

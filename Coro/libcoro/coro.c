@@ -67,6 +67,12 @@ static volatile coro_func coro_init_func;
 static volatile void *coro_init_arg;
 static volatile coro_context *new_coro, *create_coro;
 
+/* what we really want to detect here is wether we use a new-enough version of GAS */
+/* instead, check for gcc 3 and ELF and hope for the best */
+#if __GNUC__ >= 3 && __ELF__
+# define HAVE_CFI 1
+#endif
+
 static void
 coro_init (void)
 {
@@ -90,7 +96,15 @@ static void
 trampoline (int sig)
 {
   if (setjmp (((coro_context *)new_coro)->env))
-    coro_init (); /* start it */
+    {
+#if HAVE_CFI
+      asm (".cfi_startproc");
+#endif
+      coro_init (); /* start it */
+#if HAVE_CFI
+      asm (".cfi_endproc");
+#endif
+    }
   else
     trampoline_count++;
 }
