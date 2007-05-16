@@ -27,7 +27,9 @@ if (prompt ("Skip further questions and use defaults (y/n)?", "y") =~ /[yY]/) {
 
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
-if ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
+if (exists $ENV{CORO_INTERFACE}) {
+   $iface = $ENV{CORO_INTERFACE};
+} elsif ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
    $iface = 'w';
 } elsif ($^O =~ /irix/) {
    $iface = "i";
@@ -62,19 +64,29 @@ correct in most cases, but you still can chose between these alternatives:
 u  The unix 'ucontext.h' functions are relatively new and not implemented
    or well-tested in older unices. They allow very fast coroutine creation
    and reasonably fast switching, and, most importantly, are very stable.
+   It is, however, usually slower than the other alternatives due to an
+   extra syscall done by swapcontext.
 
 s  If the ucontext functions are not working or you don't want
    to use them for other reasons you can try a workaround using
    setjmp/longjmp/sigaltstack (also standard unix functions). Coroutine
-   creation is rather slow, but switching is very fast as well (often much
-   faster than with the ucontext functions). Unfortunately, glibc-2.1 and
-   below don't even feature a working sigaltstack.
+   creation is rather slow, but switching is very fast (often much faster
+   than with the ucontext functions). Unfortunately, glibc-2.1 and
+   below don't even feature a working sigaltstack. You cannot use this
+   implementation if some other code uses SIGUSR2 or you plan to
+   create coroutines from an alternative signal stack, as both are being
+   used for coroutine creation.
+
+a  Handcoded assembly. This is the fastest method with the least side
+   effects, if it works, that is. It has been tested on GNU/Linux x86 and
+   x86_64 systems and should work on all x86/x86_64 systems using the SVR
+   ELF ABI.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
    recommended even for newer versions; when it works, that is (currently
    x86 and a few others only. If it compiles, it's usually ok). Newer
-   glibc versions require setjmp/longjmp again.
+   glibc versions (>= 2.5) stop working with this implementation again.
 
 i  IRIX. For some reason, SGI really does not like to follow the single
    unix specification (does that surprise you?), so this workaround might
@@ -93,7 +105,7 @@ EOF
 retry:
 
 my $r = prompt "Use which implementation,\n" .
-               "<s>etjmp/longjump, <u>context, <i>rix, <l>inux or <w>indows?",
+               "<s>et/longjump, <u>context, <a>ssembly, <i>rix, <l>inux or <w>indows?",
                $iface;
 $iface = lc $1 if $r =~ /(\S)/;
 
@@ -114,6 +126,9 @@ if ($iface eq "u") {
 } elsif ($iface eq "w") {
    $DEFINE .= " -DCORO_LOSER";
    print "\nUsing windows-specific implementation\n\n";
+} elsif ($iface eq "a") {
+   $DEFINE .= " -DCORO_ASM";
+   print "\nUsing handcoded assembly implementation\n\n";
 } else {
    print "\nUnknown implementation \"$iface\"\n";
    goto retry;
