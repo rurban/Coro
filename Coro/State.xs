@@ -590,8 +590,8 @@ free_coro_mortal (pTHX)
 }
 
 /* inject a fake call to Coro::State::_cctx_init into the execution */
-/* _cctx_init shoukld be careful, as it could be called at almost any time */
-/* during execution of a pelr program */
+/* _cctx_init should be careful, as it could be called at almost any time */
+/* during execution of a perl program */
 static void NOINLINE
 prepare_cctx (pTHX_ coro_cctx *cctx)
 {
