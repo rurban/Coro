@@ -7,6 +7,8 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others).
 
+	- added Coro::Semaphore::adjust.
+
 3.63 Wed May 16 14:10:06 CEST 2007
 	- implement handcoded assembly for x86/amd64 SVR ABI.
 
