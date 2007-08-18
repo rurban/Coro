@@ -52,6 +52,7 @@ WriteMakefile(
 
        # for Coro::Event
        Event		=> 1.06,
+       Time::HiRes      => 0,
 
        # for Coro::AIO, Coro::Util
        IO::AIO          => 2.3,
