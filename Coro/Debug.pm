@@ -81,11 +81,11 @@ sub command($) {
    $cmd =~ s/[\012\015]$//;
 
    if ($cmd =~ /^ps/) {
-      printf "%20s %s%s%s%s %-14.14s %s\n", "pid", "R", "U", "N", "D", "description", "where";
+      printf "%20s %s%s%s%s %-20.20s %s\n", "pid", "R", "U", "N", "D", "description", "where";
       for my $coro (grep $_ != $Coro::current, Coro::State::list) {
          my @bt;
          $coro->_eval (sub { @bt = caller });
-         printf "%20s %s%s%s%s %-14.14s %s\n",
+         printf "%20s %s%s%s%s %-20.20s %s\n",
                 $coro+0,
                 $coro->is_ready     ? "R" : "-",
                 $coro->is_running   ? "U" : "-",

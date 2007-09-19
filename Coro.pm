@@ -161,6 +161,8 @@ my @destroy;
 my $manager;
 
 $manager = new Coro sub {
+   $current->desc ("[coro manager]");
+
    while () {
       (shift @destroy)->_cancel
          while @destroy;
@@ -234,6 +236,8 @@ our @pool;
 
 sub pool_handler {
    while () {
+      $current->{desc} = "[async_pool]";
+
       eval {
          my ($cb, @arg) = @{ delete $current->{_invoke} or return };
          $cb->(@arg);
@@ -241,8 +245,9 @@ sub pool_handler {
       warn $@ if $@;
 
       last if @pool >= $POOL_SIZE;
-      push @pool, $current;
 
+      push @pool, $current;
+      $current->{desc} = "[async_pool idle]";
       $current->save (Coro::State::SAVE_DEF);
       $current->prio (0);
       schedule;
@@ -251,11 +256,7 @@ sub pool_handler {
 
 sub async_pool(&@) {
    # this is also inlined into the unlock_scheduler
-   my $coro = (pop @pool) || do {
-      my $coro = new Coro \&pool_handler;
-      $coro->{desc} = "async_pool";
-      $coro
-   };
+   my $coro = (pop @pool) || new Coro \&pool_handler;;
 
    $coro->{_invoke} = [@_];
    $coro->ready;
@@ -532,6 +533,7 @@ our @unblock_queue;
 # return immediately and can be reused) and because we cannot cede
 # inside an event callback.
 our $unblock_scheduler = async {
+   $current->desc ("[unblock_sub scheduler]");
    while () {
       while (my $cb = pop @unblock_queue) {
          # this is an inlined copy of async_pool
