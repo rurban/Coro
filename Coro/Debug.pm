@@ -55,8 +55,9 @@ use Carp ();
 use IO::Socket::UNIX;
 use AnyEvent;
 
-use Coro::Handle;
-use Coro::State;
+use Coro ();
+use Coro::Handle ();
+use Coro::State ();
 
 sub find_coro {
    my ($pid) = @_;
@@ -82,7 +83,7 @@ sub command($) {
 
    if ($cmd =~ /^ps/) {
       printf "%20s %s%s%s%s %-20.20s %s\n", "pid", "R", "U", "N", "D", "description", "where";
-      for my $coro (grep $_ != $Coro::current, Coro::State::list) {
+      for my $coro (Coro::State::list) {
          my @bt;
          $coro->_eval (sub { @bt = caller });
          printf "%20s %s%s%s%s %-20.20s %s\n",
@@ -186,10 +187,13 @@ sub new_unix_server {
       path => $path,
    }, $class;
 
-   $self->{cw} = AnyEvent->io (fh => $fh, poll => 'r', cb => Coro::unblock_sub {
-      my $fh = $fh->accept;
-      session $fh;
-      close $fh;
+   $self->{cw} = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
+      Coro::async_pool {
+         $Coro::current->desc ("Coro::Debug unix server");
+         my $fh = $fh->accept;
+         session $fh;
+         close $fh;
+      };
    });
 
    $self
