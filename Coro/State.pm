@@ -193,6 +193,10 @@ a module that calls back into the interpreter.
 
 =cut
 
+sub debug_desc {
+   $_[0]{desc}
+}
+
 1;
 
 =back

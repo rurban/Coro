@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.64';
+our $VERSION = '3.7';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -251,7 +251,11 @@ sub pool_handler {
 
 sub async_pool(&@) {
    # this is also inlined into the unlock_scheduler
-   my $coro = (pop @pool or new Coro \&pool_handler);
+   my $coro = (pop @pool) || do {
+      my $coro = new Coro \&pool_handler;
+      $coro->{desc} = "async_pool";
+      $coro
+   };
 
    $coro->{_invoke} = [@_];
    $coro->ready;

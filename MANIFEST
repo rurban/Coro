@@ -21,6 +21,7 @@ Coro/RWLock.pm
 Coro/MakeMaker.pm
 Coro/CoroAPI.h
 Coro/AIO.pm
+Coro/Debug.pm
 Coro/Util.pm
 Coro/LWP.pm
 Coro/Select.pm

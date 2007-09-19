@@ -190,6 +190,10 @@ struct coro {
 
   /* coro process data */
   int prio;
+
+  /* linked list */
+  struct coro *next, *prev;
+  HV *hv; /* the perl hash associated with this coro, if any */
 };
 
 typedef struct coro *Coro__State;
@@ -208,6 +212,7 @@ typedef struct coro *Coro__State_or_hashref;
 static SV *coro_current;
 static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
+static struct coro *first;
 
 /** lowlevel stuff **********************************************************/
 
@@ -376,13 +381,11 @@ load_perl (pTHX_ Coro__State c)
 
     PUTBACK;
   }
-  assert (!PL_comppad || AvARRAY (PL_comppad));//D
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
-  assert (!PL_comppad || AvARRAY (PL_comppad));//D
   {
     dSP;
     I32 cxix = cxstack_ix;
@@ -403,7 +406,7 @@ save_perl (pTHX_ Coro__State c)
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
-            if (CxTYPE (cx) == CXt_SUB)
+            if (CxTYPE (cx) == CXt_SUB || CxTYPE (cx) == CXt_FORMAT)
               {
                 CV *cv = cx->blk_sub.cv;
 
@@ -879,7 +882,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
       assert (!(coro->flags & CF_RUNNING));
 
       Zero (&temp, 1, struct coro);
-      temp.save = CORO_SAVE_DEF;
+      temp.save = CORO_SAVE_ALL;
 
       if (coro->flags & CF_RUNNING)
         croak ("FATAL: tried to destroy currently running coroutine");
@@ -897,6 +900,10 @@ coro_state_destroy (pTHX_ struct coro *coro)
   cctx_destroy (coro->cctx);
   SvREFCNT_dec (coro->args);
 
+  if (coro->next) coro->next->prev = coro->prev;
+  if (coro->prev) coro->prev->next = coro->next;
+  if (coro == first) first = coro->next;
+
   return 1;
 }
 
@@ -905,6 +912,8 @@ coro_state_free (pTHX_ SV *sv, MAGIC *mg)
 {
   struct coro *coro = (struct coro *)mg->mg_ptr;
   mg->mg_ptr = 0;
+
+  coro->hv = 0;
 
   if (--coro->refcnt < 0)
     {
@@ -1211,7 +1220,11 @@ new (char *klass, ...)
         coro->save = CORO_SAVE_DEF;
         coro->flags = CF_NEW;
 
-        hv = newHV ();
+        if (first) first->prev = coro;
+        coro->next = first;
+        first = coro;
+
+        coro->hv = hv = newHV ();
         sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
         RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
 
@@ -1323,6 +1336,69 @@ cctx_idle ()
 	OUTPUT:
         RETVAL
 
+void
+list ()
+	PPCODE:
+{
+  	struct coro *coro;
+        for (coro = first; coro; coro = coro->next)
+          if (coro->hv)
+            XPUSHs (sv_2mortal (newRV_inc ((SV *)coro->hv)));
+}
+
+void
+_eval (SV *coro_sv, SV *coderef)
+	CODE:
+{
+        struct coro *coro = SvSTATE (coro_sv);
+        if (coro->mainstack)
+          {
+            struct coro temp;
+            Zero (&temp, 1, struct coro);
+            temp.save = CORO_SAVE_ALL;
+
+            if (!(coro->flags & CF_RUNNING))
+              {
+                save_perl (aTHX_ &temp);
+                load_perl (aTHX_ coro);
+              }
+
+            {
+              dSP;
+              ENTER;
+              SAVETMPS;
+              PUSHMARK (SP);
+              PUTBACK;
+              call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+              SPAGAIN;
+              FREETMPS;
+              LEAVE;
+              PUTBACK;
+            }
+
+            if (!(coro->flags & CF_RUNNING))
+              {
+                save_perl (aTHX_ coro);
+                load_perl (aTHX_ &temp);
+              }
+          }
+}
+ 
+SV *
+is_ready (SV *coro_sv)
+        PROTOTYPE: $
+        ALIAS:
+        is_ready     = CF_READY
+        is_running   = CF_RUNNING
+        is_new       = CF_NEW
+        is_destroyed = CF_DESTROYED
+	CODE:
+        struct coro *coro = SvSTATE (coro_sv);
+        RETVAL = boolSV (coro->flags & ix);
+	OUTPUT:
+        RETVAL
+
+
 MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
@@ -1396,14 +1472,6 @@ ready (SV *self)
         PROTOTYPE: $
 	CODE:
         RETVAL = boolSV (api_ready (self));
-	OUTPUT:
-        RETVAL
-
-SV *
-is_ready (SV *self)
-        PROTOTYPE: $
-	CODE:
-        RETVAL = boolSV (api_is_ready (self));
 	OUTPUT:
         RETVAL
 

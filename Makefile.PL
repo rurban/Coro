@@ -77,6 +77,7 @@ WriteMakefile(
     		    'Coro/SemaphoreSet.pm'=> '$(INST_LIBDIR)/Coro/SemaphoreSet.pm',
     		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
 
+    		    'Coro/Debug.pm'	=> '$(INST_LIBDIR)/Coro/Debug.pm',
     		    'Coro/Util.pm'	=> '$(INST_LIBDIR)/Coro/Util.pm',
     		    'Coro/Select.pm'	=> '$(INST_LIBDIR)/Coro/Select.pm',
     		    'Coro/Handle.pm'	=> '$(INST_LIBDIR)/Coro/Handle.pm',
