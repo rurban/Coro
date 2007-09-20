@@ -84,8 +84,17 @@ sub command($) {
    if ($cmd =~ /^ps/) {
       printf "%20s %s%s%s%s %4s %-20.20s %s\n", "pid", "R", "U", "N", "D", "RSS", "description", "where";
       for my $coro (Coro::State::list) {
+         Coro::cede;
          my @bt;
-         $coro->_eval (sub { @bt = caller });
+         $coro->_eval (sub {
+            # we try to find *the* definite frame that gives msot useful info
+            # by skipping Coro frames and pseudo-frames.
+            for my $frame (1..10) {
+               my @frame = caller $frame;
+               @bt = @frame if $frame[2];
+               last unless $bt[0] =~ /^Coro/;
+            }
+         });
          printf "%20s %s%s%s%s %4d %-20.20s %s\n",
                 $coro+0,
                 $coro->is_ready     ? "R" : "-",
@@ -94,7 +103,7 @@ sub command($) {
                 $coro->is_destroyed ? "D" : "-",
                 $coro->rss / 1024,
                 $coro->debug_desc,
-                (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "<unknown>");
+                (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
 
    } elsif ($cmd =~ /bt\s+(\d+)/) {
