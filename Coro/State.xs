@@ -212,7 +212,7 @@ typedef struct coro *Coro__State_or_hashref;
 static SV *coro_current;
 static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
-static struct coro *first;
+static struct coro *coro_first;
 
 /** lowlevel stuff **********************************************************/
 
@@ -549,18 +549,20 @@ coro_rss (struct coro *coro)
 
   if (coro->mainstack)
     {
+      if (coro->flags & CF_RUNNING)
+        {
+          #define VAR(name,type)coro->name = PL_ ## name;
+          # include "state.h"
+          #undef VAR
+        }
+
       rss += sizeof (coro->curstackinfo);
       rss += sizeof (struct xpvav) + (1 + AvFILL (coro->curstackinfo->si_stack)) * sizeof (SV *);
       rss += (coro->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
-
       rss += sizeof (struct xpvav) + (1 + AvFILL (coro->curstack)) * sizeof (SV *);
-
       rss += coro->tmps_max * sizeof (SV *);
-
       rss += (coro->markstack_max - coro->markstack_ptr) * sizeof (I32);
-
       rss += coro->scopestack_max * sizeof (I32);
-
       rss += coro->savestack_max * sizeof (ANY);
 
 #if !PERL_VERSION_ATLEAST (5,9,0)
@@ -931,7 +933,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
 
   if (coro->next) coro->next->prev = coro->prev;
   if (coro->prev) coro->prev->next = coro->next;
-  if (coro == first) first = coro->next;
+  if (coro == coro_first) coro_first = coro->next;
 
   return 1;
 }
@@ -1249,9 +1251,9 @@ new (char *klass, ...)
         coro->save = CORO_SAVE_DEF;
         coro->flags = CF_NEW;
 
-        if (first) first->prev = coro;
-        coro->next = first;
-        first = coro;
+        if (coro_first) coro_first->prev = coro;
+        coro->next = coro_first;
+        coro_first = coro;
 
         coro->hv = hv = newHV ();
         sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
@@ -1370,7 +1372,7 @@ list ()
 	PPCODE:
 {
   	struct coro *coro;
-        for (coro = first; coro; coro = coro->next)
+        for (coro = coro_first; coro; coro = coro->next)
           if (coro->hv)
             XPUSHs (sv_2mortal (newRV_inc ((SV *)coro->hv)));
 }
