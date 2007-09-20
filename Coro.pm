@@ -115,6 +115,8 @@ C<Coro::current> function instead.
 
 =cut
 
+$main->{desc} = "[main::]";
+
 # maybe some other module used Coro::Specific before...
 $main->{specific} = $current->{specific}
    if $current;

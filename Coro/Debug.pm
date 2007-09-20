@@ -28,7 +28,7 @@ coroutines:
 Lets you do backtraces on about any coroutine:
 
    > bt 8024992
-   coroutine is at at /localvol/root/src/Coro/blib/lib/Coro.pm line 544
+   coroutine is at /localvol/root/src/Coro/blib/lib/Coro.pm line 544
    eval {...} called at /localvol/root/src/Coro/blib/lib/Coro.pm line 544
    Coro::__ANON__ called at x line 0
    Coro::_run_coro called at x line 0
@@ -100,7 +100,7 @@ sub command($) {
    } elsif ($cmd =~ /bt\s+(\d+)/) {
       if (my $coro = find_coro $1) {
          my $bt;
-         $coro->_eval (sub { $bt = Carp::longmess "coroutine is at" });
+         $coro->_eval (sub { $bt = Carp::longmess "coroutine is" });
          if ($bt) {
             print $bt;
          } else {
