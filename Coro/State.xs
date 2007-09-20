@@ -542,6 +542,35 @@ coro_destroy_stacks (pTHX)
 #endif
 }
 
+static size_t
+coro_rss (struct coro *coro)
+{
+  size_t rss = sizeof (coro);
+
+  if (coro->mainstack)
+    {
+      rss += sizeof (coro->curstackinfo);
+      rss += sizeof (struct xpvav) + (1 + AvFILL (coro->curstackinfo->si_stack)) * sizeof (SV *);
+      rss += (coro->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
+
+      rss += sizeof (struct xpvav) + (1 + AvFILL (coro->curstack)) * sizeof (SV *);
+
+      rss += coro->tmps_max * sizeof (SV *);
+
+      rss += (coro->markstack_max - coro->markstack_ptr) * sizeof (I32);
+
+      rss += coro->scopestack_max * sizeof (I32);
+
+      rss += coro->savestack_max * sizeof (ANY);
+
+#if !PERL_VERSION_ATLEAST (5,9,0)
+      rss += coro->retstack_max * sizeof (OP *);
+#endif
+    }
+
+  return rss;
+}
+
 /** coroutine stack handling ************************************************/
 
 static void
@@ -1347,10 +1376,9 @@ list ()
 }
 
 void
-_eval (SV *coro_sv, SV *coderef)
+_eval (Coro::State coro, SV *coderef)
 	CODE:
 {
-        struct coro *coro = SvSTATE (coro_sv);
         if (coro->mainstack)
           {
             struct coro temp;
@@ -1385,7 +1413,7 @@ _eval (SV *coro_sv, SV *coderef)
 }
  
 SV *
-is_ready (SV *coro_sv)
+is_ready (Coro::State coro)
         PROTOTYPE: $
         ALIAS:
         is_ready     = CF_READY
@@ -1393,8 +1421,15 @@ is_ready (SV *coro_sv)
         is_new       = CF_NEW
         is_destroyed = CF_DESTROYED
 	CODE:
-        struct coro *coro = SvSTATE (coro_sv);
         RETVAL = boolSV (coro->flags & ix);
+	OUTPUT:
+        RETVAL
+
+IV
+rss (Coro::State coro)
+        PROTOTYPE: $
+        CODE:
+        RETVAL = coro_rss (coro);
 	OUTPUT:
         RETVAL
 

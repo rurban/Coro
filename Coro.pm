@@ -232,6 +232,7 @@ terminate }> once per second or so to slowly replenish the pool.
 =cut
 
 our $POOL_SIZE = 8;
+our $MAX_POOL_RSS = 64 * 1024;
 our @pool;
 
 sub pool_handler {
@@ -244,7 +245,7 @@ sub pool_handler {
       };
       warn $@ if $@;
 
-      last if @pool >= $POOL_SIZE;
+      last if @pool >= $POOL_SIZE || $current->rss >= $MAX_POOL_RSS;
 
       push @pool, $current;
       $current->{desc} = "[async_pool idle]";
