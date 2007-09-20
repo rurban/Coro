@@ -163,8 +163,6 @@ my @destroy;
 my $manager;
 
 $manager = new Coro sub {
-   $current->desc ("[coro manager]");
-
    while () {
       (shift @destroy)->_cancel
          while @destroy;
@@ -172,7 +170,7 @@ $manager = new Coro sub {
       &schedule;
    }
 };
-
+$manager->desc ("[coro manager]");
 $manager->prio (PRIO_MAX);
 
 # static methods. not really.
@@ -535,8 +533,7 @@ our @unblock_queue;
 # to reduce pressure on the coro pool (because most callbacks
 # return immediately and can be reused) and because we cannot cede
 # inside an event callback.
-our $unblock_scheduler = async {
-   $current->desc ("[unblock_sub scheduler]");
+our $unblock_scheduler = new Coro sub {
    while () {
       while (my $cb = pop @unblock_queue) {
          # this is an inlined copy of async_pool
@@ -549,6 +546,7 @@ our $unblock_scheduler = async {
       schedule; # sleep well
    }
 };
+$unblock_scheduler->desc ("[unblock_sub scheduler]");
 
 sub unblock_sub(&) {
    my $cb = shift;
