@@ -101,7 +101,7 @@ sub command($) {
                 $coro->is_running   ? "U" : "-",
                 $coro->is_new       ? "N" : "-",
                 $coro->is_destroyed ? "D" : "-",
-                $coro->rss / 1024,
+                $coro->rss / 1,
                 $coro->debug_desc,
                 (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
