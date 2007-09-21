@@ -22,6 +22,7 @@ $b = async {
    # do a little unrolling...
    while() {
       cede; cede; cede; cede; cede;
+      cede; cede; cede; cede; cede;
    }
 };
 
