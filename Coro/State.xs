@@ -90,10 +90,9 @@ static long pagesize;
 # define CORO_PREFER_PERL_FUNCTIONS 0
 #endif
 
-/* The next macro should declare a variable stacklevel that contains and approximation
- * to the current C stack pointer. Its property is that it changes with each call
- * and should be unique. */
-#define dSTACKLEVEL int stacklevel
+/* The next macros try to return the current stack pointer, in an as
+ * portable way as possible. */
+#define dSTACKLEVEL volatile char stacklevel
 #define STACKLEVEL ((void *)&stacklevel)
 
 #define IN_DESTRUCT (PL_main_cv == Nullcv)
@@ -426,8 +425,8 @@ save_perl (pTHX_ Coro__State c)
           break;
 
         top_si = top_si->si_prev;
-        ccstk = top_si->si_cxstack;
-        cxix = top_si->si_cxix;
+        ccstk  = top_si->si_cxstack;
+        cxix   = top_si->si_cxix;
       }
 
     PUTBACK;
