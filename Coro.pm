@@ -226,13 +226,15 @@ changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
 required.
 
 If you are concerned about pooled coroutines growing a lot because a
-single C<async_pool> used a lot of stackspace you can e.g. C<async_pool {
-terminate }> once per second or so to slowly replenish the pool.
+single C<async_pool> used a lot of stackspace you can e.g. C<async_pool
+{ terminate }> once per second or so to slowly replenish the pool. In
+addition to that, when the stacks used by a handler grows larger than 16kb
+(adjustable with $Coro::MAX_POOL_RSS) it will also exit.
 
 =cut
 
 our $POOL_SIZE = 8;
-our $MAX_POOL_RSS = 64 * 1024;
+our $MAX_POOL_RSS = 16 * 1024;
 our @pool;
 
 sub pool_handler {
