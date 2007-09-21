@@ -101,7 +101,7 @@ sub command($) {
                 $coro->is_running   ? "U" : "-",
                 $coro->is_new       ? "N" : "-",
                 $coro->is_destroyed ? "D" : "-",
-                $coro->rss / 1,
+                $coro->rss / 1024,
                 $coro->debug_desc,
                 (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
@@ -118,7 +118,8 @@ sub command($) {
       }
 
    } elsif ($cmd =~ /p\s+(.*)$/) {
-      print $@ ? $@ : (join " ", (eval $1), "\n");
+      my @res = eval $1;
+      print $@ ? $@ : (join " ", @res) . "\n";
 
    } elsif ($cmd =~ /eval\s+(\d+)\s+(.*)$/) {
       if (my $coro = find_coro $1) {
