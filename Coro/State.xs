@@ -457,7 +457,7 @@ save_perl (pTHX_ Coro__State c)
 static void
 coro_init_stacks (pTHX)
 {
-    PL_curstackinfo = new_stackinfo(64, 4);
+    PL_curstackinfo = new_stackinfo(64, 6);
     PL_curstackinfo->si_type = PERLSI_MAIN;
     PL_curstack = PL_curstackinfo->si_stack;
     PL_mainstack = PL_curstack;		/* remember in case we switch stacks */
@@ -483,14 +483,14 @@ coro_init_stacks (pTHX)
     PL_scopestack_ix = 0;
     PL_scopestack_max = 16;
 
-    New(54,PL_savestack,32,ANY);
+    New(54,PL_savestack,64,ANY);
     PL_savestack_ix = 0;
-    PL_savestack_max = 32;
+    PL_savestack_max = 64;
 
 #if !PERL_VERSION_ATLEAST (5,9,0)
-    New(54,PL_retstack,8,OP*);
+    New(54,PL_retstack,4,OP*);
     PL_retstack_ix = 0;
-    PL_retstack_max = 8;
+    PL_retstack_max = 4;
 #endif
 }
 #endif
