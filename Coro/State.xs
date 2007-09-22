@@ -1528,8 +1528,8 @@ nready (...)
         RETVAL
 
 # for async_pool speedup
-SV *
-_pool_1 (...)
+void
+_pool_1 (SV *cb)
 	CODE:
 {
 	int i, len;
@@ -1539,7 +1539,7 @@ _pool_1 (...)
         AV *invoke_av;
 
         if (!invoke)
-          XSRETURN_EMPTY;
+          croak ("\3terminate\2\n");
 
         hv_store (hv, "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
@@ -1547,30 +1547,29 @@ _pool_1 (...)
         invoke_av = (AV *)SvRV (invoke);
         len = av_len (invoke_av);
 
-        RETVAL = SvREFCNT_inc (AvARRAY (invoke_av)[0]);
+        sv_setsv (cb, AvARRAY (invoke_av)[0]);
 
         if (len > 0)
           {
-            av_clear (defav);
-            av_extend (defav, len);
+            av_fill (defav, len - 1);
             for (i = 0; i < len; ++i)
               av_store (defav, i, SvREFCNT_inc (AvARRAY (invoke_av)[i + 1]));
           }
 
         SvREFCNT_dec (invoke);
 }
-	OUTPUT:
-        RETVAL
 
 void
-_pool_2 (...)
+_pool_2 (SV *cb)
 	CODE:
 {
   	struct coro *coro = SvSTATE (coro_current);
 
+        sv_setsv (cb, &PL_sv_undef);
+
   	if (coro_rss (coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
-          XSRETURN_YES;
+          croak ("\3terminate\2\n");
 
         av_clear (GvAV (PL_defgv));
         hv_store (SvRV (coro_current), "desc", sizeof ("desc") - 1,
@@ -1578,8 +1577,6 @@ _pool_2 (...)
         coro->save = CORO_SAVE_DEF;
         coro->prio = 0;
         av_push (av_async_pool, newSVsv (coro_current));
-
-        XSRETURN_NO;
 }
 
 

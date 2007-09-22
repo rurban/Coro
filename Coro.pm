@@ -243,16 +243,14 @@ sub pool_handler {
    while () {
       eval {
          while () {
-#            &{&_pool_1 or &terminate}; # crashes, would be ~5% faster
-            $cb = &_pool_1
-               or &terminate;
+            _pool_1 $cb;
             &$cb;
-            undef $cb;
-            &terminate if &_pool_2;
+            _pool_2 $cb;
             &schedule;
          }
       };
 
+      last if $@ eq "\3terminate\2\n";
       warn $@ if $@;
    }
 }
