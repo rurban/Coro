@@ -243,15 +243,13 @@ sub pool_handler {
    while () {
       eval {
          while () {
+#            &{&_pool_1 or &terminate}; # crashes, would be ~5% faster
             $cb = &_pool_1
-               or return;
-
+               or &terminate;
             &$cb;
-
-            return if &_pool_2;
-
             undef $cb;
-            schedule;
+            &terminate if &_pool_2;
+            &schedule;
          }
       };
 
@@ -261,7 +259,7 @@ sub pool_handler {
 
 sub async_pool(&@) {
    # this is also inlined into the unlock_scheduler
-   my $coro = (pop @async_pool) || new Coro \&pool_handler;;
+   my $coro = (pop @async_pool) || new Coro \&pool_handler;
 
    $coro->{_invoke} = [@_];
    $coro->ready;

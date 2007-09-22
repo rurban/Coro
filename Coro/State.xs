@@ -1547,12 +1547,11 @@ _pool_1 (...)
         invoke_av = (AV *)SvRV (invoke);
         len = av_len (invoke_av);
 
-        av_clear (defav);
-
-        RETVAL = sv_2mortal (SvREFCNT_inc (AvARRAY (invoke_av)[0]));
+        RETVAL = SvREFCNT_inc (AvARRAY (invoke_av)[0]);
 
         if (len > 0)
           {
+            av_clear (defav);
             av_extend (defav, len);
             for (i = 0; i < len; ++i)
               av_store (defav, i, SvREFCNT_inc (AvARRAY (invoke_av)[i + 1]));
