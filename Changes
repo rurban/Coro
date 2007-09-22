@@ -16,9 +16,6 @@ TODO: maybe implement a default message channel, very much like Erlang
         - reduce initial stack sizes to allow for "micro-coroutines".
         - better async_pool resource management, moved parts of async_pool
           handling to XS (major speed improvement).
-        - work around bugs in Event causing events to be develivered
-          for freed watchers (with invalid pointers in them...), using
-          some ugly perl hacks :/
         - many minor tweaks.
 
 3.63 Wed May 16 14:10:06 CEST 2007
