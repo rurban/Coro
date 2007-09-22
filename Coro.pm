@@ -229,37 +229,39 @@ If you are concerned about pooled coroutines growing a lot because a
 single C<async_pool> used a lot of stackspace you can e.g. C<async_pool
 { terminate }> once per second or so to slowly replenish the pool. In
 addition to that, when the stacks used by a handler grows larger than 16kb
-(adjustable with $Coro::MAX_POOL_RSS) it will also exit.
+(adjustable with $Coro::POOL_RSS) it will also exit.
 
 =cut
 
 our $POOL_SIZE = 8;
-our $MAX_POOL_RSS = 16 * 1024;
-our @pool;
+our $POOL_RSS  = 16 * 1024;
+our @async_pool;
 
 sub pool_handler {
+   my $cb;
+
    while () {
-      $current->{desc} = "[async_pool]";
-
       eval {
-         my ($cb, @arg) = @{ delete $current->{_invoke} or return };
-         $cb->(@arg);
+         while () {
+            $cb = &_pool_1
+               or return;
+
+            &$cb;
+
+            return if &_pool_2;
+
+            undef $cb;
+            schedule;
+         }
       };
+
       warn $@ if $@;
-
-      last if @pool >= $POOL_SIZE || $current->rss >= $MAX_POOL_RSS;
-
-      push @pool, $current;
-      $current->{desc} = "[async_pool idle]";
-      $current->save (Coro::State::SAVE_DEF);
-      $current->prio (0);
-      schedule;
    }
 }
 
 sub async_pool(&@) {
    # this is also inlined into the unlock_scheduler
-   my $coro = (pop @pool) || new Coro \&pool_handler;;
+   my $coro = (pop @async_pool) || new Coro \&pool_handler;;
 
    $coro->{_invoke} = [@_];
    $coro->ready;
@@ -539,7 +541,7 @@ our $unblock_scheduler = new Coro sub {
    while () {
       while (my $cb = pop @unblock_queue) {
          # this is an inlined copy of async_pool
-         my $coro = (pop @pool or new Coro \&pool_handler);
+         my $coro = (pop @async_pool) || new Coro \&pool_handler;
 
          $coro->{_invoke} = $cb;
          $coro->ready;

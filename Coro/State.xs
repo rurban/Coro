@@ -134,6 +134,11 @@ static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
+/* async_pool helper stuff */
+static SV *sv_pool_rss;
+static SV *sv_pool_size;
+static AV *av_async_pool;
+
 static struct coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
 
@@ -1440,6 +1445,13 @@ BOOT:
 {
 	int i;
 
+        sv_pool_rss   = get_sv ("Coro::POOL_RSS"  , TRUE);
+        sv_pool_size  = get_sv ("Coro::POOL_SIZE" , TRUE);
+        av_async_pool = get_av ("Coro::async_pool", TRUE);
+
+        coro_current = get_sv ("Coro::current", FALSE);
+        SvREADONLY_on (coro_current);
+
 	coro_stash = gv_stashpv ("Coro",        TRUE);
 
         newCONSTSUB (coro_stash, "PRIO_MAX",    newSViv (PRIO_MAX));
@@ -1448,9 +1460,6 @@ BOOT:
         newCONSTSUB (coro_stash, "PRIO_LOW",    newSViv (PRIO_LOW));
         newCONSTSUB (coro_stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
         newCONSTSUB (coro_stash, "PRIO_MIN",    newSViv (PRIO_MIN));
-
-        coro_current = get_sv ("Coro::current", FALSE);
-        SvREADONLY_on (coro_current);
 
         for (i = PRIO_MAX - PRIO_MIN + 1; i--; )
           coro_ready[i] = newAV ();
@@ -1517,6 +1526,63 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
+
+# for async_pool speedup
+SV *
+_pool_1 (...)
+	CODE:
+{
+	int i, len;
+        HV *hv = (HV *)SvRV (coro_current);
+        AV *defav = GvAV (PL_defgv);
+        SV *invoke = hv_delete (hv, "_invoke", sizeof ("_invoke") - 1, 0);
+        AV *invoke_av;
+
+        if (!invoke)
+          XSRETURN_EMPTY;
+
+        hv_store (hv, "desc", sizeof ("desc") - 1,
+                  newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
+
+        invoke_av = (AV *)SvRV (invoke);
+        len = av_len (invoke_av);
+
+        av_clear (defav);
+
+        RETVAL = sv_2mortal (SvREFCNT_inc (AvARRAY (invoke_av)[0]));
+
+        if (len > 0)
+          {
+            av_extend (defav, len);
+            for (i = 0; i < len; ++i)
+              av_store (defav, i, SvREFCNT_inc (AvARRAY (invoke_av)[i + 1]));
+          }
+
+        SvREFCNT_dec (invoke);
+}
+	OUTPUT:
+        RETVAL
+
+void
+_pool_2 (...)
+	CODE:
+{
+  	struct coro *coro = SvSTATE (coro_current);
+
+  	if (coro_rss (coro) > SvIV (sv_pool_rss)
+            || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
+          XSRETURN_YES;
+
+        av_clear (GvAV (PL_defgv));
+        hv_store (SvRV (coro_current), "desc", sizeof ("desc") - 1,
+                  newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
+        coro->save = CORO_SAVE_DEF;
+        coro->prio = 0;
+        av_push (av_async_pool, newSVsv (coro_current));
+
+        XSRETURN_NO;
+}
+
 
 MODULE = Coro::State                PACKAGE = Coro::AIO
 
