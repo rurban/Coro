@@ -17,30 +17,45 @@
 
 static HV *coro_event_event_stash;
 
+static int
+coro_ev_free (pTHX_ SV *sv, MAGIC *mg)
+{
+  *(void **)mg->mg_ptr = 0;
+
+  return 0;
+}
+
+#define PERL_MAGIC_coro_event 0x18 /* to avoid clashes with e.g. event */
+
+static MGVTBL vtbl_coro_event = {0, 0, 0, 0, coro_ev_free};
+
 static void
 coro_std_cb (pe_event *pe)
 {
-  AV *priv = (AV *)pe->ext_data;
-  IV type = SvIV (AvARRAY (priv)[CD_TYPE]);
-  AV *cd_wait;
-  SV *coro;
-
-  SvIV_set (AvARRAY (priv)[CD_HITS], pe->hits);
-  SvIV_set (AvARRAY (priv)[CD_GOT], type ? ((pe_ioevent *)pe)->got : 0);
-
-  AvARRAY (priv)[CD_OK] = &PL_sv_yes;
-
-  cd_wait = (AV *)AvARRAY(priv)[CD_WAIT];
-
-  coro = av_shift (cd_wait);
-  if (coro != &PL_sv_undef)
+  if (pe->up->ext_data)
     {
-      CORO_READY (coro);
-      SvREFCNT_dec (coro);
-    }
+      AV *priv = (AV *)pe->ext_data;
+      IV type = SvIV (AvARRAY (priv)[CD_TYPE]);
+      AV *cd_wait;
+      SV *coro;
 
-  if (av_len (cd_wait) < 0)
-    GEventAPI->stop (pe->up, 0);
+      SvIV_set (AvARRAY (priv)[CD_HITS], pe->hits);
+      SvIV_set (AvARRAY (priv)[CD_GOT], type ? ((pe_ioevent *)pe)->got : 0);
+
+      AvARRAY (priv)[CD_OK] = &PL_sv_yes;
+
+      cd_wait = (AV *)AvARRAY(priv)[CD_WAIT];
+
+      coro = av_shift (cd_wait);
+      if (coro != &PL_sv_undef)
+        {
+          CORO_READY (coro);
+          SvREFCNT_dec (coro);
+        }
+
+      if (av_len (cd_wait) < 0)
+        GEventAPI->stop (pe->up, 0);
+    }
 }
 
 static void
@@ -107,9 +122,7 @@ _install_std_cb (SV *self, int type)
           w->callback = coro_std_cb;
           w->ext_data = priv;
 
-          /* make sure Event does not use PERL_MAGIC_uvar, which */
-          /* we abuse for non-uvar purposes. */
-          sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_uvar, 0, 0, 0);
+          sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_coro_event, &vtbl_coro_event, &w->ext_data, 0);
         }
 }
 
