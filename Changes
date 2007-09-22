@@ -15,7 +15,7 @@ TODO: maybe implement a default message channel, very much like Erlang
         - added Coro::Storable::{nfreeze,blocking_{freeze,nfreeze}}.
         - reduce initial stack sizes to allow for "micro-coroutines".
         - better async_pool resource management, moved parts of async_pool
-          handling to XS.
+          handling to XS (major speed improvement).
         - many minor tweaks.
 
 3.63 Wed May 16 14:10:06 CEST 2007
