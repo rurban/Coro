@@ -1430,6 +1430,14 @@ is_ready (Coro::State coro)
 	OUTPUT:
         RETVAL
 
+SV *
+has_stack (Coro::State coro)
+        PROTOTYPE: $
+	CODE:
+        RETVAL = boolSV (!!coro->cctx);
+	OUTPUT:
+        RETVAL
+
 IV
 rss (Coro::State coro)
         PROTOTYPE: $

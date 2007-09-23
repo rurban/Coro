@@ -109,7 +109,7 @@ _install_std_cb (SV *self, int type)
           w->callback = coro_std_cb;
           w->ext_data = priv;
 
-          sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_coro_event, 0, w, 0);
+          sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_coro_event, 0, (char *)w, 0);
         }
 }
 
