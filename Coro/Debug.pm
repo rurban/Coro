@@ -89,7 +89,7 @@ sub command($) {
    $cmd =~ s/[\012\015]$//;
 
    if ($cmd =~ /^ps/) {
-      printf "%20s %s%s%s%s %4s %-20.20s %s\n", "pid", "R", "U", "N", "D", "RSS", "description", "where";
+      printf "%20s %s%s %4s %-20.20s %s\n", "pid", "S", "S", "RSS", "description", "where";
       for my $coro (Coro::State::list) {
          Coro::cede;
          my @bt;
@@ -102,12 +102,10 @@ sub command($) {
                last unless $bt[0] =~ /^Coro/;
             }
          });
-         printf "%20s %s%s%s%s %4d %-20.20s %s\n",
+         printf "%20s %s%s %4d %-20.20s %s\n",
                 $coro+0,
-                $coro->is_ready     ? "R" : "-",
-                $coro->is_running   ? "U" : "-",
-                $coro->is_new       ? "N" : "-",
-                $coro->is_destroyed ? "D" : "-",
+                $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
+                $coro->has_stack ? "S" : "-",
                 $coro->rss / 1024,
                 $coro->debug_desc,
                 (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
