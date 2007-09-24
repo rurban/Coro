@@ -1580,7 +1580,7 @@ _pool_2 (SV *cb)
           croak ("\3terminate\2\n");
 
         av_clear (GvAV (PL_defgv));
-        hv_store (SvRV (coro_current), "desc", sizeof ("desc") - 1,
+        hv_store ((HV *)SvRV (coro_current), "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
         coro->save = CORO_SAVE_DEF;
         coro->prio = 0;
