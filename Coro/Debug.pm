@@ -53,6 +53,16 @@ Or lets you eval perl code within other coroutines:
    > eval 18334288 caller(1); $DB::args[0]->method
    1
 
+If your program uses the Coro::Debug::log facility:
+
+   Coro::Debug::log 0, "important message";
+   Coro::Debug::log 9, "unimportant message";
+
+Then you can even receive log messages in any debugging session:
+
+   > loglevel 5
+   2007-09-26Z02:22:46 (9) unimportant message
+
 =over 4
 
 =cut
@@ -69,6 +79,8 @@ use Coro ();
 use Coro::Handle ();
 use Coro::State ();
 
+our %log;
+
 sub find_coro {
    my ($pid) = @_;
    if (my ($coro) = grep $_ == $1, Coro::State::list) {
@@ -77,6 +89,19 @@ sub find_coro {
       print "$pid: no such coroutine\n";
       undef
    }
+}
+
+=item log $level, $msg
+
+Log a debug message of the given severity level (0 is highest, higher is
+less important) to all interested parties.
+
+=cut
+
+sub log($$) {
+   my ($level, $msg) = @_;
+   $msg =~ s/\s*$/\n/;
+   $_->($level, $msg) for values %log;
 }
 
 =item command $string
@@ -138,9 +163,7 @@ sub command($) {
 ps			show the list of all coroutines
 bt <pid>		show a full backtrace of coroutine <pid>
 eval <pid> <perl>	evaluate <perl> expression in context of <pid>
-exit			end this session, if part of a session
 <anything else>         evaluate as perl and print results
-
 EOF
 
    } else {
@@ -162,15 +185,32 @@ sub session($) {
    $fh = Coro::Handle::unblock $fh;
    select $fh;
 
+   my $loglevel = -1;
+   local $log{$Coro::current} = sub {
+      return unless $_[0] <= $loglevel;
+      my ($sec, $min, $hour, $day, $mon, $year) = gmtime time;
+      my $date = sprintf "%04d-%02d-%02dZ%02d:%02d:%02d",
+                         $year + 1900, $mon + 1, $day + 1, $hour, $min, $sec;
+      print $fh sprintf "\015%s (%d) %s> ", $date, $_[0], $_[1];
+   };
+
    print "coro debug session. use help for more info\n\n";
 
    while ((print "> "), defined (my $cmd = $fh->readline ("\012"))) {
       if ($cmd =~ /^exit\s*$/) {
          print "bye.\n";
          last;
+      } elsif ($cmd =~ /^loglevel\s*(\d+)\s*/) {
+         $loglevel = $1;
+      } elsif ($cmd =~ /^help\s*/) {
+         command $cmd;
+         print <<EOF;
+loglevel <int>		enable logging for messages of level <int> and lower
+exit			end this session, if part of a session
+EOF
+      } else {
+         command $cmd;
       }
-
-      command $cmd;
    }
 }
 
