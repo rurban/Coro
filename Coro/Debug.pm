@@ -19,7 +19,10 @@ only for debugging (or take other precautions).
 It mainly implements a very primitive debugger that lets you list running
 coroutines:
 
-   > ps
+            state
+            |cctx allocated
+            ||   resident set size (kb)
+   > ps     ||   |
         pid SS  RSS description          where
    43383424 --   10 [async_pool idle]    [/opt/perl/lib/perl5/Coro.pm:256]
    46127008 --    5 worldmap updater     [/opt/cf/ext/item-worldmap.ext:116]
@@ -42,12 +45,12 @@ Lets you do backtraces on about any coroutine:
 
 Or lets you eval perl code:
 
-   > p 5+7
+   > 5+7
    12
 
 Or lets you eval perl code within other coroutines:
 
-   > eval 18334288 $_
+   > eval 18334288 caller(1); $DB::args[0]->method
    1
 
 =over 4
@@ -86,9 +89,9 @@ C<session>, below.
 sub command($) {
    my ($cmd) = @_;
 
-   $cmd =~ s/[\012\015]$//;
+   $cmd =~ s/\s+$//;
 
-   if ($cmd =~ /^ps/) {
+   if ($cmd =~ /^ps$/) {
       printf "%20s %s%s %4s %-24.24s %s\n", "pid", "S", "S", "RSS", "description", "where";
       for my $coro (Coro::State::list) {
          Coro::cede;
@@ -106,12 +109,12 @@ sub command($) {
                 $coro+0,
                 $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
                 $coro->has_stack ? "S" : "-",
-                $coro->rss / 1024,
+                $coro->rss / 1000,
                 $coro->debug_desc,
                 (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
 
-   } elsif ($cmd =~ /bt\s+(\d+)/) {
+   } elsif ($cmd =~ /^bt\s+(\d+)$/) {
       if (my $coro = find_coro $1) {
          my $bt;
          Coro::State::call ($coro, sub { $bt = Carp::longmess "coroutine is" });
@@ -122,11 +125,7 @@ sub command($) {
          }
       }
 
-   } elsif ($cmd =~ /p\s+(.*)$/) {
-      my @res = eval $1;
-      print $@ ? $@ : (join " ", @res) . "\n";
-
-   } elsif ($cmd =~ /eval\s+(\d+)\s+(.*)$/) {
+   } elsif ($cmd =~ /^eval\s+(\d+)\s+(.*)$/) {
       if (my $coro = find_coro $1) {
          my $cmd = $2;
          my @res;
@@ -134,25 +133,26 @@ sub command($) {
          print $@ ? $@ : (join " ", @res, "\n");
       }
 
-   } elsif ($cmd =~ /^help/) {
+   } elsif ($cmd =~ /^help$/) {
       print <<EOF;
 ps			show the list of all coroutines
 bt <pid>		show a full backtrace of coroutine <pid>
-p <perl>		evaluate <perl> expression and print results
-eval <pid> <perl>	evaluate <perl> expression in context of <pid> (dangerous!)
-exit			end this session
+eval <pid> <perl>	evaluate <perl> expression in context of <pid>
+exit			end this session, if part of a session
+<anything else>         evaluate as perl and print results
 
 EOF
 
    } else {
-      print "$cmd: unknown command\n";
+      my @res = eval $cmd;
+      print $@ ? $@ : (join " ", @res) . "\n";
    }
 }
 
 =item session $fh
 
 Run an interactive debugger session on the given filehandle. Each line entered
-is simply passed to C<command>
+is simply passed to C<command>.
 
 =cut
 
@@ -165,7 +165,7 @@ sub session($) {
    print "coro debug session. use help for more info\n\n";
 
    while ((print "> "), defined (my $cmd = $fh->readline ("\012"))) {
-      if ($cmd =~ /^exit/) {
+      if ($cmd =~ /^exit\s*$/) {
          print "bye.\n";
          last;
       }

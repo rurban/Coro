@@ -38,9 +38,11 @@ modules for a higher level process abstraction including scheduling.
 
 A newly created coroutine that has not been used only allocates a
 relatively small (a few hundred bytes) structure. Only on the first
-C<transfer> will perl stacks (a few k) and optionally C stack. All this
-is very system-dependent. On my x86_64-pc-linux-gnu system this amounts
-to about 8k per (non-trivial) coroutine.
+C<transfer> will perl allocate stacks (a few kb) and optionally
+a C stack/coroutine (cctx) for coroutines that recurse through C
+functions. All this is very system-dependent. On my x86_64-pc-linux-gnu
+system this amounts to about 8k per (non-trivial) coroutine. You can view
+the actual memory consumption using Coro::Debug.
 
 =head2 FUNCTIONS
 
@@ -161,6 +163,31 @@ sub guarded_save {
    bless [$_[0], $_[0]->save_also ($_[1])], Coro::State::save_guard::
 }
 
+=item $state->has_stack
+
+Returns wether the state currently uses a cctx/C stack. An active state
+always has a cctx, as well as the main program. Other states only use a
+cctx when needed.
+
+=item $bytes = $state->rss
+
+Returns the memory allocated by the coroutine (which includes
+static structures, various perl stacks but NOT local variables,
+arguments or any C stack).
+
+=item $state->call ($coderef)
+
+Try to call the given $coderef in the context of the given state.  This
+works even when the state is currently within an XS function, and can
+be very dangerous. You can use it to acquire stack traces etc. (see the
+Coro::Debug module for more details). The coderef MUST NOT EVER transfer
+to another state.
+
+=item $state->eval ($string)
+
+Like C<call>, but eval's the string. Dangerous. Do not
+use. Untested. Unused. Biohazard.
+
 =item $prev->transfer ($next)
 
 Save the state of the current subroutine in C<$prev> and switch to the
@@ -178,8 +205,8 @@ recursion in your code and moving this into a separate coroutine.
 =item Coro::State::cctx_idle
 
 Returns the number of allocated but idle (free for reuse) C level
-coroutines. As C level coroutines are curretly rarely being deallocated, a
-high number means that you used many C coroutines in the past.
+coroutines. Currently, Coro will limit the number of idle/unused cctxs to
+8.
 
 =item Coro::State::cctx_stacksize [$new_stacksize]
 
@@ -190,6 +217,10 @@ possible. Any Coro::State's that starts to use a stack after this call is
 guarenteed this minimum size. Please note that Coroutines will only need
 to use a C-level stack if the interpreter recurses or calls a function in
 a module that calls back into the interpreter.
+
+=item @states = Coro::State::list
+
+Returns a list of all states currently allocated.
 
 =cut
 
