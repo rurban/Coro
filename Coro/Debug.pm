@@ -93,7 +93,7 @@ sub command($) {
       for my $coro (Coro::State::list) {
          Coro::cede;
          my @bt;
-         $coro->_eval (sub {
+         Coro::State::call ($coro, sub {
             # we try to find *the* definite frame that gives msot useful info
             # by skipping Coro frames and pseudo-frames.
             for my $frame (1..10) {
@@ -114,7 +114,7 @@ sub command($) {
    } elsif ($cmd =~ /bt\s+(\d+)/) {
       if (my $coro = find_coro $1) {
          my $bt;
-         $coro->_eval (sub { $bt = Carp::longmess "coroutine is" });
+         Coro::State::call ($coro, sub { $bt = Carp::longmess "coroutine is" });
          if ($bt) {
             print $bt;
          } else {
@@ -130,7 +130,7 @@ sub command($) {
       if (my $coro = find_coro $1) {
          my $cmd = $2;
          my @res;
-         $coro->_eval (sub { @res = eval $cmd });
+         Coro::State::call ($coro, sub { @res = eval $cmd });
          print $@ ? $@ : (join " ", @res, "\n");
       }
 

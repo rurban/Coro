@@ -1381,7 +1381,9 @@ list ()
 }
 
 void
-_eval (Coro::State coro, SV *coderef)
+call (Coro::State coro, SV *coderef)
+	ALIAS:
+        eval = 1
 	CODE:
 {
         if (coro->mainstack)
@@ -1402,7 +1404,10 @@ _eval (Coro::State coro, SV *coderef)
               SAVETMPS;
               PUSHMARK (SP);
               PUTBACK;
-              call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+              if (ix)
+                eval_sv (coderef, 0);
+              else
+                call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
               SPAGAIN;
               FREETMPS;
               LEAVE;
