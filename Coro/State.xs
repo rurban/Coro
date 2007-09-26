@@ -1483,6 +1483,9 @@ trace (Coro::State coro, int enable = 0)
 	CODE:
         if (enable)
           {
+            if (coro->cctx && coro->cctx->flags & CC_TRACE)
+              XSRETURN_EMPTY;
+
             if (coro->flags & CF_RUNNING)
               croak ("cannot enable tracing on running coroutine");
 
