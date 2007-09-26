@@ -222,7 +222,7 @@ sub session($) {
          command $cmd;
          print <<EOF;
 loglevel <int>		enable logging for messages of level <int> and lower
-exit			end this session, if part of a session
+exit			end this session
 EOF
       } else {
          command $cmd;
