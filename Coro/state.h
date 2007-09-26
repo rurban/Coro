@@ -55,3 +55,4 @@ VAR(sortcxix,      I32)            /* from pp_ctl.c */
 
 VAR(comppad,       AV *)           /* storage for lexically scoped temporaries */
 
+VAR(runops,        runops_proc_t); /* for tracing support */

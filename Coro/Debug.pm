@@ -81,6 +81,7 @@ use Coro::Handle ();
 use Coro::State ();
 
 our %log;
+our $LOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
 
 sub find_coro {
    my ($pid) = @_;
@@ -97,12 +98,67 @@ sub find_coro {
 Log a debug message of the given severity level (0 is highest, higher is
 less important) to all interested parties.
 
+=item loglevel $level
+
+Set the default loglevel for new coro debug sessions (defaults to the
+value of the environment variable PERL_CORO_DEFAULT_LOGLEVEL, or -1 if
+missing).
+
 =cut
 
 sub log($$) {
    my ($level, $msg) = @_;
    $msg =~ s/\s*$/\n/;
    $_->($level, $msg) for values %log;
+}
+
+sub loglevel($) {
+   $LOGLEVEL = shift;
+}
+
+=item trace $coro, $loglevel
+
+Enables tracing the given coroutine at the given loglevel. If loglevel is
+omitted, use 5. If coro is omitted, trace the current coroutine. Tracing
+incurs a very high runtime overhead.
+
+It is not uncommon to enable tracing on oneself by simply calling
+C<Coro::Debug::trace>.
+
+A message will be logged at the given loglevel if it is not possible to
+enable tracing.
+
+=item untrace $coro
+
+Disables tracing on the given coroutine.
+
+=cut
+
+sub trace {
+   my ($coro, $loglevel) = @_;
+
+   $coro ||= $Coro::current;
+   $loglevel = 5 unless defined $loglevel;
+
+   (Coro::async_pool {
+      if (eval { $coro->trace (1); 1 }) {
+         Coro::Debug::log $loglevel, sprintf "[%d] enabling tracing", $Coro::current + 0;
+         $coro->{_trace_cb} = sub {
+            Coro::Debug::log $loglevel, sprintf "[%d] %s:%s [%s]\n", $Coro::current+0, (caller 3)[1,2,3];
+         };
+      } else {
+         Coro::Debug::log $loglevel, sprintf "[%d] unable to enable tracing: %s", $Coro::current + 0, $@;
+      }
+   })->prio (Coro::PRIO_MAX);
+
+   Coro::cede;
+}
+
+sub untrace {
+   my ($coro) = @_;
+
+   $coro->trace (0);
+   delete $coro->{_trace_cb};
 }
 
 =item command $string
@@ -159,11 +215,23 @@ sub command($) {
          print $@ ? $@ : (join " ", @res, "\n");
       }
 
+   } elsif ($cmd =~ /^trace\s+(\d+)$/) {
+      if (my $coro = find_coro $1) {
+         trace $coro;
+      }
+
+   } elsif ($cmd =~ /^untrace\s+(\d+)$/) {
+      if (my $coro = find_coro $1) {
+         untrace $coro;
+      }
+
    } elsif ($cmd =~ /^help$/) {
       print <<EOF;
 ps                      show the list of all coroutines
 bt <pid>                show a full backtrace of coroutine <pid>
 eval <pid> <perl>       evaluate <perl> expression in context of <pid>
+trace <pid>             enable tracing for this coroutine
+untrace <pid>           disable tracing for this coroutine
 <anything else>         evaluate as perl and print results
 <anything else> &       same as above, but evaluate asynchronously
 EOF
@@ -181,6 +249,7 @@ EOF
             "result: ", $@ ? $@ : (join " ", @res) . "\n",
             "> ";
       };
+
    } else {
       my @res = eval $cmd;
       print $@ ? $@ : (join " ", @res) . "\n";
@@ -200,13 +269,13 @@ sub session($) {
    $fh = Coro::Handle::unblock $fh;
    select $fh;
 
-   my $loglevel = -1;
+   my $loglevel = $LOGLEVEL;
    local $log{$Coro::current} = sub {
       return unless $_[0] <= $loglevel;
       my ($time, $micro) = Time::HiRes::gettimeofday;
       my ($sec, $min, $hour, $day, $mon, $year) = gmtime $time;
       my $date = sprintf "%04d-%02d-%02dZ%02d:%02d:%02d.%04d",
-                         $year + 1900, $mon + 1, $day + 1, $hour, $min, $sec, $micro / 100;
+                         $year + 1900, $mon + 1, $day, $hour, $min, $sec, $micro / 100;
       print $fh sprintf "\015%s (%d) %s> ", $date, $_[0], $_[1];
    };
 
@@ -216,8 +285,10 @@ sub session($) {
       if ($cmd =~ /^exit\s*$/) {
          print "bye.\n";
          last;
-      } elsif ($cmd =~ /^loglevel\s*(\d+)\s*/) {
-         $loglevel = $1;
+
+      } elsif ($cmd =~ /^loglevel\s*(\d+)?\s*/) {
+         $loglevel = defined $1 ? $1 : -1;
+
       } elsif ($cmd =~ /^help\s*/) {
          command $cmd;
          print <<EOF;

@@ -142,6 +142,12 @@ static AV *av_async_pool;
 static struct coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
 
+enum {
+  CC_MAPPED  = 0x01,
+  CC_TRACE   = 0x02,
+  CC_NOREUSE = 0x04, /* throw this away after tracing */
+};
+
 /* this is a structure representing a c-level coroutine */
 typedef struct coro_cctx {
   struct coro_cctx *next;
@@ -159,7 +165,7 @@ typedef struct coro_cctx {
 #if CORO_USE_VALGRIND
   int valgrind_id;
 #endif
-  char inuse, mapped;
+  unsigned char flags;
 } coro_cctx;
 
 enum {
@@ -626,6 +632,47 @@ free_coro_mortal (pTHX)
     }
 }
 
+static void
+do_trace (pTHX)
+{
+  if (PL_curcop != &PL_compiling)
+    {
+      runops_proc_t old_runops = PL_runops;
+      dSP;
+      ENTER;
+      SAVETMPS;
+      PUSHMARK (SP);
+      PUTBACK;
+      PL_runops = RUNOPS_DEFAULT;
+      call_pv ("Coro::_do_trace", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD | G_NOARGS);
+      PL_runops = old_runops;
+      SPAGAIN;
+      FREETMPS;
+      LEAVE;
+      PUTBACK;
+    }
+}
+
+static int
+runops_coro (pTHX)
+{
+  COP *oldcop = 0;
+
+  while ((PL_op = CALL_FPTR (PL_op->op_ppaddr) (aTHX)))
+    {
+      PERL_ASYNC_CHECK ();
+
+      if (oldcop != PL_curcop)
+        {
+          oldcop = PL_curcop;
+          do_trace (aTHX);
+        }
+    }
+
+  TAINT_NOT;
+  return 0;
+}
+
 /* inject a fake call to Coro::State::_cctx_init into the execution */
 /* _cctx_init should be careful, as it could be called at almost any time */
 /* during execution of a perl program */
@@ -634,6 +681,11 @@ prepare_cctx (pTHX_ coro_cctx *cctx)
 {
   dSP;
   LOGOP myop;
+
+  PL_top_env = &PL_start_env;
+
+  if (cctx->flags & CC_TRACE)
+    PL_runops = runops_coro;
 
   Zero (&myop, 1, LOGOP);
   myop.op_next = PL_op;
@@ -660,7 +712,8 @@ coro_run (void *arg)
   /* coro_run is the alternative tail of transfer(), so unlock here. */
   UNLOCK;
 
-  PL_top_env = &PL_start_env;
+  /* we now skip the entersub that lead to transfer() */
+  PL_op = PL_op->op_next;
 
   /* inject a fake subroutine call to cctx_init */
   prepare_cctx (aTHX_ (coro_cctx *)arg);
@@ -704,7 +757,7 @@ cctx_new ()
 # endif
       stack_start = CORO_STACKGUARD * PAGESIZE + (char *)cctx->sptr;
       stack_size  = cctx->ssize - CORO_STACKGUARD * PAGESIZE;
-      cctx->mapped = 1;
+      cctx->flags |= CC_MAPPED;
     }
   else
 #endif
@@ -741,7 +794,7 @@ cctx_destroy (coro_cctx *cctx)
 #endif
 
 #if HAVE_MMAP
-  if (cctx->mapped)
+  if (cctx->flags & CC_MAPPED)
     munmap (cctx->sptr, cctx->ssize);
   else
 #endif
@@ -759,13 +812,12 @@ cctx_get (pTHX)
       cctx_first = cctx->next;
       --cctx_idle;
 
-      if (cctx->ssize >= coro_stacksize)
+      if (cctx->ssize >= coro_stacksize && !(cctx->flags & CC_NOREUSE))
         return cctx;
 
       cctx_destroy (cctx);
     }
 
-  PL_op = PL_op->op_next;
   return cctx_new ();
 }
 
@@ -779,7 +831,6 @@ cctx_put (coro_cctx *cctx)
       cctx_first = first->next;
       --cctx_idle;
 
-      assert (!first->inuse);
       cctx_destroy (first);
     }
 
@@ -810,7 +861,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
         {
           /* create a new empty context */
           Newz (0, prev->cctx, 1, coro_cctx);
-          prev->cctx->inuse = 1;
           prev->flags &= ~CF_NEW;
           prev->flags |=  CF_RUNNING;
         }
@@ -838,8 +888,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           save_perl (aTHX_ prev);
           /* setup coroutine call */
           setup_coro (aTHX_ next);
-          /* need a new stack */
-          assert (!next->cctx);
         }
       else
         {
@@ -859,15 +907,10 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           prev->cctx = 0;
 
           cctx_put (prev__cctx);
-          prev__cctx->inuse = 0;
         }
 
       if (!next->cctx)
-        {
-          next->cctx = cctx_get (aTHX);
-          assert (!next->cctx->inuse);
-          next->cctx->inuse = 1;
-        }
+        next->cctx = cctx_get (aTHX);
 
       if (prev__cctx != next->cctx)
         {
@@ -1434,6 +1477,27 @@ is_ready (Coro::State coro)
         RETVAL = boolSV (coro->flags & ix);
 	OUTPUT:
         RETVAL
+
+void
+trace (Coro::State coro, int enable = 0)
+	CODE:
+        if (enable)
+          {
+            if (coro->flags & CF_RUNNING)
+              croak ("cannot enable tracing on running coroutine");
+
+            if (coro->cctx)
+              croak ("cannot enable tracing on coroutine with custom stack");
+
+            coro->cctx = cctx_new ();
+            coro->cctx->flags |= CC_TRACE;
+          }
+        else
+          if (coro->cctx && coro->cctx->flags & CC_TRACE)
+            {
+              coro->cctx->flags &= ~CC_TRACE;
+              coro->cctx->flags |= CC_NOREUSE;
+            }
 
 SV *
 has_stack (Coro::State coro)

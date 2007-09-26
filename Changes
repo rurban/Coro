@@ -7,10 +7,10 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others).
 
-3.7
+3.8
         - incompatibly changed Coro::Storable::freeze.
-        - added Coro::Debug, interactive coroutine debugging and much
-          more.
+        - major new feature: added Coro::Debug, for interactive coroutine
+          debugging, tracing and much more.
 	- added Coro::Semaphore::adjust.
         - added Coro::Util::fork_eval.
         - added Coro::Storable::{nfreeze,blocking_{freeze,nfreeze}}.
