@@ -74,6 +74,7 @@ use strict;
 use Carp ();
 use IO::Socket::UNIX;
 use AnyEvent;
+use Time::HiRes;
 
 use Coro ();
 use Coro::Handle ();
@@ -160,12 +161,26 @@ sub command($) {
 
    } elsif ($cmd =~ /^help$/) {
       print <<EOF;
-ps			show the list of all coroutines
-bt <pid>		show a full backtrace of coroutine <pid>
-eval <pid> <perl>	evaluate <perl> expression in context of <pid>
+ps                      show the list of all coroutines
+bt <pid>                show a full backtrace of coroutine <pid>
+eval <pid> <perl>       evaluate <perl> expression in context of <pid>
 <anything else>         evaluate as perl and print results
+<anything else> &       same as above, but evaluate asynchronously
 EOF
 
+   } elsif ($cmd =~ /^(.*)&$/) {
+      my $cmd = $1;
+      my $fh = select;
+      Coro::async_pool {
+         my $t = Time::HiRes::time;
+         my @res = eval $cmd;
+         $t = Time::HiRes::time - $t;
+         print {$fh}
+            "\rcommand: $cmd\n",
+            "execution time: $t\n",
+            "result: ", $@ ? $@ : (join " ", @res) . "\n",
+            "> ";
+      };
    } else {
       my @res = eval $cmd;
       print $@ ? $@ : (join " ", @res) . "\n";
@@ -188,9 +203,10 @@ sub session($) {
    my $loglevel = -1;
    local $log{$Coro::current} = sub {
       return unless $_[0] <= $loglevel;
-      my ($sec, $min, $hour, $day, $mon, $year) = gmtime time;
-      my $date = sprintf "%04d-%02d-%02dZ%02d:%02d:%02d",
-                         $year + 1900, $mon + 1, $day + 1, $hour, $min, $sec;
+      my ($time, $micro) = Time::HiRes::gettimeofday;
+      my ($sec, $min, $hour, $day, $mon, $year) = gmtime $time;
+      my $date = sprintf "%04d-%02d-%02dZ%02d:%02d:%02d.%04d",
+                         $year + 1900, $mon + 1, $day + 1, $hour, $min, $sec, $micro / 100;
       print $fh sprintf "\015%s (%d) %s> ", $date, $_[0], $_[1];
    };
 
