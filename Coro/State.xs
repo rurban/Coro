@@ -965,7 +965,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
       prev__cctx = prev->cctx;
 
       /* possibly "free" the cctx */
-      if (prev__cctx->idle_sp == STACKLEVEL)
+      if (prev__cctx->idle_sp == STACKLEVEL && !(prev__cctx->flags & CC_TRACE))
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
           assert (("ERROR: current top_env must equal previous top_env", PL_top_env == prev__cctx->idle_te));
@@ -1566,6 +1566,11 @@ trace (Coro::State coro, int flags = CC_TRACE | CC_TRACE_SUB)
             {
               coro->cctx->flags &= ~(CC_TRACE | CC_TRACE_ALL);
               coro->cctx->flags |= CC_NOREUSE;
+
+              if (coro->flags & CF_RUNNING)
+                PL_runops = RUNOPS_DEFAULT;
+              else
+                coro->runops = RUNOPS_DEFAULT;
             }
 
 SV *
