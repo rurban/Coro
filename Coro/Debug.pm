@@ -276,12 +276,13 @@ untrace <pid>           disable tracing for this coroutine
 EOF
 
    } elsif ($cmd =~ /^(.*)&$/) {
-      my $cmd = eval "sub { $1 }";
+      my $cmd = $1;
+      my $sub = eval "sub { $cmd }";
       my $fh = select;
       Coro::async_pool {
          $Coro::current->{desc} = $cmd;
          my $t = Time::HiRes::time;
-         my @res = eval { &$cmd };
+         my @res = eval { &$sub };
          $t = Time::HiRes::time - $t;
          print {$fh}
             "\rcommand: $cmd\n",
