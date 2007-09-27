@@ -16,8 +16,13 @@ This module provides some debugging facilities. Most will, if not handled
 carefully, severely compromise the security of your program, so use it
 only for debugging (or take other precautions).
 
-It mainly implements a very primitive debugger that lets you list running
-coroutines:
+It mainly implements a very primitive debugger that is evry easy to
+integrate in your program:
+
+   our $server = new_unix_server Coro::Debug "/tmp/somepath";
+   # see new_unix_server, below, for more info
+
+It lets you list running coroutines:
 
             state
             |cctx allocated
@@ -76,6 +81,10 @@ Then you can even receive log messages in any debugging session:
 
    > loglevel 5
    2007-09-26Z02:22:46 (9) unimportant message
+
+=head1 FUNCTIONS
+
+None of the functions are being exported.
 
 =over 4
 
