@@ -54,7 +54,18 @@ Or lets you eval perl code within other coroutines:
    1
 
 It can also trace subroutine entry/exits for most coroutines (those not
-recursing into a C function).
+recursing into a C function), resulting in output similar to:
+
+   > loglevel 5
+   > trace 94652688
+   2007-09-27Z20:30:25.1368 (5) [94652688] enter Socket::sockaddr_in with (8481,\x{7f}\x{00}\x{00}\x{01})
+   2007-09-27Z20:30:25.1369 (5) [94652688] leave Socket::sockaddr_in returning (\x{02}\x{00}...)
+   2007-09-27Z20:30:25.1370 (5) [94652688] enter Net::FCP::Util::touc with (client_get)
+   2007-09-27Z20:30:25.1371 (5) [94652688] leave Net::FCP::Util::touc returning (ClientGet)
+   2007-09-27Z20:30:25.1372 (5) [94652688] enter AnyEvent::Impl::Event::io with (AnyEvent,fh,GLOB(0x9256250),poll,w,cb,CODE(0x8c963a0))
+   2007-09-27Z20:30:25.1373 (5) [94652688] enter Event::Watcher::__ANON__ with (Event,poll,w,fd,GLOB(0x9256250),cb,CODE(0x8c963a0))
+   2007-09-27Z20:30:25.1374 (5) [94652688] enter Event::io::new with (Event::io,poll,w,fd,GLOB(0x9256250),cb,CODE(0x8c963a0))
+   2007-09-27Z20:30:25.1375 (5) [94652688] enter Event::Watcher::init with (Event::io=HASH(0x8bfb120),HASH(0x9b7940))
 
 If your program uses the Coro::Debug::log facility:
 
