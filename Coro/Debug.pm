@@ -53,6 +53,9 @@ Or lets you eval perl code within other coroutines:
    > eval 18334288 caller(1); $DB::args[0]->method
    1
 
+It can also trace subroutine entry/exits for most coroutines (those not
+recursing into a C function).
+
 If your program uses the Coro::Debug::log facility:
 
    Coro::Debug::log 0, "important message";
@@ -243,20 +246,20 @@ sub command($) {
          }
       }
 
-   } elsif ($cmd =~ /^eval\s+(\d+)\s+(.*)$/) {
+   } elsif ($cmd =~ /^(?:e|eval)\s+(\d+)\s+(.*)$/) {
       if (my $coro = find_coro $1) {
-         my $cmd = $2;
+         my $cmd = eval "sub { $2 }";
          my @res;
-         Coro::State::call ($coro, sub { @res = eval $cmd });
+         Coro::State::call ($coro, sub { @res = eval { &$cmd } });
          print $@ ? $@ : (join " ", @res, "\n");
       }
 
-   } elsif ($cmd =~ /^trace\s+(\d+)$/) {
+   } elsif ($cmd =~ /^(?:tr|trace)\s+(\d+)$/) {
       if (my $coro = find_coro $1) {
          trace $coro;
       }
 
-   } elsif ($cmd =~ /^untrace\s+(\d+)$/) {
+   } elsif ($cmd =~ /^(?:ut|untrace)\s+(\d+)$/) {
       if (my $coro = find_coro $1) {
          untrace $coro;
       }
@@ -273,11 +276,12 @@ untrace <pid>           disable tracing for this coroutine
 EOF
 
    } elsif ($cmd =~ /^(.*)&$/) {
-      my $cmd = $1;
+      my $cmd = eval "sub { $1 }";
       my $fh = select;
       Coro::async_pool {
+         $Coro::current->{desc} = $cmd;
          my $t = Time::HiRes::time;
-         my @res = eval $cmd;
+         my @res = eval { &$cmd };
          $t = Time::HiRes::time - $t;
          print {$fh}
             "\rcommand: $cmd\n",
@@ -318,7 +322,7 @@ sub session($) {
          print "bye.\n";
          last;
 
-      } elsif ($cmd =~ /^loglevel\s*(\d+)?\s*/) {
+      } elsif ($cmd =~ /^(?:ll|loglevel)\s*(\d+)?\s*/) {
          $loglevel = defined $1 ? $1 : -1;
 
       } elsif ($cmd =~ /^help\s*/) {

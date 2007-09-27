@@ -1,6 +1,5 @@
 Revision history for Perl extension Coro.
 
-TODO: better (earlier) error messages on broken transfer's
 TODO: destroy gets only called on cancel: fix(?)
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 TODO: maybe implement a default message channel, very much like Erlang
@@ -17,6 +16,9 @@ TODO: maybe implement a default message channel, very much like Erlang
         - reduce initial stack sizes to allow for "micro-coroutines".
         - better async_pool resource management, moved parts of async_pool
           handling to XS (major speed improvement).
+        - actually croak before modifying important data structures.
+        - refuse to transfer while compiling.
+        - possibly support eval EXPR better now.
         - many minor tweaks.
 
 3.63 Wed May 16 14:10:06 CEST 2007

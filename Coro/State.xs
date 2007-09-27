@@ -939,7 +939,26 @@ cctx_put (coro_cctx *cctx)
 
 /** coroutine switching *****************************************************/
 
-/* never call directly, always through the coro_state_transfer global variable */
+static void NOINLINE
+transfer_check (pTHX_ struct coro *prev, struct coro *next)
+{
+  if (prev != next)
+    {
+      if (!(prev->flags & (CF_RUNNING | CF_NEW)))
+        croak ("Coro::State::transfer called with non-running/new prev Coro::State, but can only transfer from running or new states");
+
+      if (next->flags & CF_RUNNING)
+        croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states");
+
+      if (next->flags & CF_DESTROYED)
+        croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
+
+      if (PL_lex_state != LEX_NOTPARSING)
+        croak ("Coro::State::transfer called while parsing, but this is not supported");
+    }
+}
+
+/* always use the TRANSFER macro */
 static void NOINLINE
 transfer (pTHX_ struct coro *prev, struct coro *next)
 {
@@ -962,16 +981,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           prev->flags &= ~CF_NEW;
           prev->flags |=  CF_RUNNING;
         }
-
-      /*TODO: must not croak here */
-      if (!prev->flags & CF_RUNNING)
-        croak ("Coro::State::transfer called with non-running prev Coro::State, but can only transfer from running states");
-
-      if (next->flags & CF_RUNNING)
-        croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states");
-
-      if (next->flags & CF_DESTROYED)
-        croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
 
       prev->flags &= ~CF_RUNNING;
       next->flags |=  CF_RUNNING;
@@ -1028,6 +1037,7 @@ struct transfer_args
 };
 
 #define TRANSFER(ta) transfer (aTHX_ (ta).prev, (ta).next)
+#define TRANSFER_CHECK(ta) transfer_check (aTHX_ (ta).prev, (ta).next)
 
 /** high level stuff ********************************************************/
 
@@ -1125,6 +1135,7 @@ prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev_sv, SV *next_sv)
 {
   ta->prev = SvSTATE (prev_sv);
   ta->next = SvSTATE (next_sv);
+  TRANSFER_CHECK (*ta);
 }
 
 static void
@@ -1251,11 +1262,11 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
 
   /* free this only after the transfer */
   prev_sv = SvRV (coro_current);
-  SvRV_set (coro_current, next_sv);
   ta->prev = SvSTATE (prev_sv);
-
+  TRANSFER_CHECK (*ta);
   assert (ta->next->flags & CF_READY);
   ta->next->flags &= ~CF_READY;
+  SvRV_set (coro_current, next_sv);
 
   LOCK;
   free_coro_mortal (aTHX);

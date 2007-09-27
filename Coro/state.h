@@ -55,4 +55,8 @@ VAR(sortcxix,      I32)            /* from pp_ctl.c */
 
 VAR(comppad,       AV *)           /* storage for lexically scoped temporaries */
 
+/* compcv is intrpvar, but seems to be thread-specific to me */
+/* but, well, I thoroughly misunderstand what thrdvar and intrpvar is. still. */
+VAR(compcv,        CV *)           /* currently compiling subroutine */
+
 VAR(runops,        runops_proc_t); /* for tracing support */
