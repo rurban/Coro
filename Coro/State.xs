@@ -143,9 +143,12 @@ static struct coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
 
 enum {
-  CC_MAPPED  = 0x01,
-  CC_TRACE   = 0x02,
-  CC_NOREUSE = 0x04, /* throw this away after tracing */
+  CC_MAPPED     = 0x01,
+  CC_NOREUSE    = 0x02, /* throw this away after tracing */
+  CC_TRACE      = 0x04,
+  CC_TRACE_SUB  = 0x08, /* trace sub calls */
+  CC_TRACE_LINE = 0x10, /* trace each statement */
+  CC_TRACE_ALL  = CC_TRACE_SUB | CC_TRACE_LINE,
 };
 
 /* this is a structure representing a c-level coroutine */
@@ -632,40 +635,103 @@ free_coro_mortal (pTHX)
     }
 }
 
-static void
-do_trace (pTHX)
-{
-  if (PL_curcop != &PL_compiling)
-    {
-      runops_proc_t old_runops = PL_runops;
-      dSP;
-      ENTER;
-      SAVETMPS;
-      PUSHMARK (SP);
-      PUTBACK;
-      PL_runops = RUNOPS_DEFAULT;
-      call_pv ("Coro::_do_trace", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD | G_NOARGS);
-      PL_runops = old_runops;
-      SPAGAIN;
-      FREETMPS;
-      LEAVE;
-      PUTBACK;
-    }
-}
-
 static int
 runops_coro (pTHX)
 {
   COP *oldcop = 0;
+  int oldcxix = -2;
 
   while ((PL_op = CALL_FPTR (PL_op->op_ppaddr) (aTHX)))
     {
       PERL_ASYNC_CHECK ();
 
+      if (PL_op->op_type == OP_LEAVESUB)
+        {
+          PERL_CONTEXT *cx = &cxstack[cxstack_ix];
+          SV **bot, **top;
+          AV *av = newAV (); /* return values */
+          runops_proc_t old_runops = PL_runops;
+          dSP;
+          ENTER;
+          SAVETMPS;
+          EXTEND (SP, 3);
+          PL_runops = RUNOPS_DEFAULT;
+
+          GV *gv = CvGV (cx->blk_sub.cv);
+          SV *fullname = sv_2mortal (newSV (0));
+          if (isGV (gv))
+            gv_efullname3 (fullname, gv, 0);
+
+          bot = PL_stack_base + cx->blk_oldsp + 1;
+          top = cx->blk_gimme == G_ARRAY  ? SP + 1
+              : cx->blk_gimme == G_SCALAR ? bot + 1
+              :                             bot;
+
+          while (bot < top)
+            av_push (av, SvREFCNT_inc (*bot++));
+
+          PUSHMARK (SP);
+          PUSHs (&PL_sv_no);
+          PUSHs (fullname);
+          PUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
+          PUTBACK;
+          call_pv ("Coro::_do_trace_sub", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+          SPAGAIN;
+
+          FREETMPS;
+          LEAVE;
+          PL_runops = old_runops;
+        }
+
       if (oldcop != PL_curcop)
         {
           oldcop = PL_curcop;
-          do_trace (aTHX);
+
+          if (PL_curcop != &PL_compiling)
+            {
+              runops_proc_t old_runops = PL_runops;
+              dSP;
+              ENTER;
+              SAVETMPS;
+              EXTEND (SP, 3);
+              PL_runops = RUNOPS_DEFAULT;
+
+              if (oldcxix != cxstack_ix)
+                {
+                  PERL_CONTEXT *cx = &cxstack[cxstack_ix];
+
+                  if (CxTYPE (cx) == CXt_SUB && oldcxix < cxstack_ix)
+                    {
+                      GV *gv = CvGV (cx->blk_sub.cv);
+                      SV *fullname = sv_2mortal (newSV (0));
+                      if (isGV (gv))
+                        gv_efullname3 (fullname, gv, 0);
+
+                      PUSHMARK (SP);
+                      PUSHs (&PL_sv_yes);
+                      PUSHs (fullname);
+                      PUSHs (cx->blk_sub.hasargs ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
+                      PUTBACK;
+                      call_pv ("Coro::_do_trace_sub", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+                      SPAGAIN;
+                    }
+
+                  oldcxix = cxstack_ix;
+                }
+
+              if (0) {
+              PUSHMARK (SP);
+              PUSHs (sv_2mortal (newSVpv (OutCopFILE (oldcop), 0)));
+              PUSHs (sv_2mortal (newSViv (CopLINE (oldcop))));
+              PUTBACK;
+              call_pv ("Coro::_do_trace_line", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+              SPAGAIN;
+              }
+
+              FREETMPS;
+              LEAVE;
+              PL_runops = old_runops;
+            }
         }
     }
 
@@ -1264,6 +1330,11 @@ BOOT:
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
+        newCONSTSUB (coro_state_stash, "CC_TRACE"     , newSViv (CC_TRACE));
+        newCONSTSUB (coro_state_stash, "CC_TRACE_SUB" , newSViv (CC_TRACE_SUB));
+        newCONSTSUB (coro_state_stash, "CC_TRACE_LINE", newSViv (CC_TRACE_LINE));
+        newCONSTSUB (coro_state_stash, "CC_TRACE_ALL" , newSViv (CC_TRACE_ALL));
+
         newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (CORO_SAVE_DEFAV));
         newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (CORO_SAVE_DEFSV));
         newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (CORO_SAVE_ERRSV));
@@ -1479,26 +1550,21 @@ is_ready (Coro::State coro)
         RETVAL
 
 void
-trace (Coro::State coro, int enable = 0)
+trace (Coro::State coro, int flags = CC_TRACE | CC_TRACE_SUB)
 	CODE:
-        if (enable)
+        if (flags & CC_TRACE)
           {
-            if (coro->cctx && coro->cctx->flags & CC_TRACE)
-              XSRETURN_EMPTY;
-
-            if (coro->flags & CF_RUNNING)
-              croak ("cannot enable tracing on running coroutine");
-
-            if (coro->cctx)
+            if (!coro->cctx)
+              coro->cctx = cctx_new ();
+            else if (!(coro->cctx->flags & CC_TRACE))
               croak ("cannot enable tracing on coroutine with custom stack");
 
-            coro->cctx = cctx_new ();
-            coro->cctx->flags |= CC_TRACE;
+            coro->cctx->flags |= flags & (CC_TRACE | CC_TRACE_ALL);
           }
         else
           if (coro->cctx && coro->cctx->flags & CC_TRACE)
             {
-              coro->cctx->flags &= ~CC_TRACE;
+              coro->cctx->flags &= ~(CC_TRACE | CC_TRACE_ALL);
               coro->cctx->flags |= CC_NOREUSE;
             }
 
@@ -1507,6 +1573,14 @@ has_stack (Coro::State coro)
         PROTOTYPE: $
 	CODE:
         RETVAL = boolSV (!!coro->cctx);
+	OUTPUT:
+        RETVAL
+
+int
+is_traced (Coro::State coro)
+        PROTOTYPE: $
+	CODE:
+        RETVAL = (coro->cctx ? coro->cctx->flags : 0) & CC_TRACE_ALL;
 	OUTPUT:
         RETVAL
 

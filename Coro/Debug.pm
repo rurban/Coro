@@ -75,13 +75,15 @@ use Carp ();
 use IO::Socket::UNIX;
 use AnyEvent;
 use Time::HiRes;
+use overload ();
 
 use Coro ();
 use Coro::Handle ();
 use Coro::State ();
 
 our %log;
-our $LOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
+our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
+our $ERRLOGLEVEL = exists $ENV{PERL_CORO_STDERR_LOGLEVEL}  ? $ENV{PERL_CORO_STDERR_LOGLEVEL}  : -1;
 
 sub find_coro {
    my ($pid) = @_;
@@ -93,12 +95,25 @@ sub find_coro {
    }
 }
 
+sub format_msg($$) {
+   my ($time, $micro) = Time::HiRes::gettimeofday;
+   my ($sec, $min, $hour, $day, $mon, $year) = gmtime $time;
+   my $date = sprintf "%04d-%02d-%02dZ%02d:%02d:%02d.%04d",
+                      $year + 1900, $mon + 1, $day, $hour, $min, $sec, $micro / 100;
+   sprintf "%s (%d) %s", $date, $_[0], $_[1]
+}
+
 =item log $level, $msg
 
 Log a debug message of the given severity level (0 is highest, higher is
 less important) to all interested parties.
 
-=item loglevel $level
+=item stderr_loglevel $level
+
+Set the loglevel for logging to stderr (defaults to the value of the
+environment variable PERL_CORO_STDERR_LOGLEVEL, or -1 if missing).
+
+=item session_loglevel $level
 
 Set the default loglevel for new coro debug sessions (defaults to the
 value of the environment variable PERL_CORO_DEFAULT_LOGLEVEL, or -1 if
@@ -110,10 +125,15 @@ sub log($$) {
    my ($level, $msg) = @_;
    $msg =~ s/\s*$/\n/;
    $_->($level, $msg) for values %log;
+   printf STDERR format_msg $level, $msg if $level <= $ERRLOGLEVEL;
 }
 
-sub loglevel($) {
-   $LOGLEVEL = shift;
+sub session_loglevel($) {
+   $SESLOGLEVEL = shift;
+}
+
+sub stderr_loglevel($) {
+   $ERRLOGLEVEL = shift;
 }
 
 =item trace $coro, $loglevel
@@ -141,10 +161,25 @@ sub trace {
    $loglevel = 5 unless defined $loglevel;
 
    (Coro::async_pool {
-      if (eval { $coro->trace (1); 1 }) {
+      if (eval { $coro->trace (Coro::State::CC_TRACE | Coro::State::CC_TRACE_ALL); 1 }) {
          Coro::Debug::log $loglevel, sprintf "[%d] enabling tracing", $Coro::current + 0;
-         $coro->{_trace_cb} = sub {
-            Coro::Debug::log $loglevel, sprintf "[%d] %s:%s [%s]\n", $Coro::current+0, (caller 3)[1,2,3];
+         $coro->{_trace_line_cb} = sub {
+#            Coro::Debug::log $loglevel, sprintf "[%d] %s:%d\n", $Coro::current+0, @_;
+         };
+         $coro->{_trace_sub_cb} = sub {
+            Coro::Debug::log $loglevel, sprintf "[%d] %s %s %s\n",
+               $Coro::current+0,
+               $_[0] ? "enter" : "leave",
+               $_[1],
+               $_[2] ? ($_[0] ? "with (" : "returning (") . (
+                  join ",",
+                     map {
+                        my $x = ref $_ ? overload::StrVal $_ : $_;
+                        (substr $x, 40) = "..." if 40 + 3 < length $x;
+                        $x =~ s/([^\x20-\x5b\x5d-\x7e])/sprintf "\\x{%02x}", ord $1/ge;
+                        $x
+                     } @{$_[2]}
+               ) . ")" : "";
          };
       } else {
          Coro::Debug::log $loglevel, sprintf "[%d] unable to enable tracing: %s", $Coro::current + 0, $@;
@@ -158,7 +193,8 @@ sub untrace {
    my ($coro) = @_;
 
    $coro->trace (0);
-   delete $coro->{_trace_cb};
+   delete $coro->{_tracr_sub_cb};
+   delete $coro->{_trace_line_cb};
 }
 
 =item command $string
@@ -190,7 +226,7 @@ sub command($) {
          printf "%20s %s%s %4d %-24.24s %s\n",
                 $coro+0,
                 $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
-                $coro->has_stack ? "S" : "-",
+                $coro->is_traced ? "T" : $coro->has_stack ? "S" : "-",
                 $coro->rss / 1000,
                 $coro->debug_desc,
                 (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
@@ -269,14 +305,10 @@ sub session($) {
    $fh = Coro::Handle::unblock $fh;
    select $fh;
 
-   my $loglevel = $LOGLEVEL;
+   my $loglevel = $SESLOGLEVEL;
    local $log{$Coro::current} = sub {
       return unless $_[0] <= $loglevel;
-      my ($time, $micro) = Time::HiRes::gettimeofday;
-      my ($sec, $min, $hour, $day, $mon, $year) = gmtime $time;
-      my $date = sprintf "%04d-%02d-%02dZ%02d:%02d:%02d.%04d",
-                         $year + 1900, $mon + 1, $day, $hour, $min, $sec, $micro / 100;
-      print $fh sprintf "\015%s (%d) %s> ", $date, $_[0], $_[1];
+      print $fh "\015", (format_msg $_[0], $_[1]), "> ";
    };
 
    print "coro debug session. use help for more info\n\n";
