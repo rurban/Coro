@@ -301,6 +301,29 @@ static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
           : mg_find ((SV *)cv, PERL_MAGIC_coro)		\
        : 0
 
+static struct coro *
+SvSTATE_ (pTHX_ SV *coro)
+{
+  HV *stash;
+  MAGIC *mg;
+
+  if (SvROK (coro))
+    coro = SvRV (coro);
+
+  stash = SvSTASH (coro);
+  if (stash != coro_stash && stash != coro_state_stash)
+    {
+      /* very slow, but rare, check */
+      if (!sv_derived_from (sv_2mortal (newRV_inc (coro)), "Coro::State"))
+        croak ("Coro::State object required");
+    }
+
+  mg = CORO_MAGIC (coro);
+  return (struct coro *)mg->mg_ptr;
+}
+
+#define SvSTATE(sv) SvSTATE_ (aTHX_ (sv))
+
 /* the next two functions merely cache the padlists */
 static void
 get_padlist (pTHX_ CV *cv)
@@ -595,6 +618,7 @@ setup_coro (pTHX_ struct coro *coro)
    */
   coro_init_stacks (aTHX);
 
+  PL_runops     = RUNOPS_DEFAULT;
   PL_curcop     = &PL_compiling;
   PL_in_eval    = EVAL_NULL;
   PL_comppad    = 0;
@@ -636,20 +660,23 @@ free_coro_mortal (pTHX)
 }
 
 static int
-runops_coro (pTHX)
+runops_trace (pTHX)
 {
   COP *oldcop = 0;
   int oldcxix = -2;
+  struct coro *coro = SvSTATE (coro_current); /* trace cctx is tied to specific coro */
+  coro_cctx *cctx = coro->cctx;
 
   while ((PL_op = CALL_FPTR (PL_op->op_ppaddr) (aTHX)))
     {
       PERL_ASYNC_CHECK ();
 
-      if (PL_op->op_type == OP_LEAVESUB)
+      if (PL_op->op_type == OP_LEAVESUB && cctx->flags & CC_TRACE_SUB)
         {
           PERL_CONTEXT *cx = &cxstack[cxstack_ix];
           SV **bot, **top;
           AV *av = newAV (); /* return values */
+          SV **cb;
           runops_proc_t old_runops = PL_runops;
           dSP;
           ENTER;
@@ -675,7 +702,8 @@ runops_coro (pTHX)
           PUSHs (fullname);
           PUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
           PUTBACK;
-          call_pv ("Coro::_do_trace_sub", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+          cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
+          if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
           SPAGAIN;
 
           FREETMPS;
@@ -689,6 +717,7 @@ runops_coro (pTHX)
 
           if (PL_curcop != &PL_compiling)
             {
+              SV **cb;
               runops_proc_t old_runops = PL_runops;
               dSP;
               ENTER;
@@ -696,7 +725,7 @@ runops_coro (pTHX)
               EXTEND (SP, 3);
               PL_runops = RUNOPS_DEFAULT;
 
-              if (oldcxix != cxstack_ix)
+              if (oldcxix != cxstack_ix && cctx->flags & CC_TRACE_SUB)
                 {
                   PERL_CONTEXT *cx = &cxstack[cxstack_ix];
 
@@ -712,21 +741,24 @@ runops_coro (pTHX)
                       PUSHs (fullname);
                       PUSHs (cx->blk_sub.hasargs ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
                       PUTBACK;
-                      call_pv ("Coro::_do_trace_sub", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+                      cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
+                      if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
                       SPAGAIN;
                     }
 
                   oldcxix = cxstack_ix;
                 }
 
-              if (0) {
-              PUSHMARK (SP);
-              PUSHs (sv_2mortal (newSVpv (OutCopFILE (oldcop), 0)));
-              PUSHs (sv_2mortal (newSViv (CopLINE (oldcop))));
-              PUTBACK;
-              call_pv ("Coro::_do_trace_line", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
-              SPAGAIN;
-              }
+              if (cctx->flags & CC_TRACE_LINE)
+                {
+                  PUSHMARK (SP);
+                  PUSHs (sv_2mortal (newSVpv (OutCopFILE (oldcop), 0)));
+                  PUSHs (sv_2mortal (newSViv (CopLINE (oldcop))));
+                  PUTBACK;
+                  cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_line_cb", sizeof ("_trace_line_cb") - 1, 0);
+                  if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+                  SPAGAIN;
+                }
 
               FREETMPS;
               LEAVE;
@@ -751,7 +783,7 @@ prepare_cctx (pTHX_ coro_cctx *cctx)
   PL_top_env = &PL_start_env;
 
   if (cctx->flags & CC_TRACE)
-    PL_runops = runops_coro;
+    PL_runops = runops_trace;
 
   Zero (&myop, 1, LOGOP);
   myop.op_next = PL_op;
@@ -1087,29 +1119,6 @@ static MGVTBL coro_state_vtbl = {
 # define MGf_DUP 0
 #endif
 };
-
-static struct coro *
-SvSTATE_ (pTHX_ SV *coro)
-{
-  HV *stash;
-  MAGIC *mg;
-
-  if (SvROK (coro))
-    coro = SvRV (coro);
-
-  stash = SvSTASH (coro);
-  if (stash != coro_stash && stash != coro_state_stash)
-    {
-      /* very slow, but rare, check */
-      if (!sv_derived_from (sv_2mortal (newRV_inc (coro)), "Coro::State"))
-        croak ("Coro::State object required");
-    }
-
-  mg = CORO_MAGIC (coro);
-  return (struct coro *)mg->mg_ptr;
-}
-
-#define SvSTATE(sv) SvSTATE_ (aTHX_ (sv))
 
 static void
 prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev_sv, SV *next_sv)

@@ -188,6 +188,11 @@ to another state.
 Like C<call>, but eval's the string. Dangerous. Do not
 use. Untested. Unused. Biohazard.
 
+=item $state->trace ($flags)
+
+Internal function to control tracing. I just mention this so you can stay
+from abusing it.
+
 =item $prev->transfer ($next)
 
 Save the state of the current subroutine in C<$prev> and switch to the

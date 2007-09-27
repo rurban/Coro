@@ -157,14 +157,6 @@ sub _cancel {
       for @{(delete $self->{destroy_cb}) || []};
 }
 
-sub _do_trace_sub {
-   &{$current->{_trace_sub_cb}}
-}
-
-sub _do_trace_line {
-   &{$current->{_trace_line_cb}}
-}
-
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 my @destroy;
