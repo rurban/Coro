@@ -161,10 +161,10 @@ sub trace {
    $loglevel = 5 unless defined $loglevel;
 
    (Coro::async_pool {
-      if (eval { $coro->trace (Coro::State::CC_TRACE | Coro::State::CC_TRACE_ALL); 1 }) {
-         Coro::Debug::log $loglevel, sprintf "[%d] enabling tracing", $Coro::current + 0;
+      if (eval { $coro->trace (Coro::State::CC_TRACE | Coro::State::CC_TRACE_SUB); 1 }) {
+         Coro::Debug::log $loglevel, sprintf "[%d] tracing enabled", $coro + 0;
          $coro->{_trace_line_cb} = sub {
-#            Coro::Debug::log $loglevel, sprintf "[%d] %s:%d\n", $Coro::current+0, @_;
+            Coro::Debug::log $loglevel, sprintf "[%d] at %s:%d\n", $Coro::current+0, @_;
          };
          $coro->{_trace_sub_cb} = sub {
             Coro::Debug::log $loglevel, sprintf "[%d] %s %s %s\n",
