@@ -110,6 +110,7 @@ our $ERRLOGLEVEL = exists $ENV{PERL_CORO_STDERR_LOGLEVEL}  ? $ENV{PERL_CORO_STDE
 
 sub find_coro {
    my ($pid) = @_;
+
    if (my ($coro) = grep $_ == $1, Coro::State::list) {
       $coro
    } else {
