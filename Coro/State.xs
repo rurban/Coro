@@ -578,7 +578,7 @@ coro_destroy_stacks (pTHX)
 }
 
 static size_t
-coro_rss (struct coro *coro)
+coro_rss (pTHX_ struct coro *coro)
 {
   size_t rss = sizeof (coro);
 
@@ -1613,7 +1613,7 @@ IV
 rss (Coro::State coro)
         PROTOTYPE: $
         CODE:
-        RETVAL = coro_rss (coro);
+        RETVAL = coro_rss (aTHX_ coro);
 	OUTPUT:
         RETVAL
 
@@ -1746,7 +1746,7 @@ _pool_2 (SV *cb)
 
         sv_setsv (cb, &PL_sv_undef);
 
-  	if (coro_rss (coro) > SvIV (sv_pool_rss)
+  	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
           croak ("\3terminate\2\n");
 
