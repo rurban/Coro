@@ -677,98 +677,109 @@ runops_trace (pTHX)
     {
       PERL_ASYNC_CHECK ();
 
-      if (PL_op->op_type == OP_LEAVESUB && cctx->flags & CC_TRACE_SUB)
+      if (cctx->flags & CC_TRACE_ALL)
         {
-          PERL_CONTEXT *cx = &cxstack[cxstack_ix];
-          SV **bot, **top;
-          AV *av = newAV (); /* return values */
-          SV **cb;
-          runops_proc_t old_runops = PL_runops;
-          dSP;
-          ENTER;
-          SAVETMPS;
-          EXTEND (SP, 3);
-          PL_runops = RUNOPS_DEFAULT;
-
-          GV *gv = CvGV (cx->blk_sub.cv);
-          SV *fullname = sv_2mortal (newSV (0));
-          if (isGV (gv))
-            gv_efullname3 (fullname, gv, 0);
-
-          bot = PL_stack_base + cx->blk_oldsp + 1;
-          top = cx->blk_gimme == G_ARRAY  ? SP + 1
-              : cx->blk_gimme == G_SCALAR ? bot + 1
-              :                             bot;
-
-          while (bot < top)
-            av_push (av, SvREFCNT_inc (*bot++));
-
-          PUSHMARK (SP);
-          PUSHs (&PL_sv_no);
-          PUSHs (fullname);
-          PUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
-          PUTBACK;
-          cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
-          if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
-          SPAGAIN;
-
-          FREETMPS;
-          LEAVE;
-          PL_runops = old_runops;
-        }
-
-      if (oldcop != PL_curcop)
-        {
-          oldcop = PL_curcop;
-
-          if (PL_curcop != &PL_compiling)
+          if (PL_op->op_type == OP_LEAVESUB && cctx->flags & CC_TRACE_SUB)
             {
+              PERL_CONTEXT *cx = &cxstack[cxstack_ix];
+              SV **bot, **top;
+              AV *av = newAV (); /* return values */
               SV **cb;
-              runops_proc_t old_runops = PL_runops;
               dSP;
+
+              GV *gv = CvGV (cx->blk_sub.cv);
+              SV *fullname = sv_2mortal (newSV (0));
+              if (isGV (gv))
+                gv_efullname3 (fullname, gv, 0);
+
+              bot = PL_stack_base + cx->blk_oldsp + 1;
+              top = cx->blk_gimme == G_ARRAY  ? SP + 1
+                  : cx->blk_gimme == G_SCALAR ? bot + 1
+                  :                             bot;
+
+              while (bot < top)
+                av_push (av, SvREFCNT_inc (*bot++));
+
+              PL_runops = RUNOPS_DEFAULT;
               ENTER;
               SAVETMPS;
               EXTEND (SP, 3);
-              PL_runops = RUNOPS_DEFAULT;
-
-              if (oldcxix != cxstack_ix && cctx->flags & CC_TRACE_SUB)
-                {
-                  PERL_CONTEXT *cx = &cxstack[cxstack_ix];
-
-                  if (CxTYPE (cx) == CXt_SUB && oldcxix < cxstack_ix)
-                    {
-                      GV *gv = CvGV (cx->blk_sub.cv);
-                      SV *fullname = sv_2mortal (newSV (0));
-                      if (isGV (gv))
-                        gv_efullname3 (fullname, gv, 0);
-
-                      PUSHMARK (SP);
-                      PUSHs (&PL_sv_yes);
-                      PUSHs (fullname);
-                      PUSHs (cx->blk_sub.hasargs ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
-                      PUTBACK;
-                      cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
-                      if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
-                      SPAGAIN;
-                    }
-
-                  oldcxix = cxstack_ix;
-                }
-
-              if (cctx->flags & CC_TRACE_LINE)
-                {
-                  PUSHMARK (SP);
-                  PUSHs (sv_2mortal (newSVpv (OutCopFILE (oldcop), 0)));
-                  PUSHs (sv_2mortal (newSViv (CopLINE (oldcop))));
-                  PUTBACK;
-                  cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_line_cb", sizeof ("_trace_line_cb") - 1, 0);
-                  if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
-                  SPAGAIN;
-                }
-
+              PUSHMARK (SP);
+              PUSHs (&PL_sv_no);
+              PUSHs (fullname);
+              PUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
+              PUTBACK;
+              cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
+              if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+              SPAGAIN;
               FREETMPS;
               LEAVE;
-              PL_runops = old_runops;
+              PL_runops = runops_trace;
+            }
+
+          if (oldcop != PL_curcop)
+            {
+              oldcop = PL_curcop;
+
+              if (PL_curcop != &PL_compiling)
+                {
+                  SV **cb;
+
+                  if (oldcxix != cxstack_ix && cctx->flags & CC_TRACE_SUB)
+                    {
+                      PERL_CONTEXT *cx = &cxstack[cxstack_ix];
+
+                      if (CxTYPE (cx) == CXt_SUB && oldcxix < cxstack_ix)
+                        {
+                          runops_proc_t old_runops = PL_runops;
+                          dSP;
+                          GV *gv = CvGV (cx->blk_sub.cv);
+                          SV *fullname = sv_2mortal (newSV (0));
+
+                          if (isGV (gv))
+                            gv_efullname3 (fullname, gv, 0);
+
+                          PL_runops = RUNOPS_DEFAULT;
+                          ENTER;
+                          SAVETMPS;
+                          EXTEND (SP, 3);
+                          PUSHMARK (SP);
+                          PUSHs (&PL_sv_yes);
+                          PUSHs (fullname);
+                          PUSHs (cx->blk_sub.hasargs ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
+                          PUTBACK;
+                          cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
+                          if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+                          SPAGAIN;
+                          FREETMPS;
+                          LEAVE;
+                          PL_runops = runops_trace;
+                        }
+
+                      oldcxix = cxstack_ix;
+                    }
+
+                  if (cctx->flags & CC_TRACE_LINE)
+                    {
+                      dSP;
+
+                      PL_runops = RUNOPS_DEFAULT;
+                      ENTER;
+                      SAVETMPS;
+                      EXTEND (SP, 3);
+                      PL_runops = RUNOPS_DEFAULT;
+                      PUSHMARK (SP);
+                      PUSHs (sv_2mortal (newSVpv (OutCopFILE (oldcop), 0)));
+                      PUSHs (sv_2mortal (newSViv (CopLINE (oldcop))));
+                      PUTBACK;
+                      cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_line_cb", sizeof ("_trace_line_cb") - 1, 0);
+                      if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+                      SPAGAIN;
+                      FREETMPS;
+                      LEAVE;
+                      PL_runops = runops_trace;
+                    }
+                }
             }
         }
     }
@@ -1345,7 +1356,33 @@ api_cede_notself (void)
     return 0;
 }
 
-MODULE = Coro::State                PACKAGE = Coro::State
+static void
+api_trace (SV *coro_sv, int flags)
+{
+  dTHX;
+  struct coro *coro = SvSTATE (coro_sv);
+
+  if (flags & CC_TRACE)
+    {
+      if (!coro->cctx)
+        coro->cctx = cctx_new ();
+      else if (!(coro->cctx->flags & CC_TRACE))
+        croak ("cannot enable tracing on coroutine with custom stack");
+
+      coro->cctx->flags |= CC_NOREUSE | (flags & (CC_TRACE | CC_TRACE_ALL));
+    }
+  else if (coro->cctx && coro->cctx->flags & CC_TRACE)
+    {
+      coro->cctx->flags &= ~(CC_TRACE | CC_TRACE_ALL);
+
+      if (coro->flags & CF_RUNNING)
+        PL_runops = RUNOPS_DEFAULT;
+      else
+        coro->runops = RUNOPS_DEFAULT;
+    }
+}
+
+MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
 
@@ -1578,28 +1615,7 @@ is_ready (Coro::State coro)
         RETVAL
 
 void
-trace (Coro::State coro, int flags = CC_TRACE | CC_TRACE_SUB)
-	CODE:
-        if (flags & CC_TRACE)
-          {
-            if (!coro->cctx)
-              coro->cctx = cctx_new ();
-            else if (!(coro->cctx->flags & CC_TRACE))
-              croak ("cannot enable tracing on coroutine with custom stack");
-
-            coro->cctx->flags |= flags & (CC_TRACE | CC_TRACE_ALL);
-          }
-        else
-          if (coro->cctx && coro->cctx->flags & CC_TRACE)
-            {
-              coro->cctx->flags &= ~(CC_TRACE | CC_TRACE_ALL);
-              coro->cctx->flags |= CC_NOREUSE;
-
-              if (coro->flags & CF_RUNNING)
-                PL_runops = RUNOPS_DEFAULT;
-              else
-                coro->runops = RUNOPS_DEFAULT;
-            }
+api_trace (SV *coro, int flags = CC_TRACE | CC_TRACE_SUB)
 
 SV *
 has_stack (Coro::State coro)
@@ -1767,8 +1783,13 @@ _pool_2 (SV *cb)
         av_clear (GvAV (PL_defgv));
         hv_store ((HV *)SvRV (coro_current), "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
+
         coro->save = CORO_SAVE_DEF;
         coro->prio = 0;
+
+        if (coro->cctx && (coro->cctx->flags & CC_TRACE))
+          api_trace (coro_current, 0);
+
         av_push (av_async_pool, newSVsv (coro_current));
 }
 

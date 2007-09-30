@@ -269,7 +269,7 @@ sub command($) {
                last unless $bt[0] =~ /^Coro/;
             }
          });
-         printf "%20s %s%s %4d %4d %-24.24s %s\n",
+         printf "%20s %s%s %4s %4s %-24.24s %s\n",
                 $coro+0,
                 $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
                 $coro->is_traced ? "T" : $coro->has_stack ? "S" : "-",
