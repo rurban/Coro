@@ -1465,6 +1465,9 @@ save_also (SV *coro_sv, int save_also)
 	OUTPUT:
         RETVAL
 
+# these not obviously related functions are all rolled into the same xs
+# function to increase chances that they all will call transfer with the same
+# stack offset
 void
 _set_stacklevel (...)
 	ALIAS:
@@ -1783,6 +1786,7 @@ _pool_2 (SV *cb)
         av_clear (GvAV (PL_defgv));
         hv_store ((HV *)SvRV (coro_current), "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
+
         coro->save = CORO_SAVE_DEF;
         coro->prio = 0;
 
