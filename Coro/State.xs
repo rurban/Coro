@@ -1357,9 +1357,10 @@ api_cede_notself (void)
 }
 
 static void
-api_trace (struct coro *coro, int flags)
+api_trace (SV *coro_sv, int flags)
 {
   dTHX;
+  struct coro *coro = SvSTATE (coro_sv);
 
   if (flags & CC_TRACE)
     {
@@ -1614,7 +1615,7 @@ is_ready (Coro::State coro)
         RETVAL
 
 void
-api_trace (Coro::State coro, int flags = CC_TRACE | CC_TRACE_SUB)
+api_trace (SV *coro, int flags = CC_TRACE | CC_TRACE_SUB)
 
 SV *
 has_stack (Coro::State coro)
@@ -1786,7 +1787,7 @@ _pool_2 (SV *cb)
         coro->prio = 0;
 
         if (coro->cctx && (coro->cctx->flags & CC_TRACE))
-          api_trace (coro, 0);
+          api_trace (coro_current, 0);
 
         av_push (av_async_pool, newSVsv (coro_current));
 }
