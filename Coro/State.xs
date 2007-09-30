@@ -201,6 +201,9 @@ struct coro {
 # include "state.h"
 #undef VAR
 
+  /* statistics */
+  int usecount; /* number of switches to this coro */
+
   /* coro process data */
   int prio;
 
@@ -309,6 +312,9 @@ SvSTATE_ (pTHX_ SV *coro)
 
   if (SvROK (coro))
     coro = SvRV (coro);
+
+  if (SvTYPE (coro) != SVt_PVHV)
+    croak ("Coro::State object required");
 
   stash = SvSTASH (coro);
   if (stash != coro_stash && stash != coro_state_stash)
@@ -1016,6 +1022,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           cctx_put (prev__cctx);
         }
 
+      ++next->usecount;
+
       if (!next->cctx)
         next->cctx = cctx_get (aTHX);
 
@@ -1555,7 +1563,7 @@ call (Coro::State coro, SV *coderef)
               }
           }
 }
- 
+
 SV *
 is_ready (Coro::State coro)
         PROTOTYPE: $
@@ -1612,8 +1620,14 @@ is_traced (Coro::State coro)
 IV
 rss (Coro::State coro)
         PROTOTYPE: $
+        ALIAS:
+        usecount = 1
         CODE:
-        RETVAL = coro_rss (aTHX_ coro);
+        switch (ix)
+	  {
+            case 0: RETVAL = coro_rss (aTHX_ coro); break;
+            case 1: RETVAL = coro->usecount;        break;
+          }
 	OUTPUT:
         RETVAL
 

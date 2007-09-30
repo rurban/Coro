@@ -127,6 +127,22 @@ sub format_msg($$) {
    sprintf "%s (%d) %s", $date, $_[0], $_[1]
 }
 
+sub format_num4($) {
+   my ($v) = @_;
+
+   return sprintf "%4d"   , $v                     if $v <  1e4;
+   # 1e5 redundant
+   return sprintf "%3.0fk", $v /             1_000 if $v <  1e6;
+   return sprintf "%1.1fM", $v /         1_000_000 if $v <  1e7 * .995;
+   return sprintf "%3.0fM", $v /         1_000_000 if $v <  1e9;
+   return sprintf "%1.1fG", $v /     1_000_000_000 if $v < 1e10 * .995;
+   return sprintf "%3.0fG", $v /     1_000_000_000 if $v < 1e12;
+   return sprintf "%1.1fT", $v / 1_000_000_000_000 if $v < 1e13 * .995;
+   return sprintf "%3.0fT", $v / 1_000_000_000_000 if $v < 1e15;
+
+   "++++"
+}
+
 =item log $level, $msg
 
 Log a debug message of the given severity level (0 is highest, higher is
@@ -216,9 +232,15 @@ sub trace {
 sub untrace {
    my ($coro) = @_;
 
-   Coro::State::trace $coro, 0;
-   delete $coro->{_tracr_sub_cb};
-   delete $coro->{_trace_line_cb};
+   $coro ||= $Coro::current;
+
+   (Coro::async_pool {
+      Coro::State::trace $coro, 0;
+      delete $coro->{_tracr_sub_cb};
+      delete $coro->{_trace_line_cb};
+   })->prio (Coro::PRIO_MAX);
+
+   Coro::cede;
 }
 
 =item command $string
@@ -234,7 +256,7 @@ sub command($) {
    $cmd =~ s/\s+$//;
 
    if ($cmd =~ /^ps$/) {
-      printf "%20s %s%s %4s %-24.24s %s\n", "pid", "S", "S", "RSS", "description", "where";
+      printf "%20s %s%s %4s %4s %-24.24s %s\n", "pid", "S", "S", "RSS", "USES", "description", "where";
       for my $coro (Coro::State::list) {
          Coro::cede;
          my @bt;
@@ -247,11 +269,12 @@ sub command($) {
                last unless $bt[0] =~ /^Coro/;
             }
          });
-         printf "%20s %s%s %4d %-24.24s %s\n",
+         printf "%20s %s%s %4d %4d %-24.24s %s\n",
                 $coro+0,
                 $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
                 $coro->is_traced ? "T" : $coro->has_stack ? "S" : "-",
-                $coro->rss / 1000,
+                format_num4 $coro->rss,
+                format_num4 $coro->usecount,
                 $coro->debug_desc,
                 (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
