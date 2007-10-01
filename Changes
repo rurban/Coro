@@ -4,7 +4,7 @@ TODO: destroy gets only called on cancel: fix(?)
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
-      but very lacking in others).
+      but very lacking in others (higher level ipc)).
 
 3.8
         - incompatibly changed Coro::Storable::freeze.
