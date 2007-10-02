@@ -118,7 +118,7 @@ C<Coro::current> function instead.
 $main->{desc} = "[main::]";
 
 # maybe some other module used Coro::Specific before...
-$main->{specific} = $current->{specific}
+$main->{_specific} = $current->{_specific}
    if $current;
 
 _set_current $main;
@@ -153,8 +153,8 @@ sub _cancel {
       or return;
 
    # call all destruction callbacks
-   $_->(@{$self->{status}})
-      for @{(delete $self->{destroy_cb}) || []};
+   $_->(@{$self->{_status}})
+      for @{(delete $self->{_on_destroy}) || []};
 }
 
 # this coroutine is necessary because a coroutine
@@ -380,7 +380,7 @@ current coroutine.
 
 sub cancel {
    my $self = shift;
-   $self->{status} = [@_];
+   $self->{_status} = [@_];
 
    if ($current == $self) {
       push @destroy, $self;
@@ -402,10 +402,10 @@ from multiple coroutine.
 sub join {
    my $self = shift;
 
-   unless ($self->{status}) {
+   unless ($self->{_status}) {
       my $current = $current;
 
-      push @{$self->{destroy_cb}}, sub {
+      push @{$self->{_on_destroy}}, sub {
          $current->ready;
          undef $current;
       };
@@ -413,7 +413,7 @@ sub join {
       &schedule while $current;
    }
 
-   wantarray ? @{$self->{status}} : $self->{status}[0];
+   wantarray ? @{$self->{_status}} : $self->{_status}[0];
 }
 
 =item $coroutine->on_destroy (\&cb)
@@ -427,7 +427,7 @@ if any.
 sub on_destroy {
    my ($self, $cb) = @_;
 
-   push @{ $self->{destroy_cb} }, $cb;
+   push @{ $self->{_on_destroy} }, $cb;
 }
 
 =item $oldprio = $coroutine->prio ($newprio)
@@ -461,6 +461,9 @@ higher values mean lower priority, just as in unix).
 
 Sets (or gets in case the argument is missing) the description for this
 coroutine. This is just a free-form string you can associate with a coroutine.
+
+This method simply sets the C<< $coroutine->{desc} >> member to the given string. You
+can modify this member directly if you wish.
 
 =cut
 
