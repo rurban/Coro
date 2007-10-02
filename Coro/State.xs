@@ -1083,13 +1083,11 @@ coro_state_destroy (pTHX_ struct coro *coro)
     {
       struct coro temp;
 
-      assert (!(coro->flags & CF_RUNNING));
+      if (coro->flags & CF_RUNNING)
+        croak ("FATAL: tried to destroy currently running coroutine");
 
       Zero (&temp, 1, struct coro);
       temp.save = CORO_SAVE_ALL;
-
-      if (coro->flags & CF_RUNNING)
-        croak ("FATAL: tried to destroy currently running coroutine");
 
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
