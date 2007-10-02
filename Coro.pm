@@ -394,8 +394,8 @@ sub cancel {
 =item $coroutine->join
 
 Wait until the coroutine terminates and return any values given to the
-C<terminate> or C<cancel> functions. C<join> can be called multiple times
-from multiple coroutine.
+C<terminate> or C<cancel> functions. C<join> can be called concurrently
+from multiple coroutines.
 
 =cut
 
