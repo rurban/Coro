@@ -310,10 +310,23 @@ Returns true if at least one coroutine switch has happened.
 
 Terminates the current coroutine with the given status values (see L<cancel>).
 
+=item killall
+
+Kills/terminates/cancels all coroutines except the currently running
+one. This is useful after a fork, either in the child or the parent, as
+usually only one of them should inherit the running coroutines.
+
 =cut
 
 sub terminate {
    $current->cancel (@_);
+}
+
+sub killall {
+   for (Coro::State::list) {
+      $_->cancel
+         if $_ != $current && UNIVERSAL::isa $_, "Coro";
+   }
 }
 
 =back

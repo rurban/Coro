@@ -188,9 +188,10 @@ sub fork_eval(&@) {
    } elsif (defined $pid) {
       delete $SIG{__WARN__};
       delete $SIG{__DIE__};
+      Coro::killall;
       # just in case, this hack effectively disables event processing
-      # in the child. cleaner and slower would be canceling all watchers,
-      # but this works for the time being.
+      # in the child. cleaner and slower would be to canceling all
+      # event watchers, but we are event-model agnostic.
       undef $Coro::idle;
       $Coro::current->prio (Coro::PRIO_MAX);
 

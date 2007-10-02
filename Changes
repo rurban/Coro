@@ -13,6 +13,7 @@ TODO: maybe implement a default message channel, very much like Erlang
 	- added Coro::Semaphore::adjust.
         - added Coro::Util::fork_eval.
         - added Coro::Storable::{nfreeze,blocking_{freeze,nfreeze}}.
+        - added Coro::killall.
         - reduce initial stack sizes to allow for "micro-coroutines".
         - better async_pool resource management, moved parts of async_pool
           handling to XS (major speed improvement).
