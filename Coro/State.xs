@@ -194,7 +194,7 @@ struct coro {
   AV *defav; /* @_ */
   SV *defsv; /* $_ */
   SV *errsv; /* $@ */
-  IO *deffh; /* default filehandle */
+  GV *deffh; /* default filehandle */
   SV *irssv; /* $/ */
   SV *irssv_sv; /* real $/ cache */
   
@@ -203,10 +203,14 @@ struct coro {
 #undef VAR
 
   /* statistics */
-  int usecount; /* number of switches to this coro */
+  int usecount; /* number of transfers to this coro */
 
   /* coro process data */
   int prio;
+  //SV *throw;
+
+  /* async_pool */
+  GV *defoutgv;
 
   /* linked list */
   struct coro *next, *prev;
@@ -660,6 +664,9 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_defoutgv);
   SvREFCNT_dec (PL_rs);
   SvREFCNT_dec (GvSV (irsgv));
+
+  SvREFCNT_dec (coro->defoutgv);
+  //SvREFCNT_dec (coro->throw);
 
   coro_destroy_stacks (aTHX);
 }
@@ -1708,11 +1715,14 @@ void
 _pool_1 (SV *cb)
 	CODE:
 {
-	int i, len;
+	struct coro *coro = SvSTATE (coro_current);
         HV *hv = (HV *)SvRV (coro_current);
         AV *defav = GvAV (PL_defgv);
         SV *invoke = hv_delete (hv, "_invoke", sizeof ("_invoke") - 1, 0);
         AV *invoke_av;
+	int i, len;
+
+        coro->defoutgv = SvREFCNT_inc (PL_defoutgv);
 
         if (!invoke)
           croak ("\3terminate\2\n");
@@ -1732,6 +1742,8 @@ _pool_1 (SV *cb)
               av_store (defav, i, SvREFCNT_inc (AvARRAY (invoke_av)[i + 1]));
           }
 
+
+
         SvREFCNT_dec (invoke);
 }
 
@@ -1742,6 +1754,8 @@ _pool_2 (SV *cb)
   	struct coro *coro = SvSTATE (coro_current);
 
         sv_setsv (cb, &PL_sv_undef);
+
+        SvREFCNT_dec (PL_defoutgv); PL_defoutgv = coro->defoutgv;
 
   	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))

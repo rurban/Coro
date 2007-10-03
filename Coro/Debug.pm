@@ -352,7 +352,8 @@ sub session($) {
    my ($fh) = @_;
 
    $fh = Coro::Handle::unblock $fh;
-   select $fh;
+   my $old_fh = select $fh;
+   my $guard = Coro::guard { select $old_fh };
 
    my $loglevel = $SESLOGLEVEL;
    local $log{$Coro::current} = sub {
@@ -412,12 +413,9 @@ sub new_unix_server {
    }, $class;
 
    $self->{cw} = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
-      Coro::async {
-         warn select;#d#
+      Coro::async_pool {
          $Coro::current->desc ("[Coro::Debug session]");
-         my $fh = $fh->accept;
-         session $fh;
-         close $fh;
+         session +$fh->accept;
       };
    });
 

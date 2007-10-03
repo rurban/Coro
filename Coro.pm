@@ -221,8 +221,12 @@ C<async> does. As the coroutine is being reused, stuff like C<on_destroy>
 will not work in the expected way, unless you call terminate or cancel,
 which somehow defeats the purpose of pooling.
 
-The priority will be reset to C<0> after each job, otherwise the coroutine
-will be re-used "as-is".
+The priority will be reset to C<0> after each job, tracing will be
+disabled, the description will be reset and the default output filehandle
+gets restored, so you can change alkl these. Otherwise the coroutine will
+be re-used "as-is": most notably if you change other per-coroutine global
+stuff such as C<$/> you need to revert that change, which is most simply
+done by using local as in C< local $/ >.
 
 The pool size is limited to 8 idle coroutines (this can be adjusted by
 changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
