@@ -557,7 +557,7 @@ coro_destroy_stacks (pTHX)
 static size_t
 coro_rss (pTHX_ struct coro *coro)
 {
-  size_t rss = sizeof (coro);
+  size_t rss = sizeof (*coro);
 
   if (coro->mainstack)
     {
