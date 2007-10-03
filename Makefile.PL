@@ -49,14 +49,15 @@ WriteMakefile(
     DIR          => ['Coro', ($EVENT ? 'Event' : ())],
     PREREQ_PM    => {
        Scalar::Util	=> 0.00,
+       AnyEvent         => 2.51,
+       Storable		=> 2.15,
 
        # for Coro::Event
        Event		=> 1.06,
        Time::HiRes      => 0,
 
-       # for Coro::AIO, Coro::Util
+       # for Coro::AIO
        IO::AIO          => 2.3,
-       AnyEvent         => 2.51,
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',

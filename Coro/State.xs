@@ -134,6 +134,8 @@ static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
+static GV *irsgv; /* $/ */
+
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
 static SV *sv_pool_size;
@@ -186,14 +188,13 @@ struct coro {
   /* data associated with this coroutine (initial args) */
   AV *args;
   int refcnt;
-  int save;  /* CORO_SAVE flags */
   int flags; /* CF_ flags */
 
   /* optionally saved, might be zero */
   AV *defav; /* @_ */
   SV *defsv; /* $_ */
   SV *errsv; /* $@ */
-  GV *deffh; /* default filehandle */
+  IO *deffh; /* default filehandle */
   SV *irssv; /* $/ */
   SV *irssv_sv; /* real $/ cache */
   
@@ -377,11 +378,6 @@ put_padlist (pTHX_ CV *cv)
 
 /** load & save, init *******************************************************/
 
-#define SB do {
-#define SE } while (0)
-
-#define REPLACE_SV(sv,val) SB SvREFCNT_dec (sv); (sv) = (val); (val) = 0; SE
-
 static void
 load_perl (pTHX_ Coro__State c)
 {
@@ -389,25 +385,12 @@ load_perl (pTHX_ Coro__State c)
 # include "state.h"
 #undef VAR
 
-  if (c->defav) REPLACE_SV (GvAV (PL_defgv), c->defav);
-  if (c->defsv) REPLACE_SV (DEFSV          , c->defsv);
-  if (c->errsv) REPLACE_SV (ERRSV          , c->errsv);
-  if (c->deffh) REPLACE_SV (PL_defoutgv    , c->deffh);
-
-  if (c->irssv)
-    {
-      if (c->irssv == PL_rs || sv_eq (PL_rs, c->irssv))
-        {
-          SvREFCNT_dec (c->irssv);
-          c->irssv = 0;
-        }
-      else
-        {
-          REPLACE_SV (PL_rs, c->irssv);
-          if (!c->irssv_sv) c->irssv_sv = get_sv ("/", 0);
-          sv_setsv (c->irssv_sv, PL_rs);
-        }
-    }
+  GvSV (PL_defgv)    = c->defsv;
+  GvAV (PL_defgv)    = c->defav;
+  GvSV (PL_errgv)    = c->errsv;
+  GvIOp(PL_defoutgv) = c->deffh;
+  PL_rs              = c->irssv;
+  GvSV (irsgv)       = c->irssv_sv;
 
   {
     dSP;
@@ -475,11 +458,12 @@ save_perl (pTHX_ Coro__State c)
     PUTBACK;
   }
 
-  c->defav = c->save & CORO_SAVE_DEFAV ? (AV *)SvREFCNT_inc (GvAV (PL_defgv)) : 0;
-  c->defsv = c->save & CORO_SAVE_DEFSV ?       SvREFCNT_inc (DEFSV)           : 0;
-  c->errsv = c->save & CORO_SAVE_ERRSV ?       SvREFCNT_inc (ERRSV)           : 0;
-  c->deffh = c->save & CORO_SAVE_DEFFH ? (GV *)SvREFCNT_inc (PL_defoutgv)     : 0;
-  c->irssv = c->save & CORO_SAVE_IRSSV ?       SvREFCNT_inc (PL_rs)           : 0;
+  c->defav    = GvAV (PL_defgv);
+  c->defsv    = DEFSV;
+  c->errsv    = ERRSV;
+  c->deffh    = GvIOp (PL_defoutgv);
+  c->irssv    = PL_rs;
+  c->irssv_sv = GvSV (irsgv);
 
 #define VAR(name,type)c->name = PL_ ## name;
 # include "state.h"
@@ -542,23 +526,6 @@ coro_init_stacks (pTHX)
 static void
 coro_destroy_stacks (pTHX)
 {
-  if (!IN_DESTRUCT)
-    {
-      /* restore all saved variables and stuff */
-      LEAVE_SCOPE (0);
-      assert (PL_tmps_floor == -1);
-
-      /* free all temporaries */
-      FREETMPS;
-      assert (PL_tmps_ix == -1);
-
-      /* unwind all extra stacks */
-      POPSTACK_TO (PL_mainstack);
-
-      /* unwind main stack */
-      dounwind (-1);
-    }
-
   while (PL_curstackinfo->si_next)
     PL_curstackinfo = PL_curstackinfo->si_next;
 
@@ -632,13 +599,24 @@ setup_coro (pTHX_ struct coro *coro)
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
+  
+  GvSV (PL_defgv)    = NEWSV (0, 0);
+  GvAV (PL_defgv)    = coro->args; coro->args = 0;
+  GvSV (PL_errgv)    = NEWSV (0, 0);
+  GvSV (irsgv)       = newSVsv (PL_rs);
+  PL_rs              = newSVpvn ("\n", 1);
+
+  {
+    IO *io = newIO ();
+    GvIOp(PL_defoutgv) = io;
+    IoTYPE (io) = IoTYPE_WRONLY;
+    IoOFP (io) = IoIFP (io) = PerlIO_stdout ();
+    IoFLAGS (io) |= IOf_FLUSH;
+  }
 
   {
     dSP;
     LOGOP myop;
-
-    SvREFCNT_dec (GvAV (PL_defgv));
-    GvAV (PL_defgv) = coro->args; coro->args = 0;
 
     Zero (&myop, 1, LOGOP);
     myop.op_next = Nullop;
@@ -653,6 +631,36 @@ setup_coro (pTHX_ struct coro *coro)
   }
 
   ENTER; /* necessary e.g. for dounwind */
+}
+
+static void
+destroy_coro (pTHX_ struct coro *coro)
+{
+  if (!IN_DESTRUCT)
+    {
+      /* restore all saved variables and stuff */
+      LEAVE_SCOPE (0);
+      assert (PL_tmps_floor == -1);
+
+      /* free all temporaries */
+      FREETMPS;
+      assert (PL_tmps_ix == -1);
+
+      /* unwind all extra stacks */
+      POPSTACK_TO (PL_mainstack);
+
+      /* unwind main stack */
+      dounwind (-1);
+    }
+
+  SvREFCNT_dec (GvSV (PL_defgv));
+  SvREFCNT_dec (GvAV (PL_defgv));
+  SvREFCNT_dec (GvSV (PL_errgv));
+  SvREFCNT_dec (GvIOp(PL_defoutgv));
+  SvREFCNT_dec (PL_rs);
+  SvREFCNT_dec (GvSV (irsgv));
+
+  coro_destroy_stacks (aTHX);
 }
 
 static void
@@ -1086,13 +1094,10 @@ coro_state_destroy (pTHX_ struct coro *coro)
       if (coro->flags & CF_RUNNING)
         croak ("FATAL: tried to destroy currently running coroutine");
 
-      Zero (&temp, 1, struct coro);
-      temp.save = CORO_SAVE_ALL;
-
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
 
-      coro_destroy_stacks (aTHX);
+      destroy_coro (aTHX_ coro);
 
       load_perl (aTHX_ &temp); /* this will get rid of defsv etc.. */
 
@@ -1163,19 +1168,6 @@ api_transfer (SV *prev_sv, SV *next_sv)
 
   prepare_transfer (aTHX_ &ta, prev_sv, next_sv);
   TRANSFER (ta);
-}
-
-static int
-api_save (SV *coro_sv, int new_save)
-{
-  dTHX;
-  struct coro *coro = SvSTATE (coro_sv);
-  int old_save = coro->save;
-
-  if (new_save >= 0)
-    coro->save = new_save;
-
-  return old_save;
 }
 
 /** Coro ********************************************************************/
@@ -1391,20 +1383,14 @@ BOOT:
 #endif
         BOOT_PAGESIZE;
 
+        irsgv = gv_fetchpv ("/", 1, SVt_PV);
+
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
         newCONSTSUB (coro_state_stash, "CC_TRACE"     , newSViv (CC_TRACE));
         newCONSTSUB (coro_state_stash, "CC_TRACE_SUB" , newSViv (CC_TRACE_SUB));
         newCONSTSUB (coro_state_stash, "CC_TRACE_LINE", newSViv (CC_TRACE_LINE));
         newCONSTSUB (coro_state_stash, "CC_TRACE_ALL" , newSViv (CC_TRACE_ALL));
-
-        newCONSTSUB (coro_state_stash, "SAVE_DEFAV", newSViv (CORO_SAVE_DEFAV));
-        newCONSTSUB (coro_state_stash, "SAVE_DEFSV", newSViv (CORO_SAVE_DEFSV));
-        newCONSTSUB (coro_state_stash, "SAVE_ERRSV", newSViv (CORO_SAVE_ERRSV));
-        newCONSTSUB (coro_state_stash, "SAVE_IRSSV", newSViv (CORO_SAVE_IRSSV));
-        newCONSTSUB (coro_state_stash, "SAVE_DEFFH", newSViv (CORO_SAVE_DEFFH));
-        newCONSTSUB (coro_state_stash, "SAVE_DEF",   newSViv (CORO_SAVE_DEF));
-        newCONSTSUB (coro_state_stash, "SAVE_ALL",   newSViv (CORO_SAVE_ALL));
 
         main_mainstack = PL_mainstack;
         main_top_env   = PL_top_env;
@@ -1427,8 +1413,7 @@ new (char *klass, ...)
         int i;
 
         Newz (0, coro, 1, struct coro);
-        coro->args = newAV ();
-        coro->save = CORO_SAVE_DEF;
+        coro->args  = newAV ();
         coro->flags = CF_NEW;
 
         if (coro_first) coro_first->prev = coro;
@@ -1443,24 +1428,6 @@ new (char *klass, ...)
           av_push (coro->args, newSVsv (ST (i)));
 }
         OUTPUT:
-        RETVAL
-
-int
-save (SV *coro, int new_save = -1)
-	CODE:
-        RETVAL = api_save (coro, new_save);
-	OUTPUT:
-        RETVAL
-
-int
-save_also (SV *coro_sv, int save_also)
-	CODE:
-{
-        struct coro *coro = SvSTATE (coro_sv);
-        RETVAL = coro->save;
-        coro->save |= save_also;
-}
-	OUTPUT:
         RETVAL
 
 # these not obviously related functions are all rolled into the same xs
@@ -1570,7 +1537,6 @@ call (Coro::State coro, SV *coderef)
           {
             struct coro temp;
             Zero (&temp, 1, struct coro);
-            temp.save = CORO_SAVE_ALL;
 
             if (!(coro->flags & CF_RUNNING))
               {
@@ -1678,7 +1644,6 @@ BOOT:
           SV *sv = perl_get_sv("Coro::API", 1);
 
           coroapi.schedule     = api_schedule;
-          coroapi.save         = api_save;
           coroapi.cede         = api_cede;
           coroapi.cede_notself = api_cede_notself;
           coroapi.ready        = api_ready;
@@ -1785,7 +1750,6 @@ _pool_2 (SV *cb)
         hv_store ((HV *)SvRV (coro_current), "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
 
-        coro->save = CORO_SAVE_DEF;
         coro->prio = 0;
 
         if (coro->cctx && (coro->cctx->flags & CC_TRACE))

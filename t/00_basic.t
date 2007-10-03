@@ -25,8 +25,6 @@ sub b {
    die;
 }
 
-$proc2->save (0);
-
 $/ = 55;
 
 print "ok 2\n";

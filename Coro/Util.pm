@@ -130,8 +130,8 @@ Executes the given code block or code reference with the given arguments
 in a separate process, returning the results. The return values must be
 serialisable with Coro::Storable. It may, of course, block.
 
-Note that the executed sub may never use any form of Event handling or
-call schedule (so no Coroutines may be used).
+Note that using event handling in the sub is not usually a good idea as
+you will inherit a mixed set of watchers from the parent.
 
 Exceptions will be correctly forwarded to the caller.
 
@@ -140,6 +140,9 @@ different process, for example to take advantage of multiple CPU's. Its
 also useful if you want to simply run some blocking functions (such as
 C<system()>) and do not care about the overhead enough to code your own
 pid watcher etc.
+
+This function might keep a pool of processes in some future version, as
+fork can be rather slow in large processes.
 
 Example: execute some external program (convert image to rgba raw form)
 and add a long computation (extract the alpha channel) in a separate

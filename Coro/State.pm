@@ -70,8 +70,6 @@ BEGIN {
 use Exporter;
 use base Exporter::;
 
-our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_IRSSV SAVE_DEFFH SAVE_DEFAULT SAVE_ALL);
-
 =item $coro = new Coro::State [$coderef[, @args...]]
 
 Create a new coroutine and return it. The first C<transfer> call to this
@@ -81,9 +79,6 @@ ended. If it throws an exception the program will terminate.
 
 Calling C<exit> in a coroutine does the same as calling it in the main
 program.
-
-The initial save flags for a new state is C<SAVE_DEFAULT>, which can be
-changed using the C<save> method.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
@@ -104,6 +99,7 @@ sub _cctx_init {
 
 =item $old_save_flags = $state->save ([$new_save_flags])
 
+*TODO*
 It is possible to "localise" certain global variables for each state:
 for example, it would be awkward if @_ or $_ would suddenly change just
 because you temporarily switched to another coroutine, so Coro::State can
@@ -138,30 +134,6 @@ this:
      local ($_, $@, ...);
      $old->transfer ($new);
   }
-
-=item $old_save_flags = $state->save_also ($new_save_flags)
-
-Like C<save>, but adds the given flags to the existing save flags, and
-still returns the old flag set.
-
-=item $guard = $state->guarded_save ($new_save_flags)
-
-Like C<save_also>, but returns a guard that resets the save flags when
-destroyed.
-
-This is useful when you need to save additional state in a lexically
-scoped block.
-
-=cut
-
-sub Coro::State::save_guard::DESTROY {
-   $_[0][0]->save ($_[0][1]);
-
-}
-
-sub guarded_save {
-   bless [$_[0], $_[0]->save_also ($_[1])], Coro::State::save_guard::
-}
 
 =item $state->has_stack
 
