@@ -189,6 +189,9 @@ Create a new asynchronous coroutine and return it's coroutine object
 (usually unused). When the sub returns the new coroutine is automatically
 terminated.
 
+See the C<Coro::State::new> constructor for info about the coroutine
+environment.
+
 Calling C<exit> in a coroutine will do the same as calling exit outside
 the coroutine. Likewise, when the coroutine dies, the program will exit,
 just as it would in the main program.
@@ -346,7 +349,8 @@ automatically terminates as if C<terminate> with the returned values were
 called. To make the coroutine run you must first put it into the ready queue
 by calling the ready method.
 
-See C<async> for additional discussion.
+See C<async> and C<Coro::State::new> for additional info about the
+coroutine environment.
 
 =cut
 

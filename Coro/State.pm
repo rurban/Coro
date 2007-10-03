@@ -58,7 +58,7 @@ no warnings "uninitialized";
 use XSLoader;
 
 BEGIN {
-   our $VERSION = '3.0';
+   our $VERSION = '4.0';
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -87,27 +87,12 @@ to save the current coroutine in.
 The returned object is an empty hash which can be used for any purpose
 whatsoever, for example when subclassing Coro::State.
 
-=cut
+Certain variables are "localised" to each coroutine, that is, certain
+"global" variables are actually per coroutine. Not everything that would
+sensibly be localised currently is, and not everything that is localised
+makes sense for every application, and the future might bring changes.
 
-# this is called for each newly created C coroutine,
-# and is being artificially injected into the opcode flow.
-# its sole purpose is to call transfer() once so it knows
-# the stop level stack frame for stack sharing.
-sub _cctx_init {
-   _set_stacklevel $_[0];
-}
-
-=item $old_save_flags = $state->save ([$new_save_flags])
-
-*TODO*
-It is possible to "localise" certain global variables for each state:
-for example, it would be awkward if @_ or $_ would suddenly change just
-because you temporarily switched to another coroutine, so Coro::State can
-save those variables in the state object on transfers.
-
-The C<$new_save_flags> value can be used to specify which variables (and
-other things) are to be saved (and later restored) on each transfer, by
-ORing the following constants together:
+The following global variables can have different values in each coroutine:
 
    Constant    Effect
    SAVE_DEFAV  save/restore @_
@@ -134,6 +119,16 @@ this:
      local ($_, $@, ...);
      $old->transfer ($new);
   }
+
+=cut
+
+# this is called for each newly created C coroutine,
+# and is being artificially injected into the opcode flow.
+# its sole purpose is to call transfer() once so it knows
+# the stop level stack frame for stack sharing.
+sub _cctx_init {
+   _set_stacklevel $_[0];
+}
 
 =item $state->has_stack
 

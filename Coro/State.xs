@@ -584,7 +584,7 @@ coro_rss (pTHX_ struct coro *coro)
 /** coroutine stack handling ************************************************/
 
 static void
-setup_coro (pTHX_ struct coro *coro)
+coro_setup (pTHX_ struct coro *coro)
 {
   /*
    * emulate part of the perl startup here.
@@ -603,8 +603,8 @@ setup_coro (pTHX_ struct coro *coro)
   GvSV (PL_defgv)    = NEWSV (0, 0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
   GvSV (PL_errgv)    = NEWSV (0, 0);
-  GvSV (irsgv)       = newSVsv (PL_rs);
-  PL_rs              = newSVpvn ("\n", 1);
+  GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), irsgv, PERL_MAGIC_sv, "/", 1);
+  PL_rs              = newSVsv (GvSV (irsgv));
 
   {
     IO *io = newIO ();
@@ -634,7 +634,7 @@ setup_coro (pTHX_ struct coro *coro)
 }
 
 static void
-destroy_coro (pTHX_ struct coro *coro)
+coro_destroy (pTHX_ struct coro *coro)
 {
   if (!IN_DESTRUCT)
     {
@@ -1019,7 +1019,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           /* first get rid of the old state */
           save_perl (aTHX_ prev);
           /* setup coroutine call */
-          setup_coro (aTHX_ next);
+          coro_setup (aTHX_ next);
         }
       else
         {
@@ -1097,7 +1097,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
 
-      destroy_coro (aTHX_ coro);
+      coro_destroy (aTHX_ coro);
 
       load_perl (aTHX_ &temp); /* this will get rid of defsv etc.. */
 

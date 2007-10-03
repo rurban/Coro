@@ -9,9 +9,10 @@ TODO: maybe implement a default message channel, very much like Erlang
         - incompatibly changed Coro::Storable::freeze.
         - major new feature: added Coro::Debug, for interactive coroutine
           debugging, tracing and much more.
-        - unbelievable, but true: $_, $@ and many other "saved" variables
-          actually weren't being saved. This has been fixed, of course,
-          while increasing performance while losing all the save flags.
+        - major bug fix: unbelievable, but true: $_, $/ and many other
+          "saved" variables actually weren't being saved. This has been fixed,
+          of course, while increasing performance while losing all the save
+          flags.
         - save flags are gone, and all the api functions dealing with them.
 	- added Coro::Semaphore::adjust.
         - added Coro::Util::fork_eval.
