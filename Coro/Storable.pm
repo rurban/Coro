@@ -44,7 +44,7 @@ is rather inefficient. But it does keep the latency low.
 
 =item $pst = nfreeze $ref
 
-Same as C<freeze> but is compatible to C<Storabel:.nstore_fd> (note the
+Same as C<freeze> but is compatible to C<Storable::nstore_fd> (note the
 C<n>).
 
 =item $pst = blocking_freeze $ref
@@ -52,7 +52,7 @@ C<n>).
 Same as C<freeze> but is guaranteed to block. This is useful e.g. in
 C<Coro::Util::fork_eval> when you want to serialise a data structure
 for use with the C<thaw> function for this module. You cannot use
-C<Storable::freeze> for this as Storabel uses incompatible formats for
+C<Storable::freeze> for this as Storable uses incompatible formats for
 memory and file images.
 
 =item $pst = blocking_nfreeze $ref

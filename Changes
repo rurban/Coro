@@ -25,7 +25,7 @@ TODO: maybe implement a default message channel, very much like Erlang
         - refuse to transfer while compiling.
         - possibly support eval EXPR better now.
         - enable assembly per default on linux+bsd x86+amd64.
-        - all internal members are named _something for easier subclassing.
+        - all internal members were renamed _something for easier subclassing.
         - many minor tweaks.
 
 3.63 Wed May 16 14:10:06 CEST 2007

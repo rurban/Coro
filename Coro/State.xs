@@ -210,7 +210,7 @@ struct coro {
   //SV *throw;
 
   /* async_pool */
-  GV *defoutgv;
+  GV *asp_deffh;
 
   /* linked list */
   struct coro *next, *prev;
@@ -665,7 +665,7 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_rs);
   SvREFCNT_dec (GvSV (irsgv));
 
-  SvREFCNT_dec (coro->defoutgv);
+  SvREFCNT_dec (coro->asp_deffh);
   //SvREFCNT_dec (coro->throw);
 
   coro_destroy_stacks (aTHX);
@@ -1633,7 +1633,7 @@ BOOT:
         sv_pool_size  = get_sv ("Coro::POOL_SIZE" , TRUE);
         av_async_pool = get_av ("Coro::async_pool", TRUE);
 
-        coro_current = get_sv ("Coro::current", FALSE);
+        coro_current  = get_sv ("Coro::current", FALSE);
         SvREADONLY_on (coro_current);
 
 	coro_stash = gv_stashpv ("Coro",        TRUE);
@@ -1722,10 +1722,11 @@ _pool_1 (SV *cb)
         AV *invoke_av;
 	int i, len;
 
-        coro->defoutgv = SvREFCNT_inc (PL_defoutgv);
-
         if (!invoke)
           croak ("\3terminate\2\n");
+
+        SvREFCNT_dec (coro->asp_deffh);
+        coro->asp_deffh = SvREFCNT_inc (PL_defoutgv);
 
         hv_store (hv, "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
@@ -1742,8 +1743,6 @@ _pool_1 (SV *cb)
               av_store (defav, i, SvREFCNT_inc (AvARRAY (invoke_av)[i + 1]));
           }
 
-
-
         SvREFCNT_dec (invoke);
 }
 
@@ -1755,7 +1754,8 @@ _pool_2 (SV *cb)
 
         sv_setsv (cb, &PL_sv_undef);
 
-        SvREFCNT_dec (PL_defoutgv); PL_defoutgv = coro->defoutgv;
+        SvREFCNT_dec (PL_defoutgv); PL_defoutgv = coro->asp_deffh;
+        coro->asp_deffh = 0;
 
   	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
