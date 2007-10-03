@@ -92,19 +92,15 @@ Certain variables are "localised" to each coroutine, that is, certain
 sensibly be localised currently is, and not everything that is localised
 makes sense for every application, and the future might bring changes.
 
-The following global variables can have different values in each coroutine:
+The following global variables can have different values in each
+coroutine, and have defined initial values:
 
-   Constant    Effect
-   SAVE_DEFAV  save/restore @_
-   SAVE_DEFSV  save/restore $_
-   SAVE_ERRSV  save/restore $@
-   SAVE_IRSSV  save/restore $/ (the Input Record Separator, slow)
-   SAVE_DEFFH  save/restore default filehandle (select)
-   SAVE_DEF    the default set of saves
-   SAVE_ALL    everything that can be saved
-
-These constants are not exported by default. If you don't need any extra
-additional variables saved, use C<0> as the flags value.
+   Variable   Initial Value
+   @_         whatever arguments were passed to the Coro
+   $_         undef
+   $@         undef
+   $/         "\n"
+   (select)   the program's original standard output
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
@@ -116,7 +112,7 @@ The easiest way to do this is to create your own scheduling primitive like
 this:
 
   sub schedule {
-     local ($_, $@, ...);
+     local ($;, ...);
      $old->transfer ($new);
   }
 

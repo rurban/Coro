@@ -413,6 +413,7 @@ sub new_unix_server {
 
    $self->{cw} = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
       Coro::async {
+         warn select;#d#
          $Coro::current->desc ("[Coro::Debug session]");
          my $fh = $fh->accept;
          session $fh;

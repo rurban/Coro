@@ -385,12 +385,12 @@ load_perl (pTHX_ Coro__State c)
 # include "state.h"
 #undef VAR
 
-  GvSV (PL_defgv)    = c->defsv;
-  GvAV (PL_defgv)    = c->defav;
-  GvSV (PL_errgv)    = c->errsv;
-  GvIOp(PL_defoutgv) = c->deffh;
-  PL_rs              = c->irssv;
-  GvSV (irsgv)       = c->irssv_sv;
+  GvSV (PL_defgv) = c->defsv;
+  GvAV (PL_defgv) = c->defav;
+  GvSV (PL_errgv) = c->errsv;
+  PL_defoutgv     = c->deffh;
+  PL_rs           = c->irssv;
+  GvSV (irsgv)    = c->irssv_sv;
 
   {
     dSP;
@@ -461,7 +461,7 @@ save_perl (pTHX_ Coro__State c)
   c->defav    = GvAV (PL_defgv);
   c->defsv    = DEFSV;
   c->errsv    = ERRSV;
-  c->deffh    = GvIOp (PL_defoutgv);
+  c->deffh    = PL_defoutgv;
   c->irssv    = PL_rs;
   c->irssv_sv = GvSV (irsgv);
 
@@ -603,11 +603,12 @@ coro_setup (pTHX_ struct coro *coro)
   GvSV (PL_defgv)    = NEWSV (0, 0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
   GvSV (PL_errgv)    = NEWSV (0, 0);
-  GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), irsgv, PERL_MAGIC_sv, "/", 1);
+  GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
 
   {
     IO *io = newIO ();
+    PL_defoutgv = newGVgen ("Coro");
     GvIOp(PL_defoutgv) = io;
     IoTYPE (io) = IoTYPE_WRONLY;
     IoOFP (io) = IoIFP (io) = PerlIO_stdout ();
@@ -656,7 +657,7 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (GvSV (PL_defgv));
   SvREFCNT_dec (GvAV (PL_defgv));
   SvREFCNT_dec (GvSV (PL_errgv));
-  SvREFCNT_dec (GvIOp(PL_defoutgv));
+  SvREFCNT_dec (PL_defoutgv);
   SvREFCNT_dec (PL_rs);
   SvREFCNT_dec (GvSV (irsgv));
 
