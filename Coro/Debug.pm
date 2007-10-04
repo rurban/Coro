@@ -29,16 +29,16 @@ It lets you list running coroutines:
             ||   resident set size (kb)
    > ps     ||   |
         pid SS  RSS description          where
-   43383424 --   10 [async_pool idle]    [/opt/perl/lib/perl5/Coro.pm:256]
-   46127008 --    5 worldmap updater     [/opt/cf/ext/item-worldmap.ext:116]
-   18334288 --    4 music scheduler      [/opt/cf/ext/player-env.ext:77]
-   24559856 --   14 [async_pool idle]    [/opt/perl/lib/perl5/Coro.pm:256]
-   20170640 --    6 map scheduler        [/opt/cf/ext/map-scheduler.ext:62]
-   18492336 --    5 player scheduler     [/opt/cf/ext/login.ext:501]
-   15607952 --    2 timeslot manager     [/opt/cf/cf.pm:382]
-   11015408 --    2 [unblock_sub schedul [/opt/perl/lib/perl5/Coro.pm:548]
-   11015088 --    2 [coro manager]       [/opt/perl/lib/perl5/Coro.pm:170]
    11014896 US  835 [main::]             [/opt/cf/ext/dm-support.ext:45]
+   11015088 --    2 [coro manager]       [/opt/perl/lib/perl5/Coro.pm:170]
+   11015408 --    2 [unblock_sub schedul [/opt/perl/lib/perl5/Coro.pm:548]
+   15607952 --    2 timeslot manager     [/opt/cf/cf.pm:382]
+   18492336 --    5 player scheduler     [/opt/cf/ext/login.ext:501]
+   20170640 --    6 map scheduler        [/opt/cf/ext/map-scheduler.ext:62]
+   24559856 --   14 [async_pool idle]    [/opt/perl/lib/perl5/Coro.pm:256]
+   18334288 --    4 music scheduler      [/opt/cf/ext/player-env.ext:77]
+   46127008 --    5 worldmap updater     [/opt/cf/ext/item-worldmap.ext:116]
+   43383424 --   10 [async_pool idle]    [/opt/perl/lib/perl5/Coro.pm:256]
 
 Lets you do backtraces on about any coroutine:
 
@@ -257,7 +257,7 @@ sub command($) {
 
    if ($cmd =~ /^ps$/) {
       printf "%20s %s%s %4s %4s %-24.24s %s\n", "pid", "S", "S", "RSS", "USES", "description", "where";
-      for my $coro (Coro::State::list) {
+      for my $coro (reverse Coro::State::list) {
          Coro::cede;
          my @bt;
          Coro::State::call ($coro, sub {

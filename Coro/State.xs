@@ -565,9 +565,9 @@ coro_rss (pTHX_ struct coro *coro)
         }
 
       rss += sizeof (coro->curstackinfo);
-      rss += sizeof (struct xpvav) + (1 + AvFILL (coro->curstackinfo->si_stack)) * sizeof (SV *);
+      rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvFILL (coro->curstackinfo->si_stack)) * sizeof (SV *);
       rss += (coro->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
-      rss += sizeof (struct xpvav) + (1 + AvFILL (coro->curstack)) * sizeof (SV *);
+      rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvFILL (coro->curstack)) * sizeof (SV *);
       rss += coro->tmps_max * sizeof (SV *);
       rss += (coro->markstack_max - coro->markstack_ptr) * sizeof (I32);
       rss += coro->scopestack_max * sizeof (I32);
