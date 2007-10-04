@@ -194,7 +194,7 @@ struct coro {
   AV *defav; /* @_ */
   SV *defsv; /* $_ */
   SV *errsv; /* $@ */
-  GV *deffh; /* default filehandle */
+  SV *deffh; /* default filehandle */
   SV *irssv; /* $/ */
   SV *irssv_sv; /* real $/ cache */
   
@@ -210,7 +210,7 @@ struct coro {
   //SV *throw;
 
   /* async_pool */
-  GV *asp_deffh;
+  SV *saved_deffh;
 
   /* linked list */
   struct coro *next, *prev;
@@ -392,8 +392,6 @@ load_perl (pTHX_ Coro__State c)
   GvSV (PL_defgv) = c->defsv;
   GvAV (PL_defgv) = c->defav;
   GvSV (PL_errgv) = c->errsv;
-  PL_defoutgv     = c->deffh;
-  PL_rs           = c->irssv;
   GvSV (irsgv)    = c->irssv_sv;
 
   {
@@ -465,8 +463,6 @@ save_perl (pTHX_ Coro__State c)
   c->defav    = GvAV (PL_defgv);
   c->defsv    = DEFSV;
   c->errsv    = ERRSV;
-  c->deffh    = PL_defoutgv;
-  c->irssv    = PL_rs;
   c->irssv_sv = GvSV (irsgv);
 
 #define VAR(name,type)c->name = PL_ ## name;
@@ -665,7 +661,7 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_rs);
   SvREFCNT_dec (GvSV (irsgv));
 
-  SvREFCNT_dec (coro->asp_deffh);
+  SvREFCNT_dec (coro->saved_deffh);
   //SvREFCNT_dec (coro->throw);
 
   coro_destroy_stacks (aTHX);
@@ -1725,8 +1721,8 @@ _pool_1 (SV *cb)
         if (!invoke)
           croak ("\3terminate\2\n");
 
-        SvREFCNT_dec (coro->asp_deffh);
-        coro->asp_deffh = SvREFCNT_inc (PL_defoutgv);
+        SvREFCNT_dec (coro->saved_deffh);
+        coro->saved_deffh = SvREFCNT_inc ((SV *)PL_defoutgv);
 
         hv_store (hv, "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
@@ -1754,8 +1750,8 @@ _pool_2 (SV *cb)
 
         sv_setsv (cb, &PL_sv_undef);
 
-        SvREFCNT_dec (PL_defoutgv); PL_defoutgv = coro->asp_deffh;
-        coro->asp_deffh = 0;
+        SvREFCNT_dec ((SV *)PL_defoutgv); PL_defoutgv = (GV *)coro->saved_deffh;
+        coro->saved_deffh = 0;
 
   	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))

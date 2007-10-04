@@ -230,8 +230,8 @@ Coro can use (or even trick) some perl functions into doing what it needs
 instead of relying on (some) of its own functions. This might increase
 chances that it compiles and works, but it could just as well result in
 memory leaks, crashes or silent data corruption. It certainly does result
-in slightly slower speed and higher memory consumption, though, so you
-should enable it only as a last resort.
+in slightly slower speed and higher memory consumption, though, so YOU
+SHOULD ENABLE IT ONLY AS A LAST RESORT.
 
 EOF
 
