@@ -28,7 +28,7 @@ It lets you list running coroutines:
             |cctx allocated
             ||   resident set size (kb)
    > ps     ||   |
-        pid SS  RSS description          where
+        PID SS  RSS Description          Where
    11014896 US  835 [main::]             [/opt/cf/ext/dm-support.ext:45]
    11015088 --    2 [coro manager]       [/opt/perl/lib/perl5/Coro.pm:170]
    11015408 --    2 [unblock_sub schedul [/opt/perl/lib/perl5/Coro.pm:548]
@@ -256,7 +256,7 @@ sub command($) {
    $cmd =~ s/\s+$//;
 
    if ($cmd =~ /^ps$/) {
-      printf "%20s %s%s %4s %4s %-24.24s %s\n", "pid", "S", "S", "RSS", "USES", "description", "where";
+      printf "%20s %s%s %4s %4s %-24.24s %s\n", "PID", "S", "S", "RSS", "USES", "Description", "Where";
       for my $coro (reverse Coro::State::list) {
          Coro::cede;
          my @bt;
