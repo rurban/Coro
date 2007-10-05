@@ -77,6 +77,14 @@ static long pagesize;
 # define SvRV_set(s,v) SvRV(s) = (v)
 #endif
 
+/* 5.8.8 */
+#ifndef GV_NOTQUAL
+# define GV_NOTQUAL 0
+#endif
+#ifndef newSV
+# define newSV(l) NEWSV(0,l)
+#endif
+
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef CORO_STACKGUARD
 #endif
@@ -601,9 +609,9 @@ coro_setup (pTHX_ struct coro *coro)
   PL_dirty      = 0;
   PL_restartop  = 0;
   
-  GvSV (PL_defgv)    = NEWSV (0, 0);
+  GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
-  GvSV (PL_errgv)    = NEWSV (0, 0);
+  GvSV (PL_errgv)    = newSV (0);
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
   PL_defoutgv        = SvREFCNT_inc (stdoutgv);
@@ -1380,8 +1388,8 @@ BOOT:
 #endif
         BOOT_PAGESIZE;
 
-        irsgv    = gv_fetchpv ("/"     , GV_ADD, SVt_PV);
-        stdoutgv = gv_fetchpv ("STDOUT", GV_ADD, SVt_PVIO);
+        irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
+        stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
