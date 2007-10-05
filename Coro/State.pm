@@ -123,7 +123,6 @@ this:
 # its sole purpose is to call transfer() once so it knows
 # the stop level stack frame for stack sharing.
 sub _cctx_init {
-   select STDOUT;
    _set_stacklevel $_[0];
 }
 

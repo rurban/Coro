@@ -77,6 +77,11 @@ static long pagesize;
 # define SvRV_set(s,v) SvRV(s) = (v)
 #endif
 
+/* 5.8.8 */
+#ifndef GV_NOTQUAL
+# define GV_NOTQUAL 0
+#endif
+
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef CORO_STACKGUARD
 #endif
@@ -134,8 +139,8 @@ static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
-static GV *irsgv; /* $/ */
-static GV *stdoutgv; /* STDOUT */
+static GV *irsgv;    /* $/ */
+static GV *stdoutgv; /* *STDOUT */
 
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
