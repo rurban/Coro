@@ -17,6 +17,8 @@
 
 static HV *coro_event_event_stash;
 
+#define PERL_MAGIC_coro_event 0x18 /* to avoid clashes with e.g. event */
+
 static void
 coro_std_cb (pe_event *pe)
 {
@@ -107,9 +109,7 @@ _install_std_cb (SV *self, int type)
           w->callback = coro_std_cb;
           w->ext_data = priv;
 
-          /* make sure Event does not use PERL_MAGIC_uvar, which */
-          /* we abuse for non-uvar purposes. */
-          sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_uvar, 0, 0, 0);
+          sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_coro_event, 0, (char *)w, 0);
         }
 }
 

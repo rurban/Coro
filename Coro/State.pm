@@ -38,9 +38,11 @@ modules for a higher level process abstraction including scheduling.
 
 A newly created coroutine that has not been used only allocates a
 relatively small (a few hundred bytes) structure. Only on the first
-C<transfer> will perl stacks (a few k) and optionally C stack. All this
-is very system-dependent. On my x86_64-pc-linux-gnu system this amounts
-to about 8k per (non-trivial) coroutine.
+C<transfer> will perl allocate stacks (a few kb) and optionally
+a C stack/coroutine (cctx) for coroutines that recurse through C
+functions. All this is very system-dependent. On my x86_64-pc-linux-gnu
+system this amounts to about 8k per (non-trivial) coroutine. You can view
+the actual memory consumption using Coro::Debug.
 
 =head2 FUNCTIONS
 
@@ -56,7 +58,7 @@ no warnings "uninitialized";
 use XSLoader;
 
 BEGIN {
-   our $VERSION = '3.0';
+   our $VERSION = '4.0';
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -68,8 +70,6 @@ BEGIN {
 use Exporter;
 use base Exporter::;
 
-our @EXPORT_OK = qw(SAVE_DEFAV SAVE_DEFSV SAVE_ERRSV SAVE_IRSSV SAVE_DEFFH SAVE_DEFAULT SAVE_ALL);
-
 =item $coro = new Coro::State [$coderef[, @args...]]
 
 Create a new coroutine and return it. The first C<transfer> call to this
@@ -80,9 +80,6 @@ ended. If it throws an exception the program will terminate.
 Calling C<exit> in a coroutine does the same as calling it in the main
 program.
 
-The initial save flags for a new state is C<SAVE_DEFAULT>, which can be
-changed using the C<save> method.
-
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
 to save the current coroutine in.
@@ -90,38 +87,20 @@ to save the current coroutine in.
 The returned object is an empty hash which can be used for any purpose
 whatsoever, for example when subclassing Coro::State.
 
-=cut
+Certain variables are "localised" to each coroutine, that is, certain
+"global" variables are actually per coroutine. Not everything that would
+sensibly be localised currently is, and not everything that is localised
+makes sense for every application, and the future might bring changes.
 
-# this is called for each newly created C coroutine,
-# and is being artificially injected into the opcode flow.
-# its sole purpose is to call transfer() once so it knows
-# the stop level stack frame for stack sharing.
-sub _cctx_init {
-   _set_stacklevel $_[0];
-}
+The following global variables can have different values in each
+coroutine, and have defined initial values:
 
-=item $old_save_flags = $state->save ([$new_save_flags])
-
-It is possible to "localise" certain global variables for each state:
-for example, it would be awkward if @_ or $_ would suddenly change just
-because you temporarily switched to another coroutine, so Coro::State can
-save those variables in the state object on transfers.
-
-The C<$new_save_flags> value can be used to specify which variables (and
-other things) are to be saved (and later restored) on each transfer, by
-ORing the following constants together:
-
-   Constant    Effect
-   SAVE_DEFAV  save/restore @_
-   SAVE_DEFSV  save/restore $_
-   SAVE_ERRSV  save/restore $@
-   SAVE_IRSSV  save/restore $/ (the Input Record Separator, slow)
-   SAVE_DEFFH  save/restore default filehandle (select)
-   SAVE_DEF    the default set of saves
-   SAVE_ALL    everything that can be saved
-
-These constants are not exported by default. If you don't need any extra
-additional variables saved, use C<0> as the flags value.
+   Variable   Initial Value
+   @_         whatever arguments were passed to the Coro
+   $_         undef
+   $@         undef
+   $/         "\n"
+   (select)   the program's original standard output
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
@@ -133,33 +112,49 @@ The easiest way to do this is to create your own scheduling primitive like
 this:
 
   sub schedule {
-     local ($_, $@, ...);
+     local ($;, ...);
      $old->transfer ($new);
   }
 
-=item $old_save_flags = $state->save_also ($new_save_flags)
-
-Like C<save>, but adds the given flags to the existing save flags, and
-still returns the old flag set.
-
-=item $guard = $state->guarded_save ($new_save_flags)
-
-Like C<save_also>, but returns a guard that resets the save flags when
-destroyed.
-
-This is useful when you need to save additional state in a lexically
-scoped block.
-
 =cut
 
-sub Coro::State::save_guard::DESTROY {
-   $_[0][0]->save ($_[0][1]);
-
+# this is called for each newly created C coroutine,
+# and is being artificially injected into the opcode flow.
+# its sole purpose is to call transfer() once so it knows
+# the stop level stack frame for stack sharing.
+sub _cctx_init {
+   _set_stacklevel $_[0];
 }
 
-sub guarded_save {
-   bless [$_[0], $_[0]->save_also ($_[1])], Coro::State::save_guard::
-}
+=item $state->has_stack
+
+Returns wether the state currently uses a cctx/C stack. An active state
+always has a cctx, as well as the main program. Other states only use a
+cctx when needed.
+
+=item $bytes = $state->rss
+
+Returns the memory allocated by the coroutine (which includes
+static structures, various perl stacks but NOT local variables,
+arguments or any C stack).
+
+=item $state->call ($coderef)
+
+Try to call the given $coderef in the context of the given state.  This
+works even when the state is currently within an XS function, and can
+be very dangerous. You can use it to acquire stack traces etc. (see the
+Coro::Debug module for more details). The coderef MUST NOT EVER transfer
+to another state.
+
+=item $state->eval ($string)
+
+Like C<call>, but eval's the string. Dangerous. Do not
+use. Untested. Unused. Biohazard.
+
+=item $state->trace ($flags)
+
+Internal function to control tracing. I just mention this so you can stay
+from abusing it.
 
 =item $prev->transfer ($next)
 
@@ -178,8 +173,8 @@ recursion in your code and moving this into a separate coroutine.
 =item Coro::State::cctx_idle
 
 Returns the number of allocated but idle (free for reuse) C level
-coroutines. As C level coroutines are curretly rarely being deallocated, a
-high number means that you used many C coroutines in the past.
+coroutines. Currently, Coro will limit the number of idle/unused cctxs to
+8.
 
 =item Coro::State::cctx_stacksize [$new_stacksize]
 
@@ -191,7 +186,15 @@ guarenteed this minimum size. Please note that Coroutines will only need
 to use a C-level stack if the interpreter recurses or calls a function in
 a module that calls back into the interpreter.
 
+=item @states = Coro::State::list
+
+Returns a list of all states currently allocated.
+
 =cut
+
+sub debug_desc {
+   $_[0]{desc}
+}
 
 1;
 

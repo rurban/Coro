@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '3.63';
+our $VERSION = '4.0';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -115,8 +115,10 @@ C<Coro::current> function instead.
 
 =cut
 
+$main->{desc} = "[main::]";
+
 # maybe some other module used Coro::Specific before...
-$main->{specific} = $current->{specific}
+$main->{_specific} = $current->{_specific}
    if $current;
 
 _set_current $main;
@@ -151,8 +153,8 @@ sub _cancel {
       or return;
 
    # call all destruction callbacks
-   $_->(@{$self->{status}})
-      for @{(delete $self->{destroy_cb}) || []};
+   $_->(@{$self->{_status}})
+      for @{(delete $self->{_on_destroy}) || []};
 }
 
 # this coroutine is necessary because a coroutine
@@ -168,7 +170,7 @@ $manager = new Coro sub {
       &schedule;
    }
 };
-
+$manager->desc ("[coro manager]");
 $manager->prio (PRIO_MAX);
 
 # static methods. not really.
@@ -186,6 +188,9 @@ Static methods are actually functions that operate on the current coroutine only
 Create a new asynchronous coroutine and return it's coroutine object
 (usually unused). When the sub returns the new coroutine is automatically
 terminated.
+
+See the C<Coro::State::new> constructor for info about the coroutine
+environment.
 
 Calling C<exit> in a coroutine will do the same as calling exit outside
 the coroutine. Likewise, when the coroutine dies, the program will exit,
@@ -216,42 +221,50 @@ C<async> does. As the coroutine is being reused, stuff like C<on_destroy>
 will not work in the expected way, unless you call terminate or cancel,
 which somehow defeats the purpose of pooling.
 
-The priority will be reset to C<0> after each job, otherwise the coroutine
-will be re-used "as-is".
+The priority will be reset to C<0> after each job, tracing will be
+disabled, the description will be reset and the default output filehandle
+gets restored, so you can change alkl these. Otherwise the coroutine will
+be re-used "as-is": most notably if you change other per-coroutine global
+stuff such as C<$/> you need to revert that change, which is most simply
+done by using local as in C< local $/ >.
 
 The pool size is limited to 8 idle coroutines (this can be adjusted by
 changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
 required.
 
 If you are concerned about pooled coroutines growing a lot because a
-single C<async_pool> used a lot of stackspace you can e.g. C<async_pool {
-terminate }> once per second or so to slowly replenish the pool.
+single C<async_pool> used a lot of stackspace you can e.g. C<async_pool
+{ terminate }> once per second or so to slowly replenish the pool. In
+addition to that, when the stacks used by a handler grows larger than 16kb
+(adjustable with $Coro::POOL_RSS) it will also exit.
 
 =cut
 
 our $POOL_SIZE = 8;
-our @pool;
+our $POOL_RSS  = 16 * 1024;
+our @async_pool;
 
 sub pool_handler {
+   my $cb;
+
    while () {
       eval {
-         my ($cb, @arg) = @{ delete $current->{_invoke} or return };
-         $cb->(@arg);
+         while () {
+            _pool_1 $cb;
+            &$cb;
+            _pool_2 $cb;
+            &schedule;
+         }
       };
+
+      last if $@ eq "\3terminate\2\n";
       warn $@ if $@;
-
-      last if @pool >= $POOL_SIZE;
-      push @pool, $current;
-
-      $current->save (Coro::State::SAVE_DEF);
-      $current->prio (0);
-      schedule;
    }
 }
 
 sub async_pool(&@) {
    # this is also inlined into the unlock_scheduler
-   my $coro = (pop @pool or new Coro \&pool_handler);
+   my $coro = (pop @async_pool) || new Coro \&pool_handler;
 
    $coro->{_invoke} = [@_];
    $coro->ready;
@@ -304,10 +317,23 @@ Returns true if at least one coroutine switch has happened.
 
 Terminates the current coroutine with the given status values (see L<cancel>).
 
+=item killall
+
+Kills/terminates/cancels all coroutines except the currently running
+one. This is useful after a fork, either in the child or the parent, as
+usually only one of them should inherit the running coroutines.
+
 =cut
 
 sub terminate {
    $current->cancel (@_);
+}
+
+sub killall {
+   for (Coro::State::list) {
+      $_->cancel
+         if $_ != $current && UNIVERSAL::isa $_, "Coro";
+   }
 }
 
 =back
@@ -327,7 +353,8 @@ automatically terminates as if C<terminate> with the returned values were
 called. To make the coroutine run you must first put it into the ready queue
 by calling the ready method.
 
-See C<async> for additional discussion.
+See C<async> and C<Coro::State::new> for additional info about the
+coroutine environment.
 
 =cut
 
@@ -361,7 +388,7 @@ current coroutine.
 
 sub cancel {
    my $self = shift;
-   $self->{status} = [@_];
+   $self->{_status} = [@_];
 
    if ($current == $self) {
       push @destroy, $self;
@@ -375,18 +402,18 @@ sub cancel {
 =item $coroutine->join
 
 Wait until the coroutine terminates and return any values given to the
-C<terminate> or C<cancel> functions. C<join> can be called multiple times
-from multiple coroutine.
+C<terminate> or C<cancel> functions. C<join> can be called concurrently
+from multiple coroutines.
 
 =cut
 
 sub join {
    my $self = shift;
 
-   unless ($self->{status}) {
+   unless ($self->{_status}) {
       my $current = $current;
 
-      push @{$self->{destroy_cb}}, sub {
+      push @{$self->{_on_destroy}}, sub {
          $current->ready;
          undef $current;
       };
@@ -394,7 +421,7 @@ sub join {
       &schedule while $current;
    }
 
-   wantarray ? @{$self->{status}} : $self->{status}[0];
+   wantarray ? @{$self->{_status}} : $self->{_status}[0];
 }
 
 =item $coroutine->on_destroy (\&cb)
@@ -408,7 +435,7 @@ if any.
 sub on_destroy {
    my ($self, $cb) = @_;
 
-   push @{ $self->{destroy_cb} }, $cb;
+   push @{ $self->{_on_destroy} }, $cb;
 }
 
 =item $oldprio = $coroutine->prio ($newprio)
@@ -442,6 +469,9 @@ higher values mean lower priority, just as in unix).
 
 Sets (or gets in case the argument is missing) the description for this
 coroutine. This is just a free-form string you can associate with a coroutine.
+
+This method simply sets the C<< $coroutine->{desc} >> member to the given string. You
+can modify this member directly if you wish.
 
 =cut
 
@@ -527,11 +557,11 @@ our @unblock_queue;
 # to reduce pressure on the coro pool (because most callbacks
 # return immediately and can be reused) and because we cannot cede
 # inside an event callback.
-our $unblock_scheduler = async {
+our $unblock_scheduler = new Coro sub {
    while () {
       while (my $cb = pop @unblock_queue) {
          # this is an inlined copy of async_pool
-         my $coro = (pop @pool or new Coro \&pool_handler);
+         my $coro = (pop @async_pool) || new Coro \&pool_handler;
 
          $coro->{_invoke} = $cb;
          $coro->ready;
@@ -540,6 +570,7 @@ our $unblock_scheduler = async {
       schedule; # sleep well
    }
 };
+$unblock_scheduler->desc ("[unblock_sub scheduler]");
 
 sub unblock_sub(&) {
    my $cb = shift;
@@ -568,7 +599,7 @@ sub unblock_sub(&) {
 
 =head1 SEE ALSO
 
-Support/Utility: L<Coro::Cont>, L<Coro::Specific>, L<Coro::State>, L<Coro::Util>.
+Support/Utility: L<Coro::Specific>, L<Coro::State>, L<Coro::Util>.
 
 Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>, L<Coro::SemaphoreSet>, L<Coro::RWLock>.
 

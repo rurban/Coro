@@ -50,11 +50,11 @@ sub TIESCALAR {
 }
 
 sub FETCH {
-   $Coro::current->{specific}[${$_[0]}];
+   $Coro::current->{_specific}[${$_[0]}];
 }
 
 sub STORE {
-   $Coro::current->{specific}[${$_[0]}] = $_[1];
+   $Coro::current->{_specific}[${$_[0]}] = $_[1];
 }
 
 #sub DESTROY {

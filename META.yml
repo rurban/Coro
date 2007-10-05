@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Coro
-version:      3.63
+version:      4.0
 version_from: Coro.pm
 installdirs:  site
 requires:
@@ -9,6 +9,8 @@ requires:
     Event:                         1.06
     IO::AIO:                       2.3
     Scalar::Util:                  0
+    Storable:                      2.15
+    Time::HiRes:                   0
 
 distribution_type: module
 generated_by: ExtUtils::MakeMaker version 6.30

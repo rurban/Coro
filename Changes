@@ -1,11 +1,32 @@
 Revision history for Perl extension Coro.
 
-TODO: better (earlier) error messages on broken transfer's
-TODO: destroy gets only called on cancel: fix(?)
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
-      but very lacking in others).
+      but very lacking in others (higher level ipc)).
+
+4.0  Fri Oct  5 12:56:00 CEST 2007
+        - incompatibly changed Coro::Storable::freeze.
+        - major new feature: added Coro::Debug, for interactive coroutine
+          debugging, tracing and much more.
+        - major bug fix: unbelievable, but true: $_, $/ and many other
+          "saved" variables actually weren't being saved. This has been fixed,
+          of course, while increasing performance while losing all the save
+          flags.
+        - save flags are gone, and all the api functions dealing with them.
+	- added Coro::Semaphore::adjust.
+        - added Coro::Util::fork_eval.
+        - added Coro::Storable::{nfreeze,blocking_{freeze,nfreeze}}.
+        - added Coro::killall.
+        - reduce initial stack sizes to allow for "micro-coroutines".
+        - better async_pool resource management, moved parts of async_pool
+          handling to XS (major speed improvement).
+        - actually croak before modifying important data structures.
+        - refuse to transfer while compiling.
+        - possibly support eval EXPR better now.
+        - enable assembly per default on linux+bsd x86+amd64.
+        - all internal members were renamed _something for easier subclassing.
+        - many minor tweaks.
 
 3.63 Wed May 16 14:10:06 CEST 2007
 	- implement handcoded assembly for x86/amd64 SVR ABI.

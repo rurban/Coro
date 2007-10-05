@@ -29,26 +29,33 @@ $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq
 
 if (exists $ENV{CORO_INTERFACE}) {
    $iface = $ENV{CORO_INTERFACE};
+
 } elsif ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
    $iface = 'w';
+
 } elsif ($^O =~ /irix/) {
    $iface = "i";
-} elsif ($^O =~ /linux/) {
-   ## default to setjmp/longjmp on non-x86...
-   #$iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "l" : "s";
 
-   # default to setjmp/longjmp everywhere as newer libc change everything around
-   $iface = "s";
+} elsif ($^O =~ /linux/) {
+   # default to assembly on x86 and x86_64, and setjmp on others
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+
 } elsif ($^O =~ /(free|net|open)bsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
-   $iface = "s";
+
+   # default to assembly on x86 and x86_64, and setjmp on others
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+
 } elsif ($^O =~ /solaris/) {
    $iface = "s";
+
 } elsif ($^O =~ /darwin/) {
    $iface = "s";
+
 } elsif (-e "/usr/include/ucontext.h") { # shame on this heuristic
    $iface = "u";
+
 } else {
    $iface = "s";
 }
@@ -80,7 +87,7 @@ s  If the ucontext functions are not working or you don't want
 a  Handcoded assembly. This is the fastest method with the least side
    effects, if it works, that is. It has been tested on GNU/Linux x86 and
    x86_64 systems and should work on all x86/x86_64 systems using the SVR
-   ELF ABI.
+   ELF ABI. This is the recommended method on supported platforms.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
@@ -223,8 +230,8 @@ Coro can use (or even trick) some perl functions into doing what it needs
 instead of relying on (some) of its own functions. This might increase
 chances that it compiles and works, but it could just as well result in
 memory leaks, crashes or silent data corruption. It certainly does result
-in slightly slower speed and higher memory consumption, though, so you
-should enable it only as a last resort.
+in slightly slower speed and higher memory consumption, though, so YOU
+SHOULD ENABLE IT ONLY AS A LAST RESORT.
 
 EOF
 

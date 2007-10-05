@@ -62,12 +62,27 @@ sub count {
    $_[0][0]
 }
 
+=item $sem->adjust ($diff)
+
+Atomically adds the amount given to the current semaphore count. If the
+count becomes positive, wakes up any waiters. Does not block if the count
+becomes negative, however.
+
+=cut
+
+sub adjust {
+   # basically a weird copy of up
+   if (($_[0][0] += $_[1]) > 0) {
+      (shift @{$_[0][1]})->ready if @{$_[0][1]};
+   }
+}
+
 =item $sem->down
 
 Decrement the counter, therefore "locking" the semaphore. This method
 waits until the semaphore is available if the counter is zero.
 
-=item $status = $sem->timed_down($timeout)
+=item $status = $sem->timed_down ($timeout)
 
 Like C<down>, but returns false if semaphore couldn't be acquired within
 $timeout seconds, otherwise true.
@@ -149,7 +164,7 @@ sub waiters {
 This method calls C<down> and then creates a guard object. When the guard
 object is destroyed it automatically calls C<up>.
 
-=item $guard = $sem->timed_guard($timeout)
+=item $guard = $sem->timed_guard ($timeout)
 
 Like C<guard>, but returns undef if semaphore couldn't be acquired within
 $timeout seconds, otherwise the guard object.

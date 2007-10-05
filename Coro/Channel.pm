@@ -8,7 +8,7 @@ Coro::Channel - message queues
 
  $q1 = new Coro::Channel <maxsize>;
 
- $q1->put("xxx");
+ $q1->put ("xxx");
  print $q1->get;
 
  die unless $q1->size;
@@ -76,7 +76,7 @@ sub get {
       &Coro::schedule;
    }
 
-   shift @{$_[0][0]};
+   shift @{$_[0][0]}
 }
 
 =item $q->size
@@ -92,7 +92,7 @@ is NOT a race condition but works fine.
 =cut
 
 sub size {
-   scalar @{$_[0][0]};
+   scalar @{$_[0][0]}
 }
 
 1;

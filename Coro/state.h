@@ -1,6 +1,7 @@
 /* list the interpreter variables that need to be saved/restored */
 /* mostly copied from thrdvar.h */
 
+VAR(defoutgv,      GV *)           /* default FH for output */
 VAR(stack_sp,      SV **)          /* top of the stack */
 #ifdef OP_IN_REGISTER
 VAR(opsave,        OP *)           /* probably not necessary */
@@ -38,6 +39,7 @@ VAR(retstack_max,  I32)
 
 VAR(tainted,       bool)           /* using variables controlled by $< */
 VAR(curpm,         PMOP *)         /* what to do \ interps in REs from */
+VAR(rs,            SV *)           /* input record separator $/ */
 VAR(curcop,        COP *)
 
 VAR(in_eval,       int)            /* trap "fatal" errors? */
@@ -54,4 +56,10 @@ VAR(sortcxix,      I32)            /* from pp_ctl.c */
 #endif
 
 VAR(comppad,       AV *)           /* storage for lexically scoped temporaries */
+
+/* compcv is intrpvar, but seems to be thread-specific to me */
+/* but, well, I thoroughly misunderstand what thrdvar and intrpvar is. still. */
+VAR(compcv,        CV *)           /* currently compiling subroutine */
+
+VAR(runops,        runops_proc_t)  /* for tracing support */
 

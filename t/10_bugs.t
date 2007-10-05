@@ -7,8 +7,9 @@ use Coro;
 
 print "ok 1\n";
 
-# debian allocates 0.25mb of local variables in Perl_magic_get,
-# normal is <<256 bytes.
+# Debian allocates 0.25mb of local variables in Perl_magic_get,
+# normal is <<256 bytes. If your perl segfaults here, try getting a
+# newer one or increase the C context stack space to a few megs.
 async {
       print "ok 2\n";
       $1

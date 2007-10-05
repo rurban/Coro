@@ -68,6 +68,9 @@ DESCRIPTION
         (usually unused). When the sub returns the new coroutine is
         automatically terminated.
 
+        See the "Coro::State::new" constructor for info about the coroutine
+        environment.
+
         Calling "exit" in a coroutine will do the same as calling exit
         outside the coroutine. Likewise, when the coroutine dies, the
         program will exit, just as it would in the main program.
@@ -89,8 +92,12 @@ DESCRIPTION
         like "on_destroy" will not work in the expected way, unless you call
         terminate or cancel, which somehow defeats the purpose of pooling.
 
-        The priority will be reset to 0 after each job, otherwise the
-        coroutine will be re-used "as-is".
+        The priority will be reset to 0 after each job, tracing will be
+        disabled, the description will be reset and the default output
+        filehandle gets restored, so you can change alkl these. Otherwise
+        the coroutine will be re-used "as-is": most notably if you change
+        other per-coroutine global stuff such as $/ you need to revert that
+        change, which is most simply done by using local as in " local $/ ".
 
         The pool size is limited to 8 idle coroutines (this can be adjusted
         by changing $Coro::POOL_SIZE), and there can be as many non-idle
@@ -99,7 +106,9 @@ DESCRIPTION
         If you are concerned about pooled coroutines growing a lot because a
         single "async_pool" used a lot of stackspace you can e.g.
         "async_pool { terminate }" once per second or so to slowly replenish
-        the pool.
+        the pool. In addition to that, when the stacks used by a handler
+        grows larger than 16kb (adjustable with $Coro::POOL_RSS) it will
+        also exit.
 
     schedule
         Calls the scheduler. Please note that the current coroutine will not
@@ -144,6 +153,11 @@ DESCRIPTION
         Terminates the current coroutine with the given status values (see
         cancel).
 
+    killall
+        Kills/terminates/cancels all coroutines except the currently running
+        one. This is useful after a fork, either in the child or the parent,
+        as usually only one of them should inherit the running coroutines.
+
     # dynamic methods
 
   COROUTINE METHODS
@@ -155,7 +169,8 @@ DESCRIPTION
         returned values were called. To make the coroutine run you must
         first put it into the ready queue by calling the ready method.
 
-        See "async" for additional discussion.
+        See "async" and "Coro::State::new" for additional info about the
+        coroutine environment.
 
     $success = $coroutine->ready
         Put the given coroutine into the ready queue (according to it's
@@ -172,8 +187,8 @@ DESCRIPTION
 
     $coroutine->join
         Wait until the coroutine terminates and return any values given to
-        the "terminate" or "cancel" functions. "join" can be called multiple
-        times from multiple coroutine.
+        the "terminate" or "cancel" functions. "join" can be called
+        concurrently from multiple coroutines.
 
     $coroutine->on_destroy (\&cb)
         Registers a callback that is called when this coroutine gets
@@ -210,6 +225,9 @@ DESCRIPTION
         Sets (or gets in case the argument is missing) the description for
         this coroutine. This is just a free-form string you can associate
         with a coroutine.
+
+        This method simply sets the "$coroutine->{desc}" member to the given
+        string. You can modify this member directly if you wish.
 
   GLOBAL FUNCTIONS
     Coro::nready
@@ -268,7 +286,7 @@ BUGS/LIMITATIONS
        this).
 
 SEE ALSO
-    Support/Utility: Coro::Cont, Coro::Specific, Coro::State, Coro::Util.
+    Support/Utility: Coro::Specific, Coro::State, Coro::Util.
 
     Locking/IPC: Coro::Signal, Coro::Channel, Coro::Semaphore,
     Coro::SemaphoreSet, Coro::RWLock.
