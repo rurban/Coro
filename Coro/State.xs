@@ -135,6 +135,7 @@ static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
 static GV *irsgv; /* $/ */
+static GV *stdoutgv; /* STDOUT */
 
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
@@ -605,8 +606,7 @@ coro_setup (pTHX_ struct coro *coro)
   GvSV (PL_errgv)    = NEWSV (0, 0);
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
-
-  SvREFCNT_inc (PL_defoutgv);
+  PL_defoutgv        = SvREFCNT_inc (stdoutgv);
 
   {
     dSP;
@@ -1380,7 +1380,8 @@ BOOT:
 #endif
         BOOT_PAGESIZE;
 
-        irsgv = gv_fetchpv ("/", 1, SVt_PV);
+        irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
+        stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
