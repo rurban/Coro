@@ -710,6 +710,7 @@ runops_trace (pTHX)
                   : cx->blk_gimme == G_SCALAR ? bot + 1
                   :                             bot;
 
+              av_extend (av, top - bot);
               while (bot < top)
                 av_push (av, SvREFCNT_inc (*bot++));
 
@@ -931,6 +932,9 @@ cctx_destroy (coro_cctx *cctx)
   Safefree (cctx);
 }
 
+/* wether this cctx should be destructed */
+#define CCTX_EXPIRED(cctx) ((cctx)->ssize < coro_stacksize || ((cctx)->flags & CC_NOREUSE))
+
 static coro_cctx *
 cctx_get (pTHX)
 {
@@ -940,7 +944,7 @@ cctx_get (pTHX)
       cctx_first = cctx->next;
       --cctx_idle;
 
-      if (cctx->ssize >= coro_stacksize && !(cctx->flags & CC_NOREUSE))
+      if (!CCTX_EXPIRED (cctx))
         return cctx;
 
       cctx_destroy (cctx);
@@ -1042,6 +1046,10 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           assert (("ERROR: current top_env must equal previous top_env", PL_top_env == prev__cctx->idle_te));
 
           prev->cctx = 0;
+
+          /* if the cctx is about to be destroyed we need to make sure we won't see it in cctx_get */
+          if (CCTX_EXPIRED (prev__cctx))
+            next->cctx = cctx_get (aTHX);
 
           cctx_put (prev__cctx);
         }
@@ -1431,7 +1439,6 @@ new (char *klass, ...)
         RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
 
         av_extend (coro->args, items - 1);
-
         for (i = 1; i < items; i++)
           av_push (coro->args, newSVsv (ST (i)));
 }
