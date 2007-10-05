@@ -616,6 +616,8 @@ coro_setup (pTHX_ struct coro *coro)
   PL_rs              = newSVsv (GvSV (irsgv));
   PL_defoutgv        = SvREFCNT_inc (stdoutgv);
 
+  ENTER; /* necessary e.g. for dounwind */
+
   {
     dSP;
     LOGOP myop;
@@ -625,14 +627,12 @@ coro_setup (pTHX_ struct coro *coro)
     myop.op_flags = OPf_WANT_VOID;
 
     PUSHMARK (SP);
-    XPUSHs (av_shift (GvAV (PL_defgv)));
+    XPUSHs (sv_2mortal (av_shift (GvAV (PL_defgv))));
     PUTBACK;
     PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
     SPAGAIN;
   }
-
-  ENTER; /* necessary e.g. for dounwind */
 }
 
 static void
@@ -1429,6 +1429,8 @@ new (char *klass, ...)
         coro->hv = hv = newHV ();
         sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
         RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
+
+        av_extend (coro->args, items - 1);
 
         for (i = 1; i < items; i++)
           av_push (coro->args, newSVsv (ST (i)));
