@@ -77,11 +77,6 @@ static long pagesize;
 # define SvRV_set(s,v) SvRV(s) = (v)
 #endif
 
-/* 5.8.8 */
-#ifndef GV_NOTQUAL
-# define GV_NOTQUAL 0
-#endif
-
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef CORO_STACKGUARD
 #endif
@@ -1385,8 +1380,8 @@ BOOT:
 #endif
         BOOT_PAGESIZE;
 
-        irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
-        stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
+        irsgv    = gv_fetchpv ("/"     , GV_ADD, SVt_PV);
+        stdoutgv = gv_fetchpv ("STDOUT", GV_ADD, SVt_PVIO);
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
