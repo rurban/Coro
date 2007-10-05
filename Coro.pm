@@ -599,7 +599,7 @@ sub unblock_sub(&) {
 
 =head1 SEE ALSO
 
-Support/Utility: L<Coro::Cont>, L<Coro::Specific>, L<Coro::State>, L<Coro::Util>.
+Support/Utility: L<Coro::Specific>, L<Coro::State>, L<Coro::Util>.
 
 Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>, L<Coro::SemaphoreSet>, L<Coro::RWLock>.
 
