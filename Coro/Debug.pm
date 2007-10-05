@@ -98,6 +98,7 @@ use Carp ();
 use IO::Socket::UNIX;
 use AnyEvent;
 use Time::HiRes;
+use Scalar::Util ();
 use overload ();
 
 use Coro ();
@@ -221,6 +222,8 @@ sub trace {
                      } @{$_[2]}
                ) . ")" : "";
          };
+
+         undef $coro; # the subs keep a reference which we do not want them to do
       } else {
          Coro::Debug::log $loglevel, sprintf "[%d] unable to enable tracing: %s", $Coro::current + 0, $@;
       }
@@ -236,7 +239,7 @@ sub untrace {
 
    (Coro::async_pool {
       Coro::State::trace $coro, 0;
-      delete $coro->{_tracr_sub_cb};
+      delete $coro->{_trace_sub_cb};
       delete $coro->{_trace_line_cb};
    })->prio (Coro::PRIO_MAX);
 

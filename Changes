@@ -5,6 +5,15 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.02 Sat Oct  6 02:36:47 CEST 2007
+	- fix a very minor per-coroutine memleak (a single codereference).
+	- fixed a bug where the currently in-use c context would be freed
+          prematurely (can happen only when programs change the stacksize
+          or use tracing).
+        - tracing can no longer keep a coro alive after it terminated.
+        - do static branch prediction in the common path for gcc. gives
+          about 2-5% speed improvement here.
+
 4.01 Fri Oct  5 22:10:49 CEST 2007
 	- instead of recreating *a* standard output handle we simply
           use STDOUT, which is faster and hopefully more robust.

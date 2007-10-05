@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Coro
-version:      4.01
+version:      4.02
 version_from: Coro.pm
 installdirs:  site
 requires:
