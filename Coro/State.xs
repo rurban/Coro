@@ -606,15 +606,7 @@ coro_setup (pTHX_ struct coro *coro)
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
 
-  {
-    IO *io = newIO ();
-    PL_defoutgv = (GV *)NEWSV (0, 0);
-    gv_init (PL_defoutgv, coro_state_stash, "stdout", sizeof ("stdout") - 1, 0);
-    IoTYPE (io) = IoTYPE_WRONLY;
-    IoOFP (io) = IoIFP (io) = PerlIO_stdout ();
-    IoFLAGS (io) |= IOf_FLUSH;
-    GvIOp (PL_defoutgv) = io;
-  }
+  SvREFCNT_inc (PL_defoutgv);
 
   {
     dSP;

@@ -100,7 +100,7 @@ coroutine, and have defined initial values:
    $_         undef
    $@         undef
    $/         "\n"
-   (select)   the program's original standard output
+   (select)   STDOUT
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
@@ -123,6 +123,7 @@ this:
 # its sole purpose is to call transfer() once so it knows
 # the stop level stack frame for stack sharing.
 sub _cctx_init {
+   select STDOUT;
    _set_stacklevel $_[0];
 }
 
