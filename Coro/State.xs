@@ -77,6 +77,14 @@ static long pagesize;
 # define SvRV_set(s,v) SvRV(s) = (v)
 #endif
 
+/* 5.8.8 */
+#ifndef GV_NOTQUAL
+# define GV_NOTQUAL 0
+#endif
+#ifndef newSV
+# define newSV(l) NEWSV(0,l)
+#endif
+
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef CORO_STACKGUARD
 #endif
@@ -134,7 +142,8 @@ static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static SV *coro_mortal; /* will be freed after next transfer */
 
-static GV *irsgv; /* $/ */
+static GV *irsgv;    /* $/ */
+static GV *stdoutgv; /* *STDOUT */
 
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
@@ -600,20 +609,12 @@ coro_setup (pTHX_ struct coro *coro)
   PL_dirty      = 0;
   PL_restartop  = 0;
   
-  GvSV (PL_defgv)    = NEWSV (0, 0);
+  GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
-  GvSV (PL_errgv)    = NEWSV (0, 0);
+  GvSV (PL_errgv)    = newSV (0);
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
-
-  {
-    IO *io = newIO ();
-    PL_defoutgv = newGVgen ("Coro");
-    GvIOp(PL_defoutgv) = io;
-    IoTYPE (io) = IoTYPE_WRONLY;
-    IoOFP (io) = IoIFP (io) = PerlIO_stdout ();
-    IoFLAGS (io) |= IOf_FLUSH;
-  }
+  PL_defoutgv        = SvREFCNT_inc (stdoutgv);
 
   {
     dSP;
@@ -1387,7 +1388,8 @@ BOOT:
 #endif
         BOOT_PAGESIZE;
 
-        irsgv = gv_fetchpv ("/", 1, SVt_PV);
+        irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
+        stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
