@@ -108,10 +108,15 @@ static long pagesize;
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
 # define BARRIER __asm__ __volatile__ ("" : : : "memory")
+# define expect(expr,value) __builtin_expect ((expr),(value))
 #else
 # define attribute(x)
 # define BARRIER
+# define expect(expr,value) (expr)
 #endif
+
+#define expect_false(expr) expect ((expr) != 0, 0)
+#define expect_true(expr)  expect ((expr) != 0, 1)
 
 #define NOINLINE attribute ((noinline))
 
@@ -327,11 +332,11 @@ SvSTATE_ (pTHX_ SV *coro)
   if (SvROK (coro))
     coro = SvRV (coro);
 
-  if (SvTYPE (coro) != SVt_PVHV)
+  if (expect_false (SvTYPE (coro) != SVt_PVHV))
     croak ("Coro::State object required");
 
   stash = SvSTASH (coro);
-  if (stash != coro_stash && stash != coro_state_stash)
+  if (expect_false (stash != coro_stash && stash != coro_state_stash))
     {
       /* very slow, but rare, check */
       if (!sv_derived_from (sv_2mortal (newRV_inc (coro)), "Coro::State"))
@@ -351,7 +356,7 @@ get_padlist (pTHX_ CV *cv)
   MAGIC *mg = CORO_MAGIC (cv);
   AV *av;
 
-  if (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0)
+  if (expect_true (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0))
     CvPADLIST (cv) = (AV *)AvARRAY (av)[AvFILLp (av)--];
   else
    {
@@ -373,7 +378,7 @@ put_padlist (pTHX_ CV *cv)
   MAGIC *mg = CORO_MAGIC (cv);
   AV *av;
 
-  if (!mg)
+  if (expect_false (!mg))
     {
       sv_magic ((SV *)cv, 0, PERL_MAGIC_coro, 0, 0);
       mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
@@ -383,7 +388,7 @@ put_padlist (pTHX_ CV *cv)
 
   av = (AV *)mg->mg_obj;
 
-  if (AvFILLp (av) >= AvMAX (av))
+  if (expect_false (AvFILLp (av) >= AvMAX (av)))
     av_extend (av, AvMAX (av) + 1);
 
   AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
@@ -408,7 +413,7 @@ load_perl (pTHX_ Coro__State c)
     CV *cv;
 
     /* now do the ugly restore mess */
-    while ((cv = (CV *)POPs))
+    while (expect_true (cv = (CV *)POPs))
       {
         put_padlist (aTHX_ cv); /* mark this padlist as available */
         CvDEPTH (cv) = PTR2IV (POPs);
@@ -437,15 +442,15 @@ save_perl (pTHX_ Coro__State c)
     /* this loop was inspired by pp_caller */
     for (;;)
       {
-        while (cxix >= 0)
+        while (expect_true (cxix >= 0))
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
-            if (CxTYPE (cx) == CXt_SUB || CxTYPE (cx) == CXt_FORMAT)
+            if (expect_true (CxTYPE (cx) == CXt_SUB || CxTYPE (cx) == CXt_FORMAT))
               {
                 CV *cv = cx->blk_sub.cv;
 
-                if (CvDEPTH (cv))
+                if (expect_true (CvDEPTH (cv)))
                   {
                     EXTEND (SP, 3);
                     PUSHs ((SV *)CvPADLIST (cv));
@@ -458,7 +463,7 @@ save_perl (pTHX_ Coro__State c)
               }
           }
 
-        if (top_si->si_type == PERLSI_MAIN)
+        if (expect_true (top_si->si_type == PERLSI_MAIN))
           break;
 
         top_si = top_si->si_prev;
@@ -671,7 +676,7 @@ coro_destroy (pTHX_ struct coro *coro)
 static void
 free_coro_mortal (pTHX)
 {
-  if (coro_mortal)
+  if (expect_true (coro_mortal))
     {
       SvREFCNT_dec (coro_mortal);
       coro_mortal = 0;
@@ -938,13 +943,13 @@ cctx_destroy (coro_cctx *cctx)
 static coro_cctx *
 cctx_get (pTHX)
 {
-  while (cctx_first)
+  while (expect_true (cctx_first))
     {
       coro_cctx *cctx = cctx_first;
       cctx_first = cctx->next;
       --cctx_idle;
 
-      if (!CCTX_EXPIRED (cctx))
+      if (expect_true (!CCTX_EXPIRED (cctx)))
         return cctx;
 
       cctx_destroy (cctx);
@@ -957,7 +962,7 @@ static void
 cctx_put (coro_cctx *cctx)
 {
   /* free another cctx if overlimit */
-  if (cctx_idle >= MAX_IDLE_CCTX)
+  if (expect_false (cctx_idle >= MAX_IDLE_CCTX))
     {
       coro_cctx *first = cctx_first;
       cctx_first = first->next;
@@ -973,21 +978,21 @@ cctx_put (coro_cctx *cctx)
 
 /** coroutine switching *****************************************************/
 
-static void NOINLINE
+static void
 transfer_check (pTHX_ struct coro *prev, struct coro *next)
 {
-  if (prev != next)
+  if (expect_true (prev != next))
     {
-      if (!(prev->flags & (CF_RUNNING | CF_NEW)))
+      if (expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
         croak ("Coro::State::transfer called with non-running/new prev Coro::State, but can only transfer from running or new states");
 
-      if (next->flags & CF_RUNNING)
+      if (expect_false (next->flags & CF_RUNNING))
         croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states");
 
-      if (next->flags & CF_DESTROYED)
+      if (expect_false (next->flags & CF_DESTROYED))
         croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
 
-      if (PL_lex_state != LEX_NOTPARSING)
+      if (expect_false (PL_lex_state != LEX_NOTPARSING))
         croak ("Coro::State::transfer called while parsing, but this is not supported");
     }
 }
@@ -999,16 +1004,16 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
   dSTACKLEVEL;
 
   /* sometimes transfer is only called to set idle_sp */
-  if (!next)
+  if (expect_false (!next))
     {
       ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
       assert (((coro_cctx *)prev)->idle_te = PL_top_env); /* just for the side-effect when asserts are enabled */
     }
-  else if (prev != next)
+  else if (expect_true (prev != next))
     {
       coro_cctx *prev__cctx;
 
-      if (prev->flags & CF_NEW)
+      if (expect_false (prev->flags & CF_NEW))
         {
           /* create a new empty context */
           Newz (0, prev->cctx, 1, coro_cctx);
@@ -1021,7 +1026,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
 
       LOCK;
 
-      if (next->flags & CF_NEW)
+      if (expect_false (next->flags & CF_NEW))
         {
           /* need to start coroutine */
           next->flags &= ~CF_NEW;
@@ -1040,7 +1045,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
       prev__cctx = prev->cctx;
 
       /* possibly "free" the cctx */
-      if (prev__cctx->idle_sp == STACKLEVEL && !(prev__cctx->flags & CC_TRACE))
+      if (expect_true (prev__cctx->idle_sp == STACKLEVEL && !(prev__cctx->flags & CC_TRACE)))
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
           assert (("ERROR: current top_env must equal previous top_env", PL_top_env == prev__cctx->idle_te));
@@ -1048,7 +1053,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           prev->cctx = 0;
 
           /* if the cctx is about to be destroyed we need to make sure we won't see it in cctx_get */
-          if (CCTX_EXPIRED (prev__cctx))
+          /* without this the next cctx_get might destroy the prev__cctx while still in use */
+          if (expect_false (CCTX_EXPIRED (prev__cctx)))
             next->cctx = cctx_get (aTHX);
 
           cctx_put (prev__cctx);
@@ -1056,10 +1062,10 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
 
       ++next->usecount;
 
-      if (!next->cctx)
+      if (expect_true (!next->cctx))
         next->cctx = cctx_get (aTHX);
 
-      if (prev__cctx != next->cctx)
+      if (expect_false (prev__cctx != next->cctx))
         {
           prev__cctx->top_env = PL_top_env;
           PL_top_env = next->cctx->top_env;
@@ -1249,7 +1255,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
       next_sv = coro_deq (aTHX_ PRIO_MIN);
 
       /* nothing to schedule: call the idle handler */
-      if (!next_sv)
+      if (expect_false (!next_sv))
         {
           dSP;
           UNLOCK;
@@ -1269,7 +1275,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
       ta->next = SvSTATE (next_sv);
 
       /* cannot transfer to destroyed coros, skip and look for next */
-      if (ta->next->flags & CF_DESTROYED)
+      if (expect_false (ta->next->flags & CF_DESTROYED))
         {
           UNLOCK;
           SvREFCNT_dec (next_sv);
@@ -1335,7 +1341,7 @@ api_cede (void)
 
   prepare_cede (aTHX_ &ta);
 
-  if (ta.prev != ta.next)
+  if (expect_true (ta.prev != ta.next))
     {
       TRANSFER (ta);
       return 1;
@@ -1491,7 +1497,7 @@ _set_stacklevel (...)
         BARRIER;
         TRANSFER (ta);
 
-        if (GIMME_V != G_VOID && ta.next != ta.prev)
+        if (expect_false (GIMME_V != G_VOID && ta.next != ta.prev))
           XSRETURN_YES;
 }
 
