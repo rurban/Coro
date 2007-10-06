@@ -221,7 +221,7 @@ struct coro {
 
   /* coro process data */
   int prio;
-  //SV *throw;
+  SV *throw;
 
   /* async_pool */
   SV *saved_deffh;
@@ -610,7 +610,7 @@ coro_setup (pTHX_ struct coro *coro)
   PL_in_eval    = EVAL_NULL;
   PL_comppad    = 0;
   PL_curpm      = 0;
-  PL_curpad     = 1;
+  PL_curpad     = 0;
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
@@ -620,7 +620,7 @@ coro_setup (pTHX_ struct coro *coro)
   GvSV (PL_errgv)    = newSV (0);
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
-  PL_defoutgv        = SvREFCNT_inc (stdoutgv);
+  PL_defoutgv        = (GV *)SvREFCNT_inc (stdoutgv);
 
   {
     dSP;
@@ -669,7 +669,7 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (GvSV (irsgv));
 
   SvREFCNT_dec (coro->saved_deffh);
-  //SvREFCNT_dec (coro->throw);
+  SvREFCNT_dec (coro->throw);
 
   coro_destroy_stacks (aTHX);
 }
@@ -1075,6 +1075,19 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
 
       free_coro_mortal (aTHX);
       UNLOCK;
+
+      if (expect_false (prev->throw || next->throw))
+        {
+          struct coro *coro = SvSTATE (coro_current);
+
+          if (coro->throw)
+            {
+              SV *exception = coro->throw;
+              coro->throw = 0;
+              sv_setsv (ERRSV, exception);
+              croak (0);
+            }
+        }
     }
 }
 
@@ -1723,6 +1736,13 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
+
+void
+throw (Coro::State self, SV *throw = &PL_sv_undef)
+	PROTOTYPE: $;$
+        CODE:
+        SvREFCNT_dec (self->throw);
+        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
 
 # for async_pool speedup
 void

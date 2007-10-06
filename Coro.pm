@@ -473,6 +473,22 @@ coroutine. This is just a free-form string you can associate with a coroutine.
 This method simply sets the C<< $coroutine->{desc} >> member to the given string. You
 can modify this member directly if you wish.
 
+=item $coroutine->throw ([$scalar])
+
+If C<$throw> is specified and defined, it will be thrown as an exception
+inside the coroutine at the next convinient point in time (usually after
+it gains control at the next schedule/transfer/cede). Otherwise clears the
+exception object.
+
+The exception object will be thrown "as is" with the specified scalar in
+C<$@>, i.e. if it is a string, no line number or newline will be appended
+(unlike with C<die>).
+
+This can be used as a softer means than C<cancel> to ask a coroutine to
+end itself, although there is no guarentee that the exception will lead to
+termination, and if the exception isn't caught it might well end the whole
+program.
+
 =cut
 
 sub desc {
