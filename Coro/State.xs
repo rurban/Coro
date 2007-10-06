@@ -610,6 +610,7 @@ coro_setup (pTHX_ struct coro *coro)
   PL_in_eval    = EVAL_NULL;
   PL_comppad    = 0;
   PL_curpm      = 0;
+  PL_curpad     = 1;
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
@@ -620,8 +621,6 @@ coro_setup (pTHX_ struct coro *coro)
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
   PL_defoutgv        = SvREFCNT_inc (stdoutgv);
-
-  ENTER; /* necessary e.g. for dounwind */
 
   {
     dSP;
@@ -638,6 +637,8 @@ coro_setup (pTHX_ struct coro *coro)
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
     SPAGAIN;
   }
+
+  ENTER; /* necessary e.g. for dounwind and to balance the xsub-entersub */
 }
 
 static void
