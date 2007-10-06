@@ -52,7 +52,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '4.02';
+our $VERSION = '4.03';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -257,7 +257,7 @@ sub pool_handler {
          }
       };
 
-      last if $@ eq "\3terminate\2\n";
+      last if $@ eq "\3async_pool terminate\2\n";
       warn $@ if $@;
    }
 }
