@@ -37,16 +37,14 @@ modules for a higher level process abstraction including scheduling.
 =head2 MEMORY CONSUMPTION
 
 A newly created coroutine that has not been used only allocates a
-relatively small (a few hundred bytes) structure. Only on the first
-C<transfer> will perl allocate stacks (a few kb) and optionally
-a C stack/coroutine (cctx) for coroutines that recurse through C
-functions. All this is very system-dependent. On my x86_64-pc-linux-gnu
-system this amounts to about 8k per (non-trivial) coroutine. You can view
-the actual memory consumption using Coro::Debug.
-
-=head2 FUNCTIONS
-
-=over 4
+relatively small (a hundred bytes) structure. Only on the first
+C<transfer> will perl allocate stacks (a few kb, 64 bit architetcures use
+twice as much) and optionally a C stack/coroutine (cctx) for coroutines
+that recurse through C functions. All this is very system-dependent. On
+my x86-pc-linux-gnu system this amounts to about 2k per (non-trivial
+but simple) coroutine. You can view the actual memory consumption using
+Coro::Debug. Keep in mind that a for loop or other block constructs can
+easily consume 100-200 bytes per nesting level.
 
 =cut
 
@@ -55,10 +53,14 @@ package Coro::State;
 use strict;
 no warnings "uninitialized";
 
+use Carp;
+our $DIEHOOK  = sub { };
+our $WARNHOOK = sub { warn $_[0] };
+
 use XSLoader;
 
 BEGIN {
-   our $VERSION = '4.0';
+   our $VERSION = '4.1';
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -69,6 +71,40 @@ BEGIN {
 
 use Exporter;
 use base Exporter::;
+
+=head2 GLOBAL VARIABLES
+
+=over 4
+
+=item $Coro::State::DIEHOOK
+
+This works similarly to C<$SIG{__DIE__}> and is used as the default die
+hook for newly created coroutines. This is useful if you want some generic
+logging function that works for all coroutines that don't set their own
+hook.
+
+When Coro::State is first loaded it will install these handlers for the
+main program, too, unless they have been overriden already.
+
+The default handlers provided will behave like the inbuilt ones (as if
+they weren't there).
+
+Note 1: You I<must> store a valid code reference in these variables, C<undef> will not do.
+
+Note 2: You I<must> only assign to these variables, never C<local>ise or do other fancy stuff.
+
+Note 3: The value of this variable will be shared among all coroutines, so
+changing its value will change it in all coroutines using them.
+
+=item $Coro::State::WARNHOOK
+
+Similar to above die hook, but augments C<$SIG{__WARN__}>.
+
+=back
+
+=head2 FUNCTIONS
+
+=over 4
 
 =item $coro = new Coro::State [$coderef[, @args...]]
 
@@ -92,17 +128,18 @@ Certain variables are "localised" to each coroutine, that is, certain
 sensibly be localised currently is, and not everything that is localised
 makes sense for every application, and the future might bring changes.
 
-The following global variables can have different values in each
-coroutine, and have defined initial values:
+The following global variables can have different values per coroutine,
+and have the stated initial values:
 
    Variable       Initial Value
    @_             whatever arguments were passed to the Coro
    $_             undef
    $@             undef
    $/             "\n"
-   $SIG{__DIE__}  undef
-   $SIG{__WARN__} undef
+   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK
+   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK
    (default fh)   *STDOUT
+   $1, $2...      all regex results are initially undefined
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
@@ -111,11 +148,11 @@ variables. Yes, this is by design ;) You can always create your own
 process abstraction model that saves these variables.
 
 The easiest way to do this is to create your own scheduling primitive like
-this:
+below, and use it in your coroutines:
 
-  sub schedule {
+  sub my_cede {
      local ($;, ...);
-     $old->transfer ($new);
+     Coro::cede;
   }
 
 =cut
