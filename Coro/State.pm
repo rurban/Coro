@@ -136,10 +136,13 @@ and have the stated initial values:
    $_             undef
    $@             undef
    $/             "\n"
-   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK
-   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK
+   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK(*)
+   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK(*)
    (default fh)   *STDOUT
    $1, $2...      all regex results are initially undefined
+
+   (*) may not read back properly, for speed reasons, but
+       local()ising should be safe.
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
