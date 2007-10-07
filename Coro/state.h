@@ -2,7 +2,7 @@
 /* mostly copied from thrdvar.h */
 
 VAR(defoutgv,      GV *)           /* default FH for output */
-VAR(stack_sp,      SV **)          /* top of the stack */
+VAR(stack_sp,      SV **)          /* the main stack */
 #ifdef OP_IN_REGISTER
 VAR(opsave,        OP *)           /* probably not necessary */
 #else
@@ -47,7 +47,6 @@ VAR(localizing,    int)            /* are we processing a local() list? */
 
 VAR(curstack,      AV *)           /* THE STACK */
 VAR(curstackinfo,  PERL_SI *)      /* current stack + context */
-VAR(mainstack,     AV *)           /* the stack when nothing funny is happening */
 
 VAR(sortcop,       OP *)           /* user defined sort routine */
 VAR(sortstash,     HV *)           /* which is in some package or other */
@@ -61,5 +60,7 @@ VAR(comppad,       AV *)           /* storage for lexically scoped temporaries *
 /* but, well, I thoroughly misunderstand what thrdvar and intrpvar is. still. */
 VAR(compcv,        CV *)           /* currently compiling subroutine */
 
+VAR(diehook,       SV *)
+VAR(warnhook,      SV *)
 VAR(runops,        runops_proc_t)  /* for tracing support */
 

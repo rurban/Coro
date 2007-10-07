@@ -1,6 +1,7 @@
 #include "libcoro/coro.c"
 
 #define PERL_NO_GET_CONTEXT
+#define PERL_EXT
 
 #include "EXTERN.h"
 #include "perl.h"
@@ -194,27 +195,32 @@ enum {
   CF_DESTROYED = 0x0008, /* coroutine data has been freed */
 };
 
+/* the structure where most of the perl state is stored, overlaid on the cxstack */
+typedef struct {
+  SV *defsv;
+  AV *defav;
+  SV *errsv;
+  SV *irsgv;
+#define VAR(name,type) type name;
+# include "state.h"
+#undef VAR
+} perl_slots;
+
+#define SLOT_COUNT ((sizeof (perl_slots) + sizeof (PERL_CONTEXT) - 1) / sizeof (PERL_CONTEXT))
+
 /* this is a structure representing a perl-level coroutine */
 struct coro {
   /* the c coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
 
+  /* process data */
+  AV *mainstack;
+  perl_slots *slot; /* basically the saved sp */
+
   /* data associated with this coroutine (initial args) */
   AV *args;
   int refcnt;
   int flags; /* CF_ flags */
-
-  /* optionally saved, might be zero */
-  AV *defav; /* @_ */
-  SV *defsv; /* $_ */
-  SV *errsv; /* $@ */
-  SV *deffh; /* default filehandle */
-  SV *irssv; /* $/ */
-  SV *irssv_sv; /* real $/ cache */
-  
-#define VAR(name,type) type name;
-# include "state.h"
-#undef VAR
 
   /* statistics */
   int usecount; /* number of transfers to this coro */
@@ -399,17 +405,23 @@ put_padlist (pTHX_ CV *cv)
 static void
 load_perl (pTHX_ Coro__State c)
 {
-#define VAR(name,type) PL_ ## name = c->name;
-# include "state.h"
-#undef VAR
+  perl_slots *slot = c->slot;
+  c->slot = 0;
 
-  GvSV (PL_defgv) = c->defsv;
-  GvAV (PL_defgv) = c->defav;
-  GvSV (PL_errgv) = c->errsv;
-  GvSV (irsgv)    = c->irssv_sv;
+  PL_mainstack = c->mainstack;
+
+  GvSV (PL_defgv) = slot->defsv;
+  GvAV (PL_defgv) = slot->defav;
+  GvSV (PL_errgv) = slot->errsv;
+  GvSV (irsgv)    = slot->irsgv;
+
+  #define VAR(name,type) PL_ ## name = slot->name;
+  # include "state.h"
+  #undef VAR
 
   {
     dSP;
+
     CV *cv;
 
     /* now do the ugly restore mess */
@@ -474,14 +486,33 @@ save_perl (pTHX_ Coro__State c)
     PUTBACK;
   }
 
-  c->defav    = GvAV (PL_defgv);
-  c->defsv    = DEFSV;
-  c->errsv    = ERRSV;
-  c->irssv_sv = GvSV (irsgv);
+  /* allocate some space on the context stack for our purposes */
+  {
+    /* we manually unroll here, as usually 2 slots is enough */
+    int i;
+    if (SLOT_COUNT >= 1) CXINC;
+    if (SLOT_COUNT >= 2) CXINC;
+    if (SLOT_COUNT >= 3) CXINC;
+    for (i = 3; i < SLOT_COUNT; ++i)
+      CXINC;
 
-#define VAR(name,type)c->name = PL_ ## name;
-# include "state.h"
-#undef VAR
+    cxstack_ix -= SLOT_COUNT; /* undo allocation */
+  }
+
+  c->mainstack = PL_mainstack;
+
+  {
+    perl_slots *slot = c->slot = (perl_slots *)(cxstack + cxstack_ix + 1);
+
+    slot->defav = GvAV (PL_defgv);
+    slot->defsv = DEFSV;
+    slot->errsv = ERRSV;
+    slot->irsgv = GvSV (irsgv);
+
+    #define VAR(name,type) slot->name = PL_ ## name;
+    # include "state.h"
+    #undef VAR
+  }
 }
 
 /*
@@ -496,7 +527,7 @@ save_perl (pTHX_ Coro__State c)
 static void
 coro_init_stacks (pTHX)
 {
-    PL_curstackinfo = new_stackinfo(64, 6);
+    PL_curstackinfo = new_stackinfo(32, 8);
     PL_curstackinfo->si_type = PERLSI_MAIN;
     PL_curstack = PL_curstackinfo->si_stack;
     PL_mainstack = PL_curstack;		/* remember in case we switch stacks */
@@ -505,10 +536,10 @@ coro_init_stacks (pTHX)
     PL_stack_sp = PL_stack_base;
     PL_stack_max = PL_stack_base + AvMAX(PL_curstack);
 
-    New(50,PL_tmps_stack,64,SV*);
+    New(50,PL_tmps_stack,32,SV*);
     PL_tmps_floor = -1;
     PL_tmps_ix = -1;
-    PL_tmps_max = 64;
+    PL_tmps_max = 32;
 
     New(54,PL_markstack,16,I32);
     PL_markstack_ptr = PL_markstack;
@@ -518,13 +549,13 @@ coro_init_stacks (pTHX)
     SET_MARK_OFFSET;
 #endif
 
-    New(54,PL_scopestack,16,I32);
+    New(54,PL_scopestack,8,I32);
     PL_scopestack_ix = 0;
-    PL_scopestack_max = 16;
+    PL_scopestack_max = 8;
 
-    New(54,PL_savestack,64,ANY);
+    New(54,PL_savestack,24,ANY);
     PL_savestack_ix = 0;
-    PL_savestack_max = 64;
+    PL_savestack_max = 24;
 
 #if !PERL_VERSION_ATLEAST (5,9,0)
     New(54,PL_retstack,4,OP*);
@@ -571,24 +602,30 @@ coro_rss (pTHX_ struct coro *coro)
 
   if (coro->mainstack)
     {
+      perl_slots tmp_slot;
+      perl_slots *slot;
+
       if (coro->flags & CF_RUNNING)
         {
-          #define VAR(name,type)coro->name = PL_ ## name;
+          slot = &tmp_slot;
+
+          #define VAR(name,type) slot->name = PL_ ## name;
           # include "state.h"
           #undef VAR
         }
+      else
+        slot = coro->slot;
 
-      rss += sizeof (coro->curstackinfo);
-      rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvFILL (coro->curstackinfo->si_stack)) * sizeof (SV *);
-      rss += (coro->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
-      rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvFILL (coro->curstack)) * sizeof (SV *);
-      rss += coro->tmps_max * sizeof (SV *);
-      rss += (coro->markstack_max - coro->markstack_ptr) * sizeof (I32);
-      rss += coro->scopestack_max * sizeof (I32);
-      rss += coro->savestack_max * sizeof (ANY);
+      rss += sizeof (slot->curstackinfo);
+      rss += (slot->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
+      rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvMAX (slot->curstack)) * sizeof (SV *);
+      rss += slot->tmps_max * sizeof (SV *);
+      rss += (slot->markstack_max - slot->markstack_ptr) * sizeof (I32);
+      rss += slot->scopestack_max * sizeof (I32);
+      rss += slot->savestack_max * sizeof (ANY);
 
 #if !PERL_VERSION_ATLEAST (5,9,0)
-      rss += coro->retstack_max * sizeof (OP *);
+      rss += slot->retstack_max * sizeof (OP *);
 #endif
     }
 
@@ -614,6 +651,8 @@ coro_setup (pTHX_ struct coro *coro)
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
+  PL_diehook    = 0;
+  PL_warnhook   = 0;
   
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
@@ -668,6 +707,9 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_rs);
   SvREFCNT_dec (GvSV (irsgv));
 
+  SvREFCNT_dec (PL_diehook);
+  SvREFCNT_dec (PL_warnhook);
+  
   SvREFCNT_dec (coro->saved_deffh);
   SvREFCNT_dec (coro->throw);
 
@@ -993,7 +1035,13 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
       if (expect_false (next->flags & CF_DESTROYED))
         croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
 
-      if (expect_false (PL_lex_state != LEX_NOTPARSING))
+      if (
+#if PERL_VERSION_ATLEAST (5,9,0)
+          expect_false (PL_parser)
+#else
+          expect_false (PL_lex_state != LEX_NOTPARSING)
+#endif
+         )
         croak ("Coro::State::transfer called while parsing, but this is not supported");
     }
 }
@@ -1132,9 +1180,9 @@ coro_state_destroy (pTHX_ struct coro *coro)
 
       coro_destroy (aTHX_ coro);
 
-      load_perl (aTHX_ &temp); /* this will get rid of defsv etc.. */
+      load_perl (aTHX_ &temp);
 
-      coro->mainstack = 0;
+      coro->slot = 0;
     }
 
   cctx_destroy (coro->cctx);
@@ -1401,7 +1449,7 @@ api_trace (SV *coro_sv, int flags)
       if (coro->flags & CF_RUNNING)
         PL_runops = RUNOPS_DEFAULT;
       else
-        coro->runops = RUNOPS_DEFAULT;
+        coro->slot->runops = RUNOPS_DEFAULT;
     }
 }
 
@@ -1571,7 +1619,6 @@ call (Coro::State coro, SV *coderef)
         if (coro->mainstack)
           {
             struct coro temp;
-            Zero (&temp, 1, struct coro);
 
             if (!(coro->flags & CF_RUNNING))
               {
@@ -1585,10 +1632,12 @@ call (Coro::State coro, SV *coderef)
               SAVETMPS;
               PUSHMARK (SP);
               PUTBACK;
+
               if (ix)
                 eval_sv (coderef, 0);
               else
                 call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+
               SPAGAIN;
               FREETMPS;
               LEAVE;
@@ -1657,13 +1706,16 @@ BOOT:
 	int i;
 
         sv_pool_rss   = get_sv ("Coro::POOL_RSS"  , TRUE);
+                        get_sv ("Coro::POOL_RSS"  , TRUE); /* silence stupid 5.10 warning */
         sv_pool_size  = get_sv ("Coro::POOL_SIZE" , TRUE);
+                        get_sv ("Coro::POOL_SIZE" , TRUE); /* silence stupid 5.10 warning */
         av_async_pool = get_av ("Coro::async_pool", TRUE);
+                        get_av ("Coro::async_pool", TRUE); /* silence stupid 5.10 warning */
 
         coro_current  = get_sv ("Coro::current", FALSE);
         SvREADONLY_on (coro_current);
 
-	coro_stash = gv_stashpv ("Coro",        TRUE);
+	coro_stash = gv_stashpv ("Coro", TRUE);
 
         newCONSTSUB (coro_stash, "PRIO_MAX",    newSViv (PRIO_MAX));
         newCONSTSUB (coro_stash, "PRIO_HIGH",   newSViv (PRIO_HIGH));
@@ -1676,7 +1728,8 @@ BOOT:
           coro_ready[i] = newAV ();
 
         {
-          SV *sv = perl_get_sv("Coro::API", 1);
+          SV *sv = perl_get_sv ("Coro::API", TRUE);
+                   perl_get_sv ("Coro::API", TRUE); /* silence 5.10 warning */
 
           coroapi.schedule     = api_schedule;
           coroapi.cede         = api_cede;

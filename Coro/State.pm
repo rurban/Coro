@@ -95,12 +95,14 @@ makes sense for every application, and the future might bring changes.
 The following global variables can have different values in each
 coroutine, and have defined initial values:
 
-   Variable   Initial Value
-   @_         whatever arguments were passed to the Coro
-   $_         undef
-   $@         undef
-   $/         "\n"
-   (select)   STDOUT
+   Variable       Initial Value
+   @_             whatever arguments were passed to the Coro
+   $_             undef
+   $@             undef
+   $/             "\n"
+   $SIG{__DIE__}  undef
+   $SIG{__WARN__} undef
+   (default fh)   *STDOUT
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such

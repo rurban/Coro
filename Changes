@@ -13,6 +13,7 @@ TODO: maybe implement a default message channel, very much like Erlang
 	- overlay the saved state over the context stack. This saves
           a few hundred bytes per coroutine on average and also
           speeds up context switching a bit.
+        - further tune default stack sizes.
         - (more) correctly calculate stack usage in coro_rss.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
