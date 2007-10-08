@@ -20,6 +20,8 @@ TODO: maybe implement a default message channel, very much like Erlang
         - added Coro::Storable::guard.
         - stopping to trace a coroutine could destroy the cctx of
           an unrelated coroutine.
+        - explain the relationship between Perl and C coroutines in
+          more detail in Coro::State.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
 	- added Coro::throw method.

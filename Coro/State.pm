@@ -34,6 +34,25 @@ continuations and more.
 This module provides only low-level functionality. See L<Coro> and related
 modules for a higher level process abstraction including scheduling.
 
+=head2 MODEL
+
+Coro::State implements two different coroutine models: Perl and C. The
+C coroutines (called cctx's) are basically simplified perl interpreters
+running/interpreting the Perl coroutines. A single interpreter can run any
+number of Perl coroutines, so usually there are very few C coroutines.
+
+When Perl code calls a C function (e.g. in an extension module) and that
+C function then calls back into Perl or does a coroutine switch the C
+coroutine can no longer execute other Perl coroutines, so it stays tied to
+the specific coroutine until it returns to the original Perl caller, after
+which it is again avaikable to run other Perl coroutines.
+
+The main program always has its own "C coroutine" (which really is
+*the* Perl interpreter running the whole program), so there will always
+be at least one additional C coroutine. You cna use the debugger (see
+L<Coro::Debug>) to find out which coroutines are tied to their cctx and
+which aren't.
+
 =head2 MEMORY CONSUMPTION
 
 A newly created coroutine that has not been used only allocates a
