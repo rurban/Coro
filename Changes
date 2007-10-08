@@ -1,6 +1,5 @@
 Revision history for Perl extension Coro.
 
-TODO: localise SIG{__DIE__} and/or __WARN__
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
@@ -16,6 +15,9 @@ TODO: maybe implement a default message channel, very much like Erlang
           speeds up context switching a bit.
         - further tune default stack sizes.
         - (more) correctly calculate stack usage in coro_rss.
+        - Coro::Storable::blocking_* did not properly lock
+          resulting in races between coroutines.
+        - added Coro::Storable::guard.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
 	- added Coro::throw method.

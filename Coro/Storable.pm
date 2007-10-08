@@ -59,6 +59,10 @@ memory and file images.
 
 Same as C<blocking_freeze> but uses C<nfreeze> internally.
 
+=item $guard = guard;
+
+Acquire the Storable lock, for when you want to call Storable yourself.
+
 =back
 
 =cut
@@ -77,6 +81,10 @@ our $VERSION = '0.2';
 our @EXPORT = qw(thaw freeze nfreeze blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;
+
+sub guard {
+   $lock->guard
+}
 
 sub thaw($) {
    my $guard = $lock->guard;
@@ -105,6 +113,8 @@ sub nfreeze($) {
 }
 
 sub blocking_freeze {
+   my $guard = $lock->guard;
+
    open my $fh, ">", \my $buf
          or die "cannot open pst: $!";
    Storable::store_fd $_[0], $fh;
@@ -114,6 +124,8 @@ sub blocking_freeze {
 }
 
 sub blocking_nfreeze {
+   my $guard = $lock->guard;
+
    open my $fh, ">", \my $buf
          or die "cannot open pst: $!";
    Storable::nstore_fd $_[0], $fh;
