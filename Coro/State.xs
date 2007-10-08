@@ -223,24 +223,23 @@ struct coro {
   AV *mainstack;
   perl_slots *slot; /* basically the saved sp */
 
-  /* data associated with this coroutine (initial args) */
-  AV *args;
-  int refcnt;
-  int flags; /* CF_ flags */
+  AV *args;   /* data associated with this coroutine (initial args) */
+  int refcnt; /* coroutines are refcounted, yes */
+  int flags;  /* CF_ flags */
+  HV *hv;     /* the perl hash associated with this coro, if any */
 
   /* statistics */
   int usecount; /* number of transfers to this coro */
 
   /* coro process data */
   int prio;
-  SV *throw;
+  SV *throw; /* exception to be thrown */
 
   /* async_pool */
   SV *saved_deffh;
 
   /* linked list */
   struct coro *next, *prev;
-  HV *hv; /* the perl hash associated with this coro, if any */
 };
 
 typedef struct coro *Coro__State;
