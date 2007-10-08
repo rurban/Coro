@@ -558,7 +558,7 @@ save_perl (pTHX_ Coro__State c)
  * on the (sometimes correct) assumption that coroutines do
  * not usually need a lot of stackspace.
  */
-#if 1
+#if CORO_PREFER_PERL_FUNCTIONS
 # define coro_init_stacks init_stacks
 #else
 static void
