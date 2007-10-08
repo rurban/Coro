@@ -9,10 +9,10 @@ async {
    {
       local $SIG{__WARN__} = sub { print "ok 2\n" };
       cede;
-      warn;
+      warn "-";
    }
    cede;
-   warn;
+   warn "-";
 };
 
 async {
@@ -20,10 +20,10 @@ async {
    {
       local $SIG{__WARN__} = sub { print "ok 3\n" };
       cede;
-      warn;
+      warn "-";
    }
    cede;
-   warn;
+   warn "-";
 };
 
 cede;

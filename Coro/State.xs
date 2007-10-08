@@ -455,6 +455,9 @@ load_perl (pTHX_ Coro__State c)
   # include "state.h"
   #undef VAR
 
+  /*hv_store (hv_sig, strpair ("__DIE__" ), SvREFCNT_inc (sv_diehook ), 0);*/
+  /*hv_store (hv_sig, strpair ("__WARN__"), SvREFCNT_inc (sv_warnhook), 0);*/
+
   {
     dSP;
 
@@ -523,17 +526,16 @@ save_perl (pTHX_ Coro__State c)
   }
 
   /* allocate some space on the context stack for our purposes */
+  /* we manually unroll here, as usually 2 slots is enough */
+  if (SLOT_COUNT >= 1) CXINC;
+  if (SLOT_COUNT >= 2) CXINC;
+  if (SLOT_COUNT >= 3) CXINC;
   {
-    /* we manually unroll here, as usually 2 slots is enough */
     int i;
-    if (SLOT_COUNT >= 1) CXINC;
-    if (SLOT_COUNT >= 2) CXINC;
-    if (SLOT_COUNT >= 3) CXINC;
     for (i = 3; i < SLOT_COUNT; ++i)
       CXINC;
-
-    cxstack_ix -= SLOT_COUNT; /* undo allocation */
   }
+  cxstack_ix -= SLOT_COUNT; /* undo allocation */
 
   c->mainstack = PL_mainstack;
 
@@ -557,7 +559,7 @@ save_perl (pTHX_ Coro__State c)
  * on the (sometimes correct) assumption that coroutines do
  * not usually need a lot of stackspace.
  */
-#if CORO_PREFER_PERL_FUNCTIONS
+#if 1
 # define coro_init_stacks init_stacks
 #else
 static void
@@ -687,8 +689,8 @@ coro_setup (pTHX_ struct coro *coro)
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
-  SvREFCNT_inc (PL_diehook ); hv_store (hv_sig, strpair ("__DIE__" ), SvREFCNT_inc (sv_diehook ), 0);
-  SvREFCNT_inc (PL_warnhook); hv_store (hv_sig, strpair ("__WARN__"), SvREFCNT_inc (sv_warnhook), 0);
+  PL_diehook    = 0; hv_store (hv_sig, strpair ("__DIE__" ), SvREFCNT_inc (sv_diehook ), 0);
+  PL_warnhook   = 0; hv_store (hv_sig, strpair ("__WARN__"), SvREFCNT_inc (sv_warnhook), 0);
   
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
