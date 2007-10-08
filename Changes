@@ -18,6 +18,8 @@ TODO: maybe implement a default message channel, very much like Erlang
         - Coro::Storable::blocking_* did not properly lock
           resulting in races between coroutines.
         - added Coro::Storable::guard.
+        - stopping to trace a coroutine could destroy the cctx of
+          an unrelated coroutine.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
 	- added Coro::throw method.

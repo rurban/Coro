@@ -890,7 +890,7 @@ runops_trace (pTHX)
 /* _cctx_init should be careful, as it could be called at almost any time */
 /* during execution of a perl program */
 static void NOINLINE
-prepare_cctx (pTHX_ coro_cctx *cctx)
+cctx_prepare (pTHX_ coro_cctx *cctx)
 {
   dSP;
   LOGOP myop;
@@ -918,18 +918,18 @@ prepare_cctx (pTHX_ coro_cctx *cctx)
  * this is a _very_ stripped down perl interpreter ;)
  */
 static void
-coro_run (void *arg)
+cctx_run (void *arg)
 {
   dTHX;
 
-  /* coro_run is the alternative tail of transfer(), so unlock here. */
+  /* cctx_run is the alternative tail of transfer(), so unlock here. */
   UNLOCK;
 
   /* we now skip the entersub that lead to transfer() */
   PL_op = PL_op->op_next;
 
   /* inject a fake subroutine call to cctx_init */
-  prepare_cctx (aTHX_ (coro_cctx *)arg);
+  cctx_prepare (aTHX_ (coro_cctx *)arg);
 
   /* somebody or something will hit me for both perl_run and PL_restartop */
   PL_restartop = PL_op;
@@ -958,7 +958,6 @@ cctx_new ()
   Newz (0, cctx, 1, coro_cctx);
 
 #if HAVE_MMAP
-
   cctx->ssize = ((coro_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
   /* mmap supposedly does allocate-on-write for us */
   cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
@@ -989,7 +988,7 @@ cctx_new ()
     }
 
   REGISTER_STACK (cctx, (char *)stack_start, (char *)stack_start + stack_size);
-  coro_create (&cctx->cctx, coro_run, (void *)cctx, stack_start, stack_size);
+  coro_create (&cctx->cctx, cctx_run, (void *)cctx, stack_start, stack_size);
 
   return cctx;
 }
@@ -1140,7 +1139,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           /* if the cctx is about to be destroyed we need to make sure we won't see it in cctx_get */
           /* without this the next cctx_get might destroy the prev__cctx while still in use */
           if (expect_false (CCTX_EXPIRED (prev__cctx)))
-            next->cctx = cctx_get (aTHX);
+            if (!next->cctx)
+              next->cctx = cctx_get (aTHX);
 
           cctx_put (prev__cctx);
         }
