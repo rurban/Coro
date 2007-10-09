@@ -22,6 +22,8 @@ TODO: maybe implement a default message channel, very much like Erlang
           an unrelated coroutine.
         - explain the relationship between Perl and C coroutines in
           more detail in Coro::State.
+        - Coro::Util::inet_aton did not short-circuit dotted quad forms,
+          causing a fork per resolve. This also affected Coro::Socket.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
 	- added Coro::throw method.
