@@ -24,6 +24,7 @@ TODO: maybe implement a default message channel, very much like Erlang
           more detail in Coro::State.
         - Coro::Util::inet_aton did not short-circuit dotted quad forms,
           causing a fork per resolve. This also affected Coro::Socket.
+        - sped up Coro::Event next event handling by 15%, uses less memory.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
 	- added Coro::throw method.

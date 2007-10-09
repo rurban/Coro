@@ -17,7 +17,8 @@
 /* private structure, always use the provided macros below */
 struct CoroAPI {
   I32 ver;
-#define CORO_API_VERSION 5
+  I32 rev;
+#define CORO_API_VERSION 6
 #define CORO_API_REVISION 0
 
   /* internal */
@@ -34,6 +35,8 @@ struct CoroAPI {
   int (*is_ready) (SV *coro_sv);
   int *nready;
   SV *current;
+
+  SV *(*coro_event_next)(SV *watcher, int cancel, int wantev);
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -53,10 +56,12 @@ STMT_START {                                                               \
   SV *sv = perl_get_sv("Coro::API",0);                                     \
   if (!sv) croak("Coro::API not found");                                   \
   GCoroAPI = (struct CoroAPI*) SvIV(sv);                                   \
-  if (GCoroAPI->ver != CORO_API_VERSION) {                                 \
+  if (GCoroAPI->ver != CORO_API_VERSION)                                   \
     croak("Coro::API version mismatch (%d != %d) -- please recompile %s",  \
           GCoroAPI->ver, CORO_API_VERSION, YourName);                      \
-  }                                                                        \
+  if (GCoroAPI->rev < CORO_API_REVISION)                                   \
+    croak("Coro::API revision outdated (%d != %d) -- please recompile %s", \
+          GCoroAPI->rev, CORO_API_REVISION, YourName);                     \
 } STMT_END
 
 #endif

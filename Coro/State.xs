@@ -1563,45 +1563,77 @@ new (char *klass, ...)
 void
 _set_stacklevel (...)
 	ALIAS:
-        Coro::State::transfer = 1
-        Coro::schedule        = 2
-        Coro::cede            = 3
-        Coro::cede_notself    = 4
-        CODE:
+        Coro::State::transfer    = 1
+        Coro::schedule           = 2
+        Coro::cede               = 3
+        Coro::cede_notself       = 4
+        Coro::Event::next        = 5
+        Coro::Event::next_cancel = 6
+        PPCODE:
 {
 	struct transfer_args ta;
+        int repeat = 0;
 
-        switch (ix)
+        do
           {
-            case 0:
-              ta.prev  = (struct coro *)INT2PTR (coro_cctx *, SvIV (ST (0)));
-              ta.next  = 0;
-              break;
+            switch (ix)
+              {
+                case 0:
+                  ta.prev  = (struct coro *)INT2PTR (coro_cctx *, SvIV (ST (0)));
+                  ta.next  = 0;
+                  break;
 
-            case 1:
-              if (items != 2)
-                croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
+                case 1:
+                  if (items != 2)
+                    croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
 
-              prepare_transfer (aTHX_ &ta, ST (0), ST (1));
-              break;
+                  prepare_transfer (aTHX_ &ta, ST (0), ST (1));
+                  break;
 
-            case 2:
-              prepare_schedule (aTHX_ &ta);
-              break;
+                case 2:
+                  prepare_schedule (aTHX_ &ta);
+                  break;
 
-            case 3:
-              prepare_cede (aTHX_ &ta);
-              break;
+                case 3:
+                  prepare_cede (aTHX_ &ta);
+                  break;
 
-            case 4:
-              if (!prepare_cede_notself (aTHX_ &ta))
-                XSRETURN_EMPTY;
+                case 4:
+                  if (!prepare_cede_notself (aTHX_ &ta))
+                    XSRETURN_EMPTY;
 
-              break;
+                  break;
+
+                case 5:
+                case 6:
+                  if (items != 1)
+                    croak ("Coro::Event::next (watcher) expects one argument, not %d", items);
+
+                  {
+                    SV *ev = coroapi.coro_event_next (ST (0), ix == 6, GIMME_V != G_VOID);
+
+                    if (ev)
+                      {
+                        if (GIMME_V != G_VOID)
+                          {
+                            XPUSHs (ev);
+                            XSRETURN (1);
+                          }
+                        else
+                          XSRETURN_EMPTY;
+                      }
+                  }
+
+                  prepare_schedule (aTHX_ &ta);
+                  repeat = 1;
+                  break;
+              }
+
+            BARRIER;
+            TRANSFER (ta);
+            BARRIER;
           }
-
-        BARRIER;
-        TRANSFER (ta);
+        while (repeat);
 
         if (expect_false (GIMME_V != G_VOID && ta.next != ta.prev))
           XSRETURN_YES;
