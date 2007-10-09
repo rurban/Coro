@@ -16,6 +16,17 @@ data, allowing other coroutines to run while one coroutine waits for I/O.
 
 Coro::Handle does NOT inherit from IO::Handle but uses tied objects.
 
+If at all possible, you should I<always> prefer method calls on the handle object over invoking
+tied methods, i.e.:
+
+   $fh->print ($str);         # NOT print $fh $str;
+   my $line = $fh->readline;  # NOT my $line = <$fh>;
+
+The reason is that perl recurses within the interpreter when invoking tie
+magic, forcing the (temporary) allocation of a (big) stack. If you have
+lots of socket connections and they happen to wait in e.g. <$fh>, then
+they would all have a costly C coroutine associated with them.
+
 =over 4
 
 =cut

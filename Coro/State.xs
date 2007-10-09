@@ -955,6 +955,7 @@ cctx_new ()
   size_t stack_size;
 
   ++cctx_count;
+  fprintf (stderr, "bp1\n");//D
 
   Newz (0, cctx, 1, coro_cctx);
 

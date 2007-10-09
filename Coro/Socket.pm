@@ -21,7 +21,8 @@ Coro::Socket - non-blocking socket-io
 
 This module implements socket-handles in a coroutine-compatible way,
 that is, other coroutines can run while reads or writes block on the
-handle. See L<Coro::Handle>.
+handle. See L<Coro::Handle>, especially the note about prefering method
+calls.
 
 =over 4
 
