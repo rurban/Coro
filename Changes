@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.11 Thu Oct 11 02:40:24 CEST 2007
+	- port to threaded perls.
+
 4.1  Thu Oct 11 02:38:16 CEST 2007
       	- incompatible change: $SIG{__DIE__} and $SIG{__WARN__} will now
           be local to each coro (see Coro::State).

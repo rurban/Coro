@@ -262,7 +262,7 @@ static struct coro *coro_first;
 /** lowlevel stuff **********************************************************/
 
 static SV *
-coro_get_sv (const char *name, int create)
+coro_get_sv (pTHX_ const char *name, int create)
 {
 #if PERL_VERSION_ATLEAST (5,9,0)
          /* silence stupid and wrong 5.10 warning that I am unable to switch off */
@@ -272,7 +272,7 @@ coro_get_sv (const char *name, int create)
 }
 
 static AV *
-coro_get_av (const char *name, int create)
+coro_get_av (pTHX_ const char *name, int create)
 {
 #if PERL_VERSION_ATLEAST (5,9,0)
          /* silence stupid and wrong 5.10 warning that I am unable to switch off */
@@ -282,7 +282,7 @@ coro_get_av (const char *name, int create)
 }
 
 static HV *
-coro_get_hv (const char *name, int create)
+coro_get_hv (pTHX_ const char *name, int create)
 {
 #if PERL_VERSION_ATLEAST (5,9,0)
          /* silence stupid and wrong 5.10 warning that I am unable to switch off */
@@ -1508,9 +1508,9 @@ BOOT:
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
 
-        hv_sig      = coro_get_hv ("SIG", TRUE);
-        sv_diehook  = coro_get_sv ("Coro::State::DIEHOOK" , TRUE);
-        sv_warnhook = coro_get_sv ("Coro::State::WARNHOOK", TRUE);
+        hv_sig      = coro_get_hv (aTHX_ "SIG", TRUE);
+        sv_diehook  = coro_get_sv (aTHX_ "Coro::State::DIEHOOK" , TRUE);
+        sv_warnhook = coro_get_sv (aTHX_ "Coro::State::WARNHOOK", TRUE);
 
         if (!PL_diehook ) hv_store (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, SvREFCNT_inc (sv_diehook ), 0);
         if (!PL_warnhook) hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, SvREFCNT_inc (sv_warnhook), 0);
@@ -1756,11 +1756,11 @@ BOOT:
 {
 	int i;
 
-        sv_pool_rss   = coro_get_sv ("Coro::POOL_RSS"  , TRUE);
-        sv_pool_size  = coro_get_sv ("Coro::POOL_SIZE" , TRUE);
-        av_async_pool = coro_get_av ("Coro::async_pool", TRUE);
+        sv_pool_rss   = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
+        sv_pool_size  = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
+        av_async_pool = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
 
-        coro_current  = coro_get_sv ("Coro::current", FALSE);
+        coro_current  = coro_get_sv (aTHX_ "Coro::current", FALSE);
         SvREADONLY_on (coro_current);
 
 	coro_stash = gv_stashpv ("Coro", TRUE);
