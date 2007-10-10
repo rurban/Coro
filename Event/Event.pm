@@ -140,9 +140,9 @@ for my $flavour (qw(idle var timer io signal)) {
          or croak "event constructor \"Coro::Event->$flavour\" must be called as a static method";
 
       my $w = $new->($class,
-            desc   => $flavour,
-            @_,
-            parked => 1,
+         desc   => $flavour,
+         @_,
+         parked => 1,
       );
 
       _install_std_cb $w, $type;
@@ -164,7 +164,6 @@ for my $flavour (qw(idle var timer io signal)) {
 # this is about 10% slower, though.
 sub next($) {
    &Coro::schedule while &_next;
-
    &_event
 }
 

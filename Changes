@@ -1,10 +1,33 @@
 Revision history for Perl extension Coro.
 
-TODO: localise SIG{__DIE__} and/or __WARN__
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
 TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
+
+4.1  Thu Oct 11 02:38:16 CEST 2007
+      	- incompatible change: $SIG{__DIE__} and $SIG{__WARN__} will now
+          be local to each coro (see Coro::State).
+        - incompatible change: for very deep reasons, cede and cede_notself
+          cannot return anything, so nothing will be returned.
+	- possibly bring back 5.10 compatibility (untested).
+        - work around stupid (and wrong) warning on 5.10 :(.
+	- overlay the saved state over the context stack. This saves
+          a few hundred bytes per coroutine on average and also
+          speeds up context switching a bit.
+        - further tune default stack sizes.
+        - (more) correctly calculate stack usage in coro_rss.
+        - Coro::Storable::blocking_* did not properly lock
+          resulting in races between coroutines.
+        - added Coro::Storable::guard.
+        - stopping to trace a coroutine could destroy the cctx of
+          an unrelated coroutine.
+        - explain the relationship between Perl and C coroutines in
+          more detail in Coro::State.
+        - Coro::Util::inet_aton did not short-circuit dotted quad forms,
+          causing a fork per resolve. This also affected Coro::Socket.
+        - switch to a separate stack in $coro->call/eval to avoid
+          invalidating pointers.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
 	- added Coro::throw method.

@@ -1,16 +1,17 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Coro
-version:      4.03
-version_from: Coro.pm
-installdirs:  site
-requires:
+--- #YAML:1.0
+name:                Coro
+version:             4.1
+abstract:            ~
+license:             ~
+generated_by:        ExtUtils::MakeMaker version 6.32
+distribution_type:   module
+requires:     
     AnyEvent:                      2.51
     Event:                         1.06
     IO::AIO:                       2.3
     Scalar::Util:                  0
     Storable:                      2.15
     Time::HiRes:                   0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.30
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
+    version: 1.2

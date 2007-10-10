@@ -46,6 +46,7 @@ t/08_join.t
 t/10_bugs.t
 t/11_deadlock.t
 t/12_exit.t
+t/13_diewarn.t
 
 Event/Makefile.PL
 Event/Event.pm

@@ -8,15 +8,22 @@ Coro - coroutine process abstraction
 
  async {
     # some asynchronous thread of execution
+    print "2\n";
+    cede; # yield back to main
+    print "4\n";
  };
+ print "1\n";
+ cede; # yield to coroutine
+ print "3\n";
+ cede; # and again
 
- # alternatively create an async coroutine like this:
+ # use locking
+ my $lock = new Coro::Semaphore;
+ my $locked;
 
- sub some_func : Coro {
-    # some more async code
- }
-
- cede;
+ $lock->down;
+ $locked = 1;
+ $lock->up;
 
 =head1 DESCRIPTION
 
@@ -35,7 +42,7 @@ is a performance win on Windows machines, and a loss everywhere else).
 In this module, coroutines are defined as "callchain + lexical variables +
 @_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own callchain,
 its own set of lexicals and its own set of perls most important global
-variables.
+variables (see L<Coro::State> for more configuration).
 
 =cut
 
@@ -52,7 +59,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '4.03';
+our $VERSION = '4.1';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -136,7 +143,7 @@ C<Coro::Event> to wait on an external event that hopefully wake up a
 coroutine so the scheduler can run it.
 
 Please note that if your callback recursively invokes perl (e.g. for event
-handlers), then it must be prepared to be called recursively.
+handlers), then it must be prepared to be called recursively itself.
 
 =cut
 
@@ -190,7 +197,7 @@ Create a new asynchronous coroutine and return it's coroutine object
 terminated.
 
 See the C<Coro::State::new> constructor for info about the coroutine
-environment.
+environment in which coroutines run.
 
 Calling C<exit> in a coroutine will do the same as calling exit outside
 the coroutine. Likewise, when the coroutine dies, the program will exit,
@@ -304,14 +311,10 @@ The canonical way to wait on external events is this:
 ready queue and calls C<schedule>, which has the effect of giving up the
 current "timeslice" to other coroutines of the same or higher priority.
 
-Returns true if at least one coroutine switch has happened.
-
 =item Coro::cede_notself
 
 Works like cede, but is not exported by default and will cede to any
 coroutine, regardless of priority, once.
-
-Returns true if at least one coroutine switch has happened.
 
 =item terminate [arg...]
 
@@ -615,13 +618,19 @@ sub unblock_sub(&) {
 
 =head1 SEE ALSO
 
-Support/Utility: L<Coro::Specific>, L<Coro::State>, L<Coro::Util>.
+Lower level Configuration, Coroutine Environment: L<Coro::State>.
+
+Debugging: L<Coro::Debug>.
+
+Support/Utility: L<Coro::Specific>, L<Coro::Util>.
 
 Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>, L<Coro::SemaphoreSet>, L<Coro::RWLock>.
 
-Event/IO: L<Coro::Timer>, L<Coro::Event>, L<Coro::Handle>, L<Coro::Socket>, L<Coro::Select>.
+Event/IO: L<Coro::Timer>, L<Coro::Event>, L<Coro::Handle>, L<Coro::Socket>.
 
-Embedding: L<Coro:MakeMaker>
+Compatibility: L<Coro::LWP>, L<Coro::Storable>, L<Coro::Select>.
+
+Embedding: L<Coro:MakeMaker>.
 
 =head1 AUTHOR
 

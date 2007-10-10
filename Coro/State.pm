@@ -34,19 +34,36 @@ continuations and more.
 This module provides only low-level functionality. See L<Coro> and related
 modules for a higher level process abstraction including scheduling.
 
+=head2 MODEL
+
+Coro::State implements two different coroutine models: Perl and C. The
+C coroutines (called cctx's) are basically simplified perl interpreters
+running/interpreting the Perl coroutines. A single interpreter can run any
+number of Perl coroutines, so usually there are very few C coroutines.
+
+When Perl code calls a C function (e.g. in an extension module) and that
+C function then calls back into Perl or does a coroutine switch the C
+coroutine can no longer execute other Perl coroutines, so it stays tied to
+the specific coroutine until it returns to the original Perl caller, after
+which it is again avaikable to run other Perl coroutines.
+
+The main program always has its own "C coroutine" (which really is
+*the* Perl interpreter running the whole program), so there will always
+be at least one additional C coroutine. You cna use the debugger (see
+L<Coro::Debug>) to find out which coroutines are tied to their cctx and
+which aren't.
+
 =head2 MEMORY CONSUMPTION
 
 A newly created coroutine that has not been used only allocates a
-relatively small (a few hundred bytes) structure. Only on the first
-C<transfer> will perl allocate stacks (a few kb) and optionally
-a C stack/coroutine (cctx) for coroutines that recurse through C
-functions. All this is very system-dependent. On my x86_64-pc-linux-gnu
-system this amounts to about 8k per (non-trivial) coroutine. You can view
-the actual memory consumption using Coro::Debug.
-
-=head2 FUNCTIONS
-
-=over 4
+relatively small (a hundred bytes) structure. Only on the first
+C<transfer> will perl allocate stacks (a few kb, 64 bit architetcures use
+twice as much) and optionally a C stack/coroutine (cctx) for coroutines
+that recurse through C functions. All this is very system-dependent. On
+my x86-pc-linux-gnu system this amounts to about 2k per (non-trivial
+but simple) coroutine. You can view the actual memory consumption using
+Coro::Debug. Keep in mind that a for loop or other block constructs can
+easily consume 100-200 bytes per nesting level.
 
 =cut
 
@@ -55,10 +72,14 @@ package Coro::State;
 use strict;
 no warnings "uninitialized";
 
+use Carp;
+our $DIEHOOK  = sub { };
+our $WARNHOOK = sub { warn $_[0] };
+
 use XSLoader;
 
 BEGIN {
-   our $VERSION = '4.0';
+   our $VERSION = '4.1';
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -69,6 +90,40 @@ BEGIN {
 
 use Exporter;
 use base Exporter::;
+
+=head2 GLOBAL VARIABLES
+
+=over 4
+
+=item $Coro::State::DIEHOOK
+
+This works similarly to C<$SIG{__DIE__}> and is used as the default die
+hook for newly created coroutines. This is useful if you want some generic
+logging function that works for all coroutines that don't set their own
+hook.
+
+When Coro::State is first loaded it will install these handlers for the
+main program, too, unless they have been overriden already.
+
+The default handlers provided will behave like the inbuilt ones (as if
+they weren't there).
+
+Note 1: You I<must> store a valid code reference in these variables, C<undef> will not do.
+
+Note 2: You I<must> only assign to these variables, never C<local>ise or do other fancy stuff.
+
+Note 3: The value of this variable will be shared among all coroutines, so
+changing its value will change it in all coroutines using them.
+
+=item $Coro::State::WARNHOOK
+
+Similar to above die hook, but augments C<$SIG{__WARN__}>.
+
+=back
+
+=head2 FUNCTIONS
+
+=over 4
 
 =item $coro = new Coro::State [$coderef[, @args...]]
 
@@ -92,15 +147,21 @@ Certain variables are "localised" to each coroutine, that is, certain
 sensibly be localised currently is, and not everything that is localised
 makes sense for every application, and the future might bring changes.
 
-The following global variables can have different values in each
-coroutine, and have defined initial values:
+The following global variables can have different values per coroutine,
+and have the stated initial values:
 
-   Variable   Initial Value
-   @_         whatever arguments were passed to the Coro
-   $_         undef
-   $@         undef
-   $/         "\n"
-   (select)   STDOUT
+   Variable       Initial Value
+   @_             whatever arguments were passed to the Coro
+   $_             undef
+   $@             undef
+   $/             "\n"
+   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK(*)
+   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK(*)
+   (default fh)   *STDOUT
+   $1, $2...      all regex results are initially undefined
+
+   (*) may not read back properly, for speed reasons, but
+       local()ising should be safe.
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
@@ -109,11 +170,11 @@ variables. Yes, this is by design ;) You can always create your own
 process abstraction model that saves these variables.
 
 The easiest way to do this is to create your own scheduling primitive like
-this:
+below, and use it in your coroutines:
 
-  sub schedule {
+  sub my_cede {
      local ($;, ...);
-     $old->transfer ($new);
+     Coro::cede;
   }
 
 =cut
