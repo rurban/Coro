@@ -133,8 +133,6 @@ static perl_mutex coro_mutex;
 # define UNLOCK (void)0
 #endif
 
-#define strpair(const) const, sizeof (const) - 1
-
 /* helper storage struct for Coro::AIO */
 struct io_state
 {
@@ -455,8 +453,8 @@ load_perl (pTHX_ Coro__State c)
   # include "state.h"
   #undef VAR
 
-  /*hv_store (hv_sig, strpair ("__DIE__" ), SvREFCNT_inc (sv_diehook ), 0);*/
-  /*hv_store (hv_sig, strpair ("__WARN__"), SvREFCNT_inc (sv_warnhook), 0);*/
+  /*hv_store (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, SvREFCNT_inc (sv_diehook ), 0);*/
+  /*hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, SvREFCNT_inc (sv_warnhook), 0);*/
 
   {
     dSP;
@@ -689,8 +687,8 @@ coro_setup (pTHX_ struct coro *coro)
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
-  PL_diehook    = 0; hv_store (hv_sig, strpair ("__DIE__" ), SvREFCNT_inc (sv_diehook ), 0);
-  PL_warnhook   = 0; hv_store (hv_sig, strpair ("__WARN__"), SvREFCNT_inc (sv_warnhook), 0);
+  PL_diehook    = 0; hv_store (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, SvREFCNT_inc (sv_diehook ), 0);
+  PL_warnhook   = 0; hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, SvREFCNT_inc (sv_warnhook), 0);
   
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
@@ -814,7 +812,7 @@ runops_trace (pTHX)
               PUSHs (fullname);
               PUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
               PUTBACK;
-              cb = hv_fetch ((HV *)SvRV (coro_current), strpair ("_trace_sub_cb"), 0);
+              cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
               if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
               SPAGAIN;
               FREETMPS;
@@ -853,7 +851,7 @@ runops_trace (pTHX)
                           PUSHs (fullname);
                           PUSHs (cx->blk_sub.hasargs ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
                           PUTBACK;
-                          cb = hv_fetch ((HV *)SvRV (coro_current), strpair ("_trace_sub_cb"), 0);
+                          cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
                           if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
                           SPAGAIN;
                           FREETMPS;
@@ -877,7 +875,7 @@ runops_trace (pTHX)
                       PUSHs (sv_2mortal (newSVpv (OutCopFILE (oldcop), 0)));
                       PUSHs (sv_2mortal (newSViv (CopLINE (oldcop))));
                       PUTBACK;
-                      cb = hv_fetch ((HV *)SvRV (coro_current), strpair ("_trace_line_cb"), 0);
+                      cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_line_cb", sizeof ("_trace_line_cb") - 1, 0);
                       if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
                       SPAGAIN;
                       FREETMPS;
@@ -1514,8 +1512,8 @@ BOOT:
         sv_diehook  = coro_get_sv ("Coro::State::DIEHOOK" , TRUE);
         sv_warnhook = coro_get_sv ("Coro::State::WARNHOOK", TRUE);
 
-        if (!PL_diehook ) hv_store (hv_sig, strpair ("__DIE__" ), SvREFCNT_inc (sv_diehook ), 0);
-        if (!PL_warnhook) hv_store (hv_sig, strpair ("__WARN__"), SvREFCNT_inc (sv_warnhook), 0);
+        if (!PL_diehook ) hv_store (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, SvREFCNT_inc (sv_diehook ), 0);
+        if (!PL_warnhook) hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, SvREFCNT_inc (sv_warnhook), 0);
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
@@ -1855,7 +1853,7 @@ _pool_1 (SV *cb)
 	struct coro *coro = SvSTATE (coro_current);
         HV *hv = (HV *)SvRV (coro_current);
         AV *defav = GvAV (PL_defgv);
-        SV *invoke = hv_delete (hv, strpair ("_invoke"), 0);
+        SV *invoke = hv_delete (hv, "_invoke", sizeof ("_invoke") - 1, 0);
         AV *invoke_av;
 	int i, len;
 
@@ -1866,7 +1864,7 @@ _pool_1 (SV *cb)
         coro->saved_deffh = SvREFCNT_inc ((SV *)PL_defoutgv);
 
         hv_store (hv, "desc", sizeof ("desc") - 1,
-                  newSVpvn (strpair ("[async_pool]")), 0);
+                  newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
 
         invoke_av = (AV *)SvRV (invoke);
         len = av_len (invoke_av);
@@ -1899,8 +1897,8 @@ _pool_2 (SV *cb)
           croak ("\3async_pool terminate\2\n");
 
         av_clear (GvAV (PL_defgv));
-        hv_store ((HV *)SvRV (coro_current), strpair ("desc"),
-                  newSVpvn (strpair ("[async_pool idle]")), 0);
+        hv_store ((HV *)SvRV (coro_current), "desc", sizeof ("desc") - 1,
+                  newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
 
         coro->prio = 0;
 
