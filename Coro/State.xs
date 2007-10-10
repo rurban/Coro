@@ -729,6 +729,13 @@ coro_setup (pTHX_ struct coro *coro)
     PUSHs ((SV *)0); /* again */
     PUTBACK;
   }
+
+  /* this newly created coroutine might be run on an existing cctx which most
+   * likely was suspended in set_stacklevel, called from entersub.
+   * set_stacklevl doesn't do anything on return, but entersub does LEAVE,
+   * so we ENTER here for symmetry
+   */
+  ENTER;
 }
 
 static void
@@ -1540,6 +1547,7 @@ BOOT:
           main_top_env = main_top_env->je_prev;
 
         coroapi.ver      = CORO_API_VERSION;
+        coroapi.rev      = CORO_API_REVISION;
         coroapi.transfer = api_transfer;
 
         assert (("PRIO_NORMAL must be 0", !PRIO_NORMAL));
@@ -1578,101 +1586,48 @@ new (char *klass, ...)
 void
 _set_stacklevel (...)
 	ALIAS:
-        Coro::State::transfer    = 1
-        Coro::schedule           = 2
-        Coro::cede               = 3
-        Coro::cede_notself       = 4
-        Coro::Event::next        = 5
-        Coro::Event::next_cancel = 6
-        PPCODE:
+        Coro::State::transfer = 1
+        Coro::schedule        = 2
+        Coro::cede            = 3
+        Coro::cede_notself    = 4
+        CODE:
 {
 	struct transfer_args ta;
-        int again = 0;
 
-        do
+        switch (ix)
           {
-            switch (ix)
-              {
-                case 0:
-                  ta.prev  = (struct coro *)INT2PTR (coro_cctx *, SvIV (ST (0)));
-                  ta.next  = 0;
-                  break;
+            case 0:
+              ta.prev  = (struct coro *)INT2PTR (coro_cctx *, SvIV (ST (0)));
+              ta.next  = 0;
+              break;
 
-                case 1:
-                  if (items != 2)
-                    croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
+            case 1:
+              if (items != 2)
+                croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
 
-                  prepare_transfer (aTHX_ &ta, ST(0), ST(1));
-                  break;
+              prepare_transfer (aTHX_ &ta, ST (0), ST (1));
+              break;
 
-                case 2:
-                  prepare_schedule (aTHX_ &ta);
-                  break;
+            case 2:
+              prepare_schedule (aTHX_ &ta);
+              break;
 
-                case 3:
-                  prepare_cede (aTHX_ &ta);
-                  break;
+            case 3:
+              prepare_cede (aTHX_ &ta);
+              break;
 
-                case 4:
-                  if (!prepare_cede_notself (aTHX_ &ta))
-                    XSRETURN_EMPTY;
+            case 4:
+              if (!prepare_cede_notself (aTHX_ &ta))
+                XSRETURN_EMPTY;
 
-                  break;
-
-                case 5:
-                case 6:
-                  if (items != 1)
-                    croak ("Coro::Event::next (watcher) expects one argument, not %d", items);
-
-                  {
-                    SV *ev = coroapi.coro_event_next (ST (0), ix == 6, GIMME_V != G_VOID);
-
-                    if (ev)
-                      {
-                        if (GIMME_V != G_VOID)
-                          {
-                            XPUSHs (ev);
-                            XSRETURN (1);
-                          }
-                        else
-                          XSRETURN_EMPTY;
-                      }
-                  }
-
-                  prepare_schedule (aTHX_ &ta);
-                  again = 1;
-                  break;
-              }
-
-            /* our caller, entersub, caches *only* this value */
-            ta.prev->gimme = GIMME_V == G_VOID   ? 0
-                           : GIMME_V == G_SCALAR ? 1
-                           :                       2;
-
-            /* we need to save all local variables, as we might execute a different coroutine when transfer returns */
-            sp += 2; /* save args */
-            EXTEND (SP, 4);
-            PUSHs ((SV *)(intptr_t)items);
-            PUSHs ((SV *)(intptr_t)ix);
-            PUSHs ((SV *)(intptr_t)ax);
-            PUSHs ((SV *)(intptr_t)again);
-            PUTBACK;
-            BARRIER;
-            TRANSFER (ta);
-            BARRIER;
-            SPAGAIN;
-            again = (intptr_t)POPs;
-            ax    = (intptr_t)POPs;
-            ix    = (intptr_t)POPs;
-            items = (intptr_t)POPs;
-            sp -= 2; /* restore args */
+              break;
           }
-        while (again);
 
-        if (expect_false (GIMME_V != G_VOID && ta.next != ta.prev))
-          XSRETURN_YES;
-
-        XSRETURN_EMPTY; /* not understood why this is necessary, likely some stack handling bug */
+        BARRIER;
+        PUTBACK;
+        TRANSFER (ta);
+        SPAGAIN; /* might be the sp of a different coroutine now */
+        /* be extra careful not to ever do anything after TRANSFER */
 }
 
 bool
@@ -1754,6 +1709,7 @@ call (Coro::State coro, SV *coderef)
               POPSTACK;
               FREETMPS;
               LEAVE;
+              PUTBACK;
             }
 
             if (!(coro->flags & CF_RUNNING))

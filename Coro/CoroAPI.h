@@ -29,8 +29,6 @@ struct CoroAPI {
   int (*is_ready) (SV *coro_sv);
   int *nready;
   SV *current;
-
-  SV *(*coro_event_next)(SV *watcher, int cancel, int wantev); /* Coro::Event::next */
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -45,13 +43,13 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_NREADY              (*GCoroAPI->nready)
 #define CORO_CURRENT             SvRV (GCoroAPI->current)
 
-#define I_CORO_API(YourName)                                               \
-STMT_START {                                                               \
-  SV *sv = perl_get_sv ("Coro::API", 0);                                   \
-  if (!sv) croak ("Coro::API not found");                                  \
-  GCoroAPI = (struct CoroAPI*) SvIV (sv);                                  \
-  if (GCoroAPI->ver != CORO_API_VERSION                                    \
-      || GCoroAPI->rev < CORO_API_REVISION)                                \
+#define I_CORO_API(YourName)                                                             \
+STMT_START {                                                                             \
+  SV *sv = perl_get_sv ("Coro::API", 0);                                                 \
+  if (!sv) croak ("Coro::API not found");                                                \
+  GCoroAPI = (struct CoroAPI*) SvIV (sv);                                                \
+  if (GCoroAPI->ver != CORO_API_VERSION                                                  \
+      || GCoroAPI->rev < CORO_API_REVISION)                                              \
     croak ("Coro::API version mismatch (%d.%d vs. %d.%d) -- please recompile %s",        \
            GCoroAPI->ver, GCoroAPI->rev, CORO_API_VERSION, CORO_API_REVISION, YourName); \
 } STMT_END

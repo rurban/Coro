@@ -71,45 +71,6 @@ prepare_hook (void *data)
     return 85197.73; /* this is as good as any value, but it factors badly with common values */
 }
 
-static SV *
-event_next (SV *watcher, int cancel, int wantev)
-{
-  pe_watcher *w = GEventAPI->sv_2watcher (watcher);
-  AV *priv = (AV *)w->ext_data;
-
-  if (AvARRAY (priv)[CD_OK] == &PL_sv_yes)
-    {
-      AvARRAY (priv)[CD_OK] = &PL_sv_no;
-
-      if (cancel)
-        GEventAPI->cancel (w);
-
-      if (wantev)
-        {
-          SV *ev = newRV_inc ((SV *)priv);
-
-          /* may need to bless it now */
-          if (!SvOBJECT (priv))
-            {
-              SvREADONLY_off ((SV *)priv);
-              sv_bless (ev, coro_event_event_stash);
-              SvREADONLY_on ((SV *)priv);
-            }
-
-          return sv_2mortal (ev);
-        }
-      else
-        return &PL_sv_undef;
-    }
-
-  av_push ((AV *)AvARRAY (priv)[CD_WAIT], SvREFCNT_inc (CORO_CURRENT));
-
-  if (!w->running)
-    GEventAPI->start (w, 1);
-
-  return 0; /* schedule */
-}
-
 MODULE = Coro::Event                PACKAGE = Coro::Event
 
 PROTOTYPES: ENABLE
@@ -123,8 +84,6 @@ BOOT:
 
         GEventAPI->add_hook ("asynccheck", (void *)asynccheck_hook, 0);
         GEventAPI->add_hook ("prepare",    (void *)prepare_hook,    0);
-
-        GCoroAPI->coro_event_next = event_next;
 }
 
 void
@@ -153,4 +112,50 @@ _install_std_cb (SV *self, int type)
           sv_magicext (SvRV (self), newRV_noinc ((SV *)priv), PERL_MAGIC_coro_event, 0, (char *)w, 0);
         }
 }
+
+void
+_next (SV *self)
+        CODE:
+{
+        pe_watcher *w = GEventAPI->sv_2watcher (self);
+        AV *priv = (AV *)w->ext_data;
+
+        if (AvARRAY (priv)[CD_OK] == &PL_sv_yes)
+          {
+            AvARRAY (priv)[CD_OK] = &PL_sv_no;
+            XSRETURN_NO; /* got an event */
+          }
+
+        av_push ((AV *)AvARRAY (priv)[CD_WAIT], SvREFCNT_inc (CORO_CURRENT));
+
+        if (!w->running)
+          GEventAPI->start (w, 1);
+
+        XSRETURN_YES; /* schedule */
+}
+
+SV *
+_event (SV *self)
+	CODE:
+{
+        if (GIMME_V == G_VOID)
+          XSRETURN_EMPTY;
+
+        {
+          pe_watcher *w = GEventAPI->sv_2watcher (self);
+          AV *priv = (AV *)w->ext_data;
+
+          RETVAL = newRV_inc ((SV *)priv);
+
+          /* may need to bless it now */
+          if (!SvOBJECT (priv))
+            {
+              SvREADONLY_off ((SV *)priv);
+              sv_bless (RETVAL, coro_event_event_stash);
+              SvREADONLY_on ((SV *)priv);
+            }
+        }
+}
+	OUTPUT:
+        RETVAL
 

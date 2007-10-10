@@ -153,8 +153,17 @@ for my $flavour (qw(idle var timer io signal)) {
    *{    $flavour } = $coronew;
    *{"do_$flavour"} = sub {
       unshift @_, Coro::Event::;
-      next_cancel (&$coronew);
+      @_ = &$coronew;
+      &Coro::schedule while &_next;
+      &_event
    };
+}
+
+# do schedule in perl to avoid forcing a stack allocation.
+# this is about 10% slower, though.
+sub next($) {
+   &Coro::schedule while &_next;
+   &_event
 }
 
 sub Coro::Event::Event::hits { $_[0][3] }
