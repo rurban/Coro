@@ -163,8 +163,8 @@ static SV *sv_pool_rss;
 static SV *sv_pool_size;
 static AV *av_async_pool;
 
-static struct coro_cctx *cctx_first[3]; /* index by GIMME_V type, void, scalar, array */
-static int cctx_count, cctx_idle[3];
+static struct coro_cctx *cctx_first;
+static int cctx_count, cctx_idle;
 
 enum {
   CC_MAPPED     = 0x01,
@@ -219,7 +219,6 @@ typedef struct {
 struct coro {
   /* the c coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
-  int gimme;
 
   /* process data */
   AV *mainstack;
@@ -714,20 +713,6 @@ coro_setup (pTHX_ struct coro *coro)
     PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
     SPAGAIN;
-
-    /*
-     * now its very tricky. the "tail" of the next transfer might end up
-     * either in a new cctx, or an existing one.
-     * in case of an existing one we have to take care of whatever
-     * entersub and transfer do to the perl stack.
-     */
-    ENTER;
-    EXTEND (SP, 4);
-    PUSHs ((SV *)0); /* items */
-    PUSHs ((SV *)0); /* ix, set_stacklevel */
-    PUSHs ((SV *)(sp - PL_stack_base + 1)); /* ax */
-    PUSHs ((SV *)0); /* again */
-    PUTBACK;
   }
 
   /* this newly created coroutine might be run on an existing cctx which most
@@ -1041,13 +1026,13 @@ cctx_destroy (coro_cctx *cctx)
 #define CCTX_EXPIRED(cctx) ((cctx)->ssize < coro_stacksize || ((cctx)->flags & CC_NOREUSE))
 
 static coro_cctx *
-cctx_get (pTHX_ int gimme)
+cctx_get (pTHX)
 {
-  while (expect_true (cctx_first[gimme]))
+  while (expect_true (cctx_first))
     {
-      coro_cctx *cctx = cctx_first[gimme];
-      cctx_first[gimme] = cctx->next;
-      --cctx_idle[gimme];
+      coro_cctx *cctx = cctx_first;
+      cctx_first = cctx->next;
+      --cctx_idle;
 
       if (expect_true (!CCTX_EXPIRED (cctx)))
         return cctx;
@@ -1055,26 +1040,25 @@ cctx_get (pTHX_ int gimme)
       cctx_destroy (cctx);
     }
 
-  assert (!gimme);
   return cctx_new ();
 }
 
 static void
-cctx_put (coro_cctx *cctx, int gimme)
+cctx_put (coro_cctx *cctx)
 {
   /* free another cctx if overlimit */
-  if (expect_false (cctx_idle[gimme] >= MAX_IDLE_CCTX))
+  if (expect_false (cctx_idle >= MAX_IDLE_CCTX))
     {
-      coro_cctx *first = cctx_first[gimme];
-      cctx_first[gimme] = first->next;
-      --cctx_idle[gimme];
+      coro_cctx *first = cctx_first;
+      cctx_first = first->next;
+      --cctx_idle;
 
       cctx_destroy (first);
     }
 
-  ++cctx_idle[gimme];
-  cctx->next = cctx_first[gimme];
-  cctx_first[gimme] = cctx;
+  ++cctx_idle;
+  cctx->next = cctx_first;
+  cctx_first = cctx;
 }
 
 /** coroutine switching *****************************************************/
@@ -1163,15 +1147,15 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           /* without this the next cctx_get might destroy the prev__cctx while still in use */
           if (expect_false (CCTX_EXPIRED (prev__cctx)))
             if (!next->cctx)
-              next->cctx = cctx_get (aTHX_ next->gimme);
+              next->cctx = cctx_get (aTHX);
 
-          cctx_put (prev__cctx, prev->gimme);
+          cctx_put (prev__cctx);
         }
 
       ++next->usecount;
 
       if (expect_true (!next->cctx))
-        next->cctx = cctx_get (aTHX_ next->gimme);
+        next->cctx = cctx_get (aTHX);
 
       if (expect_false (prev__cctx != next->cctx))
         {
@@ -1663,7 +1647,7 @@ cctx_count ()
 int
 cctx_idle ()
 	CODE:
-        RETVAL = cctx_idle[0] + cctx_idle[1] + cctx_idle[2];
+        RETVAL = cctx_idle;
 	OUTPUT:
         RETVAL
 
@@ -1707,6 +1691,7 @@ call (Coro::State coro, SV *coderef)
                 call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
 
               POPSTACK;
+              SPAGAIN;
               FREETMPS;
               LEAVE;
               PUTBACK;

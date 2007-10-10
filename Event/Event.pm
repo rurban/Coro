@@ -155,6 +155,7 @@ for my $flavour (qw(idle var timer io signal)) {
       unshift @_, Coro::Event::;
       @_ = &$coronew;
       &Coro::schedule while &_next;
+      $_[0]->cancel;
       &_event
    };
 }
