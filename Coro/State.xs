@@ -1572,7 +1572,7 @@ _set_stacklevel (...)
         PPCODE:
 {
 	struct transfer_args ta;
-        int repeat = 0;
+        int again = 0;
 
         do
           {
@@ -1625,7 +1625,7 @@ _set_stacklevel (...)
                   }
 
                   prepare_schedule (aTHX_ &ta);
-                  repeat = 1;
+                  again = 1;
                   break;
               }
 
@@ -1633,11 +1633,12 @@ _set_stacklevel (...)
             TRANSFER (ta);
             BARRIER;
           }
-        while (repeat);
+        while (again);
 
         if (expect_false (GIMME_V != G_VOID && ta.next != ta.prev))
           XSRETURN_YES;
-}
+
+        XSRETURN_EMPTY; /* not understood why this is necessary, likely some stack handling bug */
 
 bool
 _destroy (SV *coro_sv)
@@ -1706,18 +1707,18 @@ call (Coro::State coro, SV *coderef)
               dSP;
               ENTER;
               SAVETMPS;
-              PUSHMARK (SP);
               PUTBACK;
+              PUSHSTACK;
+              PUSHMARK (SP);
 
               if (ix)
                 eval_sv (coderef, 0);
               else
                 call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
 
-              SPAGAIN;
+              POPSTACK;
               FREETMPS;
               LEAVE;
-              PUTBACK;
             }
 
             if (!(coro->flags & CF_RUNNING))

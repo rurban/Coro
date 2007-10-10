@@ -20,15 +20,9 @@ struct CoroAPI {
   I32 rev;
 #define CORO_API_VERSION 6
 #define CORO_API_REVISION 0
+  void (*transfer) (SV *prev_sv, SV *next_sv); /* Coro::State */
 
-  /* internal */
-  /*struct coro *(*sv_to_coro)(SV *arg, const char *funcname, const char *varname);*/
-
-  /* private API, Coro::State */
-  void (*transfer) (SV *prev_sv, SV *next_sv);
-
-  /* private API, Coro */
-  void (*schedule) (void);
+  void (*schedule) (void); /* Coro */
   int (*cede) (void);
   int (*cede_notself) (void);
   int (*ready) (SV *coro_sv);
@@ -36,7 +30,7 @@ struct CoroAPI {
   int *nready;
   SV *current;
 
-  SV *(*coro_event_next)(SV *watcher, int cancel, int wantev);
+  SV *(*coro_event_next)(SV *watcher, int cancel, int wantev); /* Coro::Event::next */
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -53,15 +47,13 @@ static struct CoroAPI *GCoroAPI;
 
 #define I_CORO_API(YourName)                                               \
 STMT_START {                                                               \
-  SV *sv = perl_get_sv("Coro::API",0);                                     \
-  if (!sv) croak("Coro::API not found");                                   \
-  GCoroAPI = (struct CoroAPI*) SvIV(sv);                                   \
-  if (GCoroAPI->ver != CORO_API_VERSION)                                   \
-    croak("Coro::API version mismatch (%d != %d) -- please recompile %s",  \
-          GCoroAPI->ver, CORO_API_VERSION, YourName);                      \
-  if (GCoroAPI->rev < CORO_API_REVISION)                                   \
-    croak("Coro::API revision outdated (%d != %d) -- please recompile %s", \
-          GCoroAPI->rev, CORO_API_REVISION, YourName);                     \
+  SV *sv = perl_get_sv ("Coro::API", 0);                                   \
+  if (!sv) croak ("Coro::API not found");                                  \
+  GCoroAPI = (struct CoroAPI*) SvIV (sv);                                  \
+  if (GCoroAPI->ver != CORO_API_VERSION                                    \
+      || GCoroAPI->rev < CORO_API_REVISION)                                \
+    croak ("Coro::API version mismatch (%d.%d vs. %d.%d) -- please recompile %s",        \
+           GCoroAPI->ver, GCoroAPI->rev, CORO_API_VERSION, CORO_API_REVISION, YourName); \
 } STMT_END
 
 #endif
