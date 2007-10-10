@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
+#include <inttypes.h> /* portable stdint.h */
 
 #ifdef HAVE_MMAP
 # include <unistd.h>
@@ -162,8 +163,8 @@ static SV *sv_pool_rss;
 static SV *sv_pool_size;
 static AV *av_async_pool;
 
-static struct coro_cctx *cctx_first;
-static int cctx_count, cctx_idle;
+static struct coro_cctx *cctx_first[3]; /* index by GIMME_V type, void, scalar, array */
+static int cctx_count, cctx_idle[3];
 
 enum {
   CC_MAPPED     = 0x01,
@@ -218,6 +219,7 @@ typedef struct {
 struct coro {
   /* the c coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
+  int gimme;
 
   /* process data */
   AV *mainstack;
@@ -712,9 +714,21 @@ coro_setup (pTHX_ struct coro *coro)
     PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
     SPAGAIN;
-  }
 
-  ENTER; /* necessary e.g. for dounwind and to balance the xsub-entersub */
+    /*
+     * now its very tricky. the "tail" of the next transfer might end up
+     * either in a new cctx, or an existing one.
+     * in case of an existing one we have to take care of whatever
+     * entersub and transfer do to the perl stack.
+     */
+    ENTER;
+    EXTEND (SP, 4);
+    PUSHs ((SV *)0); /* items */
+    PUSHs ((SV *)0); /* ix, set_stacklevel */
+    PUSHs ((SV *)(sp - PL_stack_base + 1)); /* ax */
+    PUSHs ((SV *)0); /* again */
+    PUTBACK;
+  }
 }
 
 static void
@@ -1020,13 +1034,13 @@ cctx_destroy (coro_cctx *cctx)
 #define CCTX_EXPIRED(cctx) ((cctx)->ssize < coro_stacksize || ((cctx)->flags & CC_NOREUSE))
 
 static coro_cctx *
-cctx_get (pTHX)
+cctx_get (pTHX_ int gimme)
 {
-  while (expect_true (cctx_first))
+  while (expect_true (cctx_first[gimme]))
     {
-      coro_cctx *cctx = cctx_first;
-      cctx_first = cctx->next;
-      --cctx_idle;
+      coro_cctx *cctx = cctx_first[gimme];
+      cctx_first[gimme] = cctx->next;
+      --cctx_idle[gimme];
 
       if (expect_true (!CCTX_EXPIRED (cctx)))
         return cctx;
@@ -1034,25 +1048,26 @@ cctx_get (pTHX)
       cctx_destroy (cctx);
     }
 
+  assert (!gimme);
   return cctx_new ();
 }
 
 static void
-cctx_put (coro_cctx *cctx)
+cctx_put (coro_cctx *cctx, int gimme)
 {
   /* free another cctx if overlimit */
-  if (expect_false (cctx_idle >= MAX_IDLE_CCTX))
+  if (expect_false (cctx_idle[gimme] >= MAX_IDLE_CCTX))
     {
-      coro_cctx *first = cctx_first;
-      cctx_first = first->next;
-      --cctx_idle;
+      coro_cctx *first = cctx_first[gimme];
+      cctx_first[gimme] = first->next;
+      --cctx_idle[gimme];
 
       cctx_destroy (first);
     }
 
-  ++cctx_idle;
-  cctx->next = cctx_first;
-  cctx_first = cctx;
+  ++cctx_idle[gimme];
+  cctx->next = cctx_first[gimme];
+  cctx_first[gimme] = cctx;
 }
 
 /** coroutine switching *****************************************************/
@@ -1141,15 +1156,15 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
           /* without this the next cctx_get might destroy the prev__cctx while still in use */
           if (expect_false (CCTX_EXPIRED (prev__cctx)))
             if (!next->cctx)
-              next->cctx = cctx_get (aTHX);
+              next->cctx = cctx_get (aTHX_ next->gimme);
 
-          cctx_put (prev__cctx);
+          cctx_put (prev__cctx, prev->gimme);
         }
 
       ++next->usecount;
 
       if (expect_true (!next->cctx))
-        next->cctx = cctx_get (aTHX);
+        next->cctx = cctx_get (aTHX_ next->gimme);
 
       if (expect_false (prev__cctx != next->cctx))
         {
@@ -1587,7 +1602,7 @@ _set_stacklevel (...)
                   if (items != 2)
                     croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
 
-                  prepare_transfer (aTHX_ &ta, ST (0), ST (1));
+                  prepare_transfer (aTHX_ &ta, ST(0), ST(1));
                   break;
 
                 case 2:
@@ -1629,9 +1644,28 @@ _set_stacklevel (...)
                   break;
               }
 
+            /* our caller, entersub, caches *only* this value */
+            ta.prev->gimme = GIMME_V == G_VOID   ? 0
+                           : GIMME_V == G_SCALAR ? 1
+                           :                       2;
+
+            /* we need to save all local variables, as we might execute a different coroutine when transfer returns */
+            sp += 2; /* save args */
+            EXTEND (SP, 4);
+            PUSHs ((SV *)(intptr_t)items);
+            PUSHs ((SV *)(intptr_t)ix);
+            PUSHs ((SV *)(intptr_t)ax);
+            PUSHs ((SV *)(intptr_t)again);
+            PUTBACK;
             BARRIER;
             TRANSFER (ta);
             BARRIER;
+            SPAGAIN;
+            again = (intptr_t)POPs;
+            ax    = (intptr_t)POPs;
+            ix    = (intptr_t)POPs;
+            items = (intptr_t)POPs;
+            sp -= 2; /* restore args */
           }
         while (again);
 
@@ -1639,6 +1673,7 @@ _set_stacklevel (...)
           XSRETURN_YES;
 
         XSRETURN_EMPTY; /* not understood why this is necessary, likely some stack handling bug */
+}
 
 bool
 _destroy (SV *coro_sv)
@@ -1673,7 +1708,7 @@ cctx_count ()
 int
 cctx_idle ()
 	CODE:
-        RETVAL = cctx_idle;
+        RETVAL = cctx_idle[0] + cctx_idle[1] + cctx_idle[2];
 	OUTPUT:
         RETVAL
 

@@ -8,6 +8,8 @@ TODO: maybe implement a default message channel, very much like Erlang
 4.1
       	- incompatible change: $SIG{__DIE__} and $SIG{__WARN__} will now
           be local to each coro (see Coro::State).
+        - introducing result types to schedule required some drastic
+          hackery, so beware.
 	- possibly bring back 5.10 compatibility (untested).
         - work around stupid (and wrong) warning on 5.10 :(.
 	- overlay the saved state over the context stack. This saves
@@ -27,6 +29,7 @@ TODO: maybe implement a default message channel, very much like Erlang
         - sped up Coro::Event next event handling by 15%, uses less memory.
         - switch to a separate stack in $coro->call/eval to avoid
           invalidating pointers.
+        - cede/cede_notself should now correctly return their status.
 
 4.03 Sat Oct  6 21:24:00 CEST 2007
 	- added Coro::throw method.

@@ -311,14 +311,10 @@ The canonical way to wait on external events is this:
 ready queue and calls C<schedule>, which has the effect of giving up the
 current "timeslice" to other coroutines of the same or higher priority.
 
-Returns true if at least one coroutine switch has happened.
-
 =item Coro::cede_notself
 
 Works like cede, but is not exported by default and will cede to any
 coroutine, regardless of priority, once.
-
-Returns true if at least one coroutine switch has happened.
 
 =item terminate [arg...]
 
