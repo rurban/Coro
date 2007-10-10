@@ -12,7 +12,7 @@ async {
    # properly handling constant folding (change 29976/28148)
    # (fixed in 5.10, 5.8.9)
    # we don't want to scare users, so disable it.
-   $SIG{__DIE__} = undef if $] < 5.008009;
+   delete $SIG{__DIE__} if $] < 5.008009;
 
    print defined eval "1/0" ? "not ok" : "ok", " 4\n";
 };
