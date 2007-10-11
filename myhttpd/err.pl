@@ -108,11 +108,15 @@ sub conn::err_blocked {
    if ($limit > $::NOW) {
       Coro::Event::do_timer(after => $limit - $::NOW);
 
-      if ($block->[2] > 30) {
-         $block->[3] = $::NOW + 180;
+      if ($block->[2] > 20) {
+         $block->[3] = $::NOW + $::DYNABLOCK + 360;
          $status = 401;
-         $hdr->{Warning} = "Please do NOT retry, you have been blocked. Press Cancel instead.";
-         $hdr->{"WWW-Authenticate"} = "Basic realm=\"Please do NOT retry, you have been blocked. Press Cancel instead.\"";
+         $hdr->{Warning} = "Please do NOT retry, your IP has been blocked due to excessive hammering. Press Cancel instead.";
+         $hdr->{"WWW-Authenticate"} = "Basic realm=\"Please do NOT retry, you IP has been blocked due to excessive hammering. Press Cancel instead.\"";
+
+         if ($block->[2] > 40) {
+            system "/root/s/dynablock --add $self->{remote_ip} $::DYNABLOCK &";
+         }
       }
    }
 
