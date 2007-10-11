@@ -6,15 +6,22 @@ SYNOPSIS
 
      async {
         # some asynchronous thread of execution
+        print "2\n";
+        cede; # yield back to main
+        print "4\n";
      };
+     print "1\n";
+     cede; # yield to coroutine
+     print "3\n";
+     cede; # and again
 
-     # alternatively create an async coroutine like this:
+     # use locking
+     my $lock = new Coro::Semaphore;
+     my $locked;
 
-     sub some_func : Coro {
-        # some more async code
-     }
-
-     cede;
+     $lock->down;
+     $locked = 1;
+     $lock->up;
 
 DESCRIPTION
     This module collection manages coroutines. Coroutines are similar to
@@ -33,7 +40,7 @@ DESCRIPTION
     In this module, coroutines are defined as "callchain + lexical variables
     + @_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own
     callchain, its own set of lexicals and its own set of perls most
-    important global variables.
+    important global variables (see Coro::State for more configuration).
 
     $main
         This coroutine represents the main program.
@@ -57,7 +64,8 @@ DESCRIPTION
         coroutine so the scheduler can run it.
 
         Please note that if your callback recursively invokes perl (e.g. for
-        event handlers), then it must be prepared to be called recursively.
+        event handlers), then it must be prepared to be called recursively
+        itself.
 
   STATIC METHODS
     Static methods are actually functions that operate on the current
@@ -69,7 +77,7 @@ DESCRIPTION
         automatically terminated.
 
         See the "Coro::State::new" constructor for info about the coroutine
-        environment.
+        environment in which coroutines run.
 
         Calling "exit" in a coroutine will do the same as calling exit
         outside the coroutine. Likewise, when the coroutine dies, the
@@ -141,13 +149,9 @@ DESCRIPTION
         giving up the current "timeslice" to other coroutines of the same or
         higher priority.
 
-        Returns true if at least one coroutine switch has happened.
-
     Coro::cede_notself
         Works like cede, but is not exported by default and will cede to any
         coroutine, regardless of priority, once.
-
-        Returns true if at least one coroutine switch has happened.
 
     terminate [arg...]
         Terminates the current coroutine with the given status values (see
@@ -301,15 +305,20 @@ BUGS/LIMITATIONS
        this).
 
 SEE ALSO
-    Support/Utility: Coro::Specific, Coro::State, Coro::Util.
+    Lower level Configuration, Coroutine Environment: Coro::State.
+
+    Debugging: Coro::Debug.
+
+    Support/Utility: Coro::Specific, Coro::Util.
 
     Locking/IPC: Coro::Signal, Coro::Channel, Coro::Semaphore,
     Coro::SemaphoreSet, Coro::RWLock.
 
-    Event/IO: Coro::Timer, Coro::Event, Coro::Handle, Coro::Socket,
-    Coro::Select.
+    Event/IO: Coro::Timer, Coro::Event, Coro::Handle, Coro::Socket.
 
-    Embedding: <Coro:MakeMaker>
+    Compatibility: Coro::LWP, Coro::Storable, Coro::Select.
+
+    Embedding: <Coro:MakeMaker>.
 
 AUTHOR
      Marc Lehmann <schmorp@schmorp.de>
