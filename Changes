@@ -5,7 +5,7 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-4.1
+4.1  Thu Oct 11 02:38:16 CEST 2007
       	- incompatible change: $SIG{__DIE__} and $SIG{__WARN__} will now
           be local to each coro (see Coro::State).
         - incompatible change: for very deep reasons, cede and cede_notself
