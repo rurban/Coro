@@ -78,7 +78,7 @@ use Storable;
 use base "Exporter";
 
 our $VERSION = '0.2';
-our @EXPORT = qw(thaw freeze nfreeze blocking_freeze blocking_nfreeze);
+our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;
 
@@ -110,6 +110,14 @@ sub nfreeze($) {
       or die "cannot open pst via CoroCede: $!";
    Storable::nstore_fd $_[0], $fh;
    $buf
+}
+
+sub blocking_thaw {
+   my $guard = $lock->guard;
+
+   open my $fh, "<", \$_[0]
+      or die "cannot open pst: $!";
+   Storable::fd_retrieve $fh
 }
 
 sub blocking_freeze {

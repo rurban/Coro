@@ -5,6 +5,8 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- add Coro::Storable::blocking_thaw.
+
 4.11 Thu Oct 11 02:40:24 CEST 2007
 	- port to threaded perls.
 
