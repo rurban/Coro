@@ -115,7 +115,7 @@ sub conn::err_blocked {
          $hdr->{"WWW-Authenticate"} = "Basic realm=\"Please do NOT retry, you IP has been blocked due to excessive hammering. Press Cancel instead.\"";
 
          if ($block->[2] > 40) {
-            system "/root/s/dynablock --add $self->{remote_ip} $::DYNABLOCK &";
+            system "/root/s/dynablock --add $self->{remote_addr} $::DYNABLOCK &";
          }
       }
    }
