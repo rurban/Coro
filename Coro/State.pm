@@ -73,8 +73,17 @@ use strict;
 no warnings "uninitialized";
 
 use Carp;
-our $DIEHOOK  = sub { };
-our $WARNHOOK = sub { warn $_[0] };
+
+our $DIEHOOK;
+our $WARNHOOK;
+
+BEGIN {
+   $DIEHOOK  = sub { };
+   $WARNHOOK = sub { warn $_[0] };
+}
+
+sub diehook  { &$DIEHOOK  }
+sub warnhook { &$WARNHOOK }
 
 use XSLoader;
 
@@ -84,6 +93,9 @@ BEGIN {
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
    $Coro::current ||= { };
+
+   $SIG{__DIE__}  = \&diehook;
+   $SIG{__WARN__} = \&warnhook;
 
    XSLoader::load __PACKAGE__, $VERSION;
 }
@@ -155,13 +167,10 @@ and have the stated initial values:
    $_             undef
    $@             undef
    $/             "\n"
-   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK(*)
-   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK(*)
+   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK
+   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK
    (default fh)   *STDOUT
    $1, $2...      all regex results are initially undefined
-
-   (*) may not read back properly, for speed reasons, but
-       local()ising should be safe.
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such

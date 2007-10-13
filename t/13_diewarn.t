@@ -13,6 +13,7 @@ async {
    }
    cede;
    warn "-";
+   cede;
 };
 
 async {
