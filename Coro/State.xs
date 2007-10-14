@@ -666,6 +666,7 @@ coro_rss (pTHX_ struct coro *coro)
 
 /** coroutine stack handling ************************************************/
 
+#if 0
 static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
 
 /*
@@ -680,6 +681,7 @@ static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
 static int
 coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
 {
+  return orig_sigelem_get (aTHX_ sv, mg);
   const char *s = MgPV_nolen_const (mg);
 
   if (*s == '_')
@@ -690,6 +692,7 @@ coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
 
   return orig_sigelem_get (aTHX_ sv, mg);
 }
+#endif
 
 static void
 coro_setup (pTHX_ struct coro *coro)
@@ -1532,13 +1535,13 @@ BOOT:
 
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
-
+#if 0
         orig_sigelem_get = PL_vtbl_sigelem.svt_get;
         PL_vtbl_sigelem.svt_get = coro_sigelem_get;
-
+#endif
         hv_sig      = coro_get_hv (aTHX_ "SIG", TRUE);
-        rv_diehook  = newRV_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
-        rv_warnhook = newRV_inc ((SV *)gv_fetchpv ("Coro::State::warnhook", 0, SVt_PVCV));
+        rv_diehook  = SvREFCNT_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
+        rv_warnhook = SvREFCNT_inc ((SV *)gv_fetchpv ("Coro::State::warnhook", 0, SVt_PVCV));
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 

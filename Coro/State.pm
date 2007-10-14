@@ -167,10 +167,12 @@ and have the stated initial values:
    $_             undef
    $@             undef
    $/             "\n"
-   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK
-   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK
+   $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK(*)
+   $SIG{__WARN__} aliased to $Coro::State::WARNHOOK(*)
    (default fh)   *STDOUT
    $1, $2...      all regex results are initially undefined
+
+   (*) reading the value from %SIG is not supported, but local'ising is.
 
 If you feel that something important is missing then tell me. Also
 remember that every function call that might call C<transfer> (such
