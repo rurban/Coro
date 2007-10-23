@@ -47,7 +47,11 @@ sub _do_asy(&;@) {
    $jobs->down;
    my $fh;
 
-   if (0 == open $fh, "-|") {
+   my $pid = open $fh, "-|";
+
+   if (!defined $pid) {
+      die "fork: $!";
+   } elsif (!$pid) {
       syswrite STDOUT, join "\0", map { unpack "H*", $_ } &$sub;
       Coro::State::_exit 0;
    }
