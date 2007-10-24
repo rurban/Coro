@@ -211,6 +211,7 @@ our $event_idle = new Coro sub {
       &Coro::schedule;
    }
 };
+$event_idle->{desc} = "[Event idle process]";
 
 $Coro::idle = sub { $event_idle->ready };
 
