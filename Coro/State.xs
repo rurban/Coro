@@ -151,10 +151,9 @@ static SV *coro_mortal; /* will be freed after next transfer */
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
-
+static SV *rv_diehook;
+static SV *rv_warnhook;
 static HV *hv_sig;   /* %SIG */
-static SV *sv_diehook;
-static SV *sv_warnhook;
 
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
@@ -347,21 +346,26 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
     free_padlist (aTHX_ padlist);
 
-  SvREFCNT_dec (av);
-
   return 0;
 }
 
-#define PERL_MAGIC_coro PERL_MAGIC_ext
+#define CORO_MAGIC_type_cv    PERL_MAGIC_ext
+#define CORO_MAGIC_type_state PERL_MAGIC_ext
 
-static MGVTBL vtbl_coro = {0, 0, 0, 0, coro_cv_free};
+static MGVTBL coro_cv_vtbl = {
+  0, 0, 0, 0,
+  coro_cv_free
+};
 
-#define CORO_MAGIC(cv)					\
-    SvMAGIC (cv)					\
-       ? SvMAGIC (cv)->mg_type == PERL_MAGIC_coro	\
-          ? SvMAGIC (cv)				\
-          : mg_find ((SV *)cv, PERL_MAGIC_coro)		\
+#define CORO_MAGIC(sv,type)		\
+    SvMAGIC (sv)			\
+       ? SvMAGIC (sv)->mg_type == type	\
+          ? SvMAGIC (sv)		\
+          : mg_find (sv, type)		\
        : 0
+
+#define CORO_MAGIC_cv(cv)    CORO_MAGIC (((SV *)(cv)), CORO_MAGIC_type_cv)
+#define CORO_MAGIC_state(sv) CORO_MAGIC (((SV *)(sv)), CORO_MAGIC_type_state)
 
 static struct coro *
 SvSTATE_ (pTHX_ SV *coro)
@@ -383,7 +387,7 @@ SvSTATE_ (pTHX_ SV *coro)
         croak ("Coro::State object required");
     }
 
-  mg = CORO_MAGIC (coro);
+  mg = CORO_MAGIC_state (coro);
   return (struct coro *)mg->mg_ptr;
 }
 
@@ -393,7 +397,7 @@ SvSTATE_ (pTHX_ SV *coro)
 static void
 get_padlist (pTHX_ CV *cv)
 {
-  MAGIC *mg = CORO_MAGIC (cv);
+  MAGIC *mg = CORO_MAGIC_cv (cv);
   AV *av;
 
   if (expect_true (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0))
@@ -415,16 +419,11 @@ get_padlist (pTHX_ CV *cv)
 static void
 put_padlist (pTHX_ CV *cv)
 {
-  MAGIC *mg = CORO_MAGIC (cv);
+  MAGIC *mg = CORO_MAGIC_cv (cv);
   AV *av;
 
   if (expect_false (!mg))
-    {
-      sv_magic ((SV *)cv, 0, PERL_MAGIC_coro, 0, 0);
-      mg = mg_find ((SV *)cv, PERL_MAGIC_coro);
-      mg->mg_virtual = &vtbl_coro;
-      mg->mg_obj = (SV *)newAV ();
-    }
+    mg = sv_magicext ((SV *)cv, (SV *)newAV (), CORO_MAGIC_type_cv, &coro_cv_vtbl, 0, 0);
 
   av = (AV *)mg->mg_obj;
 
@@ -452,9 +451,6 @@ load_perl (pTHX_ Coro__State c)
   #define VAR(name,type) PL_ ## name = slot->name;
   # include "state.h"
   #undef VAR
-
-  /*hv_store (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, SvREFCNT_inc (sv_diehook ), 0);*/
-  /*hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, SvREFCNT_inc (sv_warnhook), 0);*/
 
   {
     dSP;
@@ -670,6 +666,34 @@ coro_rss (pTHX_ struct coro *coro)
 
 /** coroutine stack handling ************************************************/
 
+#if 0
+static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
+
+/*
+ * This overrides the default magic get method of %SIG elements.
+ * The original one doesn't provide for reading back of PL_diehook/PL_warnhook
+ * and instead of tryign to save and restore the hash elements, we just provide
+ * readback here.
+ * We only do this when the hook is != 0, as they are often set to 0 temporarily,
+ * not expecting this to actually change the hook. This is a potential problem
+ * when a schedule happens then, but we ignore this.
+ */
+static int
+coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
+{
+  return orig_sigelem_get (aTHX_ sv, mg);
+  const char *s = MgPV_nolen_const (mg);
+
+  if (*s == '_')
+    {
+      if (strEQ (s, "__DIE__" ) && PL_diehook ) return sv_setsv (sv, PL_diehook ), 0;
+      if (strEQ (s, "__WARN__") && PL_warnhook) return sv_setsv (sv, PL_warnhook), 0;
+    }
+
+  return orig_sigelem_get (aTHX_ sv, mg);
+}
+#endif
+
 static void
 coro_setup (pTHX_ struct coro *coro)
 {
@@ -687,8 +711,15 @@ coro_setup (pTHX_ struct coro *coro)
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
-  PL_diehook    = 0; hv_store (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, SvREFCNT_inc (sv_diehook ), 0);
-  PL_warnhook   = 0; hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, SvREFCNT_inc (sv_warnhook), 0);
+
+  /* recreate the die/warn hooks */
+  PL_diehook = 0;
+  hv_store (hv_sig, "__DIE__", sizeof ("__DIE__") - 1, newSV (0), 0);
+  PL_diehook = SvREFCNT_inc (rv_diehook);
+
+  PL_warnhook = 0;
+  hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, newSV (0), 0);
+  PL_warnhook = SvREFCNT_inc (rv_warnhook);
   
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
@@ -1115,21 +1146,18 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
 
       LOCK;
 
+      /* first get rid of the old state */
+      save_perl (aTHX_ prev);
+
       if (expect_false (next->flags & CF_NEW))
         {
           /* need to start coroutine */
           next->flags &= ~CF_NEW;
-          /* first get rid of the old state */
-          save_perl (aTHX_ prev);
           /* setup coroutine call */
           coro_setup (aTHX_ next);
         }
       else
-        {
-          /* coroutine already started */
-          save_perl (aTHX_ prev);
-          load_perl (aTHX_ next);
-        }
+        load_perl (aTHX_ next);
 
       prev__cctx = prev->cctx;
 
@@ -1507,13 +1535,13 @@ BOOT:
 
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
-
+#if 0
+        orig_sigelem_get = PL_vtbl_sigelem.svt_get;
+        PL_vtbl_sigelem.svt_get = coro_sigelem_get;
+#endif
         hv_sig      = coro_get_hv (aTHX_ "SIG", TRUE);
-        sv_diehook  = coro_get_sv (aTHX_ "Coro::State::DIEHOOK" , TRUE);
-        sv_warnhook = coro_get_sv (aTHX_ "Coro::State::WARNHOOK", TRUE);
-
-        if (!PL_diehook ) hv_store (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, SvREFCNT_inc (sv_diehook ), 0);
-        if (!PL_warnhook) hv_store (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, SvREFCNT_inc (sv_warnhook), 0);
+        rv_diehook  = SvREFCNT_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
+        rv_warnhook = SvREFCNT_inc ((SV *)gv_fetchpv ("Coro::State::warnhook", 0, SVt_PVCV));
 
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
@@ -1540,6 +1568,7 @@ new (char *klass, ...)
         CODE:
 {
         struct coro *coro;
+        MAGIC *mg;
         HV *hv;
         int i;
 
@@ -1552,7 +1581,8 @@ new (char *klass, ...)
         coro_first = coro;
 
         coro->hv = hv = newHV ();
-        sv_magicext ((SV *)hv, 0, PERL_MAGIC_ext, &coro_state_vtbl, (char *)coro, 0)->mg_flags |= MGf_DUP;
+        mg = sv_magicext ((SV *)hv, 0, CORO_MAGIC_type_state, &coro_state_vtbl, (char *)coro, 0);
+        mg->mg_flags |= MGf_DUP;
         RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
 
         av_extend (coro->args, items - 1);

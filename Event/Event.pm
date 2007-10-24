@@ -25,6 +25,9 @@ Coro::Event - do events the coro-way
  Coro::Event::do_io (fd => \*STDIN, timeout => 1) & Event::Watcher::R
     or die "no input received";
 
+ # use a separate coroutine for event processing, if impossible in main:
+ Coro::async { Event::loop };
+
 =head1 DESCRIPTION
 
 This module enables you to create programs using the powerful Event model
@@ -48,11 +51,13 @@ then when using only Event.
 
 Please note that Event does not support coroutines or threads. That
 means that you B<MUST NOT> block in an event callback. Again: In Event
-callbacks, you I<must never ever> call a Coroutine fucntion that blocks
+callbacks, you I<must never ever> call a Coroutine function that blocks
 the current coroutine.
 
 While this seems to work superficially, it will eventually cause memory
-corruption.
+corruption and often results in deadlocks.
+
+Best practise is to always use B<Coro::unblock_sub> for your callbacks.
 
 =head1 SEMANTICS
 
@@ -199,7 +204,16 @@ Same as Event::unloop (provided here for your convinience only).
 
 =cut
 
-$Coro::idle = \&Event::one_event; # inefficient
+# very inefficient
+our $event_idle = new Coro sub {
+   while () {
+      &Event::one_event;
+      &Coro::schedule;
+   }
+};
+$event_idle->{desc} = "[Event idle process]";
+
+$Coro::idle = sub { $event_idle->ready };
 
 1;
 

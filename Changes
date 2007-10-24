@@ -5,6 +5,15 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.13 Wed Oct 24 07:26:45 CEST 2007
+	- add Coro::Storable::blocking_thaw.
+        - use a vastly more complicated technique to localise
+          $SIG{__WARN/DIE__} that also works on perls <= 5.8.8.
+        - use a coroutine for the idle callback Coro::Event,
+          instead of running Event in the current coroutine context.
+          This also catches recursive invocations.
+        - actually report fork errors in gethostbyname and inet_aton.
+
 4.11 Thu Oct 11 02:40:24 CEST 2007
 	- port to threaded perls.
 
