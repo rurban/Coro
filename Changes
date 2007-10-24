@@ -5,6 +5,8 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- enable/disable tracing from a new coroutine, not a pooled one.
+
 4.13 Wed Oct 24 07:26:45 CEST 2007
 	- add Coro::Storable::blocking_thaw.
         - use a vastly more complicated technique to localise
