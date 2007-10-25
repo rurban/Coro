@@ -289,10 +289,9 @@ sub TIEHANDLE {
 }
 
 sub cleanup {
-   $_[0][3] = "";
-   $_[0][4] = "";
-   (delete $_[0][5])->cancel if $_[0][5];
-   (delete $_[0][6])->cancel if $_[0][6];
+   $_[0][5]->cancel if $_[0][5];
+   $_[0][6]->cancel if $_[0][6];
+   @{$_[0]} = ();
 }
 
 sub OPEN {

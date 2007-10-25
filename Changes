@@ -6,6 +6,7 @@ TODO: maybe implement a default message channel, very much like Erlang
       but very lacking in others (higher level ipc)).
 
 	- enable/disable tracing from a new coroutine, not a pooled one.
+        - fix a memleak in Coro::Event.
 
 4.13 Wed Oct 24 07:26:45 CEST 2007
 	- add Coro::Storable::blocking_thaw.
