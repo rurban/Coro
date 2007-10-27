@@ -223,6 +223,9 @@ sub fork_eval(&@) {
    }
 }
 
+# make sure store_fd is preloaded
+eval { Storable::store_fd undef, undef };
+
 1;
 
 =back
