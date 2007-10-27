@@ -7,6 +7,9 @@ TODO: maybe implement a default message channel, very much like Erlang
 
 	- enable/disable tracing from a new coroutine, not a pooled one.
         - fix a memleak in Coro::Event.
+        - removed killall call from fork_eval.
+        - made sure store_fd is already loaded so that fork_eval
+          does not have to parse autoload in each subprocess.
 
 4.13 Wed Oct 24 07:26:45 CEST 2007
 	- add Coro::Storable::blocking_thaw.
