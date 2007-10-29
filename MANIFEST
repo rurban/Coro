@@ -55,6 +55,10 @@ Event/Event.xs
 Event/t/00_basic.t
 Event/t/01_unblock.t
 
+EV/Makefile.PL
+EV/EV.pm
+EV/EV.xs
+
 eg/bench
 eg/prodcons1
 eg/prodcons2
