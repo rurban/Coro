@@ -12,6 +12,7 @@ TODO: maybe implement a default message channel, very much like Erlang
           does not have to parse autoload in each subprocess.
         - if the event model is EV, use EV::DNS to resolve
           stuff in Coro::Util.
+        - don't get confused by multiple event notifications in Coro::Handle.
 
 4.13 Wed Oct 24 07:26:45 CEST 2007
 	- add Coro::Storable::blocking_thaw.
