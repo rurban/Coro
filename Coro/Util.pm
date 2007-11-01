@@ -94,21 +94,21 @@ sub gethostbyname($) {
    if ($netdns) {
       #$netdns->query($_[0]);
       die;
-#   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
-#      require EV::DNS;
-#      require Socket;
-#
-#      my $current = $Coro::current;
-#      my ($result, @ptrs);
-#  
-#      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
-#         ($result, undef, undef, @ptrs) = @_;
-#         $current->ready;
-#      });
-#      Coro::schedule while !defined $result;
-#      return @ptrs
-#         ? ($_[0], undef, &Socket::AF_INET, 4, @ptrs)
-#         : ();
+   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
+      require EV::DNS;
+      require Socket;
+
+      my $current = $Coro::current;
+      my ($result, @ptrs);
+  
+      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
+         ($result, undef, undef, @ptrs) = @_;
+         $current->ready;
+      });
+      Coro::schedule while !defined $result;
+      return @ptrs
+         ? ($_[0], undef, &Socket::AF_INET, 4, @ptrs)
+         : ();
    } else {
       return _do_asy { gethostbyname $_[0] } @_
    }
@@ -138,19 +138,19 @@ sub inet_aton {
 
    if (dotted_quad $_[0]) {
       $inet_aton->($_[0])
-#   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
-#      require EV::DNS;
-#      require Socket;
-# 
-#      my $current = $Coro::current;
-#      my ($result, @ptrs);
-# 
-#      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
-#         ($result, undef, undef, @ptrs) = @_;
-#         $current->ready;
-#      });
-#      Coro::schedule while !defined $result;
-#      return $ptrs[0];
+   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
+      require EV::DNS;
+      require Socket;
+ 
+      my $current = $Coro::current;
+      my ($result, @ptrs);
+ 
+      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
+         ($result, undef, undef, @ptrs) = @_;
+         $current->ready;
+      });
+      Coro::schedule while !defined $result;
+      return $ptrs[0];
    } else {
       return _do_asy { $inet_aton->($_[0]) } @_
    }
