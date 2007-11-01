@@ -1,5 +1,18 @@
 use ExtUtils::MakeMaker;
 
+unless (-e "Coro/libcoro/coro.c") {
+   print <<EOF;
+
+***
+*** ERROR: Coro/libcoro is missing or damaged. If you used a CVS check-out
+*** of Coro, you also have to check-out the "libcoro" module from the same CVS
+*** repository in the Coro subdirectory (i.e. Coro/Coro/libcoro from outside).
+***
+
+EOF
+   exit 1;
+}
+
 print "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***\n\n";
 
 if ($] < 5.006) {

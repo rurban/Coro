@@ -5,11 +5,12 @@
 #include <assert.h>
 #include <string.h>
 
+#define EV_PROTOTYPES 0
 #include "EVAPI.h"
 #include "../Coro/CoroAPI.h"
 
 static void
-once_cb (int fd, short revents, void *arg)
+once_cb (int revents, void *arg)
 {
   AV *av = (AV *)arg; /* @_ */
   av_push (av, newSViv (revents));
@@ -18,8 +19,34 @@ once_cb (int fd, short revents, void *arg)
 }
 
 #define ONCE_INIT  AV *av = GvAV (PL_defgv);
-#define ONCE_CBARG once_cb, SvREFCNT_inc (av)
 #define ONCE_DONE  av_clear (av); av_push (av, SvREFCNT_inc (CORO_CURRENT));
+
+static struct ev_prepare scheduler;
+static struct ev_idle idler;
+
+static void
+idle_cb (struct ev_idle *w, int revents)
+{
+  evidle_stop (w);
+}
+
+static void
+prepare_cb (struct ev_watcher *w, int revents)
+{
+  while (CORO_NREADY && CORO_CEDE)
+    ;
+
+  /* if still ready, then we have lower-priority coroutines.
+   * cede once, then poll nonblocking
+   */
+  if (CORO_NREADY)
+    {
+      CORO_CEDE_NOTSELF;
+
+      if (CORO_NREADY)
+        evidle_start (&idler);
+    }
+}
 
 MODULE = Coro::EV                PACKAGE = Coro::EV
 
@@ -29,6 +56,11 @@ BOOT:
 {
         I_EV_API ("Coro::EV");
 	I_CORO_API ("Coro::Event");
+
+        evprepare_init (&scheduler, prepare_cb);
+        evprepare_start (&scheduler);
+
+        evidle_init (&idler, idle_cb);
 }
 
 void
@@ -37,11 +69,12 @@ _timed_io_once (...)
 {
 	ONCE_INIT;
         assert (AvFILLp (av) >= 1);
-        GEVAPI->once (
-                              SvIV (AvARRAY (av)[0]),
-                              SvIV (AvARRAY (av)[1]),
-          AvFILLp (av) >= 2 ? SvNV (AvARRAY (av)[2]) : 0.,
-          ONCE_CBARG
+        ev_once (
+          sv_fileno (AvARRAY (av)[0]),
+          SvIV (AvARRAY (av)[1]),
+          AvFILLp (av) >= 2 && SvOK (AvARRAY (av)[2]) ? SvNV (AvARRAY (av)[2]) : -1.,
+          once_cb,
+          (void *)SvREFCNT_inc (av)
         );
         ONCE_DONE;
 }
@@ -52,24 +85,15 @@ _timer_once (...)
 {
 	ONCE_INIT;
         NV after = SvNV (AvARRAY (av)[0]);
-        GEVAPI->once (
+        ev_once (
           -1,
-          EV_TIMEOUT,
+          0,
           after > 0. ? after : 1e-30,
-          ONCE_CBARG
+          once_cb,
+          (void *)SvREFCNT_inc (av)
         );
         ONCE_DONE;
 }
 
-void
-loop ()
-	CODE:
-        while (1)
-          {
-            while (CORO_NREADY)
-              CORO_CEDE_NOTSELF;
-
-            GEVAPI->loop (EVLOOP_ONCE);
-          }
 
 

@@ -41,12 +41,6 @@ BEGIN {
 
 =item
 
-=item Coro::EV::loop
-
-You have to call this function instead of EV::loop, EV::dispatch and
-similar functions. EV is not generic enough to let Coro hook into yet, so
-you have to use those replacement functions.
-
 =item $revents = Coro::EV::timed_io_once $fd, $events, $timeout
 
 Blocks the coroutine until either the given event set has occured on the

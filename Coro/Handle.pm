@@ -435,11 +435,11 @@ sub writable_coro {
 }
 
 sub readable_ev {
-   &EV::READ  == Coro::EV::once_timed_io (fileno $_[0][0], &EV::READ , $_[0][2])
+   &EV::READ  == Coro::EV::timed_io_once (fileno $_[0][0], &EV::READ , $_[0][2])
 }
 
 sub writable_ev {
-   &EV::WRITE == Coro::EV::once_timed_io (fileno $_[0][0], &EV::WRITE, $_[0][2])
+   &EV::WRITE == Coro::EV::timed_io_once (fileno $_[0][0], &EV::WRITE, $_[0][2])
 }
 
 # decide on event model at runtime
