@@ -48,16 +48,19 @@ t/11_deadlock.t
 t/12_exit.t
 t/13_diewarn.t
 
+EV/Makefile.PL
+EV/EV.pm
+EV/EV.xs
+
+EV/t/00_basic.t
+EV/t/01_unblock.t
+
 Event/Makefile.PL
 Event/Event.pm
 Event/Event.xs
 
 Event/t/00_basic.t
 Event/t/01_unblock.t
-
-EV/Makefile.PL
-EV/EV.pm
-EV/EV.xs
 
 eg/bench
 eg/prodcons1

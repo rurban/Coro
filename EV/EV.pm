@@ -7,6 +7,8 @@ Coro::EV - do events the coro-way
  use Coro;
  use Coro::EV;
 
+ EV::loop;
+
 =head1 DESCRIPTION
 
 This module does two things: First, it offers some utility functions that
@@ -22,6 +24,13 @@ That means that coroutines with the same or higher pripority as the
 coroutine running the main loop will inhibit event processing, while
 coroutines of lower priority will get the CPU, but cannot completeley
 inhibit event processing.
+
+=head2 RUNNING WITH OR WITHOUT A MAINLOOP
+
+In general, you should always run EV::loop, either in your main program,
+or in a separate coroutine. If you don't do that and all coroutines start
+waiting for some events, this module will run the event loop once, but
+this is very inefficient.
 
 =head1 FUNCTIONS
 
@@ -48,6 +57,8 @@ BEGIN {
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
 }
+
+unshift @AnyEvent::REGISTRY, [Coro::EV => "EV::AnyEvent"];
 
 # relatively inefficient
 our $ev_idle = new Coro sub {

@@ -88,7 +88,7 @@ _timer_once (...)
         ev_once (
           -1,
           0,
-          after > 0. ? after : 1e-30,
+          after >= 0. ? after : 0.,
           once_cb,
           (void *)SvREFCNT_inc (av)
         );
