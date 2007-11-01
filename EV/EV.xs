@@ -27,7 +27,7 @@ static struct ev_idle idler;
 static void
 idle_cb (struct ev_idle *w, int revents)
 {
-  evidle_stop (w);
+  ev_idle_stop (w);
 }
 
 static void
@@ -44,7 +44,7 @@ prepare_cb (struct ev_watcher *w, int revents)
       CORO_CEDE_NOTSELF;
 
       if (CORO_NREADY)
-        evidle_start (&idler);
+        ev_idle_start (&idler);
     }
 }
 
@@ -57,10 +57,10 @@ BOOT:
         I_EV_API ("Coro::EV");
 	I_CORO_API ("Coro::Event");
 
-        evprepare_init (&scheduler, prepare_cb);
-        evprepare_start (&scheduler);
+        ev_prepare_init (&scheduler, prepare_cb);
+        ev_prepare_start (&scheduler);
 
-        evidle_init (&idler, idle_cb);
+        ev_idle_init (&idler, idle_cb);
 }
 
 void
