@@ -7,9 +7,21 @@ Coro::EV - do events the coro-way
  use Coro;
  use Coro::EV;
 
- loop;
-
 =head1 DESCRIPTION
+
+This module does two things: First, it offers some utility functions that
+might be useful for coroutines, and secondly, it integrates Coro into the
+EV main loop:
+
+Before the process blocks (in EV::loop) to wait for events, this module
+will schedule and run all ready (= runnable) coroutines of the same or
+higher priority. After that, it will cede once to a coroutine of lower
+priority, then continue in the event loop.
+
+That means that coroutines with the same or higher pripority as the
+coroutine running the main loop will inhibit event processing, while
+coroutines of lower priority will get the CPU, but cannot completeley
+inhibit event processing.
 
 =head1 FUNCTIONS
 
@@ -73,12 +85,6 @@ sub timer_once($) {
    do { &Coro::schedule } while !$#_;
    pop
 }
-
-#sub timer_abs_once($$) {
-#   &_timer_abs_once;
-#   do { &Coro::schedule } while !$#_;
-#   pop
-#}
 
 1;
 
