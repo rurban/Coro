@@ -10,8 +10,9 @@ TODO: maybe implement a default message channel, very much like Erlang
         - removed killall call from fork_eval.
         - made sure store_fd is already loaded so that fork_eval
           does not have to parse autoload in each subprocess.
-        - if the event model is EV, use EV::DNS to resolve
-          stuff in Coro::Util.
+        - only use assembly method if -O switch is in $Config{optimize}.
+#        - if the event model is EV, use EV::DNS to resolve
+#          stuff in Coro::Util.
         - don't get confused by multiple event notifications in Coro::Handle.
         - initial support for EV (libevent interface).
 

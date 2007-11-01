@@ -38,14 +38,14 @@ if (exists $ENV{CORO_INTERFACE}) {
 
 } elsif ($^O =~ /linux/) {
    # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ && $Config{optimize} =~ /-O/ ? "a" : "s";
 
 } elsif ($^O =~ /(free|net|open)bsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
 
    # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ && $Config{optimize} =~ /-O/ ? "a" : "s";
 
 } elsif ($^O =~ /solaris/) {
    $iface = "s";
