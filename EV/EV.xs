@@ -31,21 +31,24 @@ idle_cb (struct ev_idle *w, int revents)
 }
 
 static void
-prepare_cb (struct ev_watcher *w, int revents)
+prepare_cb (struct ev_prepare *w, int revents)
 {
-  while (CORO_NREADY && CORO_CEDE)
+  static int incede;
+
+  ++incede;
+
+  CORO_CEDE_NOTSELF;
+
+  while (CORO_NREADY > incede && CORO_CEDE)
     ;
 
   /* if still ready, then we have lower-priority coroutines.
-   * cede once, then poll nonblocking
+   * poll anyways, but do not block.
    */
-  if (CORO_NREADY)
-    {
-      CORO_CEDE_NOTSELF;
+  if (CORO_NREADY > incede && !ev_is_active (&idler))
+    ev_idle_start (&idler);
 
-      if (CORO_NREADY)
-        ev_idle_start (&idler);
-    }
+  --incede;
 }
 
 MODULE = Coro::EV                PACKAGE = Coro::EV

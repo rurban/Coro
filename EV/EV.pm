@@ -60,16 +60,11 @@ BEGIN {
 
 unshift @AnyEvent::REGISTRY, [Coro::EV => "EV::AnyEvent"];
 
-# relatively inefficient
-our $ev_idle = new Coro sub {
-   while () {
-      EV::loop EV::LOOP_ONESHOT;
-      &Coro::schedule;
-   }
-};
 $ev->{desc} = "[EV idle process]";
 
-$Coro::idle = sub { $ev_idle->ready };
+$Coro::idle = sub {
+   EV::loop EV::LOOP_ONESHOT;
+};
 
 =item $revents = Coro::EV::timed_io_once $fd, $events, $timeout
 
