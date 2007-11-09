@@ -39,13 +39,13 @@ prepare_cb (struct ev_prepare *w, int revents)
 
   CORO_CEDE_NOTSELF;
 
-  while (CORO_NREADY > incede && CORO_CEDE)
+  while (CORO_NREADY >= incede && CORO_CEDE)
     ;
 
   /* if still ready, then we have lower-priority coroutines.
    * poll anyways, but do not block.
    */
-  if (CORO_NREADY > incede && !ev_is_active (&idler))
+  if (CORO_NREADY >= incede && !ev_is_active (&idler))
     ev_idle_start (&idler);
 
   --incede;
