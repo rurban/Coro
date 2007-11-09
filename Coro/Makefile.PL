@@ -38,14 +38,14 @@ if (exists $ENV{CORO_INTERFACE}) {
 
 } elsif ($^O =~ /linux/) {
    # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ && $Config{optimize} =~ /-O/ ? "a" : "s";
 
 } elsif ($^O =~ /(free|net|open)bsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
 
    # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ && $Config{optimize} =~ /-O/ ? "a" : "s";
 
 } elsif ($^O =~ /solaris/) {
    $iface = "s";
@@ -84,10 +84,14 @@ s  If the ucontext functions are not working or you don't want
    create coroutines from an alternative signal stack, as both are being
    used for coroutine creation.
 
-a  Handcoded assembly. This is the fastest method with the least side
-   effects, if it works, that is. It has been tested on GNU/Linux x86 and
-   x86_64 systems and should work on all x86/x86_64 systems using the SVR
-   ELF ABI. This is the recommended method on supported platforms.
+a  Handcoded assembly. This is the fastest and most compatible method
+   with the least side effects, if it works, that is. It has been tested
+   on GNU/Linux x86 and x86_64 systems and should work on all x86/x86_64
+   systems using the SVR ELF ABI. This is the recommended method on
+   supported platforms. Note that you usually have to compile this module
+   with optimisation enabled for this method to work, and also more
+   esoteric switches such as -fomit-leaf-frame-pointer might be required.
+   When i doubt, use another method, such as (s)etjmp/longjmp.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
@@ -104,8 +108,8 @@ w  Microsoft Windows. Try this on Microsoft Windows, although, as there is
    cygwin or specific versions of msvc. Your problem, your fix, our patch.
 
 For most systems, the default chosen should be OK. If you experience
-problems then you should experiment with this setting and/or turn off
-optimizations (make OPTIMIZE=-O0).
+problems then you should experiment with this setting and/or turn
+optimisations on or off (make OPTIMIZE=-O0).
 
 EOF
 

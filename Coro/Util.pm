@@ -94,8 +94,23 @@ sub gethostbyname($) {
    if ($netdns) {
       #$netdns->query($_[0]);
       die;
+   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
+      require EV::DNS;
+      require Socket;
+
+      my $current = $Coro::current;
+      my ($result, @ptrs);
+  
+      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
+         ($result, undef, undef, @ptrs) = @_;
+         $current->ready;
+      });
+      Coro::schedule while !defined $result;
+      return @ptrs
+         ? ($_[0], undef, &Socket::AF_INET, 4, @ptrs)
+         : ();
    } else {
-      _do_asy { gethostbyname $_[0] } @_
+      return _do_asy { gethostbyname $_[0] } @_
    }
 }
 
@@ -123,8 +138,21 @@ sub inet_aton {
 
    if (dotted_quad $_[0]) {
       $inet_aton->($_[0])
+   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
+      require EV::DNS;
+      require Socket;
+ 
+      my $current = $Coro::current;
+      my ($result, @ptrs);
+ 
+      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
+         ($result, undef, undef, @ptrs) = @_;
+         $current->ready;
+      });
+      Coro::schedule while !defined $result;
+      return $ptrs[0];
    } else {
-      _do_asy { $inet_aton->($_[0]) } @_
+      return _do_asy { $inet_aton->($_[0]) } @_
    }
 }
 
@@ -195,7 +223,6 @@ sub fork_eval(&@) {
    } elsif (defined $pid) {
       delete $SIG{__WARN__};
       delete $SIG{__DIE__};
-      Coro::killall;
       # just in case, this hack effectively disables event processing
       # in the child. cleaner and slower would be to canceling all
       # event watchers, but we are event-model agnostic.
@@ -223,6 +250,9 @@ sub fork_eval(&@) {
       die "fork_eval: $!";
    }
 }
+
+# make sure store_fd is preloaded
+eval { Storable::store_fd undef, undef };
 
 1;
 

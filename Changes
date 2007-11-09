@@ -5,6 +5,21 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.2  Fri Nov  9 20:47:05 CET 2007
+	- enable/disable tracing from a new coroutine, not a pooled one.
+        - fix a memleak in Coro::Event.
+        - removed killall call from fork_eval.
+        - made sure store_fd is already loaded so that fork_eval
+          does not have to parse autoload in each subprocess.
+        - only use assembly method if -O switch is in $Config{optimize}.
+        - add (optional) Coro::EV module, so far the best event loop module
+          directly supported by Coro.
+        - if the event model is EV, use EV::DNS to resolve
+          stuff in Coro::Util.
+        - don't get confused by multiple event notifications in Coro::Handle.
+        - initial support for EV (libevent interface).
+        - require Event and EV using configure_requires, to force their existance.
+
 4.13 Wed Oct 24 07:26:45 CEST 2007
 	- add Coro::Storable::blocking_thaw.
         - use a vastly more complicated technique to localise

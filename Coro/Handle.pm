@@ -289,10 +289,9 @@ sub TIEHANDLE {
 }
 
 sub cleanup {
-   $_[0][3] = "";
-   $_[0][4] = "";
-   (delete $_[0][5])->cancel if $_[0][5];
-   (delete $_[0][6])->cancel if $_[0][6];
+   $_[0][5]->cancel if $_[0][5];
+   $_[0][6]->cancel if $_[0][6];
+   @{$_[0]} = ();
 }
 
 sub OPEN {
@@ -367,7 +366,7 @@ sub readable_anyevent {
       fh    => $_[0][0],
       poll  => 'r',
       cb    => sub {
-         $current->ready;
+         $current->ready if $current;
          undef $current;
       },
    );
@@ -377,7 +376,7 @@ sub readable_anyevent {
       after => $_[0][2],
       cb    => sub {
          $io = 0;
-         $current->ready;
+         $current->ready if $current;
          undef $current;
       },
    );
@@ -397,7 +396,7 @@ sub writable_anyevent {
       fh    => $_[0][0],
       poll  => 'w',
       cb    => sub {
-         $current->ready;
+         $current->ready if $current;
          undef $current;
       },
    );
@@ -407,7 +406,7 @@ sub writable_anyevent {
       after => $_[0][2],
       cb    => sub {
          $io = 0;
-         $current->ready;
+         $current->ready if $current;
          undef $current;
       },
    );
@@ -435,6 +434,14 @@ sub writable_coro {
    ))->next->[4] & &Event::Watcher::W
 }
 
+sub readable_ev {
+   &EV::READ  == Coro::EV::timed_io_once (fileno $_[0][0], &EV::READ , $_[0][2])
+}
+
+sub writable_ev {
+   &EV::WRITE == Coro::EV::timed_io_once (fileno $_[0][0], &EV::WRITE, $_[0][2])
+}
+
 # decide on event model at runtime
 for my $rw (qw(readable writable)) {
    no strict 'refs';
@@ -444,6 +451,9 @@ for my $rw (qw(readable writable)) {
       if ($AnyEvent::MODEL eq "AnyEvent::Impl::Coro" or $AnyEvent::MODEL eq "AnyEvent::Impl::Event") {
          require Coro::Event;
          *$rw = \&{"$rw\_coro"};
+      } elsif ($AnyEvent::MODEL eq "EV::AnyEvent") {
+         require Coro::EV;
+         *$rw = \&{"$rw\_ev"};
       } else {
          *$rw = \&{"$rw\_anyevent"};
       }

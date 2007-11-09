@@ -1,12 +1,13 @@
 --- #YAML:1.0
 name:                Coro
-version:             4.13
+version:             4.2
 abstract:            ~
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.32
 distribution_type:   module
 requires:     
-    AnyEvent:                      2.51
+    AnyEvent:                      2.6
+    EV:                            0.7
     Event:                         1.06
     IO::AIO:                       2.3
     Scalar::Util:                  0
@@ -15,3 +16,8 @@ requires:
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.2.html
     version: 1.2
+
+configure_requires:
+  Event: 1.06
+  EV: 0.7
+    

@@ -1,11 +1,26 @@
 use ExtUtils::MakeMaker;
 
+unless (-e "Coro/libcoro/coro.c") {
+   print <<EOF;
+
+***
+*** ERROR: Coro/libcoro is missing or damaged. If you used a CVS check-out
+*** of Coro, you also have to check-out the "libcoro" module from the same CVS
+*** repository in the Coro subdirectory (i.e. Coro/Coro/libcoro from outside).
+***
+
+EOF
+   exit 1;
+}
+
+print "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***\n\n";
+
 if ($] < 5.006) {
    print <<EOF;
 
 ***
 *** WARNING: This module is quite low-level and uses undocumented perl
-*** internals to do it's job. While it seems to work fine with perl-5.[6-9]
+*** internals to do it's job. While it seems to work fine with perl-5.[6-10]
 *** it has not been tested with older versions. If it compiles and passes the
 *** testsuite, it should work. Otherwise you should either upgrade or fix it ;)
 ***
@@ -33,9 +48,16 @@ EOF
       $DEFINE .= " -DHAVE_EVENT=1";
       print "\nEvent version $Event::VERSION found, building Event support.\n\n";
    }
-   print "\n";
 } else {
    print "\n*** Event not found, not build Event support.\n\n";
+}
+
+if (eval { require EV }) {
+   $EV = 1;
+   $DEFINE .= " -DHAVE_EV=1";
+   print "\nEV version $EV::VERSION found, building EV support.\n\n";
+} else {
+   print "\n*** EV not found, not build EV support.\n\n";
 }
 
 WriteMakefile(
@@ -46,18 +68,26 @@ WriteMakefile(
 	            },
     NAME         => "Coro",
     VERSION_FROM => "Coro.pm",
-    DIR          => ['Coro', ($EVENT ? 'Event' : ())],
+    DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
        Scalar::Util	=> 0.00,
-       AnyEvent         => 2.51,
+       AnyEvent         => 2.6,
        Storable		=> 2.15,
+       Time::HiRes      => 0,
 
        # for Coro::Event
        Event		=> 1.06,
-       Time::HiRes      => 0,
+
+       # for Coro::EV
+       EV               => 0.7,
 
        # for Coro::AIO
        IO::AIO          => 2.3,
+    },
+    EXTRA_META => q{
+configure_requires:
+  Event: 1.06
+  EV: 0.7
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
