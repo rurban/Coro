@@ -147,7 +147,7 @@ static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
-static SV *coro_mortal; /* will be freed after next transfer */
+static volatile SV *coro_mortal; /* will be freed after next transfer */
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
