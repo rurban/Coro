@@ -79,7 +79,7 @@ WriteMakefile(
        Event		=> 1.06,
 
        # for Coro::EV
-       EV               => 0.7,
+       EV               => 1.3,
 
        # for Coro::AIO
        IO::AIO          => 2.3,
