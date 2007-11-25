@@ -87,7 +87,7 @@ WriteMakefile(
     EXTRA_META => q{
 configure_requires:
   Event: 1.06
-  EV: 0.7
+  EV: 1.3
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
