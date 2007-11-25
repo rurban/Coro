@@ -91,10 +91,11 @@ this is being implemented with forking, so it's not exactly low-cost.
 my $netdns = eval { die; require Net::DNS::Resolver; new Net::DNS::Resolver; };
 
 sub gethostbyname($) {
+   my $model = AnyEvent::detect;
    if ($netdns) {
       #$netdns->query($_[0]);
       die;
-   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
+   } elsif ($model eq "AnyEvent::Impl::CoroEV" or $model eq "AnyEvent::Impl::EV") {
       require EV::DNS;
       require Socket;
 
@@ -136,9 +137,10 @@ our $inet_aton = \&Socket::inet_aton;
 sub inet_aton {
    require Socket;
 
+   my $model = AnyEvent::detect;
    if (dotted_quad $_[0]) {
       $inet_aton->($_[0])
-   } elsif (AnyEvent::detect eq "EV::AnyEvent") {
+   } elsif ($model eq "AnyEvent::Impl::CoroEV" or $model eq "AnyEvent::Impl::EV") {
       require EV::DNS;
       require Socket;
  
