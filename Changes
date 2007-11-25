@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.21 Sun Nov 25 10:48:59 CET 2007
+	- fix a spurious memory read.
+        - Coro::EV no longer keeps the eventloop "alive".
+
 4.2  Fri Nov  9 20:47:05 CET 2007
 	- enable/disable tracing from a new coroutine, not a pooled one.
         - fix a memleak in Coro::Event.

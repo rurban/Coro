@@ -79,7 +79,7 @@ WriteMakefile(
        Event		=> 1.06,
 
        # for Coro::EV
-       EV               => 0.7,
+       EV               => 1.3,
 
        # for Coro::AIO
        IO::AIO          => 2.3,
@@ -87,7 +87,7 @@ WriteMakefile(
     EXTRA_META => q{
 configure_requires:
   Event: 1.06
-  EV: 0.7
+  EV: 1.3
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',

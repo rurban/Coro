@@ -62,6 +62,7 @@ BOOT:
 
         ev_prepare_init (&scheduler, prepare_cb);
         ev_prepare_start (&scheduler);
+        ev_unref ();
 
         ev_idle_init (&idler, idle_cb);
 }

@@ -147,7 +147,7 @@ static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
-static SV *coro_mortal; /* will be freed after next transfer */
+static volatile SV *coro_mortal; /* will be freed after next transfer */
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
@@ -1122,6 +1122,7 @@ static void NOINLINE
 transfer (pTHX_ struct coro *prev, struct coro *next)
 {
   dSTACKLEVEL;
+  static volatile int has_throw;
 
   /* sometimes transfer is only called to set idle_sp */
   if (expect_false (!next))
@@ -1183,6 +1184,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
       if (expect_true (!next->cctx))
         next->cctx = cctx_get (aTHX);
 
+      has_throw = !!next->throw;
+
       if (expect_false (prev__cctx != next->cctx))
         {
           prev__cctx->top_env = PL_top_env;
@@ -1193,7 +1196,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
       free_coro_mortal (aTHX);
       UNLOCK;
 
-      if (expect_false (prev->throw || next->throw))
+      if (expect_false (has_throw))
         {
           struct coro *coro = SvSTATE (coro_current);
 
