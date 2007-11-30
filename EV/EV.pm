@@ -58,7 +58,7 @@ BEGIN {
    XSLoader::load __PACKAGE__, $VERSION;
 }
 
-unshift @AnyEvent::REGISTRY, [Coro::EV => "EV::AnyEvent"];
+unshift @AnyEvent::REGISTRY, [Coro::EV => AnyEvent::Impl::CoroEV];
 
 $ev->{desc} = "[EV idle process]";
 

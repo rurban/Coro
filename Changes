@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.22 Fri Nov 30 16:04:04 CET 2007
+	- really use optimised versions for Event and EV in Coro::Util
+          and Coro::Handle.
+
 4.21 Sun Nov 25 10:48:59 CET 2007
 	- fix a spurious memory read.
         - Coro::EV no longer keeps the eventloop "alive".

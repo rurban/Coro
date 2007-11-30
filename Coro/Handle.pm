@@ -451,7 +451,7 @@ for my $rw (qw(readable writable)) {
       if ($AnyEvent::MODEL eq "AnyEvent::Impl::Coro" or $AnyEvent::MODEL eq "AnyEvent::Impl::Event") {
          require Coro::Event;
          *$rw = \&{"$rw\_coro"};
-      } elsif ($AnyEvent::MODEL eq "EV::AnyEvent") {
+      } elsif ($AnyEvent::MODEL eq "AnyEvent::Impl::CoroEV" or $AnyEvent::MODEL eq "AnyEvent::Impl::EV") {
          require Coro::EV;
          *$rw = \&{"$rw\_ev"};
       } else {
