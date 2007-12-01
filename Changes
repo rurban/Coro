@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- do no longer rely on the presence of EV::DNS if EV is used
+          (because it is gone), but instead take avdantage of EV::ADNS
+          if available.
+
 4.22 Fri Nov 30 16:04:04 CET 2007
 	- really use optimised versions for Event and EV in Coro::Util
           and Coro::Handle.
