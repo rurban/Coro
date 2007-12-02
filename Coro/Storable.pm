@@ -112,7 +112,7 @@ sub nfreeze($) {
    $buf
 }
 
-sub blocking_thaw {
+sub blocking_thaw($) {
    my $guard = $lock->guard;
 
    open my $fh, "<", \$_[0]
@@ -120,7 +120,7 @@ sub blocking_thaw {
    Storable::fd_retrieve $fh
 }
 
-sub blocking_freeze {
+sub blocking_freeze($) {
    my $guard = $lock->guard;
 
    open my $fh, ">", \my $buf
@@ -131,7 +131,7 @@ sub blocking_freeze {
    $buf
 }
 
-sub blocking_nfreeze {
+sub blocking_nfreeze($) {
    my $guard = $lock->guard;
 
    open my $fh, ">", \my $buf
