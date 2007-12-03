@@ -23,6 +23,7 @@ once_cb (int revents, void *arg)
 
 static struct ev_prepare scheduler;
 static struct ev_idle idler;
+static int inhibit;
 
 static void
 idle_cb (struct ev_idle *w, int revents)
@@ -34,6 +35,9 @@ static void
 prepare_cb (struct ev_prepare *w, int revents)
 {
   static int incede;
+
+  if (inhibit)
+    return;
 
   ++incede;
 
@@ -61,11 +65,18 @@ BOOT:
 	I_CORO_API ("Coro::Event");
 
         ev_prepare_init (&scheduler, prepare_cb);
-        ev_prepare_start (&scheduler);
+        ev_prepare_start (EV_DEFAULT_ &scheduler);
         ev_unref ();
 
         ev_idle_init (&idler, idle_cb);
 }
+
+void
+_loop_oneshot ()
+	CODE:
+        ++inhibit;
+        ev_loop (EV_DEFAULT_ EVLOOP_ONESHOT);
+        --inhibit;
 
 void
 _timed_io_once (...)
