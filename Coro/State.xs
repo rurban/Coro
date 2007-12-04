@@ -1396,6 +1396,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
           PUSHMARK (SP);
           PUTBACK;
           call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
+          SPAGAIN;
 
           FREETMPS;
           LEAVE;
@@ -1605,6 +1606,7 @@ _set_stacklevel (...)
 {
 	struct transfer_args ta;
 
+        PUTBACK;
         switch (ix)
           {
             case 0:
@@ -1633,6 +1635,7 @@ _set_stacklevel (...)
 
               break;
           }
+        SPAGAIN;
 
         BARRIER;
         PUTBACK;
@@ -1700,6 +1703,7 @@ call (Coro::State coro, SV *coderef)
 
             if (!(coro->flags & CF_RUNNING))
               {
+                PUTBACK;
                 save_perl (aTHX_ &temp);
                 load_perl (aTHX_ coro);
               }
@@ -1728,6 +1732,7 @@ call (Coro::State coro, SV *coderef)
               {
                 save_perl (aTHX_ coro);
                 load_perl (aTHX_ &temp);
+                SPAGAIN;
               }
           }
 }
