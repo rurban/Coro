@@ -24,6 +24,8 @@ use strict;
 
 no warnings "uninitialized";
 
+use Socket ();
+
 use AnyEvent;
 
 use Coro::State;
@@ -81,6 +83,18 @@ sub dotted_quad($) {
             \.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)$/x
 }
 
+my $has_ev_adns;
+
+sub has_ev_adns {
+   ($has_ev_adns ||= do {
+      my $model = AnyEvent::detect;
+      warn $model;
+      (($model eq "AnyEvent::Impl::CoroEV" or $model eq "AnyEvent::Impl::EV")
+       && eval { require EV::ADNS })
+         ? 2 : 1
+   }) - 1
+}
+
 =item gethostbyname, gethostbyaddr
 
 Work exactly like their perl counterparts, but do not block. Currently
@@ -88,27 +102,22 @@ this is being implemented with forking, so it's not exactly low-cost.
 
 =cut
 
-my $netdns = eval { die; require Net::DNS::Resolver; new Net::DNS::Resolver; };
-
 sub gethostbyname($) {
-   my $model = AnyEvent::detect;
-   if ($netdns) {
-      #$netdns->query($_[0]);
-      die;
-   } elsif ($model eq "AnyEvent::Impl::CoroEV" or $model eq "AnyEvent::Impl::EV") {
-      require EV::DNS;
-      require Socket;
-
+   if (&dotted_quad) {
+      return $_[0];
+   } elsif (has_ev_adns) {
       my $current = $Coro::current;
-      my ($result, @ptrs);
+      my @a;
   
-      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
-         ($result, undef, undef, @ptrs) = @_;
+      EV::ADNS::submit ($_[0], &EV::ADNS::r_a, 0, sub {
+         (undef, undef, @a) = @_;
          $current->ready;
+         undef $current;
       });
-      Coro::schedule while !defined $result;
-      return @ptrs
-         ? ($_[0], undef, &Socket::AF_INET, 4, @ptrs)
+      Coro::schedule while $current;
+
+      return @a
+         ? ($_[0], $_[0], &Socket::AF_INET, 4, map +(Socket::inet_aton $_), @a)
          : ();
    } else {
       return _do_asy { gethostbyname $_[0] } @_
@@ -116,11 +125,7 @@ sub gethostbyname($) {
 }
 
 sub gethostbyaddr($$) {
-   if ($netdns) {
-      die;
-   } else {
-      _do_asy { gethostbyaddr $_[0], $_[1] } @_
-   }
+   _do_asy { gethostbyaddr $_[0], $_[1] } @_
 }
 
 =item Coro::Util::inet_aton
@@ -130,31 +135,23 @@ block. Is implemented with forking, so not exactly low-cost.
 
 =cut
 
-use Socket;
-
-our $inet_aton = \&Socket::inet_aton;
-
 sub inet_aton {
-   require Socket;
-
-   my $model = AnyEvent::detect;
-   if (dotted_quad $_[0]) {
-      $inet_aton->($_[0])
-   } elsif ($model eq "AnyEvent::Impl::CoroEV" or $model eq "AnyEvent::Impl::EV") {
-      require EV::DNS;
-      require Socket;
- 
+   if (&dotted_quad) {
+      return Socket::inet_aton ($_[0]);
+   } elsif (has_ev_adns) {
       my $current = $Coro::current;
-      my ($result, @ptrs);
+      my @a;
  
-      EV::DNS::resolve_ipv4 ($_[0], 0, sub {
-         ($result, undef, undef, @ptrs) = @_;
+      EV::ADNS::submit ($_[0], &EV::ADNS::r_a, 0, sub {
+         (undef, undef, @a) = @_;
          $current->ready;
+         undef $current;
       });
-      Coro::schedule while !defined $result;
-      return $ptrs[0];
+      Coro::schedule while $current;
+
+      return @a ? Socket::inet_aton $a[0] : ();
    } else {
-      return _do_asy { $inet_aton->($_[0]) } @_
+      return _do_asy { Socket::inet_aton $_[0] } @_
    }
 }
 

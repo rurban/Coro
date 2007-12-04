@@ -5,6 +5,16 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.3  Tue Dec  4 20:33:14 CET 2007
+	- calls to the idle function could cause stack corruption
+          when the stack changed.
+	- do no longer rely on the presence of EV::DNS if EV is used
+          (because it is gone), but instead take avdantage of EV::ADNS
+          if available.
+        - add ($) prototypes to all functions in Coro::Storable.
+        - use a conventional (safer) idle callback in Coro::EV.
+        - do accept quickly in Coro::Debug to avoid endless loops.
+
 4.22 Fri Nov 30 16:04:04 CET 2007
 	- really use optimised versions for Event and EV in Coro::Util
           and Coro::Handle.

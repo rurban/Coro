@@ -416,10 +416,12 @@ sub new_unix_server {
    }, $class;
 
    $self->{cw} = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
-      Coro::async_pool {
-         $Coro::current->desc ("[Coro::Debug session]");
-         session +$fh->accept;
-      };
+      if (my $fh = $fh->accept) {
+         Coro::async_pool {
+            $Coro::current->desc ("[Coro::Debug session]");
+            session $fh;
+         };
+      }
    });
 
    $self

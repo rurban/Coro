@@ -41,6 +41,7 @@ this is very inefficient.
 package Coro::EV;
 
 no warnings;
+use strict;
 
 use Carp;
 no warnings;
@@ -52,19 +53,21 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = '2.1';
+   our $VERSION = '2.2';
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
 }
 
-unshift @AnyEvent::REGISTRY, [Coro::EV => AnyEvent::Impl::CoroEV];
-
-$ev->{desc} = "[EV idle process]";
-
-$Coro::idle = sub {
-   EV::loop EV::LOOP_ONESHOT;
+our $IDLE = new Coro sub {
+   while () {
+      &_loop_oneshot;
+      &Coro::schedule;
+   }
 };
+$IDLE->{desc} = "[EV idle process]";
+
+$Coro::idle = sub { $IDLE->ready };
 
 =item $revents = Coro::EV::timed_io_once $fd, $events, $timeout
 

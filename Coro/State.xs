@@ -1332,15 +1332,11 @@ coro_enq (pTHX_ SV *coro_sv)
 }
 
 static SV *
-coro_deq (pTHX_ int min_prio)
+coro_deq (pTHX)
 {
-  int prio = PRIO_MAX - PRIO_MIN;
+  int prio;
 
-  min_prio -= PRIO_MIN;
-  if (min_prio < 0)
-    min_prio = 0;
-
-  for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= min_prio; )
+  for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= 0; )
     if (AvFILLp (coro_ready [prio]) >= 0)
       return av_shift (coro_ready [prio]);
 
@@ -1386,7 +1382,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
   for (;;)
     {
       LOCK;
-      next_sv = coro_deq (aTHX_ PRIO_MIN);
+      next_sv = coro_deq (aTHX);
 
       /* nothing to schedule: call the idle handler */
       if (expect_false (!next_sv))
@@ -1400,6 +1396,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
           PUSHMARK (SP);
           PUTBACK;
           call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
+          SPAGAIN;
 
           FREETMPS;
           LEAVE;
@@ -1609,6 +1606,7 @@ _set_stacklevel (...)
 {
 	struct transfer_args ta;
 
+        PUTBACK;
         switch (ix)
           {
             case 0:
@@ -1637,6 +1635,7 @@ _set_stacklevel (...)
 
               break;
           }
+        SPAGAIN;
 
         BARRIER;
         PUTBACK;
@@ -1704,6 +1703,7 @@ call (Coro::State coro, SV *coderef)
 
             if (!(coro->flags & CF_RUNNING))
               {
+                PUTBACK;
                 save_perl (aTHX_ &temp);
                 load_perl (aTHX_ coro);
               }
@@ -1732,6 +1732,7 @@ call (Coro::State coro, SV *coderef)
               {
                 save_perl (aTHX_ coro);
                 load_perl (aTHX_ &temp);
+                SPAGAIN;
               }
           }
 }

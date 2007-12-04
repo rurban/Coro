@@ -59,7 +59,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '4.22';
+our $VERSION = '4.3';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
