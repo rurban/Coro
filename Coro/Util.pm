@@ -88,7 +88,6 @@ my $has_ev_adns;
 sub has_ev_adns {
    ($has_ev_adns ||= do {
       my $model = AnyEvent::detect;
-      warn $model;
       (($model eq "AnyEvent::Impl::CoroEV" or $model eq "AnyEvent::Impl::EV")
        && eval { require EV::ADNS })
          ? 2 : 1
