@@ -6,18 +6,13 @@ use Socket;
 use Fcntl;
 
 use Coro;
-use Coro::Event;
+use Coro::EV;
 use Coro::Semaphore;
 use Coro::SemaphoreSet;
 use Coro::Socket;
 use Coro::Timer;
 
 use BerkeleyDB;
-
-$Event::DIED = sub {
-   Event::verbose_exception_handler(@_);
-   #Event::unloop_all();
-};
 
 tie %netgeo::whois, BerkeleyDB::Btree,
     -Env => $db_env,
@@ -32,7 +27,7 @@ $netgeo::iprange = new BerkeleyDB::Btree
 
 package Whois;
 
-use Coro::Event;
+use Coro::EV;
 
 sub new {
    my $class = shift;

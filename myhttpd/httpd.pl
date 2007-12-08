@@ -1,6 +1,6 @@
 use Coro;
 use Coro::Semaphore;
-use Coro::Event;
+use Coro::EV;
 use Coro::Socket;
 use Coro::Signal;
 use Coro::AIO ();
@@ -28,10 +28,11 @@ our $HTTP_NOW;
 our $ERROR_LOG;
 our $ACCESS_LOG;
 
-Event->timer(interval => 1, hard => 1, cb => sub {
+our $update_time = EV::periodic 0, 1, undef, sub {
    $NOW = time;
    $HTTP_NOW = time2str $NOW;
-})->now;
+};
+$update_time->invoke;
 
 if ($ERROR_LOG) {
    use IO::Handle;
@@ -152,9 +153,7 @@ use IO::AIO;
 
 IO::AIO::min_parallel $::AIO_PARALLEL;
 
-Event->io (fd => IO::AIO::poll_fileno,
-           poll => 'r', async => 1,
-           cb => \&IO::AIO::poll_cb);
+our $AIO_WATCHER = EV::io IO::AIO::poll_fileno, EV::READ, \&IO::AIO::poll_cb;
 
 our %conn; # $conn{ip}{self} => connobj
 our %uri;  # $uri{ip}{uri}{self}
@@ -224,7 +223,7 @@ sub prune_caches {
    }
 }
 
-Event->timer (interval => 60, cb => \&prune_caches);
+our $PRUNE_WATCHER = EV::timer 60, 60, \&prune_caches;
 
 sub slog {
    my $self = shift;

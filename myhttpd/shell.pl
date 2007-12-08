@@ -1,9 +1,10 @@
 # a server command shell
 
+use EV;
 use Coro;
+use Coro::EV;
 use Coro::Handle;
 use Coro::Socket;
-use Event;
 use Time::HiRes 'time';
 
 use Text::Abbrev;
@@ -26,7 +27,7 @@ sub shell {
             last;
          } elsif ($cmd eq "squit") {
             print $fh "server quit.\n";#d#
-            Event::unloop;
+            EV::unloop;
             last;
          } elsif ($cmd eq "print") {
             my @res = eval $_;
@@ -61,7 +62,7 @@ sub shell {
             delete $diridx{$_} for keys %diridx; # server error on %diridx = ();
          } elsif ($cmd eq "restart") {
             $::RESTART = 1;
-            unloop;
+            EV::unloop;
             print $fh "restarting, cu!\n";
             last;
          } elsif ($cmd eq "country") {

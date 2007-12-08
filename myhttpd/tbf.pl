@@ -14,20 +14,14 @@ sub new {
    $self->{interval}  ||= $::BUFSIZE / $max_per_client; # good default interval
 
    if ($self->{rate}) {
-      $self->{w} = Event->timer(hard => 1, after => 0, interval => $self->{interval}, repeat => 1, cb => sub {
-         $self->inject($self->{rate} * $self->{interval});
-      });
+      $self->{w} = EV::periodic 0, $self->{interval}, undef, sub {
+         $self->inject ($self->{rate} * $self->{interval});
+      };
    } else {
       die "chaining not yet implemented\n";
    }
 
    $self;
-}
-
-sub DESTROY {
-   my $self = shift;
-
-   $self->{w}->cancel;
 }
 
 sub inject {

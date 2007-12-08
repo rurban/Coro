@@ -1,6 +1,6 @@
 use HTTP::Date;
 
-use Coro::Event;
+use Coro::EV;
 
 sub conn::err_block_country {
    my $self = shift;
@@ -106,7 +106,7 @@ sub conn::err_blocked {
    $block->[3] = $::NOW + 10;
 
    if ($limit > $::NOW) {
-      Coro::Event::do_timer(after => $limit - $::NOW);
+      Coro::EV::timer_once $limit - $::NOW;
 
       if ($block->[2] > 20) {
          $block->[3] = $::NOW + $::DYNABLOCK + 360;

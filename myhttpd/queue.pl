@@ -15,11 +15,7 @@ sub new {
       lastspb => 0,
       avgspb  => 0,
    }, $class;
-   $self->{reschedule} = Event->timer(
-         after => 10,
-         interval => 3,
-         cb => sub { $self->wake_next },
-   );
+   $self->{reschedule} = EV::timer 10, 3, sub { $self->wake_next };
    $self;
 }
 
@@ -85,12 +81,6 @@ sub force_wake_next {
 sub waiters {
    $_[0]->sort;
    @{$_[0]{wait}};
-}
-
-sub DESTROY {
-   my $self = shift;
-
-   $self->{reschedule}->cancel;
 }
 
 package transfer;

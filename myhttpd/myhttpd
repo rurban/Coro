@@ -1,6 +1,7 @@
 #!/opt/bin/perl
 
-use Coro::Event;
+use EV;
+use Coro::EV;
 use Time::HiRes 'time';
 
 $starttime = time;
@@ -24,12 +25,14 @@ require "internal.pl";
 require "httpd.pl";
 require "shell.pl";
 
-loop;
+EV::loop;
 
 if ($RESTART) {
    $_->close for @listen_sockets;
    fork && exec $0, @ARGV;
-   loop(60*60);
+
+   my $finish = EV::timer 60*60, 0, sub { EV::unloop };
+   EV::loop;
 }
 
 print "myhttpd ended\n";#d#
