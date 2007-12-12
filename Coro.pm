@@ -630,7 +630,7 @@ Event/IO: L<Coro::Timer>, L<Coro::Event>, L<Coro::Handle>, L<Coro::Socket>.
 
 Compatibility: L<Coro::LWP>, L<Coro::Storable>, L<Coro::Select>.
 
-Embedding: L<Coro:MakeMaker>.
+Embedding: L<Coro::MakeMaker>.
 
 =head1 AUTHOR
 
