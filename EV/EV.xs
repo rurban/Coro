@@ -218,7 +218,7 @@ _readable_ev (SV *handle_sv, SV *done_sv)
           if (SvOK (to))
             {
               ev_timer_set (&dir->tw, 0., SvNV (to));
-              ev_timer_start (EV_DEFAULT_ &dir->tw);
+              ev_timer_again (EV_DEFAULT_ &dir->tw);
             }
         }
 
