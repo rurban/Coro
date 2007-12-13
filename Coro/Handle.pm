@@ -362,7 +362,6 @@ sub readable_anyevent {
    my $io = 1;
 
    my $w = AnyEvent->io (
-      desc  => "$_[0][1] read watcher",
       fh    => $_[0][0],
       poll  => 'r',
       cb    => sub {
@@ -372,7 +371,6 @@ sub readable_anyevent {
    );
 
    my $t = (defined $_[0][2]) && AnyEvent->timer (
-      desc  => "fh $_[0][1] read timeout",
       after => $_[0][2],
       cb    => sub {
          $io = 0;
@@ -392,7 +390,6 @@ sub writable_anyevent {
    my $io = 1;
 
    my $w = AnyEvent->io (
-      desc  => "fh $_[0][1] write watcher",
       fh    => $_[0][0],
       poll  => 'w',
       cb    => sub {
@@ -402,7 +399,6 @@ sub writable_anyevent {
    );
 
    my $t = (defined $_[0][2]) && AnyEvent->timer (
-      desc  => "fh $_[0][1] write timeout",
       after => $_[0][2],
       cb    => sub {
          $io = 0;
@@ -434,13 +430,13 @@ sub writable_coro {
    ))->next->[4] & &Event::Watcher::W
 }
 
-sub readable_ev {
-   &EV::READ  == Coro::EV::timed_io_once (fileno $_[0][0], &EV::READ , $_[0][2])
-}
-
-sub writable_ev {
-   &EV::WRITE == Coro::EV::timed_io_once (fileno $_[0][0], &EV::WRITE, $_[0][2])
-}
+#sub readable_ev {
+#   &EV::READ  == Coro::EV::timed_io_once (fileno $_[0][0], &EV::READ , $_[0][2])
+#}
+#
+#sub writable_ev {
+#   &EV::WRITE == Coro::EV::timed_io_once (fileno $_[0][0], &EV::WRITE, $_[0][2])
+#}
 
 # decide on event model at runtime
 for my $rw (qw(readable writable)) {
@@ -453,7 +449,7 @@ for my $rw (qw(readable writable)) {
          *$rw = \&{"$rw\_coro"};
       } elsif ($AnyEvent::MODEL eq "AnyEvent::Impl::CoroEV" or $AnyEvent::MODEL eq "AnyEvent::Impl::EV") {
          require Coro::EV;
-         *$rw = \&{"$rw\_ev"};
+         *$rw = \&{"Coro::EV::$rw\_ev"};
       } else {
          *$rw = \&{"$rw\_anyevent"};
       }
