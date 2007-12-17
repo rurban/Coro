@@ -95,6 +95,18 @@ sub timer_once($) {
    pop
 }
 
+sub readable_ev {
+   _readable_ev $_[0], my $done;
+   do { &Coro::schedule } while !defined $done;
+   $done
+}
+
+sub writable_ev {
+   _writable_ev $_[0], my $done;
+   do { &Coro::schedule } while !defined $done;
+   $done
+}
+
 1;
 
 =back

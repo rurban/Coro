@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Coro
-version:             4.31
+version:             4.32
 abstract:            ~
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.32

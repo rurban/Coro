@@ -59,7 +59,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '4.31';
+our $VERSION = '4.32';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -630,7 +630,7 @@ Event/IO: L<Coro::Timer>, L<Coro::Event>, L<Coro::Handle>, L<Coro::Socket>.
 
 Compatibility: L<Coro::LWP>, L<Coro::Storable>, L<Coro::Select>.
 
-Embedding: L<Coro:MakeMaker>.
+Embedding: L<Coro::MakeMaker>.
 
 =head1 AUTHOR
 

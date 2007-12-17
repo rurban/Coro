@@ -318,7 +318,7 @@ SEE ALSO
 
     Compatibility: Coro::LWP, Coro::Storable, Coro::Select.
 
-    Embedding: <Coro:MakeMaker>.
+    Embedding: Coro::MakeMaker.
 
 AUTHOR
      Marc Lehmann <schmorp@schmorp.de>
