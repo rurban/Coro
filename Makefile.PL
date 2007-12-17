@@ -115,6 +115,7 @@ configure_requires:
     		    'Coro/Socket.pm'	=> '$(INST_LIBDIR)/Coro/Socket.pm',
 
     		    'Coro/AIO.pm'	=> '$(INST_LIBDIR)/Coro/AIO.pm',
+    		    'Coro/BDB.pm'	=> '$(INST_LIBDIR)/Coro/BDB.pm',
     		    'Coro/LWP.pm'	=> '$(INST_LIBDIR)/Coro/LWP.pm',
     		    'Coro/Storable.pm'	=> '$(INST_LIBDIR)/Coro/Storable.pm',
                     },

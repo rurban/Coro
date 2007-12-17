@@ -5,7 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.32
 	- majorly improved Coro::Handle's performance with Coro::EV.
+        - implemented the until now mythical Coro::BDB module.
 
 4.31 Wed Dec  5 12:32:39 CET 2007
 	- remove warn statement form Coro::Util.
