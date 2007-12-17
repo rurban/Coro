@@ -8,6 +8,7 @@ TODO: maybe implement a default message channel, very much like Erlang
 4.32
 	- majorly improved Coro::Handle's performance with Coro::EV.
         - implemented the until now mythical Coro::BDB module.
+        - specialcase EV in Coro::AIO and Coro::BDB.
 
 4.31 Wed Dec  5 12:32:39 CET 2007
 	- remove warn statement form Coro::Util.
