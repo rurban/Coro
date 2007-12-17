@@ -67,13 +67,14 @@ use IO::AIO ();
 
 use base Exporter::;
 
-if (AnyEvent::detect =~ /^AnyEvent::Impl::(Coro)?EV$/) {
+our $WATCHER;
+
+if (AnyEvent::detect =~ /^AnyEvent::Impl::(?:Coro)?EV$/) {
    $WATCHER = EV::io IO::AIO::poll_fileno, EV::READ, \&IO::AIO::poll_cb;
 } else {
    our $FH; open $FH, "<&=" . IO::AIO::poll_fileno;
    $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&IO::AIO::poll_cb);
 }
-
 
 our @EXPORT    = @IO::AIO::EXPORT;
 our @EXPORT_OK = @IO::AIO::EXPORT_OK;
