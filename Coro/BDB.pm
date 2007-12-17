@@ -47,7 +47,7 @@ our $VERSION = '1.0';
 our $WATCHER;
 
 if (AnyEvent::detect =~ /^AnyEvent::Impl::(?:Coro)?EV$/) {
-   $WATCHER = EV::io BDB::poll_fileno, EV::READ, \&BDB::poll_cb;
+   $WATCHER = EV::io (BDB::poll_fileno, &EV::READ, \&BDB::poll_cb);
 } else {
    our $FH; open $FH, "<&=" . BDB::poll_fileno;
    $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&BDB::poll_cb);
