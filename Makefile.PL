@@ -53,9 +53,21 @@ EOF
 }
 
 if (eval { require EV }) {
-   $EV = 1;
-   $DEFINE .= " -DHAVE_EV=1";
-   print "\nEV version $EV::VERSION found, building EV support.\n\n";
+   if ($EV::VERSION < 2.0) {
+      print <<EOF
+
+*** 
+*** WARNING: Event version $EV::VERSION found, NOT building EV support.
+***
+*** This version is ABI-incompatible with Coro, please upgrade to 2.0.
+***
+
+EOF
+   } else {
+      $EV = 1;
+      $DEFINE .= " -DHAVE_EV=1";
+      print "\nEV version $EV::VERSION found, building EV support.\n\n";
+   }
 } else {
    print "\n*** EV not found, not build EV support.\n\n";
 }
