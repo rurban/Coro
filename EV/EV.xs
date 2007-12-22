@@ -29,7 +29,7 @@ static int inhibit;
 static void
 idle_cb (EV_P_ ev_idle *w, int revents)
 {
-  ev_idle_stop (EV_A_ w);
+  ev_idle_stop (EV_A, w);
 }
 
 static void
@@ -51,7 +51,7 @@ prepare_cb (EV_P_ ev_prepare *w, int revents)
    * poll anyways, but do not block.
    */
   if (CORO_NREADY >= incede && !ev_is_active (&idler))
-    ev_idle_start (EV_A_ &idler);
+    ev_idle_start (EV_A, &idler);
 
   --incede;
 }
@@ -78,8 +78,8 @@ handle_free (pTHX_ SV *sv, MAGIC *mg)
   coro_handle *data = (coro_handle *)mg->mg_ptr;
   mg->mg_ptr = 0;
 
-  ev_io_stop    (EV_DEFAULT_ &data->r.io); ev_io_stop    (EV_DEFAULT_ &data->w.io);
-  ev_timer_stop (EV_DEFAULT_ &data->r.tw); ev_timer_stop (EV_DEFAULT_ &data->w.tw);
+  ev_io_stop    (EV_DEFAULT, &data->r.io); ev_io_stop    (EV_DEFAULT, &data->w.io);
+  ev_timer_stop (EV_DEFAULT, &data->r.tw); ev_timer_stop (EV_DEFAULT, &data->w.tw);
   SvREFCNT_dec (data->r.done);             SvREFCNT_dec (data->w.done);
   SvREFCNT_dec (data->r.current);          SvREFCNT_dec (data->w.current);
 
@@ -91,8 +91,8 @@ static MGVTBL handle_vtbl = { 0,  0,  0,  0, handle_free };
 static void
 handle_cb (coro_dir *dir, int done)
 {
-  ev_io_stop    (EV_A_ &dir->io);
-  ev_timer_stop (EV_A_ &dir->tw);
+  ev_io_stop    (EV_DEFAULT, &dir->io);
+  ev_timer_stop (EV_DEFAULT, &dir->tw);
 
   sv_setiv (dir->done, done);
   SvREFCNT_dec (dir->done);
@@ -127,8 +127,8 @@ BOOT:
 
         ev_prepare_init (&scheduler, prepare_cb);
         ev_set_priority (&scheduler, EV_MINPRI);
-        ev_prepare_start (EV_DEFAULT_ &scheduler);
-        ev_unref ();
+        ev_prepare_start (EV_DEFAULT, &scheduler);
+        ev_unref (EV_DEFAULT);
 
         ev_idle_init (&idler, idle_cb);
         ev_set_priority (&idler, EV_MINPRI);
@@ -138,7 +138,7 @@ void
 _loop_oneshot ()
 	CODE:
         ++inhibit;
-        ev_loop (EV_DEFAULT_ EVLOOP_ONESHOT);
+        ev_loop (EV_DEFAULT, EVLOOP_ONESHOT);
         --inhibit;
 
 void
@@ -148,6 +148,7 @@ _timed_io_once (...)
 	ONCE_INIT;
         assert (AvFILLp (av) >= 1);
         ev_once (
+          EV_DEFAULT,
           sv_fileno (AvARRAY (av)[0]),
           SvIV (AvARRAY (av)[1]),
           AvFILLp (av) >= 2 && SvOK (AvARRAY (av)[2]) ? SvNV (AvARRAY (av)[2]) : -1.,
@@ -164,6 +165,7 @@ _timer_once (...)
 	ONCE_INIT;
         NV after = SvNV (AvARRAY (av)[0]);
         ev_once (
+          EV_DEFAULT,
           -1,
           0,
           after >= 0. ? after : 0.,
@@ -218,10 +220,10 @@ _readable_ev (SV *handle_sv, SV *done_sv)
           if (SvOK (to))
             {
               ev_timer_set (&dir->tw, 0., SvNV (to));
-              ev_timer_again (EV_DEFAULT_ &dir->tw);
+              ev_timer_again (EV_DEFAULT, &dir->tw);
             }
         }
 
-        ev_io_start (EV_DEFAULT_ &dir->io);
+        ev_io_start (EV_DEFAULT, &dir->io);
 }
 
