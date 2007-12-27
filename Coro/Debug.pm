@@ -286,6 +286,7 @@ sub command($) {
       if (my $coro = find_coro $1) {
          my $bt;
          Coro::State::call ($coro, sub {
+            local $Carp::CarpLevel = 2;
             $bt = eval { Carp::longmess "coroutine is" } || "$@";
          });
          if ($bt) {

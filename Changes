@@ -7,7 +7,8 @@ TODO: maybe implement a default message channel, very much like Erlang
 
 4.35
 	- "bt" debug command now displays any exceptions
-          from longmess.
+          from longmess and also skips the innermost
+          stackframes, giving more useufl output.
 	- allow backtraces in coroutines blocked in Coro::EV,
           at a <1% speed hit.
 
