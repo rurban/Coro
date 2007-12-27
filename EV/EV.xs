@@ -20,7 +20,7 @@ once_cb (int revents, void *arg)
 }
 
 #define ONCE_INIT  AV *av = GvAV (PL_defgv);
-#define ONCE_DONE  av_clear (av); av_push (av, SvREFCNT_inc (CORO_CURRENT));
+#define ONCE_DONE  av_clear (av); av_push (av, newRV_inc (CORO_CURRENT));
 
 static struct ev_prepare scheduler;
 static struct ev_idle idler;
