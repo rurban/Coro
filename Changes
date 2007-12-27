@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- "bt" debug command now displays any exceptions
+          from longmess.
+
 4.34 Sat Dec 22 17:49:53 CET 2007
 	- upgrade to EV version 2.0 API.
 
