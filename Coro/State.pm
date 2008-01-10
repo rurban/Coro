@@ -120,11 +120,9 @@ main program, too, unless they have been overriden already.
 The default handlers provided will behave like the inbuilt ones (as if
 they weren't there).
 
-Note 1: You I<must> store a valid code reference in these variables, C<undef> will not do.
+Note 1: You I<must> store a valid code reference in these variables, C<undef> will I<not> do.
 
-Note 2: You I<must> only assign to these variables, never C<local>ise or do other fancy stuff.
-
-Note 3: The value of this variable will be shared among all coroutines, so
+Note 2: The value of this variable will be shared among all coroutines, so
 changing its value will change it in all coroutines using them.
 
 =item $Coro::State::WARNHOOK

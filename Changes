@@ -11,6 +11,8 @@ TODO: maybe implement a default message channel, very much like Erlang
           stackframes, giving more useufl output.
 	- allow backtraces in coroutines blocked in Coro::EV,
           at a <1% speed hit.
+        - handle localising of $SIG{__WARN__} and __DIE__
+          properly (with a proepr amount of dirty hacking).
 
 4.34 Sat Dec 22 17:49:53 CET 2007
 	- upgrade to EV version 2.0 API.
