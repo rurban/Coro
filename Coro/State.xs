@@ -1911,7 +1911,10 @@ _pool_1 (SV *cb)
 	int i, len;
 
         if (!invoke)
-          croak ("\3async_pool terminate\2\n");
+          {
+            SvREFCNT_dec (PL_diehook); PL_diehook = 0;
+            croak ("\3async_pool terminate\2\n");
+          }
 
         SvREFCNT_dec (coro->saved_deffh);
         coro->saved_deffh = SvREFCNT_inc ((SV *)PL_defoutgv);
@@ -1947,7 +1950,10 @@ _pool_2 (SV *cb)
 
   	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
-          croak ("\3async_pool terminate\2\n");
+          {
+            SvREFCNT_dec (PL_diehook); PL_diehook = 0;
+            croak ("\3async_pool terminate\2\n");
+          }
 
         av_clear (GvAV (PL_defgv));
         hv_store ((HV *)SvRV (coro_current), "desc", sizeof ("desc") - 1,
