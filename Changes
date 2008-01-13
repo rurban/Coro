@@ -5,6 +5,15 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.35 Sun Jan 13 04:14:13 CET 2008
+	- "bt" debug command now displays any exceptions
+          from longmess and also skips the innermost
+          stackframes, giving more useufl output.
+	- allow backtraces in coroutines blocked in Coro::EV,
+          at a <1% speed hit.
+        - handle localising of $SIG{__WARN__} and __DIE__
+          properly (with a proepr amount of dirty hacking).
+
 4.34 Sat Dec 22 17:49:53 CET 2007
 	- upgrade to EV version 2.0 API.
 

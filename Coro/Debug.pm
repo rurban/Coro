@@ -285,7 +285,10 @@ sub command($) {
    } elsif ($cmd =~ /^bt\s+(\d+)$/) {
       if (my $coro = find_coro $1) {
          my $bt;
-         Coro::State::call ($coro, sub { $bt = Carp::longmess "coroutine is" });
+         Coro::State::call ($coro, sub {
+            local $Carp::CarpLevel = 2;
+            $bt = eval { Carp::longmess "coroutine is" } || "$@";
+         });
          if ($bt) {
             print $bt;
          } else {
