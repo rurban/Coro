@@ -1125,7 +1125,7 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
 
       if (
 #if PERL_VERSION_ATLEAST (5,9,0)
-          expect_false (PL_parser)
+          expect_false (PL_parser && PL_parser->lex_state != LEX_NOTPARSING)
 #else
           expect_false (PL_lex_state != LEX_NOTPARSING)
 #endif

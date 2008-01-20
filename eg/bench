@@ -66,7 +66,7 @@ $c1 = new Coro::State sub {
 transfer($main, $c0);
 transfer($main, $c1);
 
-timethese 1000000, {
+timethese 5000000, {
    function  => 'a(5); a(6)',
    method    => '$a->b(5); $a->b(6)',
    cede      => 'cede',
