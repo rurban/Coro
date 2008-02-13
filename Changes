@@ -5,6 +5,13 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.4  Wed Feb 13 16:44:29 CET 2008
+	- only assume .cfi pseudo isns exist on GNU/Linux.
+        - add get_timed method to Coro::Channels.
+        - fixed Coro::Debug manpage.
+        - perl 5.11 compatbility improvement based on patch by
+          Andreas König.
+
 4.37 Sun Jan 20 11:25:23 CET 2008
 	- soften the check for an active parser for perl 5.10 (avoiding
           "Coro::State::transfer called while parsing" in many cases).

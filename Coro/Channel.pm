@@ -66,6 +66,12 @@ sub put {
 
 Return the next element from the queue, waiting if necessary.
 
+=item $q->timed_get ($timeout)
+
+Return the next element from the queue, waiting up to C<$timeout> seconds
+if necessary. If no element arrives within the given time an empty list
+will be returned.
+
 =cut
 
 sub get {
@@ -74,6 +80,21 @@ sub get {
    while (!@{$_[0][0]}) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
+   }
+
+   shift @{$_[0][0]}
+}
+
+sub timed_get {
+   require Coro::Timer;
+   my $timeout = Coro::Timer::timeout ($_[0]);
+
+   (pop @{$_[0][3]})->ready if @{$_[0][3]};
+
+   while (!@{$_[0][0]}) {
+      push @{$_[0][1]}, $Coro::current;
+      &Coro::schedule;
+      return if $timeout;
    }
 
    shift @{$_[0][0]}

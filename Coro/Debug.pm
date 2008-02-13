@@ -6,7 +6,7 @@ Coro::Debug - various functions that help debugging Coro programs
 
  use Coro::Debug;
 
- our $server = new_unix_server Coro::Debug path => "/tmp/socketpath";
+ our $server = new_unix_server Coro::Debug "/tmp/socketpath";
 
  $ socat readline unix:/tmp/socketpath
 
