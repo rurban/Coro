@@ -74,17 +74,22 @@ static long pagesize;
 # endif
 #endif
 
-/* 5.8.7 */
-#ifndef SvRV_set
-# define SvRV_set(s,v) SvRV(s) = (v)
-#endif
-
 /* 5.8.8 */
 #ifndef GV_NOTQUAL
 # define GV_NOTQUAL 0
 #endif
 #ifndef newSV
 # define newSV(l) NEWSV(0,l)
+#endif
+
+/* 5.11 */
+#ifndef CxHASARGS
+# define CxHASARGS(cx) (cx)->blk_sub.hasargs
+#endif
+
+/* 5.8.7 */
+#ifndef SvRV_set
+# define SvRV_set(s,v) SvRV(s) = (v)
 #endif
 
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
@@ -897,7 +902,7 @@ runops_trace (pTHX)
                           PUSHMARK (SP);
                           PUSHs (&PL_sv_yes);
                           PUSHs (fullname);
-                          PUSHs (cx->blk_sub.hasargs ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
+                          PUSHs (CxHASARGS (cx)  ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
                           PUTBACK;
                           cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
                           if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
