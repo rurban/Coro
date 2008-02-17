@@ -133,7 +133,7 @@ sub handle {
                 ([^\040]+) \040+
                 HTTP\/([0-9]+\.[0-9]+)
                 \015\012/gx
-         or $self->err(403, "method not allowed", { Allow => "GET,HEAD" });
+         or $self->err(405, "method not allowed", { Allow => "GET,HEAD" });
 
       $2 < 2
          or $self->err(506, "http protocol version not supported");
