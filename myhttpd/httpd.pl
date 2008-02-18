@@ -426,6 +426,9 @@ sub map_uri {
    my $host = $self->{server_name};
    my $uri = $self->{uri};
 
+   $host =~ /[\/\\]/
+      and $self->err(400, "bad request");
+
    # some massaging, also makes it more secure
    $uri =~ s/%([0-9a-fA-F][0-9a-fA-F])/chr hex $1/ge;
    $uri =~ s%//+%/%g;
