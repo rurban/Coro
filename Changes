@@ -9,6 +9,7 @@ TODO: maybe implement a default message channel, very much like Erlang
           downloading of any file (reported by oesi).
         - support Broadcast option in Coro::Socket (patch by Richard Hundt,
           apparently having loads of fun with that).
+        - implement $state->swap_defsv, ->swap_defav and document ->throw.
 
 4.4  Wed Feb 13 16:44:29 CET 2008
 	- only assume .cfi pseudo isns exist on GNU/Linux.

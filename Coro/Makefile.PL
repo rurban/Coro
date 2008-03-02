@@ -276,14 +276,3 @@ sub conftest {
    unlink "conftestval";
 }
 
-print <<EOF if $^O =~ /linux/;
-
-*****************************************************************************
-*                                                                           *
-*  HEY!! You are using Linux! That's not at all bad, but if you get seg-    *
-*  faults with Coro almost all the time please refer to README.linux-glibc  *
-*                                                                           *
-*****************************************************************************
-
-EOF
-

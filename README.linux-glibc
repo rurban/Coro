@@ -7,7 +7,7 @@ using coroutines (of any kind, not only Coro, but including most userspace
 thread libraries like gnu-pth) or alternate stacks to segfault on calls to
 pthread functions. And glibc happens to do a lot of these calls.
 
-(Even if you perl is not compiled against pthreads, Time::HiRes links
+(Even if your perl is not compiled against pthreads, e.g. Time::HiRes links
 against -lrt, which drags in pthreads. The same is true for other modules,
 so watch out).
 
