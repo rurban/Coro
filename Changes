@@ -7,6 +7,8 @@ TODO: maybe implement a default message channel, very much like Erlang
 
 	- fix a file leaking bug in eg/mhyttpd that would allow
           downloading of any file (reported by oesi).
+	- fix deadlock bug in Coro::Channel (reported by Richard Hundt)
+          (also add testcase).
         - support Broadcast option in Coro::Socket (patch by Richard Hundt,
           apparently having loads of fun with that).
         - implement $state->swap_defsv, ->swap_defav and document ->throw.
