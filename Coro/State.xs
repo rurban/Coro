@@ -1913,8 +1913,8 @@ swap_defsv (Coro::State self)
           croak ("cannot swap state with coroutine that has no saved state");
         else
           {
-            SV **src = ix ? (SV *)&GvAV (PL_defgv) : &GvSV (PL_defgv);
-            SV **dst = ix ? self->slot->defav : self->slot->defsv;
+            SV **src = ix ? (SV **)&GvAV (PL_defgv) : &GvSV (PL_defgv);
+            SV **dst = ix ? (SV **)&self->slot->defav : (SV **)&self->slot->defsv;
 
             SV *tmp = *src; *src = *dst; *dst = tmp;
           }
