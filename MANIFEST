@@ -39,6 +39,7 @@ Coro/libcoro/conftest.c
 t/00_basic.t
 t/01_process.t
 t/02_channel.t
+t/03_channel.t
 t/04_rwlock.t
 t/05_specific.t
 t/06_prio.t
