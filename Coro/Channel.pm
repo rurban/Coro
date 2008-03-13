@@ -36,7 +36,8 @@ $VERSION = 1.9;
 
 Create a new channel with the given maximum size (unlimited if C<maxsize>
 is omitted). Giving a size of one gives you a traditional channel, i.e. a
-queue that can store only a single element.
+queue that can store only a single element (which means there will be no
+buffering). To buffer one element you have to specify C<2>, and so on.
 
 =cut
 
@@ -53,7 +54,6 @@ Put the given scalar into the queue.
 
 sub put {
    push @{$_[0][0]}, $_[1];
-
    (pop @{$_[0][1]})->ready if @{$_[0][1]};
 
    while (@{$_[0][0]} >= $_[0][2]) {
@@ -75,13 +75,12 @@ will be returned.
 =cut
 
 sub get {
-   (pop @{$_[0][3]})->ready if @{$_[0][3]};
-
    while (!@{$_[0][0]}) {
       push @{$_[0][1]}, $Coro::current;
       &Coro::schedule;
    }
 
+   (pop @{$_[0][3]})->ready if @{$_[0][3]};
    shift @{$_[0][0]}
 }
 

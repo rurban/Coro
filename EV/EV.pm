@@ -69,7 +69,7 @@ $IDLE->{desc} = "[EV idle process]";
 
 $Coro::idle = sub { $IDLE->ready };
 
-=item $revents = Coro::EV::timed_io_once $fd, $events, $timeout
+=item $revents = Coro::EV::timed_io_once $fileno_or_fh, $events, $timeout
 
 Blocks the coroutine until either the given event set has occured on the
 fd, or the timeout has been reached (if timeout is zero, there is no

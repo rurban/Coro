@@ -221,10 +221,23 @@ to another state.
 Like C<call>, but eval's the string. Dangerous. Do not
 use. Untested. Unused. Biohazard.
 
+=item $state->throw ($exception)
+
+Makes the coroutine throw the given exception as soon as it regains
+control. Untested. Unused. Biohazard.
+
+=item $state->swap_defsv
+
+=item $state->swap_defav
+
+Swap the current C<$_> (swap_defsv) or C<@_> (swap_defav) with the
+equivalent in the saved state of C<$state>. This can be used to give the
+coroutine a defined content for C<@_> and C<$_> before transfer'ing to it.
+
 =item $state->trace ($flags)
 
 Internal function to control tracing. I just mention this so you can stay
-from abusing it.
+away from abusing it.
 
 =item $prev->transfer ($next)
 
@@ -251,10 +264,10 @@ coroutines. Currently, Coro will limit the number of idle/unused cctxs to
 Returns the current C stack size and optionally sets the new I<minimum>
 stack size to C<$new_stacksize> I<long>s. Existing stacks will not
 be changed, but Coro will try to replace smaller stacks as soon as
-possible. Any Coro::State's that starts to use a stack after this call is
-guarenteed this minimum size. Please note that Coroutines will only need
-to use a C-level stack if the interpreter recurses or calls a function in
-a module that calls back into the interpreter.
+possible. Any Coro::State that starts to use a stack after this call is
+guaranteed this minimum stack size. Please note that Coroutines will
+only need to use a C-level stack if the interpreter recurses or calls a
+function in a module that calls back into the interpreter.
 
 =item @states = Coro::State::list
 

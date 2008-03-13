@@ -139,6 +139,11 @@ sub configure {
          or croak "setsockopt(SO_REUSEPORT): $!";
    }
 
+   if ($arg->{Broadcast}) {
+      $self->setsockopt (SOL_SOCKET, SO_BROADCAST, 1)
+         or croak "setsockopt(SO_BROADCAST): $!";
+   }
+
    if ($arg->{LocalPort} || $arg->{LocalHost}) {
       my @sa = _sa($arg->{LocalHost} || "0.0.0.0", $arg->{LocalPort} || 0, $arg->{Proto});
       $self->bind ($sa[0])

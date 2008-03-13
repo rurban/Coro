@@ -5,6 +5,15 @@ TODO: maybe implement a default message channel, very much like Erlang
       (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.45 Thu Mar 13 11:55:36 CET 2008
+	- fix a file leaking bug in eg/mhyttpd that would allow
+          downloading of any file (reported by oesi).
+	- fix deadlock bug in Coro::Channel (reported by Richard Hundt)
+          (also add testcase).
+        - support Broadcast option in Coro::Socket (patch by Richard Hundt,
+          apparently having loads of fun with that).
+        - implement $state->swap_defsv, ->swap_defav and document ->throw.
+
 4.4  Wed Feb 13 16:44:29 CET 2008
 	- only assume .cfi pseudo isns exist on GNU/Linux.
         - add get_timed method to Coro::Channels.
