@@ -1807,6 +1807,11 @@ rss (Coro::State coro)
 	OUTPUT:
         RETVAL
 
+void
+force_cctx ()
+	CODE:
+        struct coro *coro = SvSTATE (coro_current);
+        coro->cctx->idle_sp = 0;
 
 MODULE = Coro::State                PACKAGE = Coro
 

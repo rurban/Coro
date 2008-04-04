@@ -1,12 +1,13 @@
-use ExtUtils::MakeMaker;
-
 use 5.005;
 
+use strict;
+use ExtUtils::MakeMaker;
 use Config;
 
 $|=1;
 
-$DEFINE = "";
+my $DEFINE;
+my @LIBS = [];
 
 print <<EOF;
 
@@ -26,6 +27,8 @@ if (prompt ("Skip further questions and use defaults (y/n)?", "y") =~ /[yY]/) {
 
 
 $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
+
+my $iface;
 
 if (exists $ENV{CORO_INTERFACE}) {
    $iface = $ENV{CORO_INTERFACE};
@@ -107,6 +110,10 @@ w  Microsoft Windows. Try this on Microsoft Windows, although, as there is
    no standard on how to do this under windows, this might work only on
    cygwin or specific versions of msvc. Your problem, your fix, our patch.
 
+p  Use pthread API. Try to avoid this option, it was only created to make
+   a point about the programming language shootout and might leak threads.
+   It might work fine as a last resort, however.
+
 For most systems, the default chosen should be OK. If you experience
 problems then you should experiment with this setting and/or turn
 optimisations on or off (make OPTIMIZE=-O0).
@@ -140,6 +147,10 @@ if ($iface eq "u") {
 } elsif ($iface eq "a") {
    $DEFINE .= " -DCORO_ASM";
    print "\nUsing handcoded assembly implementation\n\n";
+} elsif ($iface eq "p") {
+   $DEFINE .= " -DCORO_PTHREAD";
+   @LIBS = ["-lpthread"];
+   print "\nUsing pthread implementation\n\n";
 } else {
    print "\nUnknown implementation \"$iface\"\n";
    goto retry;
@@ -252,6 +263,7 @@ WriteMakefile(
   NAME         => "Coro::State",
   VERSION_FROM => "State.pm",
   DEFINE       => $DEFINE,
+  LIBS         => @LIBS,
   DIR          => [],
 );
 
