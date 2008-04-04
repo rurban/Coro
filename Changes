@@ -1,9 +1,13 @@
 Revision history for Perl extension Coro.
 
 TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
-TODO: maybe implement a default message channel, very much like Erlang
-      (which is cool in a lot of important aspects (failures!),
+TODO: maybe implement a default message channel, very much like Erlang's
+      actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
+
+4.46 Fri Apr  4 22:05:43 CEST 2008
+        - upgrade libcoro, resulting in pthread-backend (which was only created
+          to fulfill the rules of the programming languages shootout).
 
 4.45 Thu Mar 13 11:55:36 CET 2008
 	- fix a file leaking bug in eg/mhyttpd that would allow
