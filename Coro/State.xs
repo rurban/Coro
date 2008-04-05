@@ -1141,7 +1141,7 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
 
 /* always use the TRANSFER macro */
 static void NOINLINE
-transfer (pTHX_ struct coro *prev, struct coro *next)
+transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 {
   dSTACKLEVEL;
   static volatile int has_throw;
@@ -1185,7 +1185,11 @@ transfer (pTHX_ struct coro *prev, struct coro *next)
       prev__cctx = prev->cctx;
 
       /* possibly "free" the cctx */
-      if (expect_true (prev__cctx->idle_sp == STACKLEVEL && !(prev__cctx->flags & CC_TRACE)))
+      if (expect_true (
+            prev__cctx->idle_sp == STACKLEVEL
+            && !(prev__cctx->flags & CC_TRACE)
+            && !force_cctx
+         ))
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
           assert (("ERROR: current top_env must equal previous top_env", PL_top_env == prev__cctx->idle_te));
@@ -1238,7 +1242,7 @@ struct transfer_args
   struct coro *prev, *next;
 };
 
-#define TRANSFER(ta) transfer (aTHX_ (ta).prev, (ta).next)
+#define TRANSFER(ta, force_cctx) transfer (aTHX_ (ta).prev, (ta).next, (force_cctx))
 #define TRANSFER_CHECK(ta) transfer_check (aTHX_ (ta).prev, (ta).next)
 
 /** high level stuff ********************************************************/
@@ -1342,7 +1346,7 @@ api_transfer (SV *prev_sv, SV *next_sv)
   struct transfer_args ta;
 
   prepare_transfer (aTHX_ &ta, prev_sv, next_sv);
-  TRANSFER (ta);
+  TRANSFER (ta, 1);
 }
 
 /** Coro ********************************************************************/
@@ -1483,7 +1487,7 @@ api_schedule (void)
   struct transfer_args ta;
 
   prepare_schedule (aTHX_ &ta);
-  TRANSFER (ta);
+  TRANSFER (ta, 1);
 }
 
 static int
@@ -1496,7 +1500,7 @@ api_cede (void)
 
   if (expect_true (ta.prev != ta.next))
     {
-      TRANSFER (ta);
+      TRANSFER (ta, 1);
       return 1;
     }
   else
@@ -1511,7 +1515,7 @@ api_cede_notself (void)
 
   if (prepare_cede_notself (aTHX_ &ta))
     {
-      TRANSFER (ta);
+      TRANSFER (ta, 1);
       return 1;
     }
   else
@@ -1663,7 +1667,7 @@ _set_stacklevel (...)
 
         BARRIER;
         PUTBACK;
-        TRANSFER (ta);
+        TRANSFER (ta, 0);
         SPAGAIN; /* might be the sp of a different coroutine now */
         /* be extra careful not to ever do anything after TRANSFER */
 }

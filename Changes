@@ -5,6 +5,12 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.47 Sun Apr  6 00:37:52 CEST 2008
+	- force cctx allocation on API calls: we know we need to force one
+          and gcc actually manages to confuse our heuristic nowadays,
+          leading to crashes and worse.
+        - document force_cctx.
+
 4.46 Fri Apr  4 22:05:43 CEST 2008
         - upgrade libcoro, resulting in pthread-backend (which was only created
           to fulfill the rules of the programming languages shootout).

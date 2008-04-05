@@ -269,6 +269,12 @@ guaranteed this minimum stack size. Please note that Coroutines will
 only need to use a C-level stack if the interpreter recurses or calls a
 function in a module that calls back into the interpreter.
 
+=item Coro::State::force_cctx
+
+Forces the allocation of a C context for the currently running coroutine
+(if not already done). Apart from benchmarking there is little point
+in doing so, however.
+
 =item @states = Coro::State::list
 
 Returns a list of all states currently allocated.
