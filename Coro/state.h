@@ -64,3 +64,7 @@ VAR(diehook,       SV *)
 VAR(warnhook,      SV *)
 VAR(runops,        runops_proc_t)  /* for tracing support */
 
+#if !PERL_VERSION_ATLEAST (5,10,0)
+VAR(parser,        yy_parser *)
+#endif
+

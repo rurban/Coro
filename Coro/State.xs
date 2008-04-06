@@ -268,7 +268,7 @@ static struct coro *coro_first;
 static SV *
 coro_get_sv (pTHX_ const char *name, int create)
 {
-#if PERL_VERSION_ATLEAST (5,9,0)
+#if PERL_VERSION_ATLEAST (5,10,0)
          /* silence stupid and wrong 5.10 warning that I am unable to switch off */
          get_sv (name, create);
 #endif
@@ -278,7 +278,7 @@ coro_get_sv (pTHX_ const char *name, int create)
 static AV *
 coro_get_av (pTHX_ const char *name, int create)
 {
-#if PERL_VERSION_ATLEAST (5,9,0)
+#if PERL_VERSION_ATLEAST (5,10,0)
          /* silence stupid and wrong 5.10 warning that I am unable to switch off */
          get_av (name, create);
 #endif
@@ -288,7 +288,7 @@ coro_get_av (pTHX_ const char *name, int create)
 static HV *
 coro_get_hv (pTHX_ const char *name, int create)
 {
-#if PERL_VERSION_ATLEAST (5,9,0)
+#if PERL_VERSION_ATLEAST (5,10,0)
          /* silence stupid and wrong 5.10 warning that I am unable to switch off */
          get_hv (name, create);
 #endif
@@ -303,7 +303,7 @@ coro_clone_padlist (pTHX_ CV *cv)
 
   newpadlist = newAV ();
   AvREAL_off (newpadlist);
-#if PERL_VERSION_ATLEAST (5,9,0)
+#if PERL_VERSION_ATLEAST (5,10,0)
   Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
 #else
   Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
@@ -594,7 +594,7 @@ coro_init_stacks (pTHX)
     PL_savestack_ix = 0;
     PL_savestack_max = 24;
 
-#if !PERL_VERSION_ATLEAST (5,9,0)
+#if !PERL_VERSION_ATLEAST (5,10,0)
     New(54,PL_retstack,4,OP*);
     PL_retstack_ix = 0;
     PL_retstack_max = 4;
@@ -627,7 +627,7 @@ coro_destroy_stacks (pTHX)
   Safefree (PL_markstack);
   Safefree (PL_scopestack);
   Safefree (PL_savestack);
-#if !PERL_VERSION_ATLEAST (5,9,0)
+#if !PERL_VERSION_ATLEAST (5,10,0)
   Safefree (PL_retstack);
 #endif
 }
@@ -661,7 +661,7 @@ coro_rss (pTHX_ struct coro *coro)
       rss += slot->scopestack_max * sizeof (I32);
       rss += slot->savestack_max * sizeof (ANY);
 
-#if !PERL_VERSION_ATLEAST (5,9,0)
+#if !PERL_VERSION_ATLEAST (5,10,0)
       rss += slot->retstack_max * sizeof (OP *);
 #endif
     }
@@ -738,6 +738,9 @@ coro_setup (pTHX_ struct coro *coro)
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
+#if !PERL_VERSION_ATLEAST (5,10,0)
+  PL_parser     = 0;
+#endif
 
   /* recreate the die/warn hooks */
   PL_diehook  = 0; SvSetMagicSV (*hv_fetch (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, 1), rv_diehook );
@@ -1128,14 +1131,10 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
       if (expect_false (next->flags & CF_DESTROYED))
         croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
 
-      if (
-#if PERL_VERSION_ATLEAST (5,9,0)
-          expect_false (PL_parser && PL_parser->lex_state != LEX_NOTPARSING)
-#else
-          expect_false (PL_lex_state != LEX_NOTPARSING)
-#endif
-         )
+#if !PERL_VERSION_ATLEAST (5,10,0)
+      if (expect_false (PL_lex_state != LEX_NOTPARSING)
         croak ("Coro::State::transfer called while parsing, but this is not supported");
+#endif
     }
 }
 
