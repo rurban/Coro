@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.49 Sun Apr  6 21:23:31 CEST 2008
+	- grr, instead of compiling the recent changes on 5.10 only they
+          were compiled on 5.8 only.
+
 4.48 Sun Apr  6 20:36:46 CEST 2008
 	- allow coroutine switches during eval's under 5.10.x, as it seems
           the parser is a per-interpreter option now, so this is safe
