@@ -5,6 +5,12 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.48 Sun Apr  6 20:36:46 CEST 2008
+	- allow coroutine switches during eval's under 5.10.x, as it seems
+          the parser is a per-interpreter option now, so this is safe
+          (this might fix the odd crashing bug).
+        - drop support for 5.9.x versions: they are dead, jim.
+
 4.47 Sun Apr  6 00:37:52 CEST 2008
 	- force cctx allocation on API calls: we know we need to force one
           and gcc actually manages to confuse our heuristic nowadays,
