@@ -738,7 +738,7 @@ coro_setup (pTHX_ struct coro *coro)
   PL_localizing = 0;
   PL_dirty      = 0;
   PL_restartop  = 0;
-#if !PERL_VERSION_ATLEAST (5,10,0)
+#if PERL_VERSION_ATLEAST (5,10,0)
   PL_parser     = 0;
 #endif
 
@@ -1133,7 +1133,7 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
       if (expect_false (PL_lex_state != LEX_NOTPARSING)
-        croak ("Coro::State::transfer called while parsing, but this is not supported");
+        croak ("Coro::State::transfer called while parsing, but this is not supported in your perl version");
 #endif
     }
 }
