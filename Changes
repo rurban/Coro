@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.51 Mon Apr 14 13:28:27 CEST 2008
+	- make it compile again on 5.8.
+
 4.50 Thu Apr 10 09:43:17 CEST 2008
 	- I did it twice! (see 4.49).
 

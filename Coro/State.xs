@@ -1132,7 +1132,7 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
         croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states");
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
-      if (expect_false (PL_lex_state != LEX_NOTPARSING)
+      if (expect_false (PL_lex_state != LEX_NOTPARSING))
         croak ("Coro::State::transfer called while parsing, but this is not supported in your perl version");
 #endif
     }
