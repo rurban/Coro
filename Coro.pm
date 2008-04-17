@@ -180,8 +180,6 @@ $manager = new Coro sub {
 $manager->desc ("[coro manager]");
 $manager->prio (PRIO_MAX);
 
-# static methods. not really.
-
 =back
 
 =head2 STATIC METHODS
@@ -340,8 +338,6 @@ sub killall {
 }
 
 =back
-
-# dynamic methods
 
 =head2 COROUTINE METHODS
 
