@@ -4,26 +4,26 @@ Coro - coroutine process abstraction
 
 =head1 SYNOPSIS
 
- use Coro;
-
- async {
-    # some asynchronous thread of execution
-    print "2\n";
-    cede; # yield back to main
-    print "4\n";
- };
- print "1\n";
- cede; # yield to coroutine
- print "3\n";
- cede; # and again
-
- # use locking
- my $lock = new Coro::Semaphore;
- my $locked;
-
- $lock->down;
- $locked = 1;
- $lock->up;
+  use Coro;
+  
+  async {
+     # some asynchronous thread of execution
+     print "2\n";
+     cede; # yield back to main
+     print "4\n";
+  };
+  print "1\n";
+  cede; # yield to coroutine
+  print "3\n";
+  cede; # and again
+  
+  # use locking
+  my $lock = new Coro::Semaphore;
+  my $locked;
+  
+  $lock->down;
+  $locked = 1;
+  $lock->up;
 
 =head1 DESCRIPTION
 
@@ -66,40 +66,6 @@ our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
 our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
-
-{
-   my @async;
-   my $init;
-
-   # this way of handling attributes simply is NOT scalable ;()
-   sub import {
-      no strict 'refs';
-
-      Coro->export_to_level (1, @_);
-
-      my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
-      *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
-         my ($package, $ref) = (shift, shift);
-         my @attrs;
-         for (@_) {
-            if ($_ eq "Coro") {
-               push @async, $ref;
-               unless ($init++) {
-                  eval q{
-                     sub INIT {
-                        &async(pop @async) while @async;
-                     }
-                  };
-               }
-            } else {
-               push @attrs, $_;
-            }
-         }
-         return $old ? $old->($package, $ref, @attrs) : @attrs;
-      };
-   }
-
-}
 
 =over 4
 

@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- INCOMPATIBLE CHANGE: sub/code attributes are no longer supported
+          by the Coro module. It was a mistake.
+
 4.51 Mon Apr 14 13:28:27 CEST 2008
 	- make it compile again on 5.8.
 
