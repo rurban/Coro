@@ -12,7 +12,15 @@
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
-#include <inttypes.h> /* portable stdint.h */
+
+#ifdef WIN32
+# undef setjmp
+# undef longjmp
+# undef _exit
+#include <setjmp.h>
+#else
+# include <inttypes.h> /* most portable stdint.h */
+#endif
 
 #ifdef HAVE_MMAP
 # include <unistd.h>
@@ -714,7 +722,7 @@ coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
           SV *old = *svp;
           *svp = newSVsv (sv);
           SvREFCNT_dec (old);
-          return;
+          return 0;
         }
     }
 
