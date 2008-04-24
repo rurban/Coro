@@ -7,6 +7,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
 
 	- INCOMPATIBLE CHANGE: sub/code attributes are no longer supported
           by the Coro module. It was a mistake.
+        - (experimental) support for activestate perl 5.10.
         - coro_sigelem_set did not return a value although it had to,
           actual impact unknown.
 

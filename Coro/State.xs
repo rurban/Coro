@@ -17,7 +17,7 @@
 # undef setjmp
 # undef longjmp
 # undef _exit
-#include <setjmp.h>
+# define setjmp _setjmp // deep magic, don't ask
 #else
 # include <inttypes.h> /* most portable stdint.h */
 #endif
