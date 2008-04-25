@@ -32,7 +32,7 @@ use Exporter;
 use Coro ();
 use AnyEvent ();
 
-$VERSION = "2.0";
+$VERSION = 4.6;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;

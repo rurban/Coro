@@ -43,7 +43,7 @@ use BDB ();
 
 use base Exporter::;
 
-our $VERSION = '1.0';
+our $VERSION = 4.6;
 our $WATCHER;
 
 if (AnyEvent::detect =~ /^AnyEvent::Impl::(?:Coro)?EV$/) {

@@ -41,7 +41,7 @@ use AnyEvent;
 
 use base Exporter::;
 
-our $VERSION = 2.0;
+our $VERSION = 4.6;
 our @EXPORT_OK = "select";
 
 sub import {
