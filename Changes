@@ -5,7 +5,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-4.6
+4.6  Sat Apr 26 10:05:14 CEST 2008
 	- INCOMPATIBLE CHANGE: sub/code attributes are no longer supported
           by the Coro module. It was a mistake to have it in the first place.
         - (experimental) support for activestate perl 5.10 (method "w").
