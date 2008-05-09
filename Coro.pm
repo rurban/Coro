@@ -37,8 +37,9 @@ safer and easier than threads programming.
 
 Unlike a normal perl program, however, coroutines allow you to have
 multiple running interpreters that share data, which is especially useful
-to code pseudo-parallel processes, such as multiple HTTP-GET requests
-running concurrently.
+to code pseudo-parallel processes and for event-based programming, such as
+multiple HTTP-GET requests running concurrently. See L<Coro::AnyEvent> to
+learn more.
 
 Coroutines are also useful because Perl has no support for threads (the so
 called "threads" that perl offers are nothing more than the (bad) process

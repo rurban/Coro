@@ -10,6 +10,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       	- added Coro::AnyEvent, generic event loop integration.
 	- implement cancel, ready and kill commands in Coro::Debug.
         - document find_coro in Coro::Debug.
+        - incompatible change: rename has_stack to has_cctx.
 
 4.6  Sat Apr 26 10:05:14 CEST 2008
 	- INCOMPATIBLE CHANGE: sub/code attributes are no longer supported

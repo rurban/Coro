@@ -1813,7 +1813,7 @@ void
 api_trace (SV *coro, int flags = CC_TRACE | CC_TRACE_SUB)
 
 SV *
-has_stack (Coro::State coro)
+has_cctx (Coro::State coro)
         PROTOTYPE: $
 	CODE:
         RETVAL = boolSV (!!coro->cctx);

@@ -31,8 +31,8 @@ It lets you list running coroutines:
             |cctx allocated
             ||   resident set size (kb)
    > ps     ||   |
-        PID SS  RSS Description          Where
-   11014896 US  835 [main::]             [/opt/cf/ext/dm-support.ext:45]
+        PID SC  RSS Description          Where
+   11014896 UC  835 [main::]             [/opt/cf/ext/dm-support.ext:45]
    11015088 --    2 [coro manager]       [/opt/perl/lib/perl5/Coro.pm:170]
    11015408 --    2 [unblock_sub schedul [/opt/perl/lib/perl5/Coro.pm:548]
    15607952 --    2 timeslot manager     [/opt/cf/cf.pm:382]
@@ -264,7 +264,7 @@ sub command($) {
    $cmd =~ s/\s+$//;
 
    if ($cmd =~ /^ps$/) {
-      printf "%20s %s%s %4s %4s %-24.24s %s\n", "PID", "S", "S", "RSS", "USES", "Description", "Where";
+      printf "%20s %s%s %4s %4s %-24.24s %s\n", "PID", "S", "C", "RSS", "USES", "Description", "Where";
       for my $coro (reverse Coro::State::list) {
          Coro::cede;
          my @bt;
@@ -280,7 +280,7 @@ sub command($) {
          printf "%20s %s%s %4s %4s %-24.24s %s\n",
                 $coro+0,
                 $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
-                $coro->is_traced ? "T" : $coro->has_stack ? "S" : "-",
+                $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
                 format_num4 $coro->rss,
                 format_num4 $coro->usecount,
                 $coro->debug_desc,
