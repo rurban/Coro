@@ -12,6 +12,9 @@ Coro::Debug - various functions that help debugging Coro programs
 
 =head1 DESCRIPTION
 
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
 This module provides some debugging facilities. Most will, if not handled
 carefully, severely compromise the security of your program, so use it
 only for debugging (or take other precautions).

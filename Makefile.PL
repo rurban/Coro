@@ -83,7 +83,7 @@ WriteMakefile(
     DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
        Scalar::Util	=> 0.00,
-       AnyEvent         => 2.7,
+       AnyEvent         => 3.3,
        Storable		=> 2.15,
        Time::HiRes      => 0,
 
@@ -91,7 +91,7 @@ WriteMakefile(
        Event		=> 1.06,
 
        # for Coro::EV
-       EV               => 1.3,
+       EV               => 3.0,
 
        # for Coro::AIO
        IO::AIO          => 2.3,
@@ -99,7 +99,7 @@ WriteMakefile(
     EXTRA_META => q{
 configure_requires:
   Event: 1.06
-  EV: 1.3
+  EV: 3.0
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
@@ -130,6 +130,7 @@ configure_requires:
     		    'Coro/BDB.pm'	=> '$(INST_LIBDIR)/Coro/BDB.pm',
     		    'Coro/LWP.pm'	=> '$(INST_LIBDIR)/Coro/LWP.pm',
     		    'Coro/Storable.pm'	=> '$(INST_LIBDIR)/Coro/Storable.pm',
+    		    'Coro/AnyEvent.pm'	=> '$(INST_LIBDIR)/Coro/AnyEvent.pm',
                     },
 );
 

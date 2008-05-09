@@ -11,6 +11,9 @@ Coro::BDB - truly asynchronous bdb access
 
 =head1 DESCRIPTION
 
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
 This module implements a thin wrapper around the L<BDB|BDB> module.
 
 Each BDB request that could block and doesn't get passed a callback will

@@ -6,6 +6,8 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 
       TODO: Coro::AnyEvent
+	- completely reworked the Coro manpage.
+      	- added Coro::AnyEvent, generic event loop integration.
 	- implement cancel, ready and kill commands in Coro::Debug.
         - document find_coro in Coro::Debug.
 

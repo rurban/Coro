@@ -19,6 +19,9 @@ Coro::Socket - non-blocking socket-io
 
 =head1 DESCRIPTION
 
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
 This module implements socket-handles in a coroutine-compatible way,
 that is, other coroutines can run while reads or writes block on the
 handle. See L<Coro::Handle>, especially the note about prefering method

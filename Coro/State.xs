@@ -173,6 +173,9 @@ static SV *sv_pool_rss;
 static SV *sv_pool_size;
 static AV *av_async_pool;
 
+/* Coro::AnyEvent */
+static SV *sv_activity;
+
 static struct coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
 
@@ -267,6 +270,7 @@ typedef struct coro *Coro__State_or_hashref;
 
 /* for Coro.pm */
 static SV *coro_current;
+static SV *coro_readyhook;
 static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
 static int coro_nready;
 static struct coro *coro_first;
@@ -512,7 +516,7 @@ save_perl (pTHX_ Coro__State c)
                   {
                     EXTEND (SP, 3);
                     PUSHs ((SV *)CvPADLIST (cv));
-                    PUSHs (INT2PTR (SV *, CvDEPTH (cv)));
+                    PUSHs (INT2PTR (SV *, (IV)CvDEPTH (cv)));
                     PUSHs ((SV *)cv);
 
                     CvDEPTH (cv) = 0;
@@ -1381,6 +1385,7 @@ api_ready (SV *coro_sv)
 {
   dTHX;
   struct coro *coro;
+  SV *hook;
 
   if (SvROK (coro_sv))
     coro_sv = SvRV (coro_sv);
@@ -1393,9 +1398,29 @@ api_ready (SV *coro_sv)
   coro->flags |= CF_READY;
 
   LOCK;
+
+  hook = coro_nready ? 0 : coro_readyhook;
+
   coro_enq (aTHX_ SvREFCNT_inc (coro_sv));
   ++coro_nready;
+
   UNLOCK;
+  
+  if (hook)
+    {
+      dSP;
+
+      ENTER;
+      SAVETMPS;
+
+      PUSHMARK (SP);
+      PUTBACK;
+      call_sv (hook, G_DISCARD);
+      SPAGAIN;
+
+      FREETMPS;
+      LEAVE;
+    }
 
   return 1;
 }
@@ -1687,8 +1712,7 @@ _destroy (SV *coro_sv)
         RETVAL
 
 void
-_exit (code)
-	int	code
+_exit (int code)
         PROTOTYPE: $
 	CODE:
 	_exit (code);
@@ -1830,9 +1854,9 @@ BOOT:
 {
 	int i;
 
+        av_async_pool = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
         sv_pool_rss   = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size  = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-        av_async_pool = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
 
         coro_current  = coro_get_sv (aTHX_ "Coro::current", FALSE);
         SvREADONLY_on (coro_current);
@@ -1873,6 +1897,16 @@ _set_current (SV *current)
 	CODE:
         SvREFCNT_dec (SvRV (coro_current));
         SvRV_set (coro_current, SvREFCNT_inc (SvRV (current)));
+
+void
+_set_readyhook (SV *hook)
+	PROTOTYPE: $
+        CODE:
+        LOCK;
+        if (coro_readyhook)
+          SvREFCNT_dec (coro_readyhook);
+        coro_readyhook = SvOK (hook) ? newSVsv (hook) : 0;
+        UNLOCK;
 
 int
 prio (Coro::State coro, int newprio = 0)
@@ -2037,5 +2071,38 @@ _set_state (char *data_)
         PL_laststype   = data->laststype;
         PL_laststatval = data->laststatval;
         PL_statcache   = data->statcache;
+}
+
+
+MODULE = Coro::State                PACKAGE = Coro::AnyEvent
+
+BOOT:
+        sv_activity = coro_get_sv (aTHX_ "Coro::AnyEvent::ACTIVITY", TRUE);
+
+SV *
+_schedule ()
+	PROTOTYPE: @
+	CODE:
+{
+  	static int incede;
+        fprintf (stderr, "_schedule\n");//D
+
+        api_cede_notself ();
+
+        ++incede;
+        while (coro_nready >= incede && api_cede ())
+          ;
+
+        sv_setsv (sv_activity, &PL_sv_undef);
+        if (coro_nready >= incede)
+          {
+            PUSHMARK (SP);
+            PUTBACK;
+            fprintf (stderr, "call act %d >= %d\n", coro_nready, incede);//D
+            call_pv ("Coro::AnyEvent::_activity", G_DISCARD | G_EVAL);
+            SPAGAIN;
+          }
+
+        --incede;
 }
 

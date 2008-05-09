@@ -85,7 +85,6 @@ use Carp;
 no warnings;
 
 use Coro;
-use Coro::Timer;
 use Event qw(loop unloop); # we are re-exporting this, cooool!
 
 use XSLoader;

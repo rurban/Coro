@@ -30,6 +30,7 @@ Coro/Handle.pm
 Coro/Socket.pm
 Coro/Timer.pm
 Coro/Storable.pm
+Coro/AnyEvent.pm
 
 Coro/libcoro/LICENSE
 Coro/libcoro/coro.h

@@ -17,6 +17,9 @@ Coro::AIO - truly asynchronous file and directrory I/O
 
 =head1 DESCRIPTION
 
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
 This module implements a thin wrapper around L<IO::AIO|IO::AIO>. All of
 the functions that expect a callback are being wrapped by this module.
 
