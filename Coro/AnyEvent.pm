@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::AnyEvent - try to integrate coroutines into AnyEvent
+Coro::AnyEvent - integrate coroutines into AnyEvent
 
 =head1 SYNOPSIS
 
@@ -99,8 +99,6 @@ sub _activity {
 sub _detect {
    my $model = AnyEvent::detect;
 
-   warn "detect $model\n";#d#
-
    if ($model eq "AnyEvent::Impl::EV" || $model eq "AnyEvent::Impl::CoroEV") {
       require Coro::EV;
       Coro::_set_readyhook undef;
@@ -119,6 +117,12 @@ sub _detect {
 Coro::_set_readyhook \&_detect;
 
 1;
+
+=head1 SEE ALSO
+
+L<AnyEvent>, to see which event loops are supported, L<Coro::EV> and
+L<Coro::Event> for more efficient and more correct solutions (they will be
+used automatically if applicable).
 
 =head1 AUTHOR
 
