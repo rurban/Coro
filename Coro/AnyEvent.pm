@@ -39,6 +39,10 @@ required functionality.
 
 Here is what this module does when it has to work with other event loops:
 
+=over 4
+
+=item * run ready coroutines before blocking the process
+
 Each time a coroutine is put into the ready queue (and there are no other
 coroutines in the ready queue), a timer with an C<after> value of C<0> is
 registered with AnyEvent.
@@ -61,14 +65,35 @@ coroutines from receiving new events.
 The priority used is simply the priority of the coroutine that runs the
 event loop, usually the main program, and the priority is usually C<0>.
 
-As C<unblock_sub> cannot be used, you must not call into the event loop
-recursively (e.g. you must not use AnyEvent condvars in a blocking
-way). This restriction will be lifted in a later version of AnyEvent and
-Coro.
+=item * provide a suitable idle callback.
 
 In addition to hooking into C<ready>, this module will also provide a
 C<$Coro::idle> handler that runs the event loop. It is best not to rely on
-this.
+this, as this is rather inefficient.
+
+=item * provide overrides for AnyEvent's condvars
+
+This module installs overrides for AnyEvent's condvars. That is, when
+the module is loaded it will provide its own condition variables. This
+makes the coroutine-safe, i.e. you can safely block on them from within a
+coroutine.
+
+=item * lead to data corruption or worse
+
+As C<unblock_sub> cannot be by this module (as it is the module that
+implements it, basically), you must not call into the event loop
+recursively from any coroutine. This is not usually a difficult
+restriction to live with, just use condvars, C<unblock_sub> or other means
+of inter-coroutine-communications.
+
+If you use a module that supports AnyEvent (or uses the same event loop
+as AnyEvent, making the compatible), and it offers callbacks of any kind,
+then you must not block in them, either (or use e.g. C<unblock_sub>), see
+the description of C<unblock_sub> in the L<Coro> module.
+
+This also means that you should load the module as early as possible,
+as only condvars created after this module has been loaded will work
+correctly.
 
 =cut
 

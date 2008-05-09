@@ -614,6 +614,12 @@ If your handler does not plan to block (e.g. simply sends a message to
 another coroutine, or puts some other coroutine into the ready queue),
 there is no reason to use C<unblock_sub>.
 
+Note that you also need to use C<unblock_sub> for any other callbacks that
+are indirectly executed by any C-based event loop. For example, when you
+use a module that uses L<AnyEvent> (and you use L<Coro::AnyEvent>) and it
+provides callbacks that are the result of some event callback, then you
+must not block either, or use C<unblock_sub>.
+
 =cut
 
 our @unblock_queue;
