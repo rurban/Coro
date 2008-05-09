@@ -82,6 +82,8 @@ Then you can even receive log messages in any debugging session:
    > loglevel 5
    2007-09-26Z02:22:46 (9) unimportant message
 
+Other commands are available in the shell, use the C<help> command for a list.
+
 =head1 FUNCTIONS
 
 None of the functions are being exported.
@@ -314,6 +316,22 @@ sub command($) {
          untrace $coro;
       }
 
+   } elsif ($cmd =~ /^cancel\s+(\d+)$/) {
+      if (my $coro = find_coro $1) {
+         $coro->cancel;
+      }
+
+   } elsif ($cmd =~ /^ready\s+(\d+)$/) {
+      if (my $coro = find_coro $1) {
+         $coro->ready;
+      }
+
+   } elsif ($cmd =~ /^kill\s+(\d+)(?:\s+(.*))?$/) {
+      my $reason = defined $2 : $2 : "killed";
+      if (my $coro = find_coro $1) {
+         $coro->throw ($2);
+      }
+
    } elsif ($cmd =~ /^help$/) {
       print <<EOF;
 ps                      show the list of all coroutines
@@ -321,8 +339,14 @@ bt <pid>                show a full backtrace of coroutine <pid>
 eval <pid> <perl>       evaluate <perl> expression in context of <pid>
 trace <pid>             enable tracing for this coroutine
 untrace <pid>           disable tracing for this coroutine
+kill <pid> <reason>	throws the given <reason> string in <pid>
+cancel <pid>		cancels this coroutine
+ready <pid>		force <pid> into the ready queue
 <anything else>         evaluate as perl and print results
 <anything else> &       same as above, but evaluate asynchronously
+                        you can use (find_coro <pid>) in perl expressions
+                        to find the coro with the given pid, e.g.
+                        (find_coro 9768720)->ready
 EOF
 
    } elsif ($cmd =~ /^(.*)&$/) {

@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+      TODO: Coro::AnyEvent
+	- implement cancel, ready and kill commands in Coro::Debug.
+        - document find_coro in Coro::Debug.
+
 4.6  Sat Apr 26 10:05:14 CEST 2008
 	- INCOMPATIBLE CHANGE: sub/code attributes are no longer supported
           by the Coro module. It was a mistake to have it in the first place.
