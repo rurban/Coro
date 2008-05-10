@@ -3,9 +3,9 @@ print "1..9\n";
 
 use Coro;
 
-sub p1 : Coro {
+async {
    print "ok 2\n";
-}
+};
 
 print "ok 1\n";
 cede;

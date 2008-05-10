@@ -12,6 +12,9 @@ Coro::Debug - various functions that help debugging Coro programs
 
 =head1 DESCRIPTION
 
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
 This module provides some debugging facilities. Most will, if not handled
 carefully, severely compromise the security of your program, so use it
 only for debugging (or take other precautions).
@@ -28,8 +31,8 @@ It lets you list running coroutines:
             |cctx allocated
             ||   resident set size (kb)
    > ps     ||   |
-        PID SS  RSS Description          Where
-   11014896 US  835 [main::]             [/opt/cf/ext/dm-support.ext:45]
+        PID SC  RSS Description          Where
+   11014896 UC  835 [main::]             [/opt/cf/ext/dm-support.ext:45]
    11015088 --    2 [coro manager]       [/opt/perl/lib/perl5/Coro.pm:170]
    11015408 --    2 [unblock_sub schedul [/opt/perl/lib/perl5/Coro.pm:548]
    15607952 --    2 timeslot manager     [/opt/cf/cf.pm:382]
@@ -82,6 +85,8 @@ Then you can even receive log messages in any debugging session:
    > loglevel 5
    2007-09-26Z02:22:46 (9) unimportant message
 
+Other commands are available in the shell, use the C<help> command for a list.
+
 =head1 FUNCTIONS
 
 None of the functions are being exported.
@@ -94,16 +99,20 @@ package Coro::Debug;
 
 use strict;
 
-use Carp ();
-use IO::Socket::UNIX;
-use AnyEvent;
-use Time::HiRes;
-use Scalar::Util ();
 use overload ();
+
+use Carp ();
+use Time::HiRes ();
+use Scalar::Util ();
+
+use IO::Socket::UNIX ();
+
+use AnyEvent ();
 
 use Coro ();
 use Coro::Handle ();
 use Coro::State ();
+use Coro::AnyEvent ();
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
@@ -259,7 +268,7 @@ sub command($) {
    $cmd =~ s/\s+$//;
 
    if ($cmd =~ /^ps$/) {
-      printf "%20s %s%s %4s %4s %-24.24s %s\n", "PID", "S", "S", "RSS", "USES", "Description", "Where";
+      printf "%20s %s%s %4s %4s %-24.24s %s\n", "PID", "S", "C", "RSS", "USES", "Description", "Where";
       for my $coro (reverse Coro::State::list) {
          Coro::cede;
          my @bt;
@@ -275,7 +284,7 @@ sub command($) {
          printf "%20s %s%s %4s %4s %-24.24s %s\n",
                 $coro+0,
                 $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
-                $coro->is_traced ? "T" : $coro->has_stack ? "S" : "-",
+                $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
                 format_num4 $coro->rss,
                 format_num4 $coro->usecount,
                 $coro->debug_desc,
@@ -314,6 +323,23 @@ sub command($) {
          untrace $coro;
       }
 
+   } elsif ($cmd =~ /^cancel\s+(\d+)$/) {
+      if (my $coro = find_coro $1) {
+         $coro->cancel;
+      }
+
+   } elsif ($cmd =~ /^ready\s+(\d+)$/) {
+      if (my $coro = find_coro $1) {
+         $coro->ready;
+      }
+
+   } elsif ($cmd =~ /^kill\s+(\d+)(?:\s+(.*))?$/) {
+      my $reason = defined $2 ? $2 : "killed";
+
+      if (my $coro = find_coro $1) {
+         $coro->throw ($reason);
+      }
+
    } elsif ($cmd =~ /^help$/) {
       print <<EOF;
 ps                      show the list of all coroutines
@@ -321,8 +347,14 @@ bt <pid>                show a full backtrace of coroutine <pid>
 eval <pid> <perl>       evaluate <perl> expression in context of <pid>
 trace <pid>             enable tracing for this coroutine
 untrace <pid>           disable tracing for this coroutine
+kill <pid> <reason>	throws the given <reason> string in <pid>
+cancel <pid>		cancels this coroutine
+ready <pid>		force <pid> into the ready queue
 <anything else>         evaluate as perl and print results
 <anything else> &       same as above, but evaluate asynchronously
+                        you can use (find_coro <pid>) in perl expressions
+                        to find the coro with the given pid, e.g.
+                        (find_coro 9768720)->ready
 EOF
 
    } elsif ($cmd =~ /^(.*)&$/) {

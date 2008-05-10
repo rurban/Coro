@@ -17,7 +17,10 @@ Coro::AIO - truly asynchronous file and directrory I/O
 
 =head1 DESCRIPTION
 
-This module implements a thin wrapper around L<IO::AIO|IO::AIO>. All of
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
+This module implements a thin wrapper around L<IO::AIO>. All of
 the functions that expect a callback are being wrapped by this module.
 
 The API is exactly the same as that of the corresponding IO::AIO routines,
@@ -30,10 +33,9 @@ You can mix calls to C<IO::AIO> functions with calls to this module. You
 I<must not>, however, call these routines from within IO::AIO callbacks,
 as this causes a deadlock. Start a coro inside the callback instead.
 
-You also can, but do not need to, call C<IO::AIO::poll_cb>, as this
-module automatically installs an event watcher for the C<IO::AIO> file
-descriptor. It uses the L<AnyEvent|AnyEvent> module for this, so please
-refer to its documentation on how it selects an appropriate Event module.
+This module also loads L<AnyEvent::AIO> to integrate into the event loop
+in use, so please refer to its (and L<AnyEvent>'s) documentation on how it
+selects an appropriate event module.
 
 All other functions exported by default by IO::AIO (e.g. C<aioreq_pri>)
 will be exported by default by Coro::AIO, too.
@@ -47,11 +49,8 @@ times.
 
 For your convienience, here are the changed function signatures for most
 of the requests, for documentation of these functions please have a look
-at L<IO::AIO|the IO::AIO manual>.
-
-The AnyEvent watcher can be disabled by executing C<undef
-$Coro::AIO::WATCHER>. Please notify the author of when and why you think
-this was necessary.
+at L<IO::AIO|the IO::AIO manual>. Note that requests added by newer
+versions of L<IO::AIO> will be automatically wrapped as well.
 
 =over 4
 
@@ -62,19 +61,9 @@ package Coro::AIO;
 use strict qw(subs vars);
 
 use Coro ();
-use AnyEvent;
-use IO::AIO ();
+use AnyEvent::AIO ();
 
 use base Exporter::;
-
-our $WATCHER;
-
-if (AnyEvent::detect =~ /^AnyEvent::Impl::(?:Coro)?EV$/) {
-   $WATCHER = EV::io (IO::AIO::poll_fileno, &EV::READ, \&IO::AIO::poll_cb);
-} else {
-   our $FH; open $FH, "<&=" . IO::AIO::poll_fileno;
-   $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&IO::AIO::poll_cb);
-}
 
 our @EXPORT    = @IO::AIO::EXPORT;
 our @EXPORT_OK = @IO::AIO::EXPORT_OK;

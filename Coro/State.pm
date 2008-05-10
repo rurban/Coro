@@ -29,7 +29,7 @@ threads, there is no parallelism and only voluntary switching is used so
 locking problems are greatly reduced.
 
 This can be used to implement non-local jumps, exception handling,
-continuations and more.
+(non-clonable) continuations and more.
 
 This module provides only low-level functionality. See L<Coro> and related
 modules for a higher level process abstraction including scheduling.
@@ -49,7 +49,7 @@ which it is again avaikable to run other Perl coroutines.
 
 The main program always has its own "C coroutine" (which really is
 *the* Perl interpreter running the whole program), so there will always
-be at least one additional C coroutine. You cna use the debugger (see
+be at least one additional C coroutine. You can use the debugger (see
 L<Coro::Debug>) to find out which coroutines are tied to their cctx and
 which aren't.
 
@@ -57,13 +57,15 @@ which aren't.
 
 A newly created coroutine that has not been used only allocates a
 relatively small (a hundred bytes) structure. Only on the first
-C<transfer> will perl allocate stacks (a few kb, 64 bit architetcures use
-twice as much) and optionally a C stack/coroutine (cctx) for coroutines
-that recurse through C functions. All this is very system-dependent. On
-my x86-pc-linux-gnu system this amounts to about 2k per (non-trivial
-but simple) coroutine. You can view the actual memory consumption using
-Coro::Debug. Keep in mind that a for loop or other block constructs can
-easily consume 100-200 bytes per nesting level.
+C<transfer> will perl allocate stacks (a few kb, 64 bit architetcures
+use twice as much, i.e. a few kb :) and optionally a C stack/coroutine
+(cctx) for coroutines that recurse through C functions. All this is very
+system-dependent. On my x86-pc-linux-gnu system this amounts to about 2k
+per (non-trivial but simple) coroutine.
+
+You can view the actual memory consumption using Coro::Debug. Keep in mind
+that a for loop or other block constructs can easily consume 100-200 bytes
+per nesting level.
 
 =cut
 
@@ -88,7 +90,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = '4.1';
+   our $VERSION = 4.6;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -120,7 +122,8 @@ main program, too, unless they have been overriden already.
 The default handlers provided will behave like the inbuilt ones (as if
 they weren't there).
 
-Note 1: You I<must> store a valid code reference in these variables, C<undef> will I<not> do.
+Note 1: You I<must> store a valid code reference in these variables,
+C<undef> will I<not> do.
 
 Note 2: The value of this variable will be shared among all coroutines, so
 changing its value will change it in all coroutines using them.
@@ -138,9 +141,13 @@ Similar to above die hook, but augments C<$SIG{__WARN__}>.
 =item $coro = new Coro::State [$coderef[, @args...]]
 
 Create a new coroutine and return it. The first C<transfer> call to this
-coroutine will start execution at the given coderef. If the subroutine
-returns the program will be terminated as if execution of the main program
-ended. If it throws an exception the program will terminate.
+coroutine will start execution at the given coderef.
+
+If the subroutine returns the program will be terminated as if execution
+of the main program ended.
+
+If it throws an exception the program will terminate unless the exception
+is caught, exactly like in the main program.
 
 Calling C<exit> in a coroutine does the same as calling it in the main
 program.
@@ -179,7 +186,7 @@ variables. Yes, this is by design ;) You can always create your own
 process abstraction model that saves these variables.
 
 The easiest way to do this is to create your own scheduling primitive like
-below, and use it in your coroutines:
+in the code below, and use it in your coroutines:
 
   sub my_cede {
      local ($;, ...);
@@ -196,21 +203,9 @@ sub _cctx_init {
    _set_stacklevel $_[0];
 }
 
-=item $state->has_stack
-
-Returns wether the state currently uses a cctx/C stack. An active state
-always has a cctx, as well as the main program. Other states only use a
-cctx when needed.
-
-=item $bytes = $state->rss
-
-Returns the memory allocated by the coroutine (which includes
-static structures, various perl stacks but NOT local variables,
-arguments or any C stack).
-
 =item $state->call ($coderef)
 
-Try to call the given $coderef in the context of the given state.  This
+Try to call the given C<$coderef> in the context of the given state. This
 works even when the state is currently within an XS function, and can
 be very dangerous. You can use it to acquire stack traces etc. (see the
 Coro::Debug module for more details). The coderef MUST NOT EVER transfer
@@ -218,13 +213,12 @@ to another state.
 
 =item $state->eval ($string)
 
-Like C<call>, but eval's the string. Dangerous. Do not
-use. Untested. Unused. Biohazard.
+Like C<call>, but eval's the string. Dangerous.
 
 =item $state->throw ($exception)
 
 Makes the coroutine throw the given exception as soon as it regains
-control. Untested. Unused. Biohazard.
+control.
 
 =item $state->swap_defsv
 
@@ -247,6 +241,18 @@ coroutine saved in C<$next>.
 The "state" of a subroutine includes the scope, i.e. lexical variables and
 the current execution state (subroutine, stack).
 
+=item $state->has_cctx
+
+Returns wether the state currently uses a cctx/C coroutine. An active
+state always has a cctx, as well as the main program. Other states only
+use a cctxts when needed.
+
+=item $bytes = $state->rss
+
+Returns the memory allocated by the coroutine (which includes
+static structures, various perl stacks but NOT local variables,
+arguments or any C stack).
+
 =item Coro::State::cctx_count
 
 Returns the number of C-level coroutines allocated. If this number is
@@ -265,9 +271,11 @@ Returns the current C stack size and optionally sets the new I<minimum>
 stack size to C<$new_stacksize> I<long>s. Existing stacks will not
 be changed, but Coro will try to replace smaller stacks as soon as
 possible. Any Coro::State that starts to use a stack after this call is
-guaranteed this minimum stack size. Please note that Coroutines will
-only need to use a C-level stack if the interpreter recurses or calls a
-function in a module that calls back into the interpreter.
+guaranteed this minimum stack size.
+
+Please note that Coroutines will only need to use a C-level stack if the
+interpreter recurses or calls a function in a module that calls back into
+the interpreter, so use of this feature is usually never needed.
 
 =item Coro::State::force_cctx
 
@@ -292,7 +300,7 @@ sub debug_desc {
 =head1 BUGS
 
 This module is not thread-safe. You must only ever use this module from
-the same thread (this requirement might be loosened in the future).
+the same thread (this requirement might be removed in the future).
 
 =head1 SEE ALSO
 

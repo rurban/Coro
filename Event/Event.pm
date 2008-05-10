@@ -85,7 +85,6 @@ use Carp;
 no warnings;
 
 use Coro;
-use Coro::Timer;
 use Event qw(loop unloop); # we are re-exporting this, cooool!
 
 use XSLoader;
@@ -95,7 +94,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = '2.1';
+   our $VERSION = 4.6;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;

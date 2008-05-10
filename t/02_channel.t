@@ -6,12 +6,12 @@ use Coro::Channel;
 
 my $q = new Coro::Channel 1;
 
-sub producer : Coro {
+async { # producer
    for (1..9) {
       print "ok ", $_*2, "\n";
       $q->put($_);
    }
-}
+};
 
 print "ok 1\n";
 cede;

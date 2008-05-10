@@ -4,40 +4,49 @@ Coro - coroutine process abstraction
 
 =head1 SYNOPSIS
 
- use Coro;
-
- async {
-    # some asynchronous thread of execution
-    print "2\n";
-    cede; # yield back to main
-    print "4\n";
- };
- print "1\n";
- cede; # yield to coroutine
- print "3\n";
- cede; # and again
-
- # use locking
- my $lock = new Coro::Semaphore;
- my $locked;
-
- $lock->down;
- $locked = 1;
- $lock->up;
+  use Coro;
+  
+  async {
+     # some asynchronous thread of execution
+     print "2\n";
+     cede; # yield back to main
+     print "4\n";
+  };
+  print "1\n";
+  cede; # yield to coroutine
+  print "3\n";
+  cede; # and again
+  
+  # use locking
+  my $lock = new Coro::Semaphore;
+  my $locked;
+  
+  $lock->down;
+  $locked = 1;
+  $lock->up;
 
 =head1 DESCRIPTION
 
-This module collection manages coroutines. Coroutines are similar
-to threads but don't run in parallel at the same time even on SMP
-machines. The specific flavor of coroutine used in this module also
-guarantees you that it will not switch between coroutines unless
+This module collection manages coroutines. Coroutines are similar to
+threads but don't (in general) run in parallel at the same time even
+on SMP machines. The specific flavor of coroutine used in this module
+also guarantees you that it will not switch between coroutines unless
 necessary, at easily-identified points in your program, so locking and
 parallel access are rarely an issue, making coroutine programming much
-safer than threads programming.
+safer and easier than threads programming.
 
-(Perl, however, does not natively support real threads but instead does a
-very slow and memory-intensive emulation of processes using threads. This
-is a performance win on Windows machines, and a loss everywhere else).
+Unlike a normal perl program, however, coroutines allow you to have
+multiple running interpreters that share data, which is especially useful
+to code pseudo-parallel processes and for event-based programming, such as
+multiple HTTP-GET requests running concurrently. See L<Coro::AnyEvent> to
+learn more.
+
+Coroutines are also useful because Perl has no support for threads (the so
+called "threads" that perl offers are nothing more than the (bad) process
+emulation coming from the Windows platform: On standard operating systems
+they serve no purpose whatsoever, except by making your programs slow and
+making them use a lot of memory. Best disable them when building perl, or
+aks your software vendor/distributor to do it for you).
 
 In this module, coroutines are defined as "callchain + lexical variables +
 @_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own callchain,
@@ -59,7 +68,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = '4.51';
+our $VERSION = '4.7';
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -67,58 +76,28 @@ our %EXPORT_TAGS = (
 );
 our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
 
-{
-   my @async;
-   my $init;
-
-   # this way of handling attributes simply is NOT scalable ;()
-   sub import {
-      no strict 'refs';
-
-      Coro->export_to_level (1, @_);
-
-      my $old = *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"}{CODE};
-      *{(caller)[0]."::MODIFY_CODE_ATTRIBUTES"} = sub {
-         my ($package, $ref) = (shift, shift);
-         my @attrs;
-         for (@_) {
-            if ($_ eq "Coro") {
-               push @async, $ref;
-               unless ($init++) {
-                  eval q{
-                     sub INIT {
-                        &async(pop @async) while @async;
-                     }
-                  };
-               }
-            } else {
-               push @attrs, $_;
-            }
-         }
-         return $old ? $old->($package, $ref, @attrs) : @attrs;
-      };
-   }
-
-}
-
 =over 4
 
-=item $main
+=item $Coro::main
 
-This coroutine represents the main program.
+This variable stores the coroutine object that represents the main
+program. While you cna C<ready> it and do most other things you can do to
+coroutines, it is mainly useful to compare again C<$Coro::current>, to see
+wether you are running in the main program or not.
 
 =cut
 
 $main = new Coro;
 
-=item $current (or as function: current)
+=item $Coro::current
 
-The current coroutine (the last coroutine switched to). The initial value
-is C<$main> (of course).
+The coroutine object representing the current coroutine (the last
+coroutine that the Coro scheduler switched to). The initial value is
+C<$main> (of course).
 
-This variable is B<strictly> I<read-only>. It is provided for performance
-reasons. If performance is not essential you are encouraged to use the
-C<Coro::current> function instead.
+This variable is B<strictly> I<read-only>. You can take copies of the
+value stored in it and use it as any other coroutine object, but you must
+not otherwise modify the variable itself.
 
 =cut
 
@@ -130,17 +109,30 @@ $main->{_specific} = $current->{_specific}
 
 _set_current $main;
 
-sub current() { $current }
+sub current() { $current } # [DEPRECATED]
 
-=item $idle
+=item $Coro::idle
 
-A callback that is called whenever the scheduler finds no ready coroutines
-to run. The default implementation prints "FATAL: deadlock detected" and
-exits, because the program has no other way to continue.
+This variable is mainly useful to integrate Coro into event loops. It is
+usually better to rely on L<Coro::AnyEvent> or LC<Coro::EV>, as this is
+pretty low-level functionality.
+
+This variable stores a callback that is called whenever the scheduler
+finds no ready coroutines to run. The default implementation prints
+"FATAL: deadlock detected" and exits, because the program has no other way
+to continue.
 
 This hook is overwritten by modules such as C<Coro::Timer> and
-C<Coro::Event> to wait on an external event that hopefully wake up a
+C<Coro::AnyEvent> to wait on an external event that hopefully wake up a
 coroutine so the scheduler can run it.
+
+Note that the callback I<must not>, under any circumstances, block
+the current coroutine. Normally, this is achieved by having an "idle
+coroutine" that calls the event loop and then blocks again, and then
+readying that coroutine in the idle handler.
+
+See L<Coro::Event> or L<Coro::AnyEvent> for examples of using this
+technique.
 
 Please note that if your callback recursively invokes perl (e.g. for event
 handlers), then it must be prepared to be called recursively itself.
@@ -180,30 +172,36 @@ $manager = new Coro sub {
 $manager->desc ("[coro manager]");
 $manager->prio (PRIO_MAX);
 
-# static methods. not really.
-
 =back
 
-=head2 STATIC METHODS
-
-Static methods are actually functions that operate on the current coroutine only.
+=head2 SIMPLE COROUTINE CREATION
 
 =over 4
 
 =item async { ... } [@args...]
 
-Create a new asynchronous coroutine and return it's coroutine object
-(usually unused). When the sub returns the new coroutine is automatically
+Create a new coroutine and return it's coroutine object (usually
+unused). The coroutine will be put into the ready queue, so
+it will start running automatically on the next scheduler run.
+
+The first argument is a codeblock/closure that should be executed in the
+coroutine. When it returns argument returns the coroutine is automatically
 terminated.
 
+The remaining arguments are passed as arguments to the closure.
+
 See the C<Coro::State::new> constructor for info about the coroutine
-environment in which coroutines run.
+environment in which coroutines are executed.
 
 Calling C<exit> in a coroutine will do the same as calling exit outside
 the coroutine. Likewise, when the coroutine dies, the program will exit,
 just as it would in the main program.
 
-   # create a new coroutine that just prints its arguments
+If you do not want that, you can provide a default C<die> handler, or
+simply avoid dieing (by use of C<eval>).
+
+Example: Create a new coroutine that just prints its arguments.
+
    async {
       print "@_\n";
    } 1,2,3,4;
@@ -219,23 +217,29 @@ sub async(&@) {
 =item async_pool { ... } [@args...]
 
 Similar to C<async>, but uses a coroutine pool, so you should not call
-terminate or join (although you are allowed to), and you get a coroutine
-that might have executed other code already (which can be good or bad :).
+terminate or join on it (although you are allowed to), and you get a
+coroutine that might have executed other code already (which can be good
+or bad :).
 
-Also, the block is executed in an C<eval> context and a warning will be
+On the plus side, this function is faster than creating (and destroying)
+a completely new coroutine, so if you need a lot of generic coroutines in
+quick successsion, use C<async_pool>, not C<async>.
+
+The code block is executed in an C<eval> context and a warning will be
 issued in case of an exception instead of terminating the program, as
 C<async> does. As the coroutine is being reused, stuff like C<on_destroy>
 will not work in the expected way, unless you call terminate or cancel,
-which somehow defeats the purpose of pooling.
+which somehow defeats the purpose of pooling (but is fine in the
+exceptional case).
 
-The priority will be reset to C<0> after each job, tracing will be
+The priority will be reset to C<0> after each run, tracing will be
 disabled, the description will be reset and the default output filehandle
-gets restored, so you can change alkl these. Otherwise the coroutine will
+gets restored, so you can change all these. Otherwise the coroutine will
 be re-used "as-is": most notably if you change other per-coroutine global
-stuff such as C<$/> you need to revert that change, which is most simply
-done by using local as in C< local $/ >.
+stuff such as C<$/> you I<must needs> to revert that change, which is most
+simply done by using local as in: C< local $/ >.
 
-The pool size is limited to 8 idle coroutines (this can be adjusted by
+The pool size is limited to C<8> idle coroutines (this can be adjusted by
 changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
 required.
 
@@ -243,7 +247,7 @@ If you are concerned about pooled coroutines growing a lot because a
 single C<async_pool> used a lot of stackspace you can e.g. C<async_pool
 { terminate }> once per second or so to slowly replenish the pool. In
 addition to that, when the stacks used by a handler grows larger than 16kb
-(adjustable with $Coro::POOL_RSS) it will also exit.
+(adjustable via $Coro::POOL_RSS) it will also be destroyed.
 
 =cut
 
@@ -279,12 +283,34 @@ sub async_pool(&@) {
    $coro
 }
 
+=back
+
+=head2 STATIC METHODS
+
+Static methods are actually functions that operate on the current coroutine.
+
+=over 4
+
 =item schedule
 
-Calls the scheduler. Please note that the current coroutine will not be put
-into the ready queue, so calling this function usually means you will
-never be called again unless something else (e.g. an event handler) calls
-ready.
+Calls the scheduler. The scheduler will find the next coroutine that is
+to be run from the ready queue and switches to it. The next coroutine
+to be run is simply the one with the highest priority that is longest
+in its ready queue. If there is no coroutine ready, it will clal the
+C<$Coro::idle> hook.
+
+Please note that the current coroutine will I<not> be put into the ready
+queue, so calling this function usually means you will never be called
+again unless something else (e.g. an event handler) calls C<< ->ready >>,
+thus waking you up.
+
+This makes C<schedule> I<the> generic method to use to block the current
+coroutine and wait for events: first you remember the current coroutine in
+a variable, then arrange for some callback of yours to call C<< ->ready
+>> on that once some event happens, and last you call C<schedule> to put
+yourself to sleep. Note that a lot of things can wake your coroutine up,
+so you need to check wether the event indeed happened, e.g. by storing the
+status in a variable.
 
 The canonical way to wait on external events is this:
 
@@ -307,14 +333,19 @@ The canonical way to wait on external events is this:
 
 =item cede
 
-"Cede" to other coroutines. This function puts the current coroutine into the
-ready queue and calls C<schedule>, which has the effect of giving up the
-current "timeslice" to other coroutines of the same or higher priority.
+"Cede" to other coroutines. This function puts the current coroutine into
+the ready queue and calls C<schedule>, which has the effect of giving
+up the current "timeslice" to other coroutines of the same or higher
+priority. Once your coroutine gets its turn again it will automatically be
+resumed.
+
+This function is often called C<yield> in other languages.
 
 =item Coro::cede_notself
 
-Works like cede, but is not exported by default and will cede to any
-coroutine, regardless of priority, once.
+Works like cede, but is not exported by default and will cede to I<any>
+coroutine, regardless of priority. This is useful sometimes to ensure
+progress is made.
 
 =item terminate [arg...]
 
@@ -325,6 +356,10 @@ Terminates the current coroutine with the given status values (see L<cancel>).
 Kills/terminates/cancels all coroutines except the currently running
 one. This is useful after a fork, either in the child or the parent, as
 usually only one of them should inherit the running coroutines.
+
+Note that while this will try to free some of the main programs resources,
+you cnanot free all of them, so if a coroutine that is not the main
+program calls this function, there will be some one-time resource leak.
 
 =cut
 
@@ -341,20 +376,19 @@ sub killall {
 
 =back
 
-# dynamic methods
-
 =head2 COROUTINE METHODS
 
-These are the methods you can call on coroutine objects.
+These are the methods you can call on coroutine objects (or to create
+them).
 
 =over 4
 
 =item new Coro \&sub [, @args...]
 
-Create a new coroutine and return it. When the sub returns the coroutine
+Create a new coroutine and return it. When the sub returns, the coroutine
 automatically terminates as if C<terminate> with the returned values were
-called. To make the coroutine run you must first put it into the ready queue
-by calling the ready method.
+called. To make the coroutine run you must first put it into the ready
+queue by calling the ready method.
 
 See C<async> and C<Coro::State::new> for additional info about the
 coroutine environment.
@@ -373,9 +407,13 @@ sub new {
 
 =item $success = $coroutine->ready
 
-Put the given coroutine into the ready queue (according to it's priority)
-and return true. If the coroutine is already in the ready queue, do nothing
-and return false.
+Put the given coroutine into the end of its ready queue (there is one
+queue for each priority) and return true. If the coroutine is already in
+the ready queue, do nothing and return false.
+
+This ensures that the scheduler will resume this coroutine automatically
+once all the coroutines of higher priority and all coroutines of the same
+priority that were put into the ready queue earlier have been resumed.
 
 =item $is_ready = $coroutine->is_ready
 
@@ -406,7 +444,8 @@ sub cancel {
 
 Wait until the coroutine terminates and return any values given to the
 C<terminate> or C<cancel> functions. C<join> can be called concurrently
-from multiple coroutines.
+from multiple coroutines, and all will be resumed and given the status
+return once the C<$coroutine> terminates.
 
 =cut
 
@@ -431,7 +470,7 @@ sub join {
 
 Registers a callback that is called when this coroutine gets destroyed,
 but before it is joined. The callback gets passed the terminate arguments,
-if any.
+if any, and I<must not> die, under any circumstances.
 
 =cut
 
@@ -509,10 +548,11 @@ sub desc {
 =item Coro::nready
 
 Returns the number of coroutines that are currently in the ready state,
-i.e. that can be switched to. The value C<0> means that the only runnable
-coroutine is the currently running one, so C<cede> would have no effect,
-and C<schedule> would cause a deadlock unless there is an idle handler
-that wakes up some coroutines.
+i.e. that can be switched to by calling C<schedule> directory or
+indirectly. The value C<0> means that the only runnable coroutine is the
+currently running one, so C<cede> would have no effect, and C<schedule>
+would cause a deadlock unless there is an idle handler that wakes up some
+coroutines.
 
 =item my $guard = Coro::guard { ... }
 
@@ -551,22 +591,34 @@ sub Coro::guard::DESTROY {
 =item unblock_sub { ... }
 
 This utility function takes a BLOCK or code reference and "unblocks" it,
-returning the new coderef. This means that the new coderef will return
-immediately without blocking, returning nothing, while the original code
-ref will be called (with parameters) from within its own coroutine.
+returning a new coderef. Unblocking means that calling the new coderef
+will return immediately without blocking, returning nothing, while the
+original code ref will be called (with parameters) from within another
+coroutine.
 
 The reason this function exists is that many event libraries (such as the
 venerable L<Event|Event> module) are not coroutine-safe (a weaker form
 of thread-safety). This means you must not block within event callbacks,
-otherwise you might suffer from crashes or worse.
+otherwise you might suffer from crashes or worse. The only event library
+currently known that is safe to use without C<unblock_sub> is L<EV>.
 
 This function allows your callbacks to block by executing them in another
 coroutine where it is safe to block. One example where blocking is handy
 is when you use the L<Coro::AIO|Coro::AIO> functions to save results to
-disk.
+disk, for example.
 
 In short: simply use C<unblock_sub { ... }> instead of C<sub { ... }> when
 creating event callbacks that want to block.
+
+If your handler does not plan to block (e.g. simply sends a message to
+another coroutine, or puts some other coroutine into the ready queue),
+there is no reason to use C<unblock_sub>.
+
+Note that you also need to use C<unblock_sub> for any other callbacks that
+are indirectly executed by any C-based event loop. For example, when you
+use a module that uses L<AnyEvent> (and you use L<Coro::AnyEvent>) and it
+provides callbacks that are the result of some event callback, then you
+must not block either, or use C<unblock_sub>.
 
 =cut
 
@@ -608,17 +660,15 @@ sub unblock_sub(&) {
 
 =head1 BUGS/LIMITATIONS
 
- - you must make very sure that no coro is still active on global
-   destruction. very bad things might happen otherwise (usually segfaults).
-
- - this module is not thread-safe. You should only ever use this module
-   from the same thread (this requirement might be loosened in the future
-   to allow per-thread schedulers, but Coro::State does not yet allow
-   this).
+This module is not perl-pseudo-thread-safe. You should only ever use this
+module from the same thread (this requirement might be removed in the
+future to allow per-thread schedulers, but Coro::State does not yet allow
+this). I recommend disabling thread support and using processes, as this
+is much faster and uses less memory.
 
 =head1 SEE ALSO
 
-Lower level Configuration, Coroutine Environment: L<Coro::State>.
+Event-Loop integration: L<Coro::AnyEvent>, L<Coro::EV>, L<Coro::Event>.
 
 Debugging: L<Coro::Debug>.
 
@@ -626,11 +676,13 @@ Support/Utility: L<Coro::Specific>, L<Coro::Util>.
 
 Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>, L<Coro::SemaphoreSet>, L<Coro::RWLock>.
 
-Event/IO: L<Coro::Timer>, L<Coro::Event>, L<Coro::Handle>, L<Coro::Socket>.
+IO/Timers: L<Coro::Timer>, L<Coro::Handle>, L<Coro::Socket>, L<Coro::AIO>.
 
-Compatibility: L<Coro::LWP>, L<Coro::Storable>, L<Coro::Select>.
+Compatibility: L<Coro::LWP>, L<Coro::BDB>, L<Coro::Storable>, L<Coro::Select>.
 
-Embedding: L<Coro::MakeMaker>.
+XS API: L<Coro::MakeMaker>.
+
+Low level Configuration, Coroutine Environment: L<Coro::State>.
 
 =head1 AUTHOR
 

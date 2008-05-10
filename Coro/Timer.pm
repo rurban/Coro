@@ -12,11 +12,7 @@ Coro::Timer - simple timer package, independent of used event loops
 =head1 DESCRIPTION
 
 This package implements a simple timer callback system which works
-independent of the event loop mechanism used. If no event mechanism is
-used, it is emulated. The C<Coro::Event> module overwrites functions with
-versions better suited.
-
-This module is not subclassable.
+independent of the event loop mechanism used.
 
 =over 4
 
@@ -29,10 +25,12 @@ no warnings;
 use Carp ();
 use Exporter;
 
-use Coro ();
 use AnyEvent ();
 
-$VERSION = "2.0";
+use Coro ();
+use Coro::AnyEvent ();
+
+$VERSION = 4.6;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
@@ -93,10 +91,6 @@ sub sleep {
 
    do { &Coro::schedule } while $current;
 }
-
-$Coro::idle = sub {
-   AnyEvent->one_event;
-};
 
 1;
 

@@ -8,6 +8,9 @@ Coro::Handle - non-blocking io with a blocking interface.
 
 =head1 DESCRIPTION
 
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
 This module implements IO-handles in a coroutine-compatible way, that is,
 other coroutines can run while reads or writes block on the handle.
 
@@ -40,7 +43,7 @@ use Carp ();
 use Errno ();
 use base 'Exporter';
 
-our $VERSION = '3.0';
+our $VERSION = 4.6;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]

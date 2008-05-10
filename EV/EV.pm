@@ -47,7 +47,6 @@ use Carp;
 no warnings;
 
 use Coro;
-use Coro::Timer;
 
 use EV ();
 use XSLoader;

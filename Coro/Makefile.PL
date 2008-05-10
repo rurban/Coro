@@ -90,11 +90,12 @@ s  If the ucontext functions are not working or you don't want
 a  Handcoded assembly. This is the fastest and most compatible method
    with the least side effects, if it works, that is. It has been tested
    on GNU/Linux x86 and x86_64 systems and should work on all x86/x86_64
-   systems using the SVR ELF ABI. This is the recommended method on
-   supported platforms. Note that you usually have to compile this module
-   with optimisation enabled for this method to work, and also more
-   esoteric switches such as -fomit-leaf-frame-pointer might be required.
-   When i doubt, use another method, such as (s)etjmp/longjmp.
+   systems using the SVR ELF ABI (it is also reported to be working on
+   Strawberry Perl for Windows using MinGW). This is the recommended
+   method on supported platforms. Note that you usually have to compile
+   this module with optimisation enabled for this method to work, and
+   also more esoteric switches such as -fomit-leaf-frame-pointer might be
+   required. When i doubt, use another method, such as (s)etjmp/longjmp.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
@@ -106,9 +107,10 @@ i  IRIX. For some reason, SGI really does not like to follow the single
    unix specification (does that surprise you?), so this workaround might
    be needed (it's fast), although [s] and [u] should also work now.
 
-w  Microsoft Windows. Try this on Microsoft Windows, although, as there is
-   no standard on how to do this under windows, this might work only on
-   cygwin or specific versions of msvc. Your problem, your fix, our patch.
+w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
+   the MSVC compilers (e.g. ActiveState Perl, but see "a" for Strawberry
+   Perl), although, as there is no standard on how to do this under
+   windows, different enviroments might work differently. Doh.
 
 p  Use pthread API. Try to avoid this option, it was only created to make
    a point about the programming language shootout and might leak threads.

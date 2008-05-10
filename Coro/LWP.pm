@@ -8,6 +8,9 @@ Coro::LWP - make LWP non-blocking - as much as possible
 
 =head1 DESCRIPTION
 
+This module is an L<AnyEvent> user, you need to make sure that you use and
+run a supported event loop.
+
 This module tries to make L<LWP|LWP> non-blocking with respect to other
 coroutines as much as possible, and with whatever means it takes.
 
@@ -71,7 +74,7 @@ use Net::HTTP;
 use Net::FTP;
 use Net::NNTP;
 
-our $VERSION = '0.9';
+our $VERSION = 4.6;
 
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 
