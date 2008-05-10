@@ -128,7 +128,6 @@ sub _activity {
 }
 
 sub _detect {
-Carp::cluck;
    unshift @AnyEvent::ISA, "Coro::AnyEvent::Condvar";
 
    my $model = AnyEvent::detect;
@@ -142,7 +141,7 @@ Carp::cluck;
    } else {
       Coro::_set_readyhook \&_activity;
       $Coro::idle = sub {
-         local $ACTIVITY = 1; # hack to keep it from being set
+         local $ACTIVITY = 1; # hack to keep it from being set by the ready call
          $IDLE->ready;
       };
    }

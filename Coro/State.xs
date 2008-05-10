@@ -2085,7 +2085,6 @@ _schedule ()
 	CODE:
 {
   	static int incede;
-        fprintf (stderr, "_schedule\n");//D
 
         api_cede_notself ();
 
@@ -2098,7 +2097,6 @@ _schedule ()
           {
             PUSHMARK (SP);
             PUTBACK;
-            fprintf (stderr, "call act %d >= %d\n", coro_nready, incede);//D
             call_pv ("Coro::AnyEvent::_activity", G_DISCARD | G_EVAL);
             SPAGAIN;
           }
