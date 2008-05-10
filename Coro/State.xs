@@ -1903,8 +1903,7 @@ _set_readyhook (SV *hook)
 	PROTOTYPE: $
         CODE:
         LOCK;
-        if (coro_readyhook)
-          SvREFCNT_dec (coro_readyhook);
+        SvREFCNT_dec (coro_readyhook);
         coro_readyhook = SvOK (hook) ? newSVsv (hook) : 0;
         UNLOCK;
 
