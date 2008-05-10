@@ -83,7 +83,7 @@ WriteMakefile(
     DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
        Scalar::Util	=> 0.00,
-       AnyEvent         => 3.3,
+       AnyEvent         => 3.4,
        Storable		=> 2.15,
        Time::HiRes      => 0,
 
@@ -94,7 +94,7 @@ WriteMakefile(
        EV               => 3.0,
 
        # for Coro::AIO
-       IO::AIO          => 2.3,
+       #IO::AIO          => 2.3,
     },
     EXTRA_META => q{
 configure_requires:

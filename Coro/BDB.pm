@@ -14,17 +14,16 @@ Coro::BDB - truly asynchronous bdb access
 This module is an L<AnyEvent> user, you need to make sure that you use and
 run a supported event loop.
 
-This module implements a thin wrapper around the L<BDB|BDB> module.
+This module implements a thin wrapper around the L<BDB> module.
 
 Each BDB request that could block and doesn't get passed a callback will
 normally block all coroutines. after loading this module, this will no
 longer be the case.
 
-It will also register an AnyEvent handler (this will be done when the
-module gets loaded and thus detects the event model at the same time, so
-you need to laod your event module before Coro::BDB).
+It will also register an AnyEvent handler as soon as AnyEvent chooses an
+event loop.
 
-This module does not export anything (unlike Coro::AIO), as BDB already
+This module does not export anything (unlike L<Coro::AIO>), as BDB already
 supports leaving out the callback.
 
 The AnyEvent watcher can be disabled by executing C<undef
@@ -41,7 +40,7 @@ no warnings;
 use strict;
 
 use Coro ();
-use AnyEvent;
+use AnyEvent ();
 use BDB ();
 
 use base Exporter::;
@@ -49,12 +48,14 @@ use base Exporter::;
 our $VERSION = 4.6;
 our $WATCHER;
 
-if (AnyEvent::detect =~ /^AnyEvent::Impl::(?:Coro)?EV$/) {
-   $WATCHER = EV::io (BDB::poll_fileno, &EV::READ, \&BDB::poll_cb);
-} else {
-   our $FH; open $FH, "<&=" . BDB::poll_fileno;
-   $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&BDB::poll_cb);
-}
+$WATCHER = AnyEvent::post_detect {
+   if ($AnyEvent::MODEL eq "AnyEvent::Impl::EV") {
+      $WATCHER = EV::io (BDB::poll_fileno, &EV::READ, \&BDB::poll_cb);
+   } else {
+      our $FH; open $FH, "<&=" . BDB::poll_fileno;
+      $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&BDB::poll_cb);
+   }
+};
 
 BDB::set_sync_prepare {
    my $status;

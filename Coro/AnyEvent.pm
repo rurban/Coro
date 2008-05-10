@@ -129,17 +129,19 @@ sub _activity {
    $ACTIVITY ||= AnyEvent->timer (after => 0, cb => \&_schedule);
 }
 
-sub _detect {
+Coro::_set_readyhook \&AnyEvent::detect;
+
+AnyEvent::post_detect {
    unshift @AnyEvent::ISA, "Coro::AnyEvent::Condvar";
 
-   my $model = AnyEvent::detect;
+   Coro::_set_readyhook undef;
+
+   my $model = $AnyEvent::MODEL;
 
    if ($model eq "AnyEvent::Impl::EV" || $model eq "AnyEvent::Impl::CoroEV") {
       require Coro::EV;
-      Coro::_set_readyhook undef;
    } elsif ($model eq "AnyEvent::Impl::Event" || $model eq "AnyEvent::Impl::CoroEvent") {
       require Coro::Event;
-      Coro::_set_readyhook undef;
    } else {
       Coro::_set_readyhook \&_activity;
       $Coro::idle = sub {
@@ -147,14 +149,7 @@ sub _detect {
          $IDLE->ready;
       };
    }
-}
-
-if ($AnyEvent::MODEL) {
-   _detect;
-} else {
-   push @AnyEvent::detect, \&_detect;
-   Coro::_set_readyhook \&AnyEvent::detect;
-}
+};
 
 #############################################################################
 # override condvars

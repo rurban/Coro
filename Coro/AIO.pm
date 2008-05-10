@@ -35,8 +35,12 @@ as this causes a deadlock. Start a coro inside the callback instead.
 
 You also can, but do not need to, call C<IO::AIO::poll_cb>, as this
 module automatically installs an event watcher for the C<IO::AIO> file
-descriptor. It uses the L<AnyEvent|AnyEvent> module for this, so please
-refer to its documentation on how it selects an appropriate Event module.
+descriptor. It uses the L<AnyEvent> module for this, so please refer to
+its documentation on how it selects an appropriate Event module.
+
+The AnyEvent watcher can be disabled by executing C<undef
+$Coro::AIO::WATCHER>. Please notify the author of when and why you think
+this was necessary.
 
 All other functions exported by default by IO::AIO (e.g. C<aioreq_pri>)
 will be exported by default by Coro::AIO, too.
@@ -50,11 +54,8 @@ times.
 
 For your convienience, here are the changed function signatures for most
 of the requests, for documentation of these functions please have a look
-at L<IO::AIO|the IO::AIO manual>.
-
-The AnyEvent watcher can be disabled by executing C<undef
-$Coro::AIO::WATCHER>. Please notify the author of when and why you think
-this was necessary.
+at L<IO::AIO|the IO::AIO manual>. Note that requests added by newer
+versions of L<IO::AIO> will be automatically wrapped as well.
 
 =over 4
 
@@ -65,19 +66,21 @@ package Coro::AIO;
 use strict qw(subs vars);
 
 use Coro ();
-use AnyEvent;
+use AnyEvent ();
 use IO::AIO ();
 
 use base Exporter::;
 
 our $WATCHER;
 
-if (AnyEvent::detect =~ /^AnyEvent::Impl::(?:Coro)?EV$/) {
-   $WATCHER = EV::io (IO::AIO::poll_fileno, &EV::READ, \&IO::AIO::poll_cb);
-} else {
-   our $FH; open $FH, "<&=" . IO::AIO::poll_fileno;
-   $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&IO::AIO::poll_cb);
-}
+$WATCHER = AnyEvent::post_detect {
+   if ($AnyEvent::MODEL eq "AnyEvent::Impl::EV") {
+      $WATCHER = EV::io (IO::AIO::poll_fileno, &EV::READ, \&IO::AIO::poll_cb);
+   } else {
+      our $FH; open $FH, "<&=" . IO::AIO::poll_fileno;
+      $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&IO::AIO::poll_cb);
+   }
+};
 
 our @EXPORT    = @IO::AIO::EXPORT;
 our @EXPORT_OK = @IO::AIO::EXPORT_OK;

@@ -12,6 +12,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
 	- implement cancel, ready and kill commands in Coro::Debug.
         - document find_coro in Coro::Debug.
         - incompatible change: rename has_stack to has_cctx.
+        - Coro::AIO and Coro::BDB no longer force event model detection.
 
 4.6  Sat Apr 26 10:05:14 CEST 2008
 	- INCOMPATIBLE CHANGE: sub/code attributes are no longer supported

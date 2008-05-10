@@ -330,9 +330,10 @@ sub command($) {
       }
 
    } elsif ($cmd =~ /^kill\s+(\d+)(?:\s+(.*))?$/) {
-      my $reason = defined $2 : $2 : "killed";
+      my $reason = defined $2 ? $2 : "killed";
+
       if (my $coro = find_coro $1) {
-         $coro->throw ($2);
+         $coro->throw ($reason);
       }
 
    } elsif ($cmd =~ /^help$/) {
