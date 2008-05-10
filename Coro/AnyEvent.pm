@@ -112,13 +112,7 @@ our $VERSION = '2.2';
 #############################################################################
 # idle handler
 
-our $IDLE = new Coro sub {
-   while () {
-      AnyEvent->one_event;
-      &Coro::schedule;
-   }
-};
-$IDLE->{desc} = "[AnyEvent idle process]";
+our $IDLE;
 
 #############################################################################
 # 0-timeout idle emulation watcher
@@ -144,6 +138,15 @@ AnyEvent::post_detect {
       require Coro::Event;
    } else {
       Coro::_set_readyhook \&_activity;
+
+      $IDLE = new Coro sub {
+         while () {
+            AnyEvent->one_event;
+            &Coro::schedule;
+         }
+      };
+      $IDLE->{desc} = "[AnyEvent idle process]";
+
       $Coro::idle = sub {
          local $ACTIVITY = 1; # hack to keep it from being set by the ready call
          $IDLE->ready;
