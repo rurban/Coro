@@ -4,8 +4,8 @@ Coro::BDB - truly asynchronous bdb access
 
 =head1 SYNOPSIS
 
-   use BDB;
    use Coro::BDB;
+   use BDB;
 
    # can now use any of the bdb requests
 
@@ -39,22 +39,13 @@ no warnings;
 use strict;
 
 use Coro ();
-use AnyEvent ();
+use AnyEvent::BDB ();
 use BDB ();
 
 use base Exporter::;
 
 our $VERSION = 4.6;
 our $WATCHER;
-
-$WATCHER = AnyEvent::post_detect {
-   if ($AnyEvent::MODEL eq "AnyEvent::Impl::EV") {
-      $WATCHER = EV::io (BDB::poll_fileno, &EV::READ, \&BDB::poll_cb);
-   } else {
-      our $FH; open $FH, "<&=" . BDB::poll_fileno;
-      $WATCHER = AnyEvent->io (fh => $FH, poll => 'r', cb => \&BDB::poll_cb);
-   }
-};
 
 BDB::set_sync_prepare {
    my $status;

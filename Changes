@@ -5,14 +5,14 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-      TODO: AnyEvent provide detetc hook
-      TODO: Coro::AnyEvent
+4.7  Sun May 11 00:32:19 CEST 2008
 	- completely reworked the Coro manpage.
       	- added Coro::AnyEvent, generic event loop integration.
 	- implement cancel, ready and kill commands in Coro::Debug.
         - document find_coro in Coro::Debug.
         - incompatible change: rename has_stack to has_cctx.
-        - Coro::AIO and Coro::BDB no longer force event model detection.
+        - Coro::AIO and Coro::BDB no longer force event model detection,
+          use AnyEvent::AIO and AnyEvent::BDB.
 
 4.6  Sat Apr 26 10:05:14 CEST 2008
 	- INCOMPATIBLE CHANGE: sub/code attributes are no longer supported

@@ -126,15 +126,15 @@ sub _activity {
 Coro::_set_readyhook \&AnyEvent::detect;
 
 AnyEvent::post_detect {
-   unshift @AnyEvent::ISA, "Coro::AnyEvent::Condvar";
+   unshift @AnyEvent::CondVar::ISA, "Coro::AnyEvent::CondVar";
 
    Coro::_set_readyhook undef;
 
    my $model = $AnyEvent::MODEL;
 
-   if ($model eq "AnyEvent::Impl::EV" || $model eq "AnyEvent::Impl::CoroEV") {
+   if ($model eq "AnyEvent::Impl::EV") {
       require Coro::EV;
-   } elsif ($model eq "AnyEvent::Impl::Event" || $model eq "AnyEvent::Impl::CoroEvent") {
+   } elsif ($model eq "AnyEvent::Impl::Event") {
       require Coro::Event;
    } else {
       Coro::_set_readyhook \&_activity;
@@ -157,22 +157,15 @@ AnyEvent::post_detect {
 #############################################################################
 # override condvars
 
-package Coro::AnyEvent::Condvar;
+package Coro::AnyEvent::CondVar;
 
-use Coro::Signal ();
-
-sub condvar {
-   bless [], __PACKAGE__
+sub _send {
+   (delete $_[0]{_ae_coro})->ready if $_[0]{_ae_coro};
 }
 
-sub broadcast {
-   $_[0][0] = 1;
-   $_[0][1]->ready if $_[0][1];
-}
-
-sub wait {
-   while (!$_[0][0]) {
-      local $_[0][1] = $Coro::current;
+sub _wait {
+   while (!$_[0]{_ae_sent}) {
+      local $_[0]{_ae_coro} = $Coro::current;
       Coro::schedule;
    }
 }
