@@ -99,16 +99,20 @@ package Coro::Debug;
 
 use strict;
 
-use Carp ();
-use IO::Socket::UNIX;
-use AnyEvent;
-use Time::HiRes;
-use Scalar::Util ();
 use overload ();
+
+use Carp ();
+use Time::HiRes ();
+use Scalar::Util ();
+
+use IO::Socket::UNIX ();
+
+use AnyEvent ();
 
 use Coro ();
 use Coro::Handle ();
 use Coro::State ();
+use Coro::AnyEvent ();
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
