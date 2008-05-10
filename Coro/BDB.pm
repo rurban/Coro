@@ -14,21 +14,20 @@ Coro::BDB - truly asynchronous bdb access
 This module is an L<AnyEvent> user, you need to make sure that you use and
 run a supported event loop.
 
-This module implements a thin wrapper around the L<BDB> module.
+This module implements a thin wrapper around the L<BDB> module: Each BDB
+request that could block and doesn't get passed a callback will normally
+block all coroutines. after loading this module, this will no longer be
+the case (it provides a suitable sync prepare callback).
 
-Each BDB request that could block and doesn't get passed a callback will
-normally block all coroutines. after loading this module, this will no
-longer be the case.
-
-It will also register an AnyEvent handler as soon as AnyEvent chooses an
+It will also register an AnyEvent watcher as soon as AnyEvent chooses an
 event loop.
-
-This module does not export anything (unlike L<Coro::AIO>), as BDB already
-supports leaving out the callback.
 
 The AnyEvent watcher can be disabled by executing C<undef
 $Coro::BDB::WATCHER>. Please notify the author of when and why you think
 this was necessary.
+
+This module does not export anything (unlike L<Coro::AIO>), as BDB already
+supports leaving out the callback.
 
 =over 4
 
