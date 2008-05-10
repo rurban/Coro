@@ -107,6 +107,9 @@ use AnyEvent ();
 
 our $VERSION = '2.2';
 
+#############################################################################
+# idle handler
+
 our $IDLE = new Coro sub {
    while () {
       AnyEvent->one_event;
@@ -115,6 +118,9 @@ our $IDLE = new Coro sub {
 };
 $IDLE->{desc} = "[AnyEvent idle process]";
 
+#############################################################################
+# 0-timeout idle emulation watcher
+
 our $ACTIVITY;
 
 sub _activity {
@@ -122,6 +128,9 @@ sub _activity {
 }
 
 sub _detect {
+Carp::cluck;
+   unshift @AnyEvent::ISA, "Coro::AnyEvent::Condvar";
+
    my $model = AnyEvent::detect;
 
    if ($model eq "AnyEvent::Impl::EV" || $model eq "AnyEvent::Impl::CoroEV") {
@@ -139,7 +148,35 @@ sub _detect {
    }
 }
 
-Coro::_set_readyhook \&_detect;
+if ($AnyEvent::MODEL) {
+   _detect;
+} else {
+   push @AnyEvent::detect, \&_detect;
+   Coro::_set_readyhook \&AnyEvent::detect;
+}
+
+#############################################################################
+# override condvars
+
+package Coro::AnyEvent::Condvar;
+
+use Coro::Signal ();
+
+sub condvar {
+   bless [], __PACKAGE__
+}
+
+sub broadcast {
+   $_[0][0] = 1;
+   $_[0][1]->ready if $_[0][1];
+}
+
+sub wait {
+   while (!$_[0][0]) {
+      local $_[0][1] = $Coro::current;
+      Coro::schedule;
+   }
+}
 
 1;
 
