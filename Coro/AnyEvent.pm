@@ -95,6 +95,8 @@ This also means that you should load the module as early as possible,
 as only condvars created after this module has been loaded will work
 correctly.
 
+=back
+
 =cut
 
 package Coro::AnyEvent;

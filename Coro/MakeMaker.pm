@@ -75,18 +75,10 @@ problem.  Just be aware, and set your expectations accordingly.
 
 =head2 API
 
- /* perl-related */
- #define TRANSFER_SAVE_DEFAV      /* save @_ */
- #define TRANSFER_SAVE_DEFSV      /* save $_ */
- #define TRANSFER_SAVE_ERRSV      /* save $@ */
-
- #define TRANSFER_SAVE_ALL        ( TRANSFER_SAVE_DEFAV \
-                                  | TRANSFER_SAVE_DEFSV \
-                                  | TRANSFER_SAVE_ERRSV)
-
- #define CORO_TRANSFER(prev,next,flags) /* transfer from prev to next */
+ #define CORO_TRANSFER(prev,next) /* transfer from prev to next */
  #define CORO_SCHEDULE            /* like Coro::schedule */
  #define CORO_CEDE                /* like Coro::cede */
+ #define CORO_CEDE_NOTSELF        /* like Coro::cede_notself */
  #define CORO_READY(coro)         /* like $coro->ready */
  #define CORO_IS_READY(coro)      /* like $coro->is_ready */
  #define CORO_NREADY              /* # of procs in ready queue */
