@@ -72,18 +72,16 @@ sub _port($$) {
 
 sub _sa($$$) {
    my ($host, $port, $proto) = @_;
+
    $port or $host =~ s/:([^:]+)$// and $port = $1;
+
    my $_proto = _proto($proto);
    my $_port = _port($port, $proto);
 
-   # optimize this a bit for a common case
-   if (Coro::Util::dotted_quad $host) {
-      return pack_sockaddr_in ($_port, inet_aton $host);
-   } else {
-      my (undef, undef, undef, undef, @host) = Coro::Util::gethostbyname $host
-         or croak "unknown host: $host";
-      map pack_sockaddr_in ($_port,$_), @host;
-   }
+   my $_host = Coro::Util::inet_aton $host
+      or croak "$host: unable to resolve";
+
+   pack_sockaddr_in $_port, $_host
 }
 
 =item $fh = new Coro::Socket param => value, ...

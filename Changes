@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- take advantage of async name resolution of AnyEvent::Util.
+        - work around brutal inet_aton override in Coro::LWP.
+
 4.7  Sun May 11 00:32:19 CEST 2008
 	- completely reworked the Coro manpage.
       	- added Coro::AnyEvent, generic event loop integration.
