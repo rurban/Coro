@@ -89,13 +89,11 @@ sub _sa($$$) {
 =item $fh = new Coro::Socket param => value, ...
 
 Create a new non-blocking tcp handle and connect to the given host
-and port. The parameter names and values are mostly the same as in
+and port. The parameter names and values are mostly the same as for
 IO::Socket::INET (as ugly as I think they are).
 
-If the host is unreachable or otherwise cannot be connected to this method
-returns undef. On all other errors ot croak's.
-
-Multihomed is always enabled.
+The parameters officially supported currently are: C<ReuseAddr>,
+C<LocalPort>, C<LocalHost>, C<PeerPort>, C<PeerHost>, C<Listen>, C<Timeout>.
 
    $fh = new Coro::Socket PeerHost => "localhost", PeerPort => 'finger';
 
