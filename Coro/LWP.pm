@@ -14,7 +14,8 @@ run a supported event loop.
 This module tries to make L<LWP|LWP> non-blocking with respect to other
 coroutines as much as possible, and with whatever means it takes.
 
-LWP really tries very hard to be blocking, so this module had to be very
+LWP really tries very hard to be blocking (and relies on a lot of
+undocumented functionality in IO::Socket), so this module had to be very
 invasive and must be loaded very early to take the proper effect.
 
 Here is what it currently does (future versions of LWP might require
