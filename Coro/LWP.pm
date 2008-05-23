@@ -66,6 +66,10 @@ package Coro::LWP;
 
 use strict;
 
+# import these so they cna grab Socket::inet_aton
+use AnyEvent::Util ();
+use AnyEvent::DNS ();
+
 use Coro::Select ();
 use Coro::Util ();
 use Coro::Socket ();

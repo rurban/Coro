@@ -27,16 +27,12 @@ no warnings "uninitialized";
 use Socket ();
 
 use AnyEvent ();
-use AnyEvent::Util ();
+use AnyEvent::Socket ();
 
 use Coro::State;
 use Coro::Handle;
 use Coro::Storable ();
 use Coro::Semaphore;
-
-BEGIN {
-   *socket_inet_aton = \&Socket::inet_aton; # take a copy, in case Coro::LWP overrides it
-}
 
 use base 'Exporter';
 
@@ -83,24 +79,24 @@ sub _do_asy(&;@) {
 
 =item $ipn = Coro::Util::inet_aton $hostname || $ip
 
-Works almost exactly like its AnyEvent::Util counterpart, except that it does not
+Works almost exactly like its AnyEvent::Socket counterpart, except that it does not
 block.
 
 =cut
 
 sub inet_aton {
    my $current = $Coro::current;
-   my $res;
+   my @res;
 
-   AnyEvent::Util::inet_aton $_[0], sub {
-      $res = shift;
+   AnyEvent::Socket::inet_aton $_[0], sub {
+      @res = shift;
       $current->ready;
       undef $current;
    };
 
    Coro::schedule while $current;
 
-   $res
+   wantarray ? @res : $res[0]
 }
 
 =item gethostbyname, gethostbyaddr
@@ -112,17 +108,9 @@ C<Anyevent::Util::inet_aton> internally.
 
 sub gethostbyname($) {
    my $current = $Coro::current;
-   my @res;
+   my @res = inet_aton $_[0];
 
-   AnyEvent::Util::inet_aton $_[0], sub {
-      @res = @_;
-      $current->ready;
-      undef $current;
-   };
-
-   Coro::schedule while $current;
-
-   ($_[0], $_[0], &Socket::AF_INET, 4, map +(socket_inet_aton $_), @res)
+   ($_[0], $_[0], &Socket::AF_INET, 4, map +(format_ip $_), grep length == 4, @res)
 }
 
 sub gethostbyaddr($$) {
