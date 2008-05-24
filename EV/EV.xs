@@ -52,8 +52,16 @@ prepare_cb (EV_P_ ev_prepare *w, int revents)
    */
   if (CORO_NREADY >= incede && !ev_is_active (&idler))
     ev_idle_start (EV_A, &idler);
+  else if (ev_is_active (&idler))
+    ev_idle_stop (EV_A, &idler);
 
   --incede;
+}
+
+static void
+readyhook (void)
+{
+  ev_idle_start (EV_DEFAULT_UC, &idler);
 }
 
 /*****************************************************************************/
@@ -78,8 +86,8 @@ handle_free (pTHX_ SV *sv, MAGIC *mg)
   coro_handle *data = (coro_handle *)mg->mg_ptr;
   mg->mg_ptr = 0;
 
-  ev_io_stop    (EV_DEFAULT, &data->r.io); ev_io_stop    (EV_DEFAULT, &data->w.io);
-  ev_timer_stop (EV_DEFAULT, &data->r.tw); ev_timer_stop (EV_DEFAULT, &data->w.tw);
+  ev_io_stop    (EV_DEFAULT_UC, &data->r.io); ev_io_stop    (EV_DEFAULT_UC, &data->w.io);
+  ev_timer_stop (EV_DEFAULT_UC, &data->r.tw); ev_timer_stop (EV_DEFAULT_UC, &data->w.tw);
   SvREFCNT_dec (data->r.done);             SvREFCNT_dec (data->w.done);
   SvREFCNT_dec (data->r.current);          SvREFCNT_dec (data->w.current);
 
@@ -91,8 +99,8 @@ static MGVTBL handle_vtbl = { 0,  0,  0,  0, handle_free };
 static void
 handle_cb (coro_dir *dir, int done)
 {
-  ev_io_stop    (EV_DEFAULT, &dir->io);
-  ev_timer_stop (EV_DEFAULT, &dir->tw);
+  ev_io_stop    (EV_DEFAULT_UC, &dir->io);
+  ev_timer_stop (EV_DEFAULT_UC, &dir->tw);
 
   sv_setiv (dir->done, done);
   SvREFCNT_dec (dir->done);
@@ -132,6 +140,8 @@ BOOT:
 
         ev_idle_init (&idler, idle_cb);
         ev_set_priority (&idler, EV_MINPRI);
+
+        CORO_READYHOOK = readyhook;
 }
 
 void

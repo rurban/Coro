@@ -1385,7 +1385,8 @@ api_ready (SV *coro_sv)
 {
   dTHX;
   struct coro *coro;
-  SV *hook;
+  SV *sv_hook;
+  void (*xs_hook)(void);
 
   if (SvROK (coro_sv))
     coro_sv = SvRV (coro_sv);
@@ -1399,14 +1400,15 @@ api_ready (SV *coro_sv)
 
   LOCK;
 
-  hook = coro_nready ? 0 : coro_readyhook;
+  sv_hook = coro_nready ? 0 : coro_readyhook;
+  xs_hook = coro_nready ? 0 : coroapi.readyhook;
 
   coro_enq (aTHX_ SvREFCNT_inc (coro_sv));
   ++coro_nready;
 
   UNLOCK;
   
-  if (hook)
+  if (sv_hook)
     {
       dSP;
 
@@ -1415,12 +1417,15 @@ api_ready (SV *coro_sv)
 
       PUSHMARK (SP);
       PUTBACK;
-      call_sv (hook, G_DISCARD);
+      call_sv (sv_hook, G_DISCARD);
       SPAGAIN;
 
       FREETMPS;
       LEAVE;
     }
+
+  if (xs_hook)
+    xs_hook ();
 
   return 1;
 }
@@ -1616,9 +1621,9 @@ BOOT:
         while (main_top_env->je_prev)
           main_top_env = main_top_env->je_prev;
 
-        coroapi.ver      = CORO_API_VERSION;
-        coroapi.rev      = CORO_API_REVISION;
-        coroapi.transfer = api_transfer;
+        coroapi.ver       = CORO_API_VERSION;
+        coroapi.rev       = CORO_API_REVISION;
+        coroapi.transfer  = api_transfer;
 
         assert (("PRIO_NORMAL must be 0", !PRIO_NORMAL));
 }
@@ -2079,7 +2084,7 @@ BOOT:
         sv_activity = coro_get_sv (aTHX_ "Coro::AnyEvent::ACTIVITY", TRUE);
 
 SV *
-_schedule ()
+_schedule (...)
 	PROTOTYPE: @
 	CODE:
 {

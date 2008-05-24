@@ -11,7 +11,7 @@ Coro::Util - various utility functions.
 This module implements various utility functions, mostly replacing perl
 functions by non-blocking counterparts.
 
-This module is an AnyEvent user. Refer to the L<AnyEvent|AnyEvent>
+This module is an AnyEvent user. Refer to the L<AnyEvent>
 documentation to see how to integrate it into your own programs.
 
 =over 4
@@ -26,7 +26,8 @@ no warnings "uninitialized";
 
 use Socket ();
 
-use AnyEvent;
+use AnyEvent ();
+use AnyEvent::Socket ();
 
 use Coro::State;
 use Coro::Handle;
@@ -76,82 +77,44 @@ sub _do_asy(&;@) {
    wantarray ? @r : $r[0];
 }
 
-sub dotted_quad($) {
-   $_[0] =~ /^(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
-            \.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
-            \.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)
-            \.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9][0-9]?)$/x
-}
+=item $ipn = Coro::Util::inet_aton $hostname || $ip
 
-my $has_ev_adns;
-
-sub has_ev_adns {
-   ($has_ev_adns ||= do {
-      my $model = AnyEvent::detect;
-      (($model eq "AnyEvent::Impl::CoroEV" or $model eq "AnyEvent::Impl::EV")
-       && eval { require EV::ADNS })
-         ? 2 : 1
-   }) - 1
-}
-
-=item gethostbyname, gethostbyaddr
-
-Work exactly like their perl counterparts, but do not block. Currently
-this is being implemented with forking, so it's not exactly low-cost.
-
-=cut
-
-sub gethostbyname($) {
-   if (&dotted_quad) {
-      return $_[0];
-   } elsif (has_ev_adns) {
-      my $current = $Coro::current;
-      my @a;
-  
-      EV::ADNS::submit ($_[0], &EV::ADNS::r_a, 0, sub {
-         (undef, undef, @a) = @_;
-         $current->ready;
-         undef $current;
-      });
-      Coro::schedule while $current;
-
-      return @a
-         ? ($_[0], $_[0], &Socket::AF_INET, 4, map +(Socket::inet_aton $_), @a)
-         : ();
-   } else {
-      return _do_asy { gethostbyname $_[0] } @_
-   }
-}
-
-sub gethostbyaddr($$) {
-   _do_asy { gethostbyaddr $_[0], $_[1] } @_
-}
-
-=item Coro::Util::inet_aton
-
-Works almost exactly like its Socket counterpart, except that it does not
-block. Is implemented with forking, so not exactly low-cost.
+Works almost exactly like its AnyEvent::Socket counterpart, except that it does not
+block.
 
 =cut
 
 sub inet_aton {
-   if (&dotted_quad) {
-      return Socket::inet_aton ($_[0]);
-   } elsif (has_ev_adns) {
-      my $current = $Coro::current;
-      my @a;
- 
-      EV::ADNS::submit ($_[0], &EV::ADNS::r_a, 0, sub {
-         (undef, undef, @a) = @_;
-         $current->ready;
-         undef $current;
-      });
-      Coro::schedule while $current;
+   my $current = $Coro::current;
+   my @res;
 
-      return @a ? Socket::inet_aton $a[0] : ();
-   } else {
-      return _do_asy { Socket::inet_aton $_[0] } @_
-   }
+   AnyEvent::Socket::inet_aton $_[0], sub {
+      @res = shift;
+      $current->ready;
+      undef $current;
+   };
+
+   Coro::schedule while $current;
+
+   wantarray ? @res : $res[0]
+}
+
+=item gethostbyname, gethostbyaddr
+
+Work similarly to their perl counterparts, but do not block. Uses
+C<Anyevent::Util::inet_aton> internally.
+
+=cut
+
+sub gethostbyname($) {
+   my $current = $Coro::current;
+   my @res = inet_aton $_[0];
+
+   ($_[0], $_[0], &Socket::AF_INET, 4, map +(format_ip $_), grep length == 4, @res)
+}
+
+sub gethostbyaddr($$) {
+   _do_asy { gethostbyaddr $_[0], $_[1] } @_
 }
 
 =item @result = Coro::Util::fork_eval { ... }, @args

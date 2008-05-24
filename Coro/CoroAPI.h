@@ -19,7 +19,7 @@ struct CoroAPI {
   I32 ver;
   I32 rev;
 #define CORO_API_VERSION 6
-#define CORO_API_REVISION 0
+#define CORO_API_REVISION 1
   void (*transfer) (SV *prev_sv, SV *next_sv); /* Coro::State */
 
   void (*schedule) (void); /* Coro */
@@ -29,6 +29,8 @@ struct CoroAPI {
   int (*is_ready) (SV *coro_sv);
   int *nready;
   SV *current;
+
+  void (*readyhook) (void);
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -42,6 +44,7 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_IS_READY(coro)      GCoroAPI->is_ready (coro)
 #define CORO_NREADY              (*GCoroAPI->nready)
 #define CORO_CURRENT             SvRV (GCoroAPI->current)
+#define CORO_READYHOOK           (GCoroAPI->readyhook)
 
 #define I_CORO_API(YourName)                                                             \
 STMT_START {                                                                             \

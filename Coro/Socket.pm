@@ -72,30 +72,26 @@ sub _port($$) {
 
 sub _sa($$$) {
    my ($host, $port, $proto) = @_;
+
    $port or $host =~ s/:([^:]+)$// and $port = $1;
+
    my $_proto = _proto($proto);
    my $_port = _port($port, $proto);
 
-   # optimize this a bit for a common case
-   if (Coro::Util::dotted_quad $host) {
-      return pack_sockaddr_in ($_port, inet_aton $host);
-   } else {
-      my (undef, undef, undef, undef, @host) = Coro::Util::gethostbyname $host
-         or croak "unknown host: $host";
-      map pack_sockaddr_in ($_port,$_), @host;
-   }
+   my $_host = Coro::Util::inet_aton $host
+      or croak "$host: unable to resolve";
+
+   pack_sockaddr_in $_port, $_host
 }
 
 =item $fh = new Coro::Socket param => value, ...
 
 Create a new non-blocking tcp handle and connect to the given host
-and port. The parameter names and values are mostly the same as in
+and port. The parameter names and values are mostly the same as for
 IO::Socket::INET (as ugly as I think they are).
 
-If the host is unreachable or otherwise cannot be connected to this method
-returns undef. On all other errors ot croak's.
-
-Multihomed is always enabled.
+The parameters officially supported currently are: C<ReuseAddr>,
+C<LocalPort>, C<LocalHost>, C<PeerPort>, C<PeerHost>, C<Listen>, C<Timeout>.
 
    $fh = new Coro::Socket PeerHost => "localhost", PeerPort => 'finger';
 

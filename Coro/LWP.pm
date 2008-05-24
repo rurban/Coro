@@ -14,7 +14,8 @@ run a supported event loop.
 This module tries to make L<LWP|LWP> non-blocking with respect to other
 coroutines as much as possible, and with whatever means it takes.
 
-LWP really tries very hard to be blocking, so this module had to be very
+LWP really tries very hard to be blocking (and relies on a lot of
+undocumented functionality in IO::Socket), so this module had to be very
 invasive and must be loaded very early to take the proper effect.
 
 Here is what it currently does (future versions of LWP might require
@@ -35,7 +36,9 @@ compatible to perls builtin select, though.
 This is necessary because LWP might (and does) try to resolve hostnames
 this way.
 
-Impact: likely little, the two functions should be pretty equivalent.
+Impact: some code might not expect coroutine semantics, for example, when
+you fork you might prefer the blocking variant because other coroutines
+shouldn't actually run.
 
 =item It replaces the base class of Net::HTTP, Net::FTP, Net::NNTP.
 
@@ -63,16 +66,20 @@ package Coro::LWP;
 
 use strict;
 
-use Coro::Select;
-use Coro::Util;
-use Coro::Socket;
+# import these so they cna grab Socket::inet_aton
+use AnyEvent::Util ();
+use AnyEvent::DNS ();
 
-use Socket;
-use IO::Socket::INET;
+use Coro::Select ();
+use Coro::Util ();
+use Coro::Socket ();
 
-use Net::HTTP;
-use Net::FTP;
-use Net::NNTP;
+use Socket ();
+use IO::Socket::INET ();
+
+use Net::HTTP ();
+use Net::FTP ();
+use Net::NNTP ();
 
 our $VERSION = 4.6;
 

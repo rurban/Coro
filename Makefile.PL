@@ -83,7 +83,7 @@ WriteMakefile(
     DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
        Scalar::Util	=> 0.00,
-       AnyEvent         => 3.4,
+       AnyEvent         => 3.6,
        AnyEvent::AIO    => 1.0,
        AnyEvent::BDB    => 1.0,
        Storable		=> 2.15,
