@@ -70,9 +70,16 @@ Acquire the Storable lock, for when you want to call Storable yourself.
 package Coro::Storable;
 
 use strict;
+no warnings;
 
 use Coro ();
 use Coro::Semaphore ();
+
+BEGIN {
+   # suppress warnings
+   local $^W = 0;
+   require Storable;
+}
 
 use Storable;
 use base "Exporter";

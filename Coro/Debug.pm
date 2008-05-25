@@ -98,6 +98,7 @@ None of the functions are being exported.
 package Coro::Debug;
 
 use strict;
+no warnings;
 
 use overload ();
 

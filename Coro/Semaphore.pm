@@ -33,7 +33,7 @@ and decrement the count when resources are removed.
 
 package Coro::Semaphore;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
 
 use Coro ();
 

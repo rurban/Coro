@@ -30,7 +30,7 @@ identifier.
 
 package Coro::SemaphoreSet;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+no warnings;
 
 use Coro ();
 
