@@ -40,8 +40,9 @@ no warnings;
 use strict;
 
 use Carp ();
-use Errno ();
-use AnyEvent::Util ();
+use Errno qw(EAGAIN EINTR);
+
+use AnyEvent::Util qw(WSAEAGAIN);
 
 use base 'Exporter';
 
@@ -167,7 +168,7 @@ sub accept {
                     ? ($_[0]->new_from_fh($fh), $peername)
                     :  $_[0]->new_from_fh($fh);
 
-      return unless $!{EAGAIN};
+      return if $! != EAGAIN && $! != EINTR && $! != WSAEAGAIN;
 
       $_[0]->readable or return;
    }
@@ -256,10 +257,11 @@ package Coro::Handle::FH;
 no warnings;
 use strict;
 
-use Errno ();
 use Carp 'croak';
+use Errno qw(EAGAIN EINTR);
 
 use AnyEvent ();
+use AnyEvent::Util qw(WSAEAGAIN);
 
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
@@ -472,7 +474,7 @@ sub WRITE {
          $ofs += $r;
          $res += $r;
          last unless $len;
-      } elsif ($! != Errno::EAGAIN) {
+      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAEAGAIN) {
          last;
       }
       last unless &writable;
@@ -509,7 +511,7 @@ sub READ {
          $ofs += $r;
          $res += $r;
          last unless $len && $r;
-      } elsif ($! != Errno::EAGAIN) {
+      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAEAGAIN) {
          last;
       }
       last if $_[0][8] || !&readable;
@@ -535,7 +537,7 @@ sub READLINE {
       my $r = sysread $_[0][0], $_[0][3], 8192, length $_[0][3];
       if (defined $r) {
          return length $_[0][3] ? delete $_[0][3] : undef unless $r;
-      } elsif ($! != Errno::EAGAIN || !&readable) {
+      } elsif (($! != EAGAIN && $! != EINTR && $! != WSAEAGAIN) || !&readable) {
          return length $_[0][3] ? delete $_[0][3] : undef;
       }
    }
