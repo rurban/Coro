@@ -77,7 +77,7 @@ use Coro::Semaphore ();
 use Storable;
 use base "Exporter";
 
-our $VERSION = 4.6;
+our $VERSION = 4.72;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;
