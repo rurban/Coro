@@ -26,7 +26,7 @@ package Coro::Specific;
 
 BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
-$VERSION = 4.6;
+$VERSION = 4.72;
 
 =item new
 

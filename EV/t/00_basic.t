@@ -16,7 +16,9 @@ async {
 
 print "ok 2\n";
 
-Coro::EV::timed_io_once \*STDOUT, EV::WRITE;
+Coro::EV::timed_io_once \*STDOUT, EV::WRITE
+   unless $^O =~ /mswin32/i; # *sigh*
+cede;
 
 print $var == 7 ? "ok 5\n" : "not ok 5\n";
 

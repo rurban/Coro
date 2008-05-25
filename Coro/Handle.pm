@@ -40,10 +40,13 @@ no warnings;
 use strict;
 
 use Carp ();
-use Errno ();
+use Errno qw(EAGAIN EINTR EINPROGRESS);
+
+use AnyEvent::Util qw(WSAWOULDBLOCK WSAEINPROGRESS);
+
 use base 'Exporter';
 
-our $VERSION = 4.6;
+our $VERSION = 4.72;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -139,7 +142,7 @@ true on EINPROGRESS). Remember that these must be method calls.
 
 =cut
 
-sub connect	{ connect     tied(${$_[0]})->[0], $_[1] or $! == Errno::EINPROGRESS }
+sub connect	{ connect     tied(${$_[0]})->[0], $_[1] or $! == EINPROGRESS or $! == WSAEINPROGRESS }
 sub bind	{ bind        tied(${$_[0]})->[0], $_[1] }
 sub listen	{ listen      tied(${$_[0]})->[0], $_[1] }
 sub getsockopt	{ getsockopt  tied(${$_[0]})->[0], $_[1], $_[2] }
@@ -165,7 +168,7 @@ sub accept {
                     ? ($_[0]->new_from_fh($fh), $peername)
                     :  $_[0]->new_from_fh($fh);
 
-      return unless $!{EAGAIN};
+      return if $! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK;
 
       $_[0]->readable or return;
    }
@@ -254,11 +257,11 @@ package Coro::Handle::FH;
 no warnings;
 use strict;
 
-use Fcntl ();
-use Errno ();
 use Carp 'croak';
+use Errno qw(EAGAIN EINTR);
 
-use AnyEvent;
+use AnyEvent ();
+use AnyEvent::Util qw(WSAWOULDBLOCK);
 
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
@@ -285,8 +288,7 @@ sub TIEHANDLE {
    $self->[7] = $arg{forward_class};
    $self->[8] = $arg{partial};
 
-   fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
-      or croak "fcntl(O_NONBLOCK): $!";
+   AnyEvent::Util::fh_nonblocking $self->[0], 1;
 
    $self
 }
@@ -472,7 +474,7 @@ sub WRITE {
          $ofs += $r;
          $res += $r;
          last unless $len;
-      } elsif ($! != Errno::EAGAIN) {
+      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK) {
          last;
       }
       last unless &writable;
@@ -509,7 +511,7 @@ sub READ {
          $ofs += $r;
          $res += $r;
          last unless $len && $r;
-      } elsif ($! != Errno::EAGAIN) {
+      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK) {
          last;
       }
       last if $_[0][8] || !&readable;
@@ -535,7 +537,7 @@ sub READLINE {
       my $r = sysread $_[0][0], $_[0][3], 8192, length $_[0][3];
       if (defined $r) {
          return length $_[0][3] ? delete $_[0][3] : undef unless $r;
-      } elsif ($! != Errno::EAGAIN || !&readable) {
+      } elsif (($! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK) || !&readable) {
          return length $_[0][3] ? delete $_[0][3] : undef;
       }
    }

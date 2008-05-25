@@ -83,25 +83,36 @@ WriteMakefile(
     DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
        Scalar::Util	=> 0.00,
-       AnyEvent         => 3.6,
-       AnyEvent::AIO    => 1.0,
-       AnyEvent::BDB    => 1.0,
+       AnyEvent         => 4.03,
        Storable		=> 2.15,
        Time::HiRes      => 0,
 
        # for Coro::Event
-       Event		=> 1.06,
+       #Event		=> 1.06,
 
        # for Coro::EV
-       EV               => 3.0,
+       #EV               => 3.0,
 
        # for Coro::AIO
        #IO::AIO          => 2.3,
+       #AnyEvent::AIO    => 1.0,
+
+       # for Coro::BDB
+       #BDB              => 1.5,
+       #AnyEvent::BDB    => 1.0,
     },
+    # neither configure_requires nor recommends can be used
+    # for optional dependencies. whoever decided that a module needs
+    # to build properly without its dependencies installed
+    # needs his brian rearranged dramatically.
     EXTRA_META => q{
-configure_requires:
-  Event: 1.06
+recommends:
+  Event: 1.08
   EV: 3.0
+  IO::AIO: 0
+  AnyEvent::AIO: 1.0
+  BDB: 0
+  AnyEvent::BDB: 1.0
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
