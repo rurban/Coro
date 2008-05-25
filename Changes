@@ -5,6 +5,13 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- avoid running some tests on windows because they would fail due to
+          perl bugs.
+        - use AnyEvent::Util::fh_nonblocking in Coro::Handle to work around
+          a common perl implementation bug on windows.
+        - use unix domain sockets in testsuite to work around
+          common perl implementation bugs on widows.
+
 4.71 Sat May 24 20:01:27 CEST 2008
       	- fix a bug in Coro::AnyEvent ("Usage: Coro::AnyEvent::_schedule()").
 	- take advantage of async name resolution of AnyEvent::Util.

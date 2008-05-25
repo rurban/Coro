@@ -41,6 +41,8 @@ use strict;
 
 use Carp ();
 use Errno ();
+use AnyEvent::Util ();
+
 use base 'Exporter';
 
 our $VERSION = 4.6;
@@ -254,11 +256,10 @@ package Coro::Handle::FH;
 no warnings;
 use strict;
 
-use Fcntl ();
 use Errno ();
 use Carp 'croak';
 
-use AnyEvent;
+use AnyEvent ();
 
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
@@ -285,8 +286,7 @@ sub TIEHANDLE {
    $self->[7] = $arg{forward_class};
    $self->[8] = $arg{partial};
 
-   fcntl $self->[0], &Fcntl::F_SETFL, &Fcntl::O_NONBLOCK
-      or croak "fcntl(O_NONBLOCK): $!";
+   AnyEvent::Util::fh_nonblocking $self->[0], 1;
 
    $self
 }

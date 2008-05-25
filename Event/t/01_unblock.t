@@ -1,10 +1,5 @@
 $| = 1;
 
-if ($^O eq "cygwin") {
-   print "1..0 # skipped: pipe() blocking on cygwin\n";
-   exit;
-}
-
 print "1..12\n";
 
 use Coro;
@@ -13,7 +8,8 @@ use Coro::Handle;
 
 print "ok 1\n";
 
-pipe my ($r, $w) or die;
+use Socket;
+socketpair my $r, my $w, AF_UNIX, SOCK_STREAM, PF_UNSPEC;
 
 print "ok 2\n";
 
