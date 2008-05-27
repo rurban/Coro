@@ -7,6 +7,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
 
 	- sprinkle "no warnings" freely over everything, also suppress
           warnings for some other modules.
+        - fix typo in WSAEWOULDBLOCK.
 
 4.72 Sun May 25 05:14:36 CEST 2008
       	- tweak META.yaml a bit, unfortunately, there is no documented way
