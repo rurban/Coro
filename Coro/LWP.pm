@@ -65,6 +65,13 @@ data globally.
 package Coro::LWP;
 
 use strict;
+no warnings;
+
+BEGIN {
+   # suppress warnings
+   local $^W = 0;
+   require Net::Config;
+}
 
 # import these so they cna grab Socket::inet_aton
 use AnyEvent::Util ();
@@ -75,13 +82,14 @@ use Coro::Util ();
 use Coro::Socket ();
 
 use Socket ();
+
 use IO::Socket::INET ();
 
 use Net::HTTP ();
 use Net::FTP ();
 use Net::NNTP ();
 
-our $VERSION = 4.72;
+our $VERSION = 4.73;
 
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 
@@ -90,6 +98,8 @@ for (@Net::HTTP::ISA, @Net::FTP::ISA, @Net::NTTP::ISA) {
 }
 
 package Coro::LWP::Socket;
+
+no warnings;
 
 use base Coro::Socket::;
 

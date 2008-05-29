@@ -70,14 +70,21 @@ Acquire the Storable lock, for when you want to call Storable yourself.
 package Coro::Storable;
 
 use strict;
+no warnings;
 
 use Coro ();
 use Coro::Semaphore ();
 
+BEGIN {
+   # suppress warnings
+   local $^W = 0;
+   require Storable;
+}
+
 use Storable;
 use base "Exporter";
 
-our $VERSION = 4.72;
+our $VERSION = 4.73;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;

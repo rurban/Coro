@@ -42,11 +42,11 @@ use strict;
 use Carp ();
 use Errno qw(EAGAIN EINTR EINPROGRESS);
 
-use AnyEvent::Util qw(WSAWOULDBLOCK WSAEINPROGRESS);
+use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 4.72;
+our $VERSION = 4.73;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -168,7 +168,7 @@ sub accept {
                     ? ($_[0]->new_from_fh($fh), $peername)
                     :  $_[0]->new_from_fh($fh);
 
-      return if $! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK;
+      return if $! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK;
 
       $_[0]->readable or return;
    }
@@ -261,7 +261,7 @@ use Carp 'croak';
 use Errno qw(EAGAIN EINTR);
 
 use AnyEvent ();
-use AnyEvent::Util qw(WSAWOULDBLOCK);
+use AnyEvent::Util qw(WSAEWOULDBLOCK);
 
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
@@ -474,7 +474,7 @@ sub WRITE {
          $ofs += $r;
          $res += $r;
          last unless $len;
-      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK) {
+      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK) {
          last;
       }
       last unless &writable;
@@ -511,7 +511,7 @@ sub READ {
          $ofs += $r;
          $res += $r;
          last unless $len && $r;
-      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK) {
+      } elsif ($! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK) {
          last;
       }
       last if $_[0][8] || !&readable;
@@ -537,7 +537,7 @@ sub READLINE {
       my $r = sysread $_[0][0], $_[0][3], 8192, length $_[0][3];
       if (defined $r) {
          return length $_[0][3] ? delete $_[0][3] : undef unless $r;
-      } elsif (($! != EAGAIN && $! != EINTR && $! != WSAWOULDBLOCK) || !&readable) {
+      } elsif (($! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK) || !&readable) {
          return length $_[0][3] ? delete $_[0][3] : undef;
       }
    }

@@ -50,6 +50,7 @@ t/10_bugs.t
 t/11_deadlock.t
 t/12_exit.t
 t/13_diewarn.t
+t/14_load.t
 
 EV/Makefile.PL
 EV/EV.pm
