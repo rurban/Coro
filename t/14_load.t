@@ -1,4 +1,4 @@
-BEGIN { $| = 1; print "1..18\n"; }
+BEGIN { $| = 1; print "1..16\n"; }
 
 my $idx;
 
@@ -14,8 +14,6 @@ for my $module (qw(
    Coro::MakeMaker
    Coro::Debug
    Coro::Util
-   Coro::LWP
-   Coro::Select
    Coro::Handle
    Coro::Socket
    Coro::Timer
