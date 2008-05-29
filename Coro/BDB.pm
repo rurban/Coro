@@ -44,7 +44,7 @@ use BDB ();
 
 use base Exporter::;
 
-our $VERSION = 4.73;
+our $VERSION = 4.74;
 our $WATCHER;
 
 BDB::set_sync_prepare {
