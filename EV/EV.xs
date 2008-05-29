@@ -50,10 +50,16 @@ prepare_cb (EV_P_ ev_prepare *w, int revents)
   /* if still ready, then we have lower-priority coroutines.
    * poll anyways, but do not block.
    */
-  if (CORO_NREADY >= incede && !ev_is_active (&idler))
-    ev_idle_start (EV_A, &idler);
-  else if (ev_is_active (&idler))
-    ev_idle_stop (EV_A, &idler);
+  if (CORO_NREADY >= incede)
+    {
+      if (!ev_is_active (&idler))
+        ev_idle_start (EV_A, &idler);
+    }
+  else
+    {
+      if (ev_is_active (&idler))
+        ev_idle_stop (EV_A, &idler);
+    }
 
   --incede;
 }
