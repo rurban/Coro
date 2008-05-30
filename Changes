@@ -5,6 +5,13 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.741 Fri May 30 23:33:09 CEST 2008
+	- tell netbsd how utterly broken their imitation of an OS is
+          and refuse to build by default if pthreads are in use.
+        - switch to "s" method on all bsd's by default, as their ucontext
+          stuff seems just too broken.
+        - fix a bug in Coro::Select.
+
 4.74 Thu May 29 20:05:31 CEST 2008
 	- do not test Coro::LWP for lack of dependencies.
         - do not test Coro::Select for lack of working perls.

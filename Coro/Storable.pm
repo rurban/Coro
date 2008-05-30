@@ -84,7 +84,7 @@ BEGIN {
 use Storable;
 use base "Exporter";
 
-our $VERSION = 4.74;
+our $VERSION = 4.741;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;
@@ -166,7 +166,7 @@ sub PUSHED {
 sub FILL {
    if ($next_cede <= time) {
       $next_cede = time + $GRANULARITY; # calling time() twice usually is a net win
-      Coro::cede;
+      Coro::cede ();
    }
 
    read $_[1], my $buf, 512

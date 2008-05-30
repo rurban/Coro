@@ -34,14 +34,12 @@ package Coro::Select;
 
 use strict;
 
-use Event;
-
 use Coro;
 use AnyEvent;
 
 use base Exporter::;
 
-our $VERSION = 4.74;
+our $VERSION = 4.741;
 our @EXPORT_OK = "select";
 
 sub import {
