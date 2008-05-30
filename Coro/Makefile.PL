@@ -9,6 +9,32 @@ $|=1;
 my $DEFINE;
 my @LIBS = [];
 
+# check for completely broken platforms (such as netbsd)
+if ($Config{usethreads} && $^O eq "netbsd") {
+   print <<EOF;
+
+***
+*** Your platform is BROKEN - netbsd pthreads are known to be completely broken.
+*** There is *no* way to implement coroutines on this platform until the bugs
+*** are fixed (this has been true for at least netbsd version 4.0).
+***
+*** This affects many modules currently, so the recommended build option
+*** for perl is to DISABLE THREAD support - it serves no practical purpose
+*** on POSIX systems anyways, except that it slows down your programs a lot
+*** and uses a lot more memory than fork (perl threads do not give you threads,
+*** they are only windows-process emulation ported to unix).
+***
+*** If you really want to try building Coro on your broken platform, enter
+*** "yes" at the prompt - report back if the bugs is fixed please. (Oh,
+*** and try out BDB or IO::AIO which suffer from other threading bugs on
+*** netbsd that never seem to get fixed).
+***
+
+EOF
+
+   print "prompt> "; <STDIN> =~ /^yes/ or exit 1;
+}
+
 print <<EOF;
 
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
@@ -47,8 +73,10 @@ if (exists $ENV{CORO_INTERFACE}) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
 
-   # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ && $Config{optimize} =~ /-O/ ? "a" : "s";
+   # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switchign mechanisms)
+
+   # therefore, default to setjmp
+   $iface = "s";
 
 } elsif ($^O =~ /solaris/) {
    $iface = "s";

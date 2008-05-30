@@ -107,7 +107,7 @@ use strict;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 4.74;
+our $VERSION = 4.741;
 
 #############################################################################
 # idle handler
@@ -123,7 +123,7 @@ sub _activity {
    $ACTIVITY ||= AnyEvent->timer (after => 0, cb => \&_schedule);
 }
 
-Coro::_set_readyhook \&AnyEvent::detect;
+Coro::_set_readyhook (\&AnyEvent::detect);
 
 AnyEvent::post_detect {
    unshift @AnyEvent::CondVar::ISA, "Coro::AnyEvent::CondVar";
