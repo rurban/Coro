@@ -1,10 +1,10 @@
 --- #YAML:1.0
 name:                Coro
-version:             4.741
+version:             4.742
 abstract:            ~
 license:             ~
 author:              ~
-generated_by:        ExtUtils::MakeMaker version 6.44
+generated_by:        ExtUtils::MakeMaker version 6.42
 distribution_type:   module
 requires:     
     AnyEvent:                      4.1
