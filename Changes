@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.742 Sat May 31 14:10:21 CEST 2008
+	- implement a workaround for (some) perl <5.8.8 versions.
+        - require EV 3.3+.
+
 4.741 Fri May 30 23:33:09 CEST 2008
 	- tell netbsd how utterly broken their imitation of an OS is
           and refuse to build by default if pthreads are in use.

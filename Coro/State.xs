@@ -686,6 +686,14 @@ coro_rss (pTHX_ struct coro *coro)
 static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
 static int (*orig_sigelem_set) (pTHX_ SV *sv, MAGIC *mg);
 
+/* apparently < 5.8.8 */
+#undef MgPV_nolen_const
+#ifndef MgPV_nolen_const
+#define MgPV_nolen_const(mg)    (((((int)(mg)->mg_len)) == HEf_SVKEY) ?   \
+                                 SvPV_nolen_const((SV*)((mg)->mg_ptr)) :  \
+                                 (const char*)(mg)->mg_ptr)
+#endif
+
 /*
  * This overrides the default magic get method of %SIG elements.
  * The original one doesn't provide for reading back of PL_diehook/PL_warnhook

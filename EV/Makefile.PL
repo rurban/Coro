@@ -1,7 +1,7 @@
 use ExtUtils::MakeMaker;
 use EV::MakeMaker;
 
-use 5.005;
+use 5.008;
 
 use Config;
 

@@ -53,13 +53,13 @@ EOF
 }
 
 if (eval { require EV }) {
-   if ($EV::VERSION < 2.0) {
+   if ($EV::VERSION < 3.3) {
       print <<EOF
 
 *** 
 *** WARNING: Event version $EV::VERSION found, NOT building EV support.
 ***
-*** This version is ABI-incompatible with Coro, please upgrade to 2.0.
+*** This version is ABI-incompatible with Coro, please upgrade to 3.3.
 ***
 
 EOF
