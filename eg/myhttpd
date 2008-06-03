@@ -294,7 +294,7 @@ sub handle_file {
    my @code = (200, "ok");
    my ($l, $h);
 
-   if ($self->{h}{range} =~ /^bytes=(.*)$/) {
+   if ($self->{h}{range} =~ /^bytes=(.*)$/i) {
       for (split /,/, $1) {
          if (/^-(\d+)$/) {
             ($l, $h) = ($length - $1, $length - 1);
