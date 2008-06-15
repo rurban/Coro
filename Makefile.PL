@@ -59,7 +59,7 @@ if (eval { require EV }) {
 *** 
 *** WARNING: Event version $EV::VERSION found, NOT building EV support.
 ***
-*** This version is ABI-incompatible with Coro, please upgrade to 3.3.
+*** This version is ABI-incompatible with Coro, please upgrade to at least 3.3.
 ***
 
 EOF
@@ -91,7 +91,7 @@ WriteMakefile(
        #Event		=> 1.06,
 
        # for Coro::EV
-       #EV               => 3.0,
+       #EV               => 3.3,
 
        # for Coro::AIO
        #IO::AIO          => 2.3,
@@ -104,7 +104,7 @@ WriteMakefile(
     # neither configure_requires nor recommends can be used
     # for optional dependencies. whoever decided that a module needs
     # to build properly without its dependencies installed
-    # needs his brian rearranged dramatically.
+    # needs his brain rearranged dramatically.
     EXTRA_META => q{
 recommends:
   Event: 1.08
