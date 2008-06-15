@@ -5,6 +5,11 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.743 Mon Jun 16 00:21:57 CEST 2008
+	- when using Coro::EV without running EV::loop it could
+          result in busy-waiting for events, this has been fixed.
+        - reduce codesize and improve performance by using EV_DEFAULT_UC.
+
 4.742 Sat May 31 14:10:21 CEST 2008
 	- implement a workaround for (some) perl <5.8.8 versions.
         - require EV 3.3+.

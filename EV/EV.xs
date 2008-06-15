@@ -67,7 +67,8 @@ prepare_cb (EV_P_ ev_prepare *w, int revents)
 static void
 readyhook (void)
 {
-  ev_idle_start (EV_DEFAULT_UC, &idler);
+  if (!ev_is_active (&idler))
+    ev_idle_start (EV_DEFAULT_UC, &idler);
 }
 
 /*****************************************************************************/
@@ -94,8 +95,8 @@ handle_free (pTHX_ SV *sv, MAGIC *mg)
 
   ev_io_stop    (EV_DEFAULT_UC, &data->r.io); ev_io_stop    (EV_DEFAULT_UC, &data->w.io);
   ev_timer_stop (EV_DEFAULT_UC, &data->r.tw); ev_timer_stop (EV_DEFAULT_UC, &data->w.tw);
-  SvREFCNT_dec (data->r.done);             SvREFCNT_dec (data->w.done);
-  SvREFCNT_dec (data->r.current);          SvREFCNT_dec (data->w.current);
+  SvREFCNT_dec (data->r.done);                SvREFCNT_dec (data->w.done);
+  SvREFCNT_dec (data->r.current);             SvREFCNT_dec (data->w.current);
 
   return 0;
 }
@@ -139,10 +140,12 @@ BOOT:
         I_EV_API ("Coro::EV");
 	I_CORO_API ("Coro::Event");
 
+        EV_DEFAULT; /* make sure it is initialised */
+
         ev_prepare_init (&scheduler, prepare_cb);
         ev_set_priority (&scheduler, EV_MINPRI);
-        ev_prepare_start (EV_DEFAULT, &scheduler);
-        ev_unref (EV_DEFAULT);
+        ev_prepare_start (EV_DEFAULT_UC, &scheduler);
+        ev_unref (EV_DEFAULT_UC);
 
         ev_idle_init (&idler, idle_cb);
         ev_set_priority (&idler, EV_MINPRI);
@@ -153,9 +156,21 @@ BOOT:
 void
 _loop_oneshot ()
 	CODE:
+{
+        /* inhibit the prepare watcher, as we know we are the only
+         * ready coroutine and we don't want it to start an idle watcher
+         * just because of the fallback idle coro being of lower priority.
+         */
         ++inhibit;
-        ev_loop (EV_DEFAULT, EVLOOP_ONESHOT);
+
+        /* same reasoning as above, make sure it is stopped */
+        if (ev_is_active (&idler))
+          ev_idle_stop (EV_DEFAULT_UC, &idler);
+
+        ev_loop (EV_DEFAULT_UC, EVLOOP_ONESHOT);
+
         --inhibit;
+}
 
 void
 _timed_io_once (...)
@@ -164,7 +179,7 @@ _timed_io_once (...)
 	ONCE_INIT;
         assert (AvFILLp (av) >= 1);
         ev_once (
-          EV_DEFAULT,
+          EV_DEFAULT_UC,
           sv_fileno (AvARRAY (av)[0]),
           SvIV (AvARRAY (av)[1]),
           AvFILLp (av) >= 2 && SvOK (AvARRAY (av)[2]) ? SvNV (AvARRAY (av)[2]) : -1.,
@@ -181,7 +196,7 @@ _timer_once (...)
 	ONCE_INIT;
         NV after = SvNV (AvARRAY (av)[0]);
         ev_once (
-          EV_DEFAULT,
+          EV_DEFAULT_UC,
           -1,
           0,
           after >= 0. ? after : 0.,
@@ -236,10 +251,10 @@ _readable_ev (SV *handle_sv, SV *done_sv)
           if (SvOK (to))
             {
               ev_timer_set (&dir->tw, 0., SvNV (to));
-              ev_timer_again (EV_DEFAULT, &dir->tw);
+              ev_timer_again (EV_DEFAULT_UC, &dir->tw);
             }
         }
 
-        ev_io_start (EV_DEFAULT, &dir->io);
+        ev_io_start (EV_DEFAULT_UC, &dir->io);
 }
 
