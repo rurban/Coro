@@ -96,10 +96,17 @@ BEGIN {
    # it might exist already because Coro::Specific created it.
    $Coro::current ||= { };
 
-   $SIG{__DIE__}  = \&diehook;
-   $SIG{__WARN__} = \&warnhook;
+   {
+      # save/restore the handlers before/after overwriting %SIG magic
+      local $SIG{__DIE__};
+      local $SIG{__WARN__};
 
-   XSLoader::load __PACKAGE__, $VERSION;
+      XSLoader::load __PACKAGE__, $VERSION;
+   }
+
+   # need to do it after overwriting the %SIG magic
+   $SIG{__DIE__}  ||= \&diehook;
+   $SIG{__WARN__} ||= \&warnhook;
 }
 
 use Exporter;
@@ -117,7 +124,7 @@ logging function that works for all coroutines that don't set their own
 hook.
 
 When Coro::State is first loaded it will install these handlers for the
-main program, too, unless they have been overriden already.
+main program, too, unless they have been overwritten already.
 
 The default handlers provided will behave like the built-in ones (as if
 they weren't there).
