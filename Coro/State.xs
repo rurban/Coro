@@ -2027,7 +2027,9 @@ _pool_1 (SV *cb)
 
         if (!invoke)
           {
-            SvREFCNT_dec (PL_diehook); PL_diehook = 0;
+            SV *old = PL_diehook;
+            PL_diehook = 0;
+            SvREFCNT_dec (old);
             croak ("\3async_pool terminate\2\n");
           }
 
@@ -2066,7 +2068,9 @@ _pool_2 (SV *cb)
   	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
           {
-            SvREFCNT_dec (PL_diehook); PL_diehook = 0;
+            SV *old = PL_diehook;
+            PL_diehook = 0;
+            SvREFCNT_dec (old);
             croak ("\3async_pool terminate\2\n");
           }
 
