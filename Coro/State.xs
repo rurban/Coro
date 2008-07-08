@@ -685,6 +685,7 @@ coro_rss (pTHX_ struct coro *coro)
 
 static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
 static int (*orig_sigelem_set) (pTHX_ SV *sv, MAGIC *mg);
+static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
 
 /* apparently < 5.8.8 */
 #undef MgPV_nolen_const
@@ -710,11 +711,43 @@ coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
 
   if (*s == '_')
     {
-      if (strEQ (s, "__DIE__" ) && PL_diehook ) return sv_setsv (sv, PL_diehook ), 0;
-      if (strEQ (s, "__WARN__") && PL_warnhook) return sv_setsv (sv, PL_warnhook), 0;
+      SV **svp = 0;
+
+      if (strEQ (s, "__DIE__" )) svp = &PL_diehook;
+      if (strEQ (s, "__WARN__")) svp = &PL_warnhook;
+      
+      if (svp)
+        {
+          sv_setsv (sv, *svp ? *svp : &PL_sv_undef);
+          return 0;
+        }
     }
 
   return orig_sigelem_get ? orig_sigelem_get (aTHX_ sv, mg) : 0;
+}
+
+static int
+coro_sigelem_clr (pTHX_ SV *sv, MAGIC *mg)
+{
+  const char *s = MgPV_nolen_const (mg);
+
+  if (*s == '_')
+    {
+      SV **svp = 0;
+
+      if (strEQ (s, "__DIE__" )) svp = &PL_diehook;
+      if (strEQ (s, "__WARN__")) svp = &PL_warnhook;
+
+      if (svp)
+        {
+          SV *old = *svp;
+          *svp = 0;
+          SvREFCNT_dec (old);
+          return 0;
+        }
+    }
+
+  return orig_sigelem_clr ? orig_sigelem_clr (aTHX_ sv, mg) : 0;
 }
 
 static int
@@ -1607,10 +1640,9 @@ BOOT:
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
 
-        orig_sigelem_get = PL_vtbl_sigelem.svt_get;
-        PL_vtbl_sigelem.svt_get = coro_sigelem_get;
-        orig_sigelem_set = PL_vtbl_sigelem.svt_set;
-        PL_vtbl_sigelem.svt_set = coro_sigelem_set;
+        orig_sigelem_get = PL_vtbl_sigelem.svt_get;   PL_vtbl_sigelem.svt_get   = coro_sigelem_get;
+        orig_sigelem_set = PL_vtbl_sigelem.svt_set;   PL_vtbl_sigelem.svt_set   = coro_sigelem_set;
+        orig_sigelem_clr = PL_vtbl_sigelem.svt_clear; PL_vtbl_sigelem.svt_clear = coro_sigelem_clr;
 
         hv_sig      = coro_get_hv (aTHX_ "SIG", TRUE);
         rv_diehook  = newRV_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
@@ -1995,7 +2027,9 @@ _pool_1 (SV *cb)
 
         if (!invoke)
           {
-            SvREFCNT_dec (PL_diehook); PL_diehook = 0;
+            SV *old = PL_diehook;
+            PL_diehook = 0;
+            SvREFCNT_dec (old);
             croak ("\3async_pool terminate\2\n");
           }
 
@@ -2034,7 +2068,9 @@ _pool_2 (SV *cb)
   	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
           {
-            SvREFCNT_dec (PL_diehook); PL_diehook = 0;
+            SV *old = PL_diehook;
+            PL_diehook = 0;
+            SvREFCNT_dec (old);
             croak ("\3async_pool terminate\2\n");
           }
 

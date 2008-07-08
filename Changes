@@ -5,6 +5,11 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.744 Tue Jul  8 22:06:35 CEST 2008
+      	- correctly provide default DIE/WARN handlers as documented.
+	- also overwrite PL_vtbl_sigelem.svt_clear, even though current
+          implementations inside perl work fine for us.
+
 4.743 Mon Jun 16 00:21:57 CEST 2008
 	- when using Coro::EV without running EV::loop it could
           result in busy-waiting for events, this has been fixed.

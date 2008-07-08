@@ -90,16 +90,23 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 4.742;
+   our $VERSION = 4.744;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
    $Coro::current ||= { };
 
-   $SIG{__DIE__}  = \&diehook;
-   $SIG{__WARN__} = \&warnhook;
+   {
+      # save/restore the handlers before/after overwriting %SIG magic
+      local $SIG{__DIE__};
+      local $SIG{__WARN__};
 
-   XSLoader::load __PACKAGE__, $VERSION;
+      XSLoader::load __PACKAGE__, $VERSION;
+   }
+
+   # need to do it after overwriting the %SIG magic
+   $SIG{__DIE__}  ||= \&diehook;
+   $SIG{__WARN__} ||= \&warnhook;
 }
 
 use Exporter;
@@ -117,16 +124,17 @@ logging function that works for all coroutines that don't set their own
 hook.
 
 When Coro::State is first loaded it will install these handlers for the
-main program, too, unless they have been overriden already.
+main program, too, unless they have been overwritten already.
 
-The default handlers provided will behave like the inbuilt ones (as if
+The default handlers provided will behave like the built-in ones (as if
 they weren't there).
 
 Note 1: You I<must> store a valid code reference in these variables,
 C<undef> will I<not> do.
 
 Note 2: The value of this variable will be shared among all coroutines, so
-changing its value will change it in all coroutines using them.
+changing its value will change it in all coroutines that don't have their
+own die handler.
 
 =item $Coro::State::WARNHOOK
 
