@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::AIO - truly asynchronous file and directrory I/O
+Coro::AIO - truly asynchronous file and directory I/O
 
 =head1 SYNOPSIS
 
