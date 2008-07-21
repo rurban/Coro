@@ -5,6 +5,8 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- remove debugging code related to MgPV_nolen_const.
+
 4.744 Tue Jul  8 22:06:35 CEST 2008
       	- correctly provide default DIE/WARN handlers as documented.
 	- also overwrite PL_vtbl_sigelem.svt_clear, even though current
