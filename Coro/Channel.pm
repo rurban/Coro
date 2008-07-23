@@ -30,7 +30,7 @@ no warnings;
 
 use Coro ();
 
-$VERSION = 4.744;
+$VERSION = 4.745;
 
 =item $q = new Coro:Channel $maxsize
 
