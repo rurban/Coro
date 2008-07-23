@@ -102,7 +102,7 @@ correct in most cases, but you still can chose between these alternatives:
 u  The unix 'ucontext.h' functions are relatively new and not implemented
    or well-tested in older unices. They allow very fast coroutine creation
    and reasonably fast switching, and, most importantly, are very stable.
-   It is, however, usually slower than the other alternatives due to an
+   They are, however, usually slower than the other alternatives due to an
    extra syscall done by swapcontext.
 
 s  If the ucontext functions are not working or you don't want
@@ -123,7 +123,7 @@ a  Handcoded assembly. This is the fastest and most compatible method
    method on supported platforms. Note that you usually have to compile
    this module with optimisation enabled for this method to work, and
    also more esoteric switches such as -fomit-leaf-frame-pointer might be
-   required. When i doubt, use another method, such as (s)etjmp/longjmp.
+   required. When in doubt, use another method, such as (s)etjmp/longjmp.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
@@ -138,7 +138,7 @@ i  IRIX. For some reason, SGI really does not like to follow the single
 w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
    the MSVC compilers (e.g. ActiveState Perl, but see "a" for Strawberry
    Perl), although, as there is no standard on how to do this under
-   windows, different enviroments might work differently. Doh.
+   windows, different environments might work differently. Doh.
 
 p  Use pthread API. Try to avoid this option, it was only created to make
    a point about the programming language shootout and might leak threads.
@@ -146,7 +146,7 @@ p  Use pthread API. Try to avoid this option, it was only created to make
 
 For most systems, the default chosen should be OK. If you experience
 problems then you should experiment with this setting and/or turn
-optimisations on or off (make OPTIMIZE=-O0).
+optimisations on or off (make OPTIMIZE=-O or -O0).
 
 EOF
 
@@ -160,11 +160,11 @@ $iface = lc $1 if $r =~ /(\S)/;
 if ($iface eq "u") {
    $DEFINE .= " -DCORO_UCONTEXT";
    print "\nUsing ucontext implementation\n\n";
-   conftest("TEST_makecontext");
+   conftest ("TEST_makecontext");
 } elsif ($iface eq "s") {
    $DEFINE .= " -DCORO_SJLJ";
    print "\nUsing setjmp/longjmp/sigaltstack implementation\n\n";
-   conftest("TEST_sigaltstack");
+   conftest ("TEST_sigaltstack");
 } elsif ($iface eq "l") {
    $DEFINE .= " -DCORO_LINUX";
    print "\nUsing linux-specific implementation\n\n";
@@ -191,12 +191,12 @@ print <<EOF;
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
 
 Per-context stack size factor: Depending on your settings, Coro tries to
-share the C stack as much as possible, but sometimes it needs to allocate
-a new one. This setting controls the maximum size that gets allocated,
-and should not be set too high, as memory and address space still is
-wasted even if it's not fully used. The value entered will be multiplied
-by sizeof(long), which is usually 4 on 32-bit systems, and 8 on 64-bit
-systems.
+share the C stacks is creates as much as possible, but sometimes it needs
+to allocate a new one. This setting controls the maximum size that gets
+allocated, and should not be set too high, as memory and address space
+still is wasted even if it's not fully used. The value entered will be
+multiplied by sizeof(long), which is usually 4 on 32-bit systems, and 8 on
+64-bit systems.
 
 A setting of 16384 (the default) therefore corresponds to a 64k..128k
 stack, which usually is ample space (you might even want to try 8192 or
@@ -204,7 +204,8 @@ lower if your program creates many coroutines).
 
 On systems supporting mmap and dynamic memory management, the actual
 memory usually gets allocated on demand, but with many large stacks you
-can still run out of address space on your typical 32 bit platform.
+can still run out of address space on your typical 32 bit platform (not to
+forget the pagetables).
 
 Some perls (mostly threaded ones and perl compiled under linux 2.6) and
 some programs (inefficient regexes can use a lot of stack space) may
@@ -226,7 +227,7 @@ print <<EOF;
 
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
 
-Coro can optionally put a guard area before each stack segment. When the
+Coro can optionally put a guard area before each stack segment: When the
 stack is too small and the access is not too far outside the stack (i.e.
 within the guard area), then the program will safely segfault instead of
 running into other data. The cost is some additional overhead with is
@@ -254,11 +255,11 @@ print <<EOF;
 Coro can tell valgrind about its stacks and so reduce spurious warnings
 where valgrind would otherwise complain about possible stack switches.
 
-Enabling this does not incur visible runtime or memory overhead, but it
+Enabling this does not incur noticable runtime or memory overhead, but it
 requires that you have the <valgrind/valgrind.h> header file available.
 
-Valgrind support is completely optional, so the default of disabling it is
-the safe choice.
+Valgrind support is completely optional, so disabling it is the safe
+choice.
 
 EOF
 
@@ -276,7 +277,7 @@ instead of relying on (some) of its own functions. This might increase
 chances that it compiles and works, but it could just as well result in
 memory leaks, crashes or silent data corruption. It certainly does result
 in slightly slower speed and higher memory consumption, though, so YOU
-SHOULD ENABLE IT ONLY AS A LAST RESORT.
+SHOULD ENABLE THIS OPTION ONLY AS A LAST RESORT.
 
 EOF
 

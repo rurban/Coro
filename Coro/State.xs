@@ -688,10 +688,9 @@ static int (*orig_sigelem_set) (pTHX_ SV *sv, MAGIC *mg);
 static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
 
 /* apparently < 5.8.8 */
-#undef MgPV_nolen_const
 #ifndef MgPV_nolen_const
 #define MgPV_nolen_const(mg)    (((((int)(mg)->mg_len)) == HEf_SVKEY) ?   \
-                                 SvPV_nolen_const((SV*)((mg)->mg_ptr)) :  \
+                                 SvPV_nolen((SV*)((mg)->mg_ptr)) :  \
                                  (const char*)(mg)->mg_ptr)
 #endif
 
