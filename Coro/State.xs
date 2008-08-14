@@ -1892,6 +1892,29 @@ force_cctx ()
         struct coro *coro = SvSTATE (coro_current);
         coro->cctx->idle_sp = 0;
 
+void
+throw (Coro::State self, SV *throw = &PL_sv_undef)
+	PROTOTYPE: $;$
+        CODE:
+        SvREFCNT_dec (self->throw);
+        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
+
+void
+swap_defsv (Coro::State self)
+	PROTOTYPE: $
+        ALIAS:
+        swap_defav = 1
+        CODE:
+	if (!self->slot)
+          croak ("cannot swap state with coroutine that has no saved state");
+        else
+          {
+            SV **src = ix ? (SV **)&GvAV (PL_defgv) : &GvSV (PL_defgv);
+            SV **dst = ix ? (SV **)&self->slot->defav : (SV **)&self->slot->defsv;
+
+            SV *tmp = *src; *src = *dst; *dst = tmp;
+          }
+
 MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
@@ -1988,29 +2011,6 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
-
-void
-throw (Coro::State self, SV *throw = &PL_sv_undef)
-	PROTOTYPE: $;$
-        CODE:
-        SvREFCNT_dec (self->throw);
-        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
-
-void
-swap_defsv (Coro::State self)
-	PROTOTYPE: $
-        ALIAS:
-        swap_defav = 1
-        CODE:
-	if (!self->slot)
-          croak ("cannot swap state with coroutine that has no saved state");
-        else
-          {
-            SV **src = ix ? (SV **)&GvAV (PL_defgv) : &GvSV (PL_defgv);
-            SV **dst = ix ? (SV **)&self->slot->defav : (SV **)&self->slot->defsv;
-
-            SV *tmp = *src; *src = *dst; *dst = tmp;
-          }
 
 # for async_pool speedup
 void
