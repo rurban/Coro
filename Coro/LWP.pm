@@ -42,7 +42,7 @@ shouldn't actually run.
 
 =item It replaces the base class of Net::HTTP, Net::FTP, Net::NNTP.
 
-This is necessary because LWP does not always use select to see wether
+This is necessary because LWP does not always use select to see whether
 a filehandle can be read/written without blocking, so the base class
 C<IO::Socket::INET> needs to be replaced by C<Coro::Socket>.
 

@@ -254,7 +254,7 @@ the current execution state (subroutine, stack).
 
 =item $state->has_cctx
 
-Returns wether the state currently uses a cctx/C coroutine. An active
+Returns whether the state currently uses a cctx/C coroutine. An active
 state always has a cctx, as well as the main program. Other states only
 use a cctxts when needed.
 
