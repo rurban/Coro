@@ -15,11 +15,11 @@ blocking the server for a long time.
 
 This is being implemented by using a perlio layer that feeds only small
 amounts of data (512 bytes per call) into Storable, and C<Coro::cede>'ing
-regularly (at most 1000 times per second by default, though).
+regularly (at most 100 times per second by default, though).
 
 As it seems that Storable is not reentrant, this module also serialises
-calls to freeze and thaw between coroutines as necessary (for this to work
-reliably you always have to use this module, however).
+calls to C<freeze> and C<thaw> between coroutines as necessary (for this
+to work reliably you always have to use this module, however).
 
 =head1 FUNCTIONS
 
@@ -155,7 +155,7 @@ package PerlIO::via::CoroCede;
 
 use Time::HiRes ("time");
 
-our $GRANULARITY = 0.001;
+our $GRANULARITY = 0.01;
 
 my $next_cede;
 
@@ -176,9 +176,9 @@ sub FILL {
 }
 
 sub WRITE {
-   if ($next_cede <= (my $now = time)) {
+   if ($next_cede <= time) {
+      $next_cede = time + $GRANULARITY;
       Coro::cede ();
-      $next_cede = $now + $GRANULARITY;
    }
 
    (print {$_[2]} $_[1]) ? length $_[1] : -1
