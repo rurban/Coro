@@ -177,7 +177,7 @@ sub FILL {
 
 sub WRITE {
    if ($next_cede <= (my $now = time)) {
-      Coro::cede;
+      Coro::cede ();
       $next_cede = $now + $GRANULARITY;
    }
 
