@@ -18,6 +18,7 @@ Coro - coroutine process abstraction
   cede; # and again
   
   # use locking
+  use Coro::Semaphore;
   my $lock = new Coro::Semaphore;
   my $locked;
   
