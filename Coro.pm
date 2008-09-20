@@ -18,6 +18,7 @@ Coro - coroutine process abstraction
   cede; # and again
   
   # use locking
+  use Coro::Semaphore;
   my $lock = new Coro::Semaphore;
   my $locked;
   
@@ -68,7 +69,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = 4.745;
+our $VERSION = 4.746;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -83,7 +84,7 @@ our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
 This variable stores the coroutine object that represents the main
 program. While you cna C<ready> it and do most other things you can do to
 coroutines, it is mainly useful to compare again C<$Coro::current>, to see
-wether you are running in the main program or not.
+whether you are running in the main program or not.
 
 =cut
 
@@ -311,7 +312,7 @@ coroutine and wait for events: first you remember the current coroutine in
 a variable, then arrange for some callback of yours to call C<< ->ready
 >> on that once some event happens, and last you call C<schedule> to put
 yourself to sleep. Note that a lot of things can wake your coroutine up,
-so you need to check wether the event indeed happened, e.g. by storing the
+so you need to check whether the event indeed happened, e.g. by storing the
 status in a variable.
 
 The canonical way to wait on external events is this:
@@ -360,7 +361,7 @@ one. This is useful after a fork, either in the child or the parent, as
 usually only one of them should inherit the running coroutines.
 
 Note that while this will try to free some of the main programs resources,
-you cnanot free all of them, so if a coroutine that is not the main
+you cannot free all of them, so if a coroutine that is not the main
 program calls this function, there will be some one-time resource leak.
 
 =cut
@@ -419,7 +420,7 @@ priority that were put into the ready queue earlier have been resumed.
 
 =item $is_ready = $coroutine->is_ready
 
-Return wether the coroutine is currently the ready queue or not,
+Return whether the coroutine is currently the ready queue or not,
 
 =item $coroutine->cancel (arg...)
 

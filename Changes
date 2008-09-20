@@ -5,6 +5,11 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.746 Sun Sep 21 03:22:20 CEST 2008
+        - be more insistent on locking Storable against reentrancy
+          in Coro::Storable.
+	- move swap_def?v and throw to Coro::State, as documented.
+
 4.745 Thu Jul 24 00:14:38 CEST 2008
 	- remove debugging code related to MgPV_nolen_const, also try to
           make it compile with perl 5.8.6 (yes, apple apparently loves

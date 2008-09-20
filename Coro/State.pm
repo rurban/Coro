@@ -90,7 +90,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 4.745;
+   our $VERSION = 4.746;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -162,7 +162,10 @@ program.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
-to save the current coroutine in.
+to save the current coroutine state in (note that this is dangerous, as no
+reference is taken to ensure that the "current coroutine state" survives,
+the caller is responsible to ensure that the cloned state does not go
+away).
 
 The returned object is an empty hash which can be used for any purpose
 whatsoever, for example when subclassing Coro::State.
@@ -251,7 +254,7 @@ the current execution state (subroutine, stack).
 
 =item $state->has_cctx
 
-Returns wether the state currently uses a cctx/C coroutine. An active
+Returns whether the state currently uses a cctx/C coroutine. An active
 state always has a cctx, as well as the main program. Other states only
 use a cctxts when needed.
 

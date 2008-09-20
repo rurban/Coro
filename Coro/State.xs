@@ -1625,6 +1625,22 @@ api_trace (SV *coro_sv, int flags)
     }
 }
 
+static int
+coro_gensub_free (pTHX_ SV *sv, MAGIC *mg)
+{
+  AV *padlist;
+  AV *av = (AV *)mg->mg_obj;
+
+  abort ();
+
+  return 0;
+}
+
+static MGVTBL coro_gensub_vtbl = {
+  0, 0, 0, 0,
+  coro_gensub_free
+};
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
@@ -1892,6 +1908,29 @@ force_cctx ()
         struct coro *coro = SvSTATE (coro_current);
         coro->cctx->idle_sp = 0;
 
+void
+throw (Coro::State self, SV *throw = &PL_sv_undef)
+	PROTOTYPE: $;$
+        CODE:
+        SvREFCNT_dec (self->throw);
+        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
+
+void
+swap_defsv (Coro::State self)
+	PROTOTYPE: $
+        ALIAS:
+        swap_defav = 1
+        CODE:
+	if (!self->slot)
+          croak ("cannot swap state with coroutine that has no saved state");
+        else
+          {
+            SV **src = ix ? (SV **)&GvAV (PL_defgv) : &GvSV (PL_defgv);
+            SV **dst = ix ? (SV **)&self->slot->defav : (SV **)&self->slot->defsv;
+
+            SV *tmp = *src; *src = *dst; *dst = tmp;
+          }
+
 MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
@@ -1989,29 +2028,6 @@ nready (...)
 	OUTPUT:
         RETVAL
 
-void
-throw (Coro::State self, SV *throw = &PL_sv_undef)
-	PROTOTYPE: $;$
-        CODE:
-        SvREFCNT_dec (self->throw);
-        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
-
-void
-swap_defsv (Coro::State self)
-	PROTOTYPE: $
-        ALIAS:
-        swap_defav = 1
-        CODE:
-	if (!self->slot)
-          croak ("cannot swap state with coroutine that has no saved state");
-        else
-          {
-            SV **src = ix ? (SV **)&GvAV (PL_defgv) : &GvSV (PL_defgv);
-            SV **dst = ix ? (SV **)&self->slot->defav : (SV **)&self->slot->defsv;
-
-            SV *tmp = *src; *src = *dst; *dst = tmp;
-          }
-
 # for async_pool speedup
 void
 _pool_1 (SV *cb)
@@ -2084,6 +2100,54 @@ _pool_2 (SV *cb)
 
         av_push (av_async_pool, newSVsv (coro_current));
 }
+
+#if 0
+
+void
+_generator_call (...)
+	PROTOTYPE: @
+        PPCODE:
+        fprintf (stderr, "call %p\n", CvXSUBANY(cv).any_ptr);
+        xxxx
+        abort ();
+
+SV *
+gensub (SV *sub, ...)
+	PROTOTYPE: &;@
+        CODE:
+{
+        struct coro *coro;
+        MAGIC *mg;
+        CV *xcv;
+        CV *ncv = (CV *)newSV_type (SVt_PVCV);
+        int i;
+
+        CvGV   (ncv) = CvGV   (cv);
+        CvFILE (ncv) = CvFILE (cv);
+
+        Newz (0, coro, 1, struct coro);
+        coro->args  = newAV ();
+        coro->flags = CF_NEW;
+
+        av_extend (coro->args, items - 1);
+        for (i = 1; i < items; i++)
+          av_push (coro->args, newSVsv (ST (i)));
+
+        CvISXSUB_on (ncv);
+        CvXSUBANY (ncv).any_ptr = (void *)coro;
+
+        xcv = GvCV (gv_fetchpv ("Coro::_generator_call", 0, SVt_PVCV));
+
+        CvXSUB (ncv) = CvXSUB (xcv);
+        CvANON_on (ncv);
+
+        mg = sv_magicext ((SV *)ncv, 0, CORO_MAGIC_type_state, &coro_gensub_vtbl, (char *)coro, 0);
+        RETVAL = newRV_noinc ((SV *)ncv);
+}
+	OUTPUT:
+        RETVAL
+
+#endif
 
 
 MODULE = Coro::State                PACKAGE = Coro::AIO
