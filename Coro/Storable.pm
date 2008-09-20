@@ -9,7 +9,7 @@ Coro::Storable - offer a more fine-grained Storable interface
 =head1 DESCRIPTION
 
 This module implements a few functions from the Storable module in a way
-so that it cede's more often. Some applications (such as the Crossfire
+so that it cede's more often. Some applications (such as the Deliantra
 game server) sometimes need to load large Storable objects without
 blocking the server for a long time.
 
@@ -17,9 +17,9 @@ This is being implemented by using a perlio layer that feeds only small
 amounts of data (512 bytes per call) into Storable, and C<Coro::cede>'ing
 regularly (at most 100 times per second by default, though).
 
-As it seems that Storable is not reentrant, this module also serialises
-calls to C<freeze> and C<thaw> between coroutines as necessary (for this
-to work reliably you always have to use this module, however).
+As it seems that Storable is not reentrant, this module also wraps most
+functions of the Storable module so that only one freeze or thaw is done
+at any one moment (recursive invocations are not currently supported).
 
 =head1 FUNCTIONS
 
@@ -59,9 +59,12 @@ memory and file images.
 
 Same as C<blocking_freeze> but uses C<nfreeze> internally.
 
-=item $guard = guard;
+=item $guard = guard
 
 Acquire the Storable lock, for when you want to call Storable yourself.
+
+Note that this module already wraps the Storable functions, so there is
+rarely the need to do this yourself.
 
 =back
 
@@ -69,7 +72,7 @@ Acquire the Storable lock, for when you want to call Storable yourself.
 
 package Coro::Storable;
 
-use strict;
+use strict qw(subs vars);
 no warnings;
 
 use Coro ();
@@ -93,17 +96,23 @@ sub guard {
    $lock->guard
 }
 
-sub thaw($) {
-   my $guard = $lock->guard;
+# wrap xs functions
+for (qw(net_pstore mstore net_mstore pretrieve mretrieve dclone)) {
+   my $orig = \&{"Storable::$_"};
+   *{"Storable::$_"} = sub {
+      my $guard = $lock->guard;
+      &$orig
+   };
+   die if $@;
+}
 
+sub thaw($) {
    open my $fh, "<:via(CoroCede)", \$_[0]
       or die "cannot open pst via CoroCede: $!";
    Storable::fd_retrieve $fh
 }
 
 sub freeze($) {
-   my $guard = $lock->guard;
-
    open my $fh, ">:via(CoroCede)", \my $buf
       or die "cannot open pst via CoroCede: $!";
    Storable::store_fd $_[0], $fh;
@@ -111,8 +120,6 @@ sub freeze($) {
 }
 
 sub nfreeze($) {
-   my $guard = $lock->guard;
-
    open my $fh, ">:via(CoroCede)", \my $buf
       or die "cannot open pst via CoroCede: $!";
    Storable::nstore_fd $_[0], $fh;
@@ -120,16 +127,12 @@ sub nfreeze($) {
 }
 
 sub blocking_thaw($) {
-   my $guard = $lock->guard;
-
    open my $fh, "<", \$_[0]
       or die "cannot open pst: $!";
    Storable::fd_retrieve $fh
 }
 
 sub blocking_freeze($) {
-   my $guard = $lock->guard;
-
    open my $fh, ">", \my $buf
          or die "cannot open pst: $!";
    Storable::store_fd $_[0], $fh;
@@ -139,8 +142,6 @@ sub blocking_freeze($) {
 }
 
 sub blocking_nfreeze($) {
-   my $guard = $lock->guard;
-
    open my $fh, ">", \my $buf
          or die "cannot open pst: $!";
    Storable::nstore_fd $_[0], $fh;
