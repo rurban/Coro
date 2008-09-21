@@ -363,6 +363,8 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
     free_padlist (aTHX_ padlist);
 
+  SvREFCNT_dec (av);
+
   return 0;
 }
 
@@ -422,7 +424,8 @@ get_padlist (pTHX_ CV *cv)
   else
    {
 #if CORO_PREFER_PERL_FUNCTIONS
-     /* this is probably cleaner, but also slower? */
+     /* this is probably cleaner? but also slower! */
+     /* in practise, it seems to be less stable */
      CV *cp = Perl_cv_clone (cv);
      CvPADLIST (cv) = CvPADLIST (cp);
      CvPADLIST (cp) = 0;
