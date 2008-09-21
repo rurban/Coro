@@ -16,6 +16,7 @@ SYNOPSIS
       cede; # and again
       
   # use locking
+      use Coro::Semaphore;
       my $lock = new Coro::Semaphore;
       my $locked;
       
@@ -55,8 +56,8 @@ DESCRIPTION
         This variable stores the coroutine object that represents the main
         program. While you cna "ready" it and do most other things you can
         do to coroutines, it is mainly useful to compare again
-        $Coro::current, to see wether you are running in the main program or
-        not.
+        $Coro::current, to see whether you are running in the main program
+        or not.
 
     $Coro::current
         The coroutine object representing the current coroutine (the last
@@ -179,7 +180,7 @@ DESCRIPTION
         current coroutine in a variable, then arrange for some callback of
         yours to call "->ready" on that once some event happens, and last
         you call "schedule" to put yourself to sleep. Note that a lot of
-        things can wake your coroutine up, so you need to check wether the
+        things can wake your coroutine up, so you need to check whether the
         event indeed happened, e.g. by storing the status in a variable.
 
         The canonical way to wait on external events is this:
@@ -225,7 +226,7 @@ DESCRIPTION
         as usually only one of them should inherit the running coroutines.
 
         Note that while this will try to free some of the main programs
-        resources, you cnanot free all of them, so if a coroutine that is
+        resources, you cannot free all of them, so if a coroutine that is
         not the main program calls this function, there will be some
         one-time resource leak.
 
@@ -253,7 +254,7 @@ DESCRIPTION
         earlier have been resumed.
 
     $is_ready = $coroutine->is_ready
-        Return wether the coroutine is currently the ready queue or not,
+        Return whether the coroutine is currently the ready queue or not,
 
     $coroutine->cancel (arg...)
         Terminates the given coroutine and makes it return the given

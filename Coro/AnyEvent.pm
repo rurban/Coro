@@ -107,7 +107,7 @@ use strict;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 4.745;
+our $VERSION = 4.746;
 
 #############################################################################
 # idle handler
