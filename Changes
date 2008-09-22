@@ -5,6 +5,14 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.747 Tue Sep 23 01:59:41 CEST 2008
+	- fix a per-cv memleak (one empty array was leaked per
+          code reference).
+        - avoid a crash in coro->call|rss when the coroutine was already
+          destroyed (most noticably when using Coro::Debug::ps :)
+        - also protect *Storable::FILE.
+        - push up default storable granularity to 20ms.
+
 4.746 Sun Sep 21 03:22:20 CEST 2008
         - be more insistent on locking Storable against reentrancy
           in Coro::Storable.

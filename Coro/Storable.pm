@@ -87,7 +87,7 @@ BEGIN {
 use Storable;
 use base "Exporter";
 
-our $VERSION = 4.746;
+our $VERSION = 4.747;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;
@@ -156,7 +156,7 @@ package PerlIO::via::CoroCede;
 
 use Time::HiRes ("time");
 
-our $GRANULARITY = 0.01;
+our $GRANULARITY = 0.02;
 
 my $next_cede;
 
@@ -167,6 +167,7 @@ sub PUSHED {
 sub FILL {
    if ($next_cede <= time) {
       $next_cede = time + $GRANULARITY; # calling time() twice usually is a net win
+      local *Storable::FILE;
       Coro::cede ();
    }
 
@@ -179,6 +180,7 @@ sub FILL {
 sub WRITE {
    if ($next_cede <= time) {
       $next_cede = time + $GRANULARITY;
+      local *Storable::FILE;
       Coro::cede ();
    }
 

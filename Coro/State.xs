@@ -363,6 +363,8 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
     free_padlist (aTHX_ padlist);
 
+  SvREFCNT_dec (av); /* sv_magicext increased the refcount */
+
   return 0;
 }
 
@@ -422,7 +424,8 @@ get_padlist (pTHX_ CV *cv)
   else
    {
 #if CORO_PREFER_PERL_FUNCTIONS
-     /* this is probably cleaner, but also slower? */
+     /* this is probably cleaner? but also slower! */
+     /* in practise, it seems to be less stable */
      CV *cp = Perl_cv_clone (cv);
      CvPADLIST (cv) = CvPADLIST (cp);
      CvPADLIST (cp) = 0;
@@ -665,17 +668,20 @@ coro_rss (pTHX_ struct coro *coro)
       else
         slot = coro->slot;
 
-      rss += sizeof (slot->curstackinfo);
-      rss += (slot->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
-      rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvMAX (slot->curstack)) * sizeof (SV *);
-      rss += slot->tmps_max * sizeof (SV *);
-      rss += (slot->markstack_max - slot->markstack_ptr) * sizeof (I32);
-      rss += slot->scopestack_max * sizeof (I32);
-      rss += slot->savestack_max * sizeof (ANY);
+      if (slot)
+        {
+          rss += sizeof (slot->curstackinfo);
+          rss += (slot->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
+          rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvMAX (slot->curstack)) * sizeof (SV *);
+          rss += slot->tmps_max * sizeof (SV *);
+          rss += (slot->markstack_max - slot->markstack_ptr) * sizeof (I32);
+          rss += slot->scopestack_max * sizeof (I32);
+          rss += slot->savestack_max * sizeof (ANY);
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
-      rss += slot->retstack_max * sizeof (OP *);
+          rss += slot->retstack_max * sizeof (OP *);
 #endif
+        }
     }
 
   return rss;
@@ -1816,7 +1822,7 @@ call (Coro::State coro, SV *coderef)
         eval = 1
 	CODE:
 {
-        if (coro->mainstack)
+        if (coro->mainstack && ((coro->flags & CF_RUNNING) || coro->slot))
           {
             struct coro temp;
 
