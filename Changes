@@ -8,6 +8,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
 4.747
 	- fix a per-cv memleak (one empty array was leaked per
           code reference).
+        - avoid a crash in coro->call|rss when the coroutine was already
+          destroyed (most noticably when using Coro::Debug::ps :)
+        - also protect *Storable::FILE.
 
 4.746 Sun Sep 21 03:22:20 CEST 2008
         - be more insistent on locking Storable against reentrancy

@@ -167,6 +167,7 @@ sub PUSHED {
 sub FILL {
    if ($next_cede <= time) {
       $next_cede = time + $GRANULARITY; # calling time() twice usually is a net win
+      local *Storable::FILE;
       Coro::cede ();
    }
 
@@ -179,6 +180,7 @@ sub FILL {
 sub WRITE {
    if ($next_cede <= time) {
       $next_cede = time + $GRANULARITY;
+      local *Storable::FILE;
       Coro::cede ();
    }
 
