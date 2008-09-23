@@ -87,7 +87,7 @@ BEGIN {
 use Storable;
 use base "Exporter";
 
-our $VERSION = 4.746;
+our $VERSION = 4.747;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;
@@ -156,7 +156,7 @@ package PerlIO::via::CoroCede;
 
 use Time::HiRes ("time");
 
-our $GRANULARITY = 0.01;
+our $GRANULARITY = 0.02;
 
 my $next_cede;
 
