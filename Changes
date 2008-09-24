@@ -1,15 +1,15 @@
 Revision history for Perl extension Coro.
 
-TODO: should explore PerlIO::via::CoroCede and PerlIO::via::CoroAIO.
+TODO: should explore PerlIO::coroaio.
 TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
 4.748
+	- implement, but do not document, PerlIO::cede(granularity).
 	- Coro::Storable forgot to wrap Storable::pstore.
-        - work around a memory leak in perl in Coro::Storable
-          (and note that perl 5.10.0 has a double-free bug
-          that is not being workarounded).
+        - work around the multitude of leaks and memory corruption
+          bugs in PerlIO::via by using our own C-level perliol.
 
 4.747 Tue Sep 23 01:59:41 CEST 2008
 	- fix a per-cv memleak (one empty array was leaked per

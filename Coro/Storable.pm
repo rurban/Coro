@@ -90,6 +90,8 @@ use base "Exporter";
 our $VERSION = 4.748;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
+our $GRANULARITY = 0.02;
+
 my $lock = new Coro::Semaphore;
 
 sub guard {
@@ -107,21 +109,21 @@ for (qw(net_pstore pstore net_mstore mstore pretrieve mretrieve dclone)) {
 }
 
 sub thaw($) {
-   open my $fh, "<:via(CoroCede)", \$_[0]
-      or die "cannot open pst via CoroCede: $!";
+   open my $fh, "<:cede($GRANULARITY)", \$_[0]
+      or die "cannot open pst via PerlIO::cede: $!";
    Storable::fd_retrieve $fh
 }
 
 sub freeze($) {
-   open my $fh, ">:via(CoroCede)", \my $buf
-      or die "cannot open pst via CoroCede: $!";
+   open my $fh, ">:cede($GRANULARITY)", \my $buf
+      or die "cannot open pst via PerlIO::cede: $!";
    Storable::store_fd $_[0], $fh;
    $buf
 }
 
 sub nfreeze($) {
-   open my $fh, ">:via(CoroCede)", \my $buf
-      or die "cannot open pst via CoroCede: $!";
+   open my $fh, ">:cede($GRANULARITY)", \my $buf
+      or die "cannot open pst via PerlIO::cede: $!";
    Storable::nstore_fd $_[0], $fh;
    $buf
 }
@@ -148,51 +150,6 @@ sub blocking_nfreeze($) {
    close $fh;
 
    $buf
-}
-
-package PerlIO::via::CoroCede;
-
-# generic cede-on-read/write filtering layer
-
-use Time::HiRes ("time");
-
-our $GRANULARITY = 0.02;
-
-my $next_cede;
-
-sub PUSHED {
-   __PACKAGE__
-}
-
-sub POPPED {
-   # newGVgen leaks globals with name _GEN_\d+, remove them here
-   delete @PerlIO::via::CoroCede::{
-      grep /^_GEN/,
-               keys %PerlIO::via::CoroCede::
-   };
-}
-
-sub FILL {
-   if ($next_cede <= time) {
-      $next_cede = time + $GRANULARITY; # calling time() twice usually is a net win
-      local *Storable::FILE;
-      Coro::cede ();
-   }
-
-   read $_[1], my $buf, 1024
-      or return undef;
-
-   $buf
-}
-
-sub WRITE {
-   if ($next_cede <= time) {
-      $next_cede = time + $GRANULARITY;
-      local *Storable::FILE;
-      Coro::cede ();
-   }
-
-   (print {$_[2]} $_[1]) ? length $_[1] : -1
 }
 
 1;

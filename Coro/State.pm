@@ -76,6 +76,8 @@ no warnings "uninitialized";
 
 use Carp;
 
+use Time::HiRes (); # currently only used for PerlIO::cede
+
 our $DIEHOOK;
 our $WARNHOOK;
 
