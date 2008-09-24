@@ -1664,7 +1664,7 @@ PerlIOCede_pushed (pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab
 {
   PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
 
-  self->every = SvNV (arg);
+  self->every = SvCUR (arg) ? SvNV (arg) : 0.01;
   self->next  = nvtime () + self->every;
 
   return PerlIOBuf_pushed (aTHX_ f, mode, Nullsv, tab);
