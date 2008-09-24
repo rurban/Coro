@@ -7,6 +7,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
 
 4.748
 	- Coro::Storable forgot to wrap Storable::pstore.
+        - work around a memory leak in perl in Coro::Storable
+          (and note that perl 5.10.0 has a double-free bug
+          that is not being workarounded).
 
 4.747 Tue Sep 23 01:59:41 CEST 2008
 	- fix a per-cv memleak (one empty array was leaked per

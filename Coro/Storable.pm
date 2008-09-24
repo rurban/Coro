@@ -14,8 +14,8 @@ game server) sometimes need to load large Storable objects without
 blocking the server for a long time.
 
 This is being implemented by using a perlio layer that feeds only small
-amounts of data (512 bytes per call) into Storable, and C<Coro::cede>'ing
-regularly (at most 100 times per second by default, though).
+amounts of data (1024 bytes per call) into Storable, and C<Coro::cede>'ing
+regularly (at most 50 times per second by default, though).
 
 As it seems that Storable is not reentrant, this module also wraps most
 functions of the Storable module so that only one freeze or thaw is done
@@ -164,6 +164,14 @@ sub PUSHED {
    __PACKAGE__
 }
 
+sub POPPED {
+   # newGVgen leaks globals with name _GEN_\d+, remove them here
+   delete @PerlIO::via::CoroCede::{
+      grep /^_GEN/,
+               keys %PerlIO::via::CoroCede::
+   };
+}
+
 sub FILL {
    if ($next_cede <= time) {
       $next_cede = time + $GRANULARITY; # calling time() twice usually is a net win
@@ -171,7 +179,7 @@ sub FILL {
       Coro::cede ();
    }
 
-   read $_[1], my $buf, 512
+   read $_[1], my $buf, 1024
       or return undef;
 
    $buf
