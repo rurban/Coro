@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.748
+	- Coro::Storable forgot to wrap Storable::pstore.
+
 4.747 Tue Sep 23 01:59:41 CEST 2008
 	- fix a per-cv memleak (one empty array was leaked per
           code reference).

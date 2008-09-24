@@ -87,7 +87,7 @@ BEGIN {
 use Storable;
 use base "Exporter";
 
-our $VERSION = 4.747;
+our $VERSION = 4.748;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 my $lock = new Coro::Semaphore;
@@ -97,7 +97,7 @@ sub guard {
 }
 
 # wrap xs functions
-for (qw(net_pstore mstore net_mstore pretrieve mretrieve dclone)) {
+for (qw(net_pstore pstore net_mstore mstore pretrieve mretrieve dclone)) {
    my $orig = \&{"Storable::$_"};
    *{"Storable::$_"} = sub {
       my $guard = $lock->guard;

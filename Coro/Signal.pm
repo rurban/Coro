@@ -31,7 +31,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 
 use Coro ();
 
-$VERSION = 4.747;
+$VERSION = 4.748;
 
 =item $s = new Coro::Signal;
 
