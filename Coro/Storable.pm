@@ -116,6 +116,8 @@ sub freeze($) {
    open my $fh, ">:cede($GRANULARITY)", \my $buf
       or die "cannot open pst via PerlIO::cede: $!";
    Storable::store_fd $_[0], $fh;
+   close $fh;
+
    $buf
 }
 
@@ -123,6 +125,8 @@ sub nfreeze($) {
    open my $fh, ">:cede($GRANULARITY)", \my $buf
       or die "cannot open pst via PerlIO::cede: $!";
    Storable::nstore_fd $_[0], $fh;
+   close $fh;
+
    $buf
 }
 
