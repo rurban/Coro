@@ -6,6 +6,7 @@
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
+#include "perliol.h"
 
 #include "patchlevel.h"
 
@@ -154,6 +155,8 @@ struct io_state
   int laststatval;
   Stat_t statcache;
 };
+
+static double (*nvtime)(); /* so why doesn't it take void? */
 
 static size_t coro_stacksize = CORO_STACKSIZE;
 static struct CoroAPI coroapi;
@@ -1647,6 +1650,82 @@ static MGVTBL coro_gensub_vtbl = {
   coro_gensub_free
 };
 
+/*****************************************************************************/
+/* PerlIO::cede */
+
+typedef struct
+{
+  PerlIOBuf base;
+  NV next, every;
+} PerlIOCede;
+
+static IV
+PerlIOCede_pushed (pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
+{
+  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
+
+  self->every = SvCUR (arg) ? SvNV (arg) : 0.01;
+  self->next  = nvtime () + self->every;
+
+  return PerlIOBuf_pushed (aTHX_ f, mode, Nullsv, tab);
+}
+
+static SV *
+PerlIOCede_getarg (pTHX_ PerlIO *f, CLONE_PARAMS *param, int flags)
+{
+  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
+
+  return newSVnv (self->every);
+}
+
+static IV
+PerlIOCede_flush (pTHX_ PerlIO *f)
+{
+  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
+  double now = nvtime ();
+
+  if (now >= self->next)
+    {
+      api_cede ();
+      self->next = now + self->every;
+    }
+
+  return PerlIOBuf_flush (f);
+}
+
+static PerlIO_funcs PerlIO_cede =
+{
+  sizeof(PerlIO_funcs),
+  "cede",
+  sizeof(PerlIOCede),
+  PERLIO_K_DESTRUCT | PERLIO_K_RAW,
+  PerlIOCede_pushed,
+  PerlIOBuf_popped,
+  PerlIOBuf_open,
+  PerlIOBase_binmode,
+  PerlIOCede_getarg,
+  PerlIOBase_fileno,
+  PerlIOBuf_dup,
+  PerlIOBuf_read,
+  PerlIOBuf_unread,
+  PerlIOBuf_write,
+  PerlIOBuf_seek,
+  PerlIOBuf_tell,
+  PerlIOBuf_close,
+  PerlIOCede_flush,
+  PerlIOBuf_fill,
+  PerlIOBase_eof,
+  PerlIOBase_error,
+  PerlIOBase_clearerr,
+  PerlIOBase_setlinebuf,
+  PerlIOBuf_get_base,
+  PerlIOBuf_bufsiz,
+  PerlIOBuf_get_ptr,
+  PerlIOBuf_get_cnt,
+  PerlIOBuf_set_ptrcnt,
+};
+
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
@@ -1685,6 +1764,15 @@ BOOT:
         coroapi.ver       = CORO_API_VERSION;
         coroapi.rev       = CORO_API_REVISION;
         coroapi.transfer  = api_transfer;
+
+        {
+          SV **svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
+
+          if (!svp)          croak ("Time::HiRes is required");
+          if (!SvIOK (*svp)) croak ("Time::NVtime isn't a function pointer");
+
+          nvtime = INT2PTR (double (*)(), SvIV (*svp));
+        }
 
         assert (("PRIO_NORMAL must be 0", !PRIO_NORMAL));
 }
@@ -2221,3 +2309,8 @@ _schedule (...)
         --incede;
 }
 
+
+MODULE = Coro::State                PACKAGE = PerlIO::cede
+
+BOOT:
+	PerlIO_define_layer (aTHX_ &PerlIO_cede);
