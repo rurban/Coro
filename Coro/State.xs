@@ -1690,7 +1690,7 @@ PerlIOCede_flush (pTHX_ PerlIO *f)
       self->next = now + self->every;
     }
 
-  return PerlIOBuf_flush (f);
+  return PerlIOBuf_flush (aTHX_ f);
 }
 
 static PerlIO_funcs PerlIO_cede =

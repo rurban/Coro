@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.749 Mon Sep 29 14:40:12 CEST 2008
+	- port to slow and broken pseudo-threaded perls. (courtesy pippijn).
+
 4.748 Sat Sep 27 14:03:19 CEST 2008
 	- implement, but do not document, PerlIO::cede(granularity).
 	- Coro::Storable forgot to wrap Storable::pstore.
