@@ -109,7 +109,7 @@ WriteMakefile(
 recommends:
   Event: 1.08
   EV: 3.0
-  IO::AIO: 0
+  IO::AIO: 3.1
   AnyEvent::AIO: 1.0
   BDB: 0
   AnyEvent::BDB: 1.0

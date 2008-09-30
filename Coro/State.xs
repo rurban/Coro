@@ -150,6 +150,7 @@ static perl_mutex coro_mutex;
 /* helper storage struct for Coro::AIO */
 struct io_state
 {
+  AV *res;
   int errorno;
   I32 laststype;
   int laststatval;
@@ -326,7 +327,7 @@ coro_clone_padlist (pTHX_ CV *cv)
   newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
   --AvFILLp (padlist);
 
-  av_store (newpadlist, 0, SvREFCNT_inc (*av_fetch (padlist, 0, FALSE)));
+  av_store (newpadlist, 0, SvREFCNT_inc_NN (*av_fetch (padlist, 0, FALSE)));
   av_store (newpadlist, 1, (SV *)newpad);
 
   return newpadlist;
@@ -812,7 +813,7 @@ coro_setup (pTHX_ struct coro *coro)
   GvSV (PL_errgv)    = newSV (0);
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
   PL_rs              = newSVsv (GvSV (irsgv));
-  PL_defoutgv        = (GV *)SvREFCNT_inc (stdoutgv);
+  PL_defoutgv        = (GV *)SvREFCNT_inc_NN (stdoutgv);
 
   {
     dSP;
@@ -918,7 +919,7 @@ runops_trace (pTHX)
 
               av_extend (av, top - bot);
               while (bot < top)
-                av_push (av, SvREFCNT_inc (*bot++));
+                av_push (av, SvREFCNT_inc_NN (*bot++));
 
               PL_runops = RUNOPS_DEFAULT;
               ENTER;
@@ -1452,7 +1453,7 @@ api_ready (SV *coro_sv)
   sv_hook = coro_nready ? 0 : coro_readyhook;
   xs_hook = coro_nready ? 0 : coroapi.readyhook;
 
-  coro_enq (aTHX_ SvREFCNT_inc (coro_sv));
+  coro_enq (aTHX_ SvREFCNT_inc_NN (coro_sv));
   ++coro_nready;
 
   UNLOCK;
@@ -2073,7 +2074,7 @@ _set_current (SV *current)
         PROTOTYPE: $
 	CODE:
         SvREFCNT_dec (SvRV (coro_current));
-        SvRV_set (coro_current, SvREFCNT_inc (SvRV (current)));
+        SvRV_set (coro_current, SvREFCNT_inc_NN (SvRV (current)));
 
 void
 _set_readyhook (SV *hook)
@@ -2143,7 +2144,7 @@ _pool_1 (SV *cb)
           }
 
         SvREFCNT_dec (coro->saved_deffh);
-        coro->saved_deffh = SvREFCNT_inc ((SV *)PL_defoutgv);
+        coro->saved_deffh = SvREFCNT_inc_NN ((SV *)PL_defoutgv);
 
         hv_store (hv, "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
@@ -2157,7 +2158,7 @@ _pool_1 (SV *cb)
           {
             av_fill (defav, len - 1);
             for (i = 0; i < len; ++i)
-              av_store (defav, i, SvREFCNT_inc (AvARRAY (invoke_av)[i + 1]));
+              av_store (defav, i, SvREFCNT_inc_NN (AvARRAY (invoke_av)[i + 1]));
           }
 
         SvREFCNT_dec (invoke);
@@ -2246,36 +2247,52 @@ gensub (SV *sub, ...)
 
 MODULE = Coro::State                PACKAGE = Coro::AIO
 
-SV *
-_get_state ()
-	CODE:
+void
+_get_state (SV *self)
+	PPCODE:
 {
-	struct io_state *data;
-
-        RETVAL = newSV (sizeof (struct io_state));
-	data = (struct io_state *)SvPVX (RETVAL);
-        SvCUR_set (RETVAL, sizeof (struct io_state));
-        SvPOK_only (RETVAL);
+        AV *defav = GvAV (PL_defgv);
+        AV *av = newAV ();
+        int i;
+        SV *data_sv = newSV (sizeof (struct io_state));
+	struct io_state *data = (struct io_state *)SvPVX (data_sv);
+        SvCUR_set (data_sv, sizeof (struct io_state));
+        SvPOK_only (data_sv);
 
         data->errorno     = errno;
         data->laststype   = PL_laststype;
         data->laststatval = PL_laststatval;
         data->statcache   = PL_statcache;
+
+        av_extend (av, AvFILLp (defav) + 1 + 1);
+
+        for (i = 0; i <= AvFILLp (defav); ++i)
+          av_push (av, SvREFCNT_inc_NN (AvARRAY (defav)[i]));
+
+        av_push (av, data_sv);
+
+        XPUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
+
+        api_ready (self);
 }
-	OUTPUT:
-        RETVAL
 
 void
-_set_state (char *data_)
+_set_state (SV *state)
 	PROTOTYPE: $
-	CODE:
+	PPCODE:
 {
-	struct io_state *data = (void *)data_;
+  	AV *av = (AV *)SvRV (state);
+	struct io_state *data = (struct io_state *)SvPVX (AvARRAY (av)[AvFILLp (av)]);
+        int i;
 
         errno          = data->errorno;
         PL_laststype   = data->laststype;
         PL_laststatval = data->laststatval;
         PL_statcache   = data->statcache;
+
+        EXTEND (SP, AvFILLp (av));
+        for (i = 0; i < AvFILLp (av); ++i)
+          PUSHs (sv_2mortal (SvREFCNT_inc_NN (AvARRAY (av)[i])));
 }
 
 
