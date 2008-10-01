@@ -9,6 +9,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
 	- new function Coro::AIO::aio_wait.
         - Coro.:AIO and Coro::BDB now "use Coro::AnyEvent".
         - greatly speed up and reduce memory usage of Coro::AIO requests.
+        - implement some other µ-optimisations.
 
 4.749 Mon Sep 29 14:40:12 CEST 2008
 	- port to slow and broken pseudo-threaded perls. (courtesy pippijn).
