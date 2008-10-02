@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Coro
-version:             4.749
+version:             4.8
 abstract:            ~
 license:             ~
 author:              ~
@@ -18,7 +18,7 @@ meta-spec:
 recommends:
   Event: 1.08
   EV: 3.0
-  IO::AIO: 0
+  IO::AIO: 3.1
   AnyEvent::AIO: 1.0
   BDB: 0
   AnyEvent::BDB: 1.0
