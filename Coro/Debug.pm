@@ -270,12 +270,13 @@ sub command($) {
 
    $cmd =~ s/\s+$//;
 
-   if ($cmd =~ /^ps (?:\s* (\S+)) $/x) {
+   if ($cmd =~ /^ps (?:\s* (\S+))? $/x) {
       my $flags = $1;
       my $desc = $flags =~ /w/ ? "%-24s" : "%-24.24s";
-      printf "%20s %s%s %4s %4s $desc %s\n", "PID", "S", "C", "RSS", "USES", "Description", "Where";
+      my $buf = sprintf "%20s %s%s %4s %4s $desc %s\n",
+                        "PID", "S", "C", "RSS", "USES", "Description", "Where";
+      Coro::cede;
       for my $coro (reverse Coro::State::list) {
-         Coro::cede;
          my @bt;
          Coro::State::call ($coro, sub {
             # we try to find *the* definite frame that gives msot useful info
@@ -286,15 +287,17 @@ sub command($) {
                last unless $bt[0] =~ /^Coro/;
             }
          });
-         printf "%20s %s%s %4s %4s $desc %s\n",
-                $coro+0,
-                $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
-                $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
-                format_num4 $coro->rss,
-                format_num4 $coro->usecount,
-                $coro->debug_desc,
-                (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
+         $buf .= sprintf "%20s %s%s %4s %4s $desc %s\n",
+                         $coro+0,
+                         $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
+                         $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
+                         format_num4 $coro->rss,
+                         format_num4 $coro->usecount,
+                         $coro->debug_desc,
+                         (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
+      Coro::cede;
+      print $buf;
 
    } elsif ($cmd =~ /^bt\s+(\d+)$/) {
       if (my $coro = find_coro $1) {
