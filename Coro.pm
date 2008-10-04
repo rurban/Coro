@@ -223,7 +223,7 @@ coroutine that might have executed other code already (which can be good
 or bad :).
 
 On the plus side, this function is faster than creating (and destroying)
-a completely new coroutine, so if you need a lot of generic coroutines in
+a completly new coroutine, so if you need a lot of generic coroutines in
 quick successsion, use C<async_pool>, not C<async>.
 
 The code block is executed in an C<eval> context and a warning will be
