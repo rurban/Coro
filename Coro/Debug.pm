@@ -275,8 +275,8 @@ sub command($) {
       my $desc = $flags =~ /w/ ? "%-24s" : "%-24.24s";
       my $buf = sprintf "%20s %s%s %4s %4s $desc %s\n",
                         "PID", "S", "C", "RSS", "USES", "Description", "Where";
-      Coro::cede;
       for my $coro (reverse Coro::State::list) {
+         Coro::cede;
          my @bt;
          Coro::State::call ($coro, sub {
             # we try to find *the* definite frame that gives msot useful info
@@ -385,6 +385,7 @@ EOF
       my @res = eval $cmd;
       print $@ ? $@ : (join " ", @res) . "\n";
    }
+   Coro::cede;
 }
 
 =item session $fh
