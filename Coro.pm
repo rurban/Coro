@@ -237,12 +237,12 @@ The priority will be reset to C<0> after each run, tracing will be
 disabled, the description will be reset and the default output filehandle
 gets restored, so you can change all these. Otherwise the coroutine will
 be re-used "as-is": most notably if you change other per-coroutine global
-stuff such as C<$/> you I<must needs> to revert that change, which is most
-simply done by using local as in: C< local $/ >.
+stuff such as C<$/> you I<must needs> revert that change, which is most
+simply done by using local as in: C<< local $/ >>.
 
-The pool size is limited to C<8> idle coroutines (this can be adjusted by
-changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
-required.
+The idle pool size is limited to C<8> idle coroutines (this can be
+adjusted by changing $Coro::POOL_SIZE), but there can be as many non-idle
+coros as required.
 
 If you are concerned about pooled coroutines growing a lot because a
 single C<async_pool> used a lot of stackspace you can e.g. C<async_pool
