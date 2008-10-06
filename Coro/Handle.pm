@@ -522,16 +522,19 @@ sub READ {
 
 sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
+   my $ofs;
 
    while() {
       if (defined $irs) {
-         my $pos = index $_[0][3], $irs;
+         my $pos = index $_[0][3], $irs, $ofs < 0 ? 0 : $ofs;
          if ($pos >= 0) {
             $pos += length $irs;
             my $res = substr $_[0][3], 0, $pos;
             substr ($_[0][3], 0, $pos) = "";
             return $res;
          }
+
+         $ofs = length $_[0][3] - length $irs;
       }
 
       my $r = sysread $_[0][0], $_[0][3], 8192, length $_[0][3];

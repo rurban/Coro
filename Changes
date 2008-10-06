@@ -5,6 +5,8 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- improve readline speed for very long "lines".
+
 4.8  Thu Oct  2 13:34:40 CEST 2008
 	- new function Coro::AIO::aio_wait.
         - Coro.:AIO and Coro::BDB now "use Coro::AnyEvent".
