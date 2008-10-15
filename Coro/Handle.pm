@@ -522,8 +522,7 @@ sub READ {
 
 sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
-   my $ofs;
-   my $len;
+   my ($ofs, $len);
 
    while() {
       if (defined $irs) {
