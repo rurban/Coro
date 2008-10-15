@@ -523,6 +523,7 @@ sub READ {
 sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
    my $ofs;
+   my $len;
 
    while() {
       if (defined $irs) {
@@ -537,9 +538,10 @@ sub READLINE {
          $ofs = length $_[0][3] - length $irs;
       }
 
-      my $r = sysread $_[0][0], $_[0][3], 8192, length $_[0][3];
-      if (defined $r) {
-         return length $_[0][3] ? delete $_[0][3] : undef unless $r;
+      $len = sysread $_[0][0], $_[0][3], $len + 4096, length $_[0][3];
+      if (defined $len) {
+         return length $_[0][3] ? delete $_[0][3] : undef
+            unless $len;
       } elsif (($! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK) || !&readable) {
          return length $_[0][3] ? delete $_[0][3] : undef;
       }
