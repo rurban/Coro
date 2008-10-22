@@ -90,6 +90,9 @@ static long pagesize;
 #ifndef newSV
 # define newSV(l) NEWSV(0,l)
 #endif
+#ifndef SvREFCNT_inc_NN
+# define SvREFCNT_inc_NN(sv) SvREFCNT_inc (sv)
+#endif
 
 /* 5.11 */
 #ifndef CxHASARGS
