@@ -129,7 +129,7 @@ DESCRIPTION
         can be good or bad :).
 
         On the plus side, this function is faster than creating (and
-        destroying) a completely new coroutine, so if you need a lot of
+        destroying) a completly new coroutine, so if you need a lot of
         generic coroutines in quick successsion, use "async_pool", not
         "async".
 
@@ -144,13 +144,12 @@ DESCRIPTION
         disabled, the description will be reset and the default output
         filehandle gets restored, so you can change all these. Otherwise the
         coroutine will be re-used "as-is": most notably if you change other
-        per-coroutine global stuff such as $/ you *must needs* to revert
-        that change, which is most simply done by using local as in: " local
-        $/ ".
+        per-coroutine global stuff such as $/ you *must needs* revert that
+        change, which is most simply done by using local as in: "local $/".
 
-        The pool size is limited to 8 idle coroutines (this can be adjusted
-        by changing $Coro::POOL_SIZE), and there can be as many non-idle
-        coros as required.
+        The idle pool size is limited to 8 idle coroutines (this can be
+        adjusted by changing $Coro::POOL_SIZE), but there can be as many
+        non-idle coros as required.
 
         If you are concerned about pooled coroutines growing a lot because a
         single "async_pool" used a lot of stackspace you can e.g.

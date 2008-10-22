@@ -69,7 +69,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = 4.8;
+our $VERSION = 4.801;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -223,7 +223,7 @@ coroutine that might have executed other code already (which can be good
 or bad :).
 
 On the plus side, this function is faster than creating (and destroying)
-a completely new coroutine, so if you need a lot of generic coroutines in
+a completly new coroutine, so if you need a lot of generic coroutines in
 quick successsion, use C<async_pool>, not C<async>.
 
 The code block is executed in an C<eval> context and a warning will be
@@ -237,12 +237,12 @@ The priority will be reset to C<0> after each run, tracing will be
 disabled, the description will be reset and the default output filehandle
 gets restored, so you can change all these. Otherwise the coroutine will
 be re-used "as-is": most notably if you change other per-coroutine global
-stuff such as C<$/> you I<must needs> to revert that change, which is most
-simply done by using local as in: C< local $/ >.
+stuff such as C<$/> you I<must needs> revert that change, which is most
+simply done by using local as in: C<< local $/ >>.
 
-The pool size is limited to C<8> idle coroutines (this can be adjusted by
-changing $Coro::POOL_SIZE), and there can be as many non-idle coros as
-required.
+The idle pool size is limited to C<8> idle coroutines (this can be
+adjusted by changing $Coro::POOL_SIZE), but there can be as many non-idle
+coros as required.
 
 If you are concerned about pooled coroutines growing a lot because a
 single C<async_pool> used a lot of stackspace you can e.g. C<async_pool

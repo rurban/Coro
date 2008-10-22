@@ -1,9 +1,13 @@
 Revision history for Perl extension Coro.
 
-TODO: should explore PerlIO::coroaio.
+TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
+
+4.801 Wed Oct 22 18:33:37 CEST 2008
+	- improve readline speed for very long "lines".
+	- backport to 5.8.8.
 
 4.8  Thu Oct  2 13:34:40 CEST 2008
 	- new function Coro::AIO::aio_wait.

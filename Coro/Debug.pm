@@ -270,8 +270,11 @@ sub command($) {
 
    $cmd =~ s/\s+$//;
 
-   if ($cmd =~ /^ps$/) {
-      printf "%20s %s%s %4s %4s %-24.24s %s\n", "PID", "S", "C", "RSS", "USES", "Description", "Where";
+   if ($cmd =~ /^ps (?:\s* (\S+))? $/x) {
+      my $flags = $1;
+      my $desc = $flags =~ /w/ ? "%-24s" : "%-24.24s";
+      my $buf = sprintf "%20s %s%s %4s %4s $desc %s\n",
+                        "PID", "S", "C", "RSS", "USES", "Description", "Where";
       for my $coro (reverse Coro::State::list) {
          Coro::cede;
          my @bt;
@@ -284,15 +287,17 @@ sub command($) {
                last unless $bt[0] =~ /^Coro/;
             }
          });
-         printf "%20s %s%s %4s %4s %-24.24s %s\n",
-                $coro+0,
-                $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
-                $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
-                format_num4 $coro->rss,
-                format_num4 $coro->usecount,
-                $coro->debug_desc,
-                (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
+         $buf .= sprintf "%20s %s%s %4s %4s $desc %s\n",
+                         $coro+0,
+                         $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
+                         $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
+                         format_num4 $coro->rss,
+                         format_num4 $coro->usecount,
+                         $coro->debug_desc,
+                         (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
+      Coro::cede;
+      print $buf;
 
    } elsif ($cmd =~ /^bt\s+(\d+)$/) {
       if (my $coro = find_coro $1) {
@@ -380,6 +385,7 @@ EOF
       my @res = eval $cmd;
       print $@ ? $@ : (join " ", @res) . "\n";
    }
+   Coro::cede;
 }
 
 =item session $fh
