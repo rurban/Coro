@@ -38,7 +38,7 @@ async {
 
    print "ok 8\n";
 
-   $w->print ($buf, "x" x (1024*128));
+   $w->print ($buf, "x" x (1024*1024*16));
 
    print "ok 10\n";
 
@@ -54,7 +54,7 @@ print "ok 6\n";
 
 print <$r> == 13 ? "" : "not ", "ok 9\n";
 
-$r->read ($buf, 1024*128);
+$r->read ($buf, 1024*1024*16);
 
 print "ok 11\n";
 

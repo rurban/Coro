@@ -121,9 +121,8 @@ a  Handcoded assembly. This is the fastest and most compatible method
    systems using the SVR ELF ABI (it is also reported to be working on
    Strawberry Perl for Windows using MinGW). This is the recommended
    method on supported platforms. Note that you usually have to compile
-   this module with optimisation enabled for this method to work, and
-   also more esoteric switches such as -fomit-leaf-frame-pointer might be
-   required. When in doubt, use another method, such as (s)etjmp/longjmp.
+   this module with optimisation enabled for this method to work. When in
+   doubt, use another method, such as (s)etjmp/longjmp.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and

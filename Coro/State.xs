@@ -83,20 +83,22 @@ static long pagesize;
 # endif
 #endif
 
+/* 5.11 */
+#ifndef CxHASARGS
+# define CxHASARGS(cx) (cx)->blk_sub.hasargs
+#endif
+
+/* 5.10.0 */
+#ifndef SvREFCNT_inc_NN
+# define SvREFCNT_inc_NN(sv) SvREFCNT_inc (sv)
+#endif
+
 /* 5.8.8 */
 #ifndef GV_NOTQUAL
 # define GV_NOTQUAL 0
 #endif
 #ifndef newSV
 # define newSV(l) NEWSV(0,l)
-#endif
-#ifndef SvREFCNT_inc_NN
-# define SvREFCNT_inc_NN(sv) SvREFCNT_inc (sv)
-#endif
-
-/* 5.11 */
-#ifndef CxHASARGS
-# define CxHASARGS(cx) (cx)->blk_sub.hasargs
 #endif
 
 /* 5.8.7 */
