@@ -6,6 +6,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 
 	- tune 01_unblock.t tests a bit.
+        - support -fno-omit-frame-pointer on x86 with the assembly method.
 
 4.801 Wed Oct 22 18:33:37 CEST 2008
 	- improve readline speed for very long "lines".
