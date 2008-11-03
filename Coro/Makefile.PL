@@ -84,6 +84,11 @@ if (exists $ENV{CORO_INTERFACE}) {
 } elsif ($^O =~ /darwin/) {
    $iface = "s";
 
+} elsif ($^O =~ /dragonfly/) {
+   # ucontext is totally broken on dragonfly bsd:
+   # Fatal error 'siglongjmp()ing between thread contexts is undefined by POSIX 1003.1
+   $iface = "s";
+
 } elsif (-e "/usr/include/ucontext.h") { # shame on this heuristic
    $iface = "u";
 
