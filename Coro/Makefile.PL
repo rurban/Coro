@@ -67,7 +67,7 @@ if (exists $ENV{CORO_INTERFACE}) {
 
 } elsif ($^O =~ /linux/) {
    # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ && $Config{optimize} =~ /-O/ ? "a" : "s";
+   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
 
 } elsif ($^O =~ /(free|net|open)bsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
@@ -82,6 +82,11 @@ if (exists $ENV{CORO_INTERFACE}) {
    $iface = "s";
 
 } elsif ($^O =~ /darwin/) {
+   $iface = "s";
+
+} elsif ($^O =~ /dragonfly/) {
+   # ucontext is totally broken on dragonfly bsd:
+   # Fatal error 'siglongjmp()ing between thread contexts is undefined by POSIX 1003.1
    $iface = "s";
 
 } elsif (-e "/usr/include/ucontext.h") { # shame on this heuristic
@@ -120,9 +125,8 @@ a  Handcoded assembly. This is the fastest and most compatible method
    on GNU/Linux x86 and x86_64 systems and should work on all x86/x86_64
    systems using the SVR ELF ABI (it is also reported to be working on
    Strawberry Perl for Windows using MinGW). This is the recommended
-   method on supported platforms. Note that you usually have to compile
-   this module with optimisation enabled for this method to work. When in
-   doubt, use another method, such as (s)etjmp/longjmp.
+   method on supported platforms. When in doubt, use another method,
+   such as (s)etjmp/longjmp.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
