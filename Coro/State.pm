@@ -228,11 +228,6 @@ to another state.
 
 Like C<call>, but eval's the string. Dangerous.
 
-=item $state->throw ($exception)
-
-Makes the coroutine throw the given exception as soon as it regains
-control.
-
 =item $state->swap_defsv
 
 =item $state->swap_defav
