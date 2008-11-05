@@ -260,6 +260,24 @@ DESCRIPTION
         arguments as status (default: the empty list). Never returns if the
         coroutine is the current coroutine.
 
+    $coroutine->throw ([$scalar])
+        If $throw is specified and defined, it will be thrown as an
+        exception inside the coroutine at the next convenient point in time
+        (usually after it gains control at the next schedule/transfer/cede).
+        Otherwise clears the exception object.
+
+        The exception object will be thrown "as is" with the specified
+        scalar in $@, i.e. if it is a string, no line number or newline will
+        be appended (unlike with "die").
+
+        This can be used as a softer means than "cancel" to ask a coroutine
+        to end itself, although there is no guarantee that the exception
+        will lead to termination, and if the exception isn't caught it might
+        well end the whole program.
+
+        You might also think of "throw" as being the moral equivalent of
+        "kill"ing a coroutine with a signal (in this case, a scalar).
+
     $coroutine->join
         Wait until the coroutine terminates and return any values given to
         the "terminate" or "cancel" functions. "join" can be called
@@ -305,21 +323,6 @@ DESCRIPTION
 
         This method simply sets the "$coroutine->{desc}" member to the given
         string. You can modify this member directly if you wish.
-
-    $coroutine->throw ([$scalar])
-        If $throw is specified and defined, it will be thrown as an
-        exception inside the coroutine at the next convinient point in time
-        (usually after it gains control at the next schedule/transfer/cede).
-        Otherwise clears the exception object.
-
-        The exception object will be thrown "as is" with the specified
-        scalar in $@, i.e. if it is a string, no line number or newline will
-        be appended (unlike with "die").
-
-        This can be used as a softer means than "cancel" to ask a coroutine
-        to end itself, although there is no guarentee that the exception
-        will lead to termination, and if the exception isn't caught it might
-        well end the whole program.
 
   GLOBAL FUNCTIONS
     Coro::nready
