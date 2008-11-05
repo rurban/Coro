@@ -169,7 +169,7 @@ static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
-static volatile SV *coro_mortal; /* will be freed after next transfer */
+static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
@@ -1210,7 +1210,6 @@ static void NOINLINE
 transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 {
   dSTACKLEVEL;
-  static volatile int has_throw;
 
   /* sometimes transfer is only called to set idle_sp */
   if (expect_false (!next))
@@ -1220,6 +1219,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
     }
   else if (expect_true (prev != next))
     {
+      static volatile int has_throw;
       coro_cctx *prev__cctx;
 
       if (expect_false (prev->flags & CF_NEW))
@@ -1836,7 +1836,7 @@ _set_stacklevel (...)
 
             case 1:
               if (items != 2)
-                croak ("Coro::State::transfer (prev,next) expects two arguments, not %d", items);
+                croak ("Coro::State::transfer (prev, next) expects two arguments, not %d", items);
 
               prepare_transfer (aTHX_ &ta, ST (0), ST (1));
               break;
@@ -2009,13 +2009,6 @@ force_cctx ()
         coro->cctx->idle_sp = 0;
 
 void
-throw (Coro::State self, SV *throw = &PL_sv_undef)
-	PROTOTYPE: $;$
-        CODE:
-        SvREFCNT_dec (self->throw);
-        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
-
-void
 swap_defsv (Coro::State self)
 	PROTOTYPE: $
         ALIAS:
@@ -2127,6 +2120,13 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
+
+void
+throw (Coro::State self, SV *throw = &PL_sv_undef)
+	PROTOTYPE: $;$
+        CODE:
+        SvREFCNT_dec (self->throw);
+        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
 
 # for async_pool speedup
 void

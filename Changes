@@ -5,6 +5,14 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.804 Wed Nov  5 16:36:00 CET 2008
+	- Coro::Debug::new_unix_server would not create a non-blocking listening
+          socket, sometimes causing freezes.
+        - fix misaligned stack points for setjmp and assembly methods, which
+          can cause crashes on x86/x86_64 with a sufficiently aggressive compiler.
+        - new function: Coro::Debug::new_tcp_server.
+	- move ->throw into the Coro class because it only works on coro objects.
+
 4.803 Mon Nov  3 17:16:12 CET 2008
 	- use a global asm statement to become independent of gcc otpimisations
           for CORO_ASM (thanks to pippijn for the idea).
