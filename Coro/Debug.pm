@@ -487,8 +487,7 @@ sub new_tcp_server {
 sub DESTROY {
    my ($self) = @_;
 
-   unlink $self->{path};
-   close $self->{fh};
+   unlink $self->{path} if exists $self->{path};
    %$self = ();
 }
 

@@ -297,6 +297,7 @@ Returns a list of all states currently allocated.
 
 =cut
 
+# used by Coro::Debug only atm.
 sub debug_desc {
    $_[0]{desc}
 }
