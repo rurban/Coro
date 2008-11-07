@@ -54,7 +54,7 @@ static long pagesize;
 #endif
 
 /* the maximum number of idle cctx that will be pooled */
-#define MAX_IDLE_CCTX 8
+static int cctx_max_idle = 4;
 
 #define PERL_VERSION_ATLEAST(a,b,c)				\
   (PERL_REVISION > (a)						\
@@ -164,7 +164,8 @@ struct io_state
 
 static double (*nvtime)(); /* so why doesn't it take void? */
 
-static size_t coro_stacksize = CORO_STACKSIZE;
+static U32 cctx_gen;
+static size_t cctx_stacksize = CORO_STACKSIZE;
 static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
@@ -211,6 +212,7 @@ typedef struct coro_cctx {
   JMPENV *top_env;
   coro_context cctx;
 
+  U32 gen;
 #if CORO_USE_VALGRIND
   int valgrind_id;
 #endif
@@ -1084,8 +1086,10 @@ cctx_new ()
   ++cctx_count;
   Newz (0, cctx, 1, coro_cctx);
 
+  cctx->gen = cctx_gen;
+
 #if HAVE_MMAP
-  cctx->ssize = ((coro_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
+  cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
   /* mmap supposedly does allocate-on-write for us */
   cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
@@ -1101,8 +1105,8 @@ cctx_new ()
   else
 #endif
     {
-      cctx->ssize = coro_stacksize * (long)sizeof (long);
-      New (0, cctx->sptr, coro_stacksize, long);
+      cctx->ssize = cctx_stacksize * (long)sizeof (long);
+      New (0, cctx->sptr, cctx_stacksize, long);
 
       if (!cctx->sptr)
         {
@@ -1148,7 +1152,7 @@ cctx_destroy (coro_cctx *cctx)
 }
 
 /* wether this cctx should be destructed */
-#define CCTX_EXPIRED(cctx) ((cctx)->ssize < coro_stacksize || ((cctx)->flags & CC_NOREUSE))
+#define CCTX_EXPIRED(cctx) ((cctx)->gen != cctx_gen || ((cctx)->flags & CC_NOREUSE))
 
 static coro_cctx *
 cctx_get (pTHX)
@@ -1174,7 +1178,7 @@ cctx_put (coro_cctx *cctx)
   assert (("cctx_put called on non-initialised cctx", cctx->sptr));
 
   /* free another cctx if overlimit */
-  if (expect_false (cctx_idle >= MAX_IDLE_CCTX))
+  if (expect_false (cctx_idle >= cctx_max_idle))
     {
       coro_cctx *first = cctx_first;
       cctx_first = first->next;
@@ -1890,9 +1894,21 @@ _exit (int code)
 int
 cctx_stacksize (int new_stacksize = 0)
 	CODE:
-        RETVAL = coro_stacksize;
+        RETVAL = cctx_stacksize;
         if (new_stacksize)
-          coro_stacksize = new_stacksize;
+          {
+            cctx_stacksize = new_stacksize;
+            ++cctx_gen;
+          }
+	OUTPUT:
+        RETVAL
+
+int
+cctx_max_idle (int max_idle = 0)
+	CODE:
+        RETVAL = cctx_max_idle;
+        if (max_idle > 1)
+          cctx_max_idle = max_idle;
 	OUTPUT:
         RETVAL
 

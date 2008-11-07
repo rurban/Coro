@@ -13,6 +13,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - cctx_count wasn't always updated properly.
         - (libcoro) cleanup and extend the libcoro API to officialy
           allow creation of empty source contexts.
+        - Coro::State::cctx_stacksize wasn't applied correctly.
+        - new function Coro::State::cctx_max_idle.
+        - the default max number of idle C contexts is now 4.
 
 4.804 Wed Nov  5 16:36:00 CET 2008
 	- Coro::Debug::new_unix_server would not create a non-blocking listening
