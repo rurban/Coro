@@ -106,9 +106,11 @@ correct in most cases, but you still can chose between these alternatives:
 
 u  The unix 'ucontext.h' functions are relatively new and not implemented
    or well-tested in older unices. They allow very fast coroutine creation
-   and reasonably fast switching, and, most importantly, are very stable.
-   They are, however, usually slower than the other alternatives due to an
-   extra syscall done by swapcontext.
+   and reasonably fast switching.  They are, however, usually slower than
+   the other alternatives due to an extra syscall done by swapcontext. And
+   while nominally most portable (it's the only POSIX-standardised
+   interface for coroutines), ucontext functions are, as usual, broken on
+   most/all BSDs.
 
 s  If the ucontext functions are not working or you don't want
    to use them for other reasons you can try a workaround using
@@ -116,27 +118,27 @@ s  If the ucontext functions are not working or you don't want
    creation is rather slow, but switching is very fast (often much faster
    than with the ucontext functions). Unfortunately, glibc-2.1 and
    below don't even feature a working sigaltstack. You cannot use this
-   implementation if some other code uses SIGUSR2 or you plan to
-   create coroutines from an alternative signal stack, as both are being
-   used for coroutine creation.
+   implementation if some other code uses SIGUSR2 or you plan to create
+   coroutines from an alternative signal stack, as both are being used for
+   coroutine creation.
 
-a  Handcoded assembly. This is the fastest and most compatible method
+a  Handcoded assembly. This is the fastest and most compatible method,
    with the least side effects, if it works, that is. It has been tested
    on GNU/Linux x86 and x86_64 systems and should work on all x86/x86_64
    systems using the SVR ELF ABI (it is also reported to be working on
    Strawberry Perl for Windows using MinGW). This is the recommended
-   method on supported platforms. When in doubt, use another method,
-   such as (s)etjmp/longjmp.
+   method on supported platforms. When it doesn't work, use another
+   method, such as (s)etjmp/longjmp.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
    recommended even for newer versions; when it works, that is (currently
    x86 and a few others only. If it compiles, it's usually ok). Newer
-   glibc versions (>= 2.5) stop working with this implementation again.
+   glibc versions (>= 2.5) stop working with this implementation however.
 
-i  IRIX. For some reason, SGI really does not like to follow the single
-   unix specification (does that surprise you?), so this workaround might
-   be needed (it's fast), although [s] and [u] should also work now.
+i  IRIX. For some reason, SGI really does not like to follow POSIX (does
+   that surprise you?), so this workaround might be needed (it's fast),
+   although [s] and [u] should also work now.
 
 w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
    the MSVC compilers (e.g. ActiveState Perl, but see "a" for Strawberry
@@ -144,12 +146,16 @@ w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
    windows, different environments might work differently. Doh.
 
 p  Use pthread API. Try to avoid this option, it was only created to make
-   a point about the programming language shootout and might leak threads.
-   It might work fine as a last resort, however.
+   a point about the programming language shootout. It is likely the
+   slowest method of implementing coroutines. It might work fine as a last
+   resort, however, as the pthread API is slightly better tested than
+   ucontext functions for example. Of course, not on BSDs, who usually
+   have very broken pthread implementations.
 
-For most systems, the default chosen should be OK. If you experience
-problems then you should experiment with this setting and/or turn
-optimisations on or off (make OPTIMIZE=-O or -O0).
+Coro tries hard to come up with a suitable default for most systems,
+so pressing return at the prompt usually does the right thing. If you
+experience problems (e.g. make test fails) then you should experiment with
+this setting.
 
 EOF
 
