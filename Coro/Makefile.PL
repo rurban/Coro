@@ -75,8 +75,8 @@ if (exists $ENV{CORO_INTERFACE}) {
 
    # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switchign mechanisms)
 
-   # therefore, default to setjmp
-   $iface = "s";
+   # therefore, default to pthread - hey, it might actually work
+   $iface = "p";
 
 } elsif ($^O =~ /solaris/) {
    $iface = "s";
@@ -299,6 +299,9 @@ WriteMakefile(
   DEFINE       => $DEFINE,
   LIBS         => @LIBS,
   DIR          => [],
+  depend => {
+     "State.c" => "libcoro/coro.h libcoro/coro.c",
+  },
 );
 
 sub conftest {

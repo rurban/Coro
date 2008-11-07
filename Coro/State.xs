@@ -144,9 +144,9 @@ static long pagesize;
 #include "CoroAPI.h"
 
 #ifdef USE_ITHREADS
-static perl_mutex coro_mutex;
-# define LOCK   do { MUTEX_LOCK   (&coro_mutex); } while (0)
-# define UNLOCK do { MUTEX_UNLOCK (&coro_mutex); } while (0)
+static perl_mutex coro_lock;
+# define LOCK   do { MUTEX_LOCK   (&coro_lock); } while (0)
+# define UNLOCK do { MUTEX_UNLOCK (&coro_lock); } while (0)
 #else
 # define LOCK   (void)0
 # define UNLOCK (void)0
@@ -385,12 +385,12 @@ static MGVTBL coro_cv_vtbl = {
   coro_cv_free
 };
 
-#define CORO_MAGIC(sv,type)		\
-    SvMAGIC (sv)			\
-       ? SvMAGIC (sv)->mg_type == type	\
-          ? SvMAGIC (sv)		\
-          : mg_find (sv, type)		\
-       : 0
+#define CORO_MAGIC(sv, type)		\
+  SvMAGIC (sv)				\
+    ? SvMAGIC (sv)->mg_type == type	\
+        ? SvMAGIC (sv)			\
+        : mg_find (sv, type)		\
+    : 0
 
 #define CORO_MAGIC_cv(cv)    CORO_MAGIC (((SV *)(cv)), CORO_MAGIC_type_cv)
 #define CORO_MAGIC_state(sv) CORO_MAGIC (((SV *)(sv)), CORO_MAGIC_type_state)
@@ -630,7 +630,7 @@ coro_init_stacks (pTHX)
  * destroy the stacks, the callchain etc...
  */
 static void
-coro_destroy_stacks (pTHX)
+coro_destruct_stacks (pTHX)
 {
   while (PL_curstackinfo->si_next)
     PL_curstackinfo = PL_curstackinfo->si_next;
@@ -845,7 +845,7 @@ coro_setup (pTHX_ struct coro *coro)
 }
 
 static void
-coro_destroy (pTHX_ struct coro *coro)
+coro_destruct (pTHX_ struct coro *coro)
 {
   if (!IN_DESTRUCT)
     {
@@ -877,7 +877,7 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (coro->saved_deffh);
   SvREFCNT_dec (coro->throw);
 
-  coro_destroy_stacks (aTHX);
+  coro_destruct_stacks (aTHX);
 }
 
 static void
@@ -1082,7 +1082,6 @@ cctx_new ()
   size_t stack_size;
 
   ++cctx_count;
-
   Newz (0, cctx, 1, coro_cctx);
 
 #if HAVE_MMAP
@@ -1128,17 +1127,22 @@ cctx_destroy (coro_cctx *cctx)
     return;
 
   --cctx_count;
+  coro_destroy (&cctx->cctx);
 
+  /* coro_transfer creates new, empty cctx's */
+  if (cctx->sptr)
+    {
 #if CORO_USE_VALGRIND
-  VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
+      VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
 #endif
 
 #if HAVE_MMAP
-  if (cctx->flags & CC_MAPPED)
-    munmap (cctx->sptr, cctx->ssize);
-  else
+      if (cctx->flags & CC_MAPPED)
+        munmap (cctx->sptr, cctx->ssize);
+      else
 #endif
-    Safefree (cctx->sptr);
+        Safefree (cctx->sptr);
+    }
 
   Safefree (cctx);
 }
@@ -1167,6 +1171,8 @@ cctx_get (pTHX)
 static void
 cctx_put (coro_cctx *cctx)
 {
+  assert (("cctx_put called on non-initialised cctx", cctx->sptr));
+
   /* free another cctx if overlimit */
   if (expect_false (cctx_idle >= MAX_IDLE_CCTX))
     {
@@ -1224,8 +1230,12 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       if (expect_false (prev->flags & CF_NEW))
         {
-          /* create a new empty context */
-          Newz (0, prev->cctx, 1, coro_cctx);
+          /* create a new empty/source context */
+          ++cctx_count;
+          New (0, prev->cctx, 1, coro_cctx);
+          prev->cctx->sptr = 0;
+          coro_create (&prev->cctx->cctx, 0, 0, 0, 0);
+
           prev->flags &= ~CF_NEW;
           prev->flags |=  CF_RUNNING;
         }
@@ -1342,7 +1352,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
 
-      coro_destroy (aTHX_ coro);
+      coro_destruct (aTHX_ coro);
 
       load_perl (aTHX_ &temp);
 
@@ -1739,7 +1749,7 @@ PROTOTYPES: DISABLE
 BOOT:
 {
 #ifdef USE_ITHREADS
-        MUTEX_INIT (&coro_mutex);
+        MUTEX_INIT (&coro_lock);
 #endif
         BOOT_PAGESIZE;
 
