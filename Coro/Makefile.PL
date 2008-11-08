@@ -24,15 +24,8 @@ if ($Config{usethreads} && $^O eq "netbsd") {
 *** and uses a lot more memory than fork (perl threads do not give you threads,
 *** they are only windows-process emulation ported to unix).
 ***
-*** If you really want to try building Coro on your broken platform, enter
-*** "yes" at the prompt - report back if the bugs is fixed please. (Oh,
-*** and try out BDB or IO::AIO which suffer from other threading bugs on
-*** netbsd that never seem to get fixed).
-***
 
 EOF
-
-   print "prompt> "; <STDIN> =~ /^yes/ or exit 1;
 }
 
 print <<EOF;
@@ -73,9 +66,9 @@ if (exists $ENV{CORO_INTERFACE}) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
 
-   # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switchign mechanisms)
+   # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switching mechanisms)
 
-   # therefore, default to pthread - hey, it might actually work
+   # therefore, default to pthread - hey, it might actually work, with some hacks
    $iface = "p";
 
 } elsif ($^O =~ /solaris/) {
@@ -145,12 +138,14 @@ w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
    Perl), although, as there is no standard on how to do this under
    windows, different environments might work differently. Doh.
 
-p  Use pthread API. Try to avoid this option, it was only created to make
-   a point about the programming language shootout. It is likely the
-   slowest method of implementing coroutines. It might work fine as a last
-   resort, however, as the pthread API is slightly better tested than
-   ucontext functions for example. Of course, not on BSDs, who usually
-   have very broken pthread implementations.
+p  Use pthread API. Try to avoid this option, it was only created to
+   make a point about the programming language shootout. It is unlikely
+   to work with perls that have windows process emulation enabled ("perl
+   threads"). It is also likely the slowest method of implementing
+   coroutines. It might work fine as a last resort, however, as the
+   pthread API is slightly better tested than ucontext functions for
+   example. Of course, not on BSDs, who usually have very broken pthread
+   implementations.
 
 Coro tries hard to come up with a suitable default for most systems,
 so pressing return at the prompt usually does the right thing. If you

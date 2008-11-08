@@ -18,6 +18,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - (libcoro) try harder to get _setjmp/_longjmp.
         - (libcoro) cleanup and extend the libcoro API to officially
           allow the creation of empty source contexts.
+        - very experimental workaround for the totally broken netbsd platform.
 
 4.804 Wed Nov  5 16:36:00 CET 2008
 	- Coro::Debug::new_unix_server would not create a non-blocking listening

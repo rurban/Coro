@@ -144,13 +144,25 @@ static int cctx_max_idle = 4;
 #include "CoroAPI.h"
 
 #ifdef USE_ITHREADS
+
 static perl_mutex coro_lock;
 # define LOCK   do { MUTEX_LOCK   (&coro_lock); } while (0)
 # define UNLOCK do { MUTEX_UNLOCK (&coro_lock); } while (0)
+# if CORO_PTHREAD
+static void *coro_thx;
+# endif
+
 #else
+
 # define LOCK   (void)0
 # define UNLOCK (void)0
+
 #endif
+
+# undef LOCK
+# define LOCK   (void)0
+# undef UNLOCK
+# define UNLOCK (void)0
 
 /* helper storage struct for Coro::AIO */
 struct io_state
@@ -1050,30 +1062,37 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
 static void
 cctx_run (void *arg)
 {
-  dTHX;
+#ifdef USE_ITHREADS
+# if CORO_PTHREAD
+  PERL_SET_CONTEXT (coro_thx);
+# endif
+#endif
+  {
+    dTHX;
 
-  /* cctx_run is the alternative tail of transfer(), so unlock here. */
-  UNLOCK;
+    /* cctx_run is the alternative tail of transfer(), so unlock here. */
+    UNLOCK;
 
-  /* we now skip the entersub that lead to transfer() */
-  PL_op = PL_op->op_next;
+    /* we now skip the entersub that lead to transfer() */
+    PL_op = PL_op->op_next;
 
-  /* inject a fake subroutine call to cctx_init */
-  cctx_prepare (aTHX_ (coro_cctx *)arg);
+    /* inject a fake subroutine call to cctx_init */
+    cctx_prepare (aTHX_ (coro_cctx *)arg);
 
-  /* somebody or something will hit me for both perl_run and PL_restartop */
-  PL_restartop = PL_op;
-  perl_run (PL_curinterp);
+    /* somebody or something will hit me for both perl_run and PL_restartop */
+    PL_restartop = PL_op;
+    perl_run (PL_curinterp);
 
-  /*
-   * If perl-run returns we assume exit() was being called or the coro
-   * fell off the end, which seems to be the only valid (non-bug)
-   * reason for perl_run to return. We try to exit by jumping to the
-   * bootstrap-time "top" top_env, as we cannot restore the "main"
-   * coroutine as Coro has no such concept
-   */
-  PL_top_env = main_top_env;
-  JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
+    /*
+     * If perl-run returns we assume exit() was being called or the coro
+     * fell off the end, which seems to be the only valid (non-bug)
+     * reason for perl_run to return. We try to exit by jumping to the
+     * bootstrap-time "top" top_env, as we cannot restore the "main"
+     * coroutine as Coro has no such concept
+     */
+    PL_top_env = main_top_env;
+    JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
+  }
 }
 
 static coro_cctx *
@@ -1756,6 +1775,9 @@ BOOT:
 {
 #ifdef USE_ITHREADS
         MUTEX_INIT (&coro_lock);
+# if CORO_PTHREAD
+        coro_thx = PERL_GET_CONTEXT;
+# endif
 #endif
         BOOT_PAGESIZE;
 
