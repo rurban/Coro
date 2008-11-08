@@ -66,6 +66,7 @@ $c1 = new Coro::State sub {
 transfer($main, $c0);
 transfer($main, $c1);
 
+#(async {
 timethese 5000000, {
    function  => 'a(5); a(6)',
    method    => '$a->b(5); $a->b(6)',
@@ -73,6 +74,7 @@ timethese 5000000, {
    transfer0 => 'transfer($main, $c0)',
    transfer1 => 'transfer($main, $c1)',
 };
+#})->join;
 
 
 
