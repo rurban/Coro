@@ -54,7 +54,7 @@ static long pagesize;
 #endif
 
 /* the maximum number of idle cctx that will be pooled */
-#define MAX_IDLE_CCTX 8
+static int cctx_max_idle = 4;
 
 #define PERL_VERSION_ATLEAST(a,b,c)				\
   (PERL_REVISION > (a)						\
@@ -144,27 +144,40 @@ static long pagesize;
 #include "CoroAPI.h"
 
 #ifdef USE_ITHREADS
-static perl_mutex coro_mutex;
-# define LOCK   do { MUTEX_LOCK   (&coro_mutex); } while (0)
-# define UNLOCK do { MUTEX_UNLOCK (&coro_mutex); } while (0)
+
+static perl_mutex coro_lock;
+# define LOCK   do { MUTEX_LOCK   (&coro_lock); } while (0)
+# define UNLOCK do { MUTEX_UNLOCK (&coro_lock); } while (0)
+# if CORO_PTHREAD
+static void *coro_thx;
+# endif
+
 #else
+
 # define LOCK   (void)0
 # define UNLOCK (void)0
+
 #endif
+
+# undef LOCK
+# define LOCK   (void)0
+# undef UNLOCK
+# define UNLOCK (void)0
 
 /* helper storage struct for Coro::AIO */
 struct io_state
 {
   AV *res;
   int errorno;
-  I32 laststype;
+  I32 laststype; /* U16 in 5.10.0 */
   int laststatval;
   Stat_t statcache;
 };
 
 static double (*nvtime)(); /* so why doesn't it take void? */
 
-static size_t coro_stacksize = CORO_STACKSIZE;
+static U32 cctx_gen;
+static size_t cctx_stacksize = CORO_STACKSIZE;
 static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
@@ -211,6 +224,7 @@ typedef struct coro_cctx {
   JMPENV *top_env;
   coro_context cctx;
 
+  U32 gen;
 #if CORO_USE_VALGRIND
   int valgrind_id;
 #endif
@@ -385,12 +399,12 @@ static MGVTBL coro_cv_vtbl = {
   coro_cv_free
 };
 
-#define CORO_MAGIC(sv,type)		\
-    SvMAGIC (sv)			\
-       ? SvMAGIC (sv)->mg_type == type	\
-          ? SvMAGIC (sv)		\
-          : mg_find (sv, type)		\
-       : 0
+#define CORO_MAGIC(sv, type)		\
+  SvMAGIC (sv)				\
+    ? SvMAGIC (sv)->mg_type == type	\
+        ? SvMAGIC (sv)			\
+        : mg_find (sv, type)		\
+    : 0
 
 #define CORO_MAGIC_cv(cv)    CORO_MAGIC (((SV *)(cv)), CORO_MAGIC_type_cv)
 #define CORO_MAGIC_state(sv) CORO_MAGIC (((SV *)(sv)), CORO_MAGIC_type_state)
@@ -630,7 +644,7 @@ coro_init_stacks (pTHX)
  * destroy the stacks, the callchain etc...
  */
 static void
-coro_destroy_stacks (pTHX)
+coro_destruct_stacks (pTHX)
 {
   while (PL_curstackinfo->si_next)
     PL_curstackinfo = PL_curstackinfo->si_next;
@@ -845,7 +859,7 @@ coro_setup (pTHX_ struct coro *coro)
 }
 
 static void
-coro_destroy (pTHX_ struct coro *coro)
+coro_destruct (pTHX_ struct coro *coro)
 {
   if (!IN_DESTRUCT)
     {
@@ -877,7 +891,7 @@ coro_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (coro->saved_deffh);
   SvREFCNT_dec (coro->throw);
 
-  coro_destroy_stacks (aTHX);
+  coro_destruct_stacks (aTHX);
 }
 
 static void
@@ -1048,30 +1062,37 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
 static void
 cctx_run (void *arg)
 {
-  dTHX;
+#ifdef USE_ITHREADS
+# if CORO_PTHREAD
+  PERL_SET_CONTEXT (coro_thx);
+# endif
+#endif
+  {
+    dTHX;
 
-  /* cctx_run is the alternative tail of transfer(), so unlock here. */
-  UNLOCK;
+    /* cctx_run is the alternative tail of transfer(), so unlock here. */
+    UNLOCK;
 
-  /* we now skip the entersub that lead to transfer() */
-  PL_op = PL_op->op_next;
+    /* we now skip the entersub that lead to transfer() */
+    PL_op = PL_op->op_next;
 
-  /* inject a fake subroutine call to cctx_init */
-  cctx_prepare (aTHX_ (coro_cctx *)arg);
+    /* inject a fake subroutine call to cctx_init */
+    cctx_prepare (aTHX_ (coro_cctx *)arg);
 
-  /* somebody or something will hit me for both perl_run and PL_restartop */
-  PL_restartop = PL_op;
-  perl_run (PL_curinterp);
+    /* somebody or something will hit me for both perl_run and PL_restartop */
+    PL_restartop = PL_op;
+    perl_run (PL_curinterp);
 
-  /*
-   * If perl-run returns we assume exit() was being called or the coro
-   * fell off the end, which seems to be the only valid (non-bug)
-   * reason for perl_run to return. We try to exit by jumping to the
-   * bootstrap-time "top" top_env, as we cannot restore the "main"
-   * coroutine as Coro has no such concept
-   */
-  PL_top_env = main_top_env;
-  JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
+    /*
+     * If perl-run returns we assume exit() was being called or the coro
+     * fell off the end, which seems to be the only valid (non-bug)
+     * reason for perl_run to return. We try to exit by jumping to the
+     * bootstrap-time "top" top_env, as we cannot restore the "main"
+     * coroutine as Coro has no such concept
+     */
+    PL_top_env = main_top_env;
+    JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
+  }
 }
 
 static coro_cctx *
@@ -1082,11 +1103,12 @@ cctx_new ()
   size_t stack_size;
 
   ++cctx_count;
-
   Newz (0, cctx, 1, coro_cctx);
 
+  cctx->gen = cctx_gen;
+
 #if HAVE_MMAP
-  cctx->ssize = ((coro_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
+  cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
   /* mmap supposedly does allocate-on-write for us */
   cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
 
@@ -1102,8 +1124,8 @@ cctx_new ()
   else
 #endif
     {
-      cctx->ssize = coro_stacksize * (long)sizeof (long);
-      New (0, cctx->sptr, coro_stacksize, long);
+      cctx->ssize = cctx_stacksize * (long)sizeof (long);
+      New (0, cctx->sptr, cctx_stacksize, long);
 
       if (!cctx->sptr)
         {
@@ -1128,23 +1150,28 @@ cctx_destroy (coro_cctx *cctx)
     return;
 
   --cctx_count;
+  coro_destroy (&cctx->cctx);
 
+  /* coro_transfer creates new, empty cctx's */
+  if (cctx->sptr)
+    {
 #if CORO_USE_VALGRIND
-  VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
+      VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
 #endif
 
 #if HAVE_MMAP
-  if (cctx->flags & CC_MAPPED)
-    munmap (cctx->sptr, cctx->ssize);
-  else
+      if (cctx->flags & CC_MAPPED)
+        munmap (cctx->sptr, cctx->ssize);
+      else
 #endif
-    Safefree (cctx->sptr);
+        Safefree (cctx->sptr);
+    }
 
   Safefree (cctx);
 }
 
 /* wether this cctx should be destructed */
-#define CCTX_EXPIRED(cctx) ((cctx)->ssize < coro_stacksize || ((cctx)->flags & CC_NOREUSE))
+#define CCTX_EXPIRED(cctx) ((cctx)->gen != cctx_gen || ((cctx)->flags & CC_NOREUSE))
 
 static coro_cctx *
 cctx_get (pTHX)
@@ -1167,8 +1194,10 @@ cctx_get (pTHX)
 static void
 cctx_put (coro_cctx *cctx)
 {
+  assert (("cctx_put called on non-initialised cctx", cctx->sptr));
+
   /* free another cctx if overlimit */
-  if (expect_false (cctx_idle >= MAX_IDLE_CCTX))
+  if (expect_false (cctx_idle >= cctx_max_idle))
     {
       coro_cctx *first = cctx_first;
       cctx_first = first->next;
@@ -1224,8 +1253,12 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       if (expect_false (prev->flags & CF_NEW))
         {
-          /* create a new empty context */
-          Newz (0, prev->cctx, 1, coro_cctx);
+          /* create a new empty/source context */
+          ++cctx_count;
+          New (0, prev->cctx, 1, coro_cctx);
+          prev->cctx->sptr = 0;
+          coro_create (&prev->cctx->cctx, 0, 0, 0, 0);
+
           prev->flags &= ~CF_NEW;
           prev->flags |=  CF_RUNNING;
         }
@@ -1342,7 +1375,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
 
-      coro_destroy (aTHX_ coro);
+      coro_destruct (aTHX_ coro);
 
       load_perl (aTHX_ &temp);
 
@@ -1640,6 +1673,7 @@ api_trace (SV *coro_sv, int flags)
     }
 }
 
+#if 0
 static int
 coro_gensub_free (pTHX_ SV *sv, MAGIC *mg)
 {
@@ -1655,6 +1689,7 @@ static MGVTBL coro_gensub_vtbl = {
   0, 0, 0, 0,
   coro_gensub_free
 };
+#endif
 
 /*****************************************************************************/
 /* PerlIO::cede */
@@ -1739,7 +1774,10 @@ PROTOTYPES: DISABLE
 BOOT:
 {
 #ifdef USE_ITHREADS
-        MUTEX_INIT (&coro_mutex);
+        MUTEX_INIT (&coro_lock);
+# if CORO_PTHREAD
+        coro_thx = PERL_GET_CONTEXT;
+# endif
 #endif
         BOOT_PAGESIZE;
 
@@ -1880,9 +1918,21 @@ _exit (int code)
 int
 cctx_stacksize (int new_stacksize = 0)
 	CODE:
-        RETVAL = coro_stacksize;
+        RETVAL = cctx_stacksize;
         if (new_stacksize)
-          coro_stacksize = new_stacksize;
+          {
+            cctx_stacksize = new_stacksize;
+            ++cctx_gen;
+          }
+	OUTPUT:
+        RETVAL
+
+int
+cctx_max_idle (int max_idle = 0)
+	CODE:
+        RETVAL = cctx_max_idle;
+        if (max_idle > 1)
+          cctx_max_idle = max_idle;
 	OUTPUT:
         RETVAL
 
@@ -1988,7 +2038,7 @@ is_traced (Coro::State coro)
 	OUTPUT:
         RETVAL
 
-IV
+UV
 rss (Coro::State coro)
         PROTOTYPE: $
         ALIAS:
@@ -2180,7 +2230,7 @@ _pool_2 (SV *cb)
         SvREFCNT_dec ((SV *)PL_defoutgv); PL_defoutgv = (GV *)coro->saved_deffh;
         coro->saved_deffh = 0;
 
-  	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
+  	if (coro_rss (aTHX_ coro) > SvUV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
           {
             SV *old = PL_diehook;

@@ -24,15 +24,8 @@ if ($Config{usethreads} && $^O eq "netbsd") {
 *** and uses a lot more memory than fork (perl threads do not give you threads,
 *** they are only windows-process emulation ported to unix).
 ***
-*** If you really want to try building Coro on your broken platform, enter
-*** "yes" at the prompt - report back if the bugs is fixed please. (Oh,
-*** and try out BDB or IO::AIO which suffer from other threading bugs on
-*** netbsd that never seem to get fixed).
-***
 
 EOF
-
-   print "prompt> "; <STDIN> =~ /^yes/ or exit 1;
 }
 
 print <<EOF;
@@ -56,6 +49,9 @@ $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq
 
 my $iface;
 
+# default to assembly on x86 and x86_64 sometimes
+my $iface_asm = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : undef;
+
 if (exists $ENV{CORO_INTERFACE}) {
    $iface = $ENV{CORO_INTERFACE};
 
@@ -66,20 +62,28 @@ if (exists $ENV{CORO_INTERFACE}) {
    $iface = "i";
 
 } elsif ($^O =~ /linux/) {
-   # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+   $iface = $iface_asm || "s";
 
-} elsif ($^O =~ /(free|net|open)bsd/) {
+} elsif ($^O =~ /freebsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
+   #
+   # FreeBSD 6.2 has working ucontext, setjmp and asm.
 
-   # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switchign mechanisms)
+   $iface = $iface_asm || "s";
 
-   # therefore, default to setjmp
-   $iface = "s";
+} elsif ($^O =~ /netbsd/) {
+   # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switching mechanisms)
+   # therefore, default to pthread - hey, it might actually work, with some hacks
+   $iface = "p";
+
+} elsif ($^O =~ /openbsd/) {
+   # asm seems to work, setjmp might, ucontext is missing
+   $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /solaris/) {
-   $iface = "s";
+   # setjmp, ucontext seem to work, as well as asm
+   $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /darwin/) {
    $iface = "s";
@@ -106,9 +110,11 @@ correct in most cases, but you still can chose between these alternatives:
 
 u  The unix 'ucontext.h' functions are relatively new and not implemented
    or well-tested in older unices. They allow very fast coroutine creation
-   and reasonably fast switching, and, most importantly, are very stable.
-   They are, however, usually slower than the other alternatives due to an
-   extra syscall done by swapcontext.
+   and reasonably fast switching.  They are, however, usually slower than
+   the other alternatives due to an extra syscall done by swapcontext. And
+   while nominally most portable (it's the only POSIX-standardised
+   interface for coroutines), ucontext functions are, as usual, broken on
+   most/all BSDs.
 
 s  If the ucontext functions are not working or you don't want
    to use them for other reasons you can try a workaround using
@@ -116,40 +122,46 @@ s  If the ucontext functions are not working or you don't want
    creation is rather slow, but switching is very fast (often much faster
    than with the ucontext functions). Unfortunately, glibc-2.1 and
    below don't even feature a working sigaltstack. You cannot use this
-   implementation if some other code uses SIGUSR2 or you plan to
-   create coroutines from an alternative signal stack, as both are being
-   used for coroutine creation.
+   implementation if some other code uses SIGUSR2 or you plan to create
+   coroutines from an alternative signal stack, as both are being used for
+   coroutine creation.
 
-a  Handcoded assembly. This is the fastest and most compatible method
+a  Handcoded assembly. This is the fastest and most compatible method,
    with the least side effects, if it works, that is. It has been tested
    on GNU/Linux x86 and x86_64 systems and should work on all x86/x86_64
    systems using the SVR ELF ABI (it is also reported to be working on
    Strawberry Perl for Windows using MinGW). This is the recommended
-   method on supported platforms. When in doubt, use another method,
-   such as (s)etjmp/longjmp.
+   method on supported platforms. When it doesn't work, use another
+   method, such as (s)etjmp/longjmp.
 
 l  GNU/Linux. Very old GNU/Linux systems (glibc-2.1 and below) need
    this hack. Since it is very linux-specific it is also quite fast and
    recommended even for newer versions; when it works, that is (currently
    x86 and a few others only. If it compiles, it's usually ok). Newer
-   glibc versions (>= 2.5) stop working with this implementation again.
+   glibc versions (>= 2.5) stop working with this implementation however.
 
-i  IRIX. For some reason, SGI really does not like to follow the single
-   unix specification (does that surprise you?), so this workaround might
-   be needed (it's fast), although [s] and [u] should also work now.
+i  IRIX. For some reason, SGI really does not like to follow POSIX (does
+   that surprise you?), so this workaround might be needed (it's fast),
+   although [s] and [u] should also work now.
 
 w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
    the MSVC compilers (e.g. ActiveState Perl, but see "a" for Strawberry
    Perl), although, as there is no standard on how to do this under
    windows, different environments might work differently. Doh.
 
-p  Use pthread API. Try to avoid this option, it was only created to make
-   a point about the programming language shootout and might leak threads.
-   It might work fine as a last resort, however.
+p  Use pthread API. Try to avoid this option, it was only created to
+   make a point about the programming language shootout. It is unlikely
+   to work with perls that have windows process emulation enabled ("perl
+   threads"). It is also likely the slowest method of implementing
+   coroutines. It might work fine as a last resort, however, as the
+   pthread API is slightly better tested than ucontext functions for
+   example. Of course, not on BSDs, who usually have very broken pthread
+   implementations.
 
-For most systems, the default chosen should be OK. If you experience
-problems then you should experiment with this setting and/or turn
-optimisations on or off (make OPTIMIZE=-O or -O0).
+Coro tries hard to come up with a suitable default for most systems,
+so pressing return at the prompt usually does the right thing. If you
+experience problems (e.g. make test fails) then you should experiment with
+this setting.
 
 EOF
 
@@ -299,6 +311,9 @@ WriteMakefile(
   DEFINE       => $DEFINE,
   LIBS         => @LIBS,
   DIR          => [],
+  depend => {
+     "State.c" => "libcoro/coro.h libcoro/coro.c",
+  },
 );
 
 sub conftest {

@@ -5,17 +5,34 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.9  Sat Nov  8 17:45:27 CET 2008
+ 	- (libcoro) did not preserve rbp with CORO_ASM (we are getting there).
+        - (libcoro) no longer leak threads in the experimental pthread backend,
+          also speed it up considerably.
+        - (libcoro) do not rely on makecontext passing void *'s unscathed.
+        - fix compiletime dependencies on libcoro in the Makefile.
+        - cctx_count wasn't always updated properly.
+        - Coro::State::cctx_stacksize wasn't applied correctly.
+        - new function Coro::State::cctx_max_idle.
+        - the default max number of idle C contexts is now 4.
+        - (libcoro) try harder to get _setjmp/_longjmp.
+        - (libcoro) cleanup and extend the libcoro API to officially
+          allow the creation of empty source contexts.
+        - very experimental workaround for the totally broken netbsd platform.
+        - tried to hack around openbsd bugs.
+
 4.804 Wed Nov  5 16:36:00 CET 2008
 	- Coro::Debug::new_unix_server would not create a non-blocking listening
           socket, sometimes causing freezes.
-        - fix misaligned stack points for setjmp and assembly methods, which
-          can cause crashes on x86/x86_64 with a sufficiently aggressive compiler.
+        - (libcoro) fix misaligned stack points for setjmp and assembly
+          methods, which can cause crashes on x86/x86_64 with a sufficiently
+          aggressive compiler.
         - new function: Coro::Debug::new_tcp_server.
 	- move ->throw into the Coro class because it only works on coro objects.
 
 4.803 Mon Nov  3 17:16:12 CET 2008
-	- use a global asm statement to become independent of gcc otpimisations
-          for CORO_ASM (thanks to pippijn for the idea).
+	- (libcoro) use a global asm statement to become independent of gcc
+          otpimisations for CORO_ASM (thanks to pippijn for the idea).
         - try to workaround yet another broken bsd, this time dragonfly.
 
 4.802 Thu Oct 30 10:56:12 CET 2008
