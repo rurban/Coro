@@ -157,7 +157,7 @@ struct io_state
 {
   AV *res;
   int errorno;
-  I32 laststype;
+  I32 laststype; /* U16 in 5.10.0 */
   int laststatval;
   Stat_t statcache;
 };
@@ -1654,6 +1654,7 @@ api_trace (SV *coro_sv, int flags)
     }
 }
 
+#if 0
 static int
 coro_gensub_free (pTHX_ SV *sv, MAGIC *mg)
 {
@@ -1669,6 +1670,7 @@ static MGVTBL coro_gensub_vtbl = {
   0, 0, 0, 0,
   coro_gensub_free
 };
+#endif
 
 /*****************************************************************************/
 /* PerlIO::cede */
@@ -2014,7 +2016,7 @@ is_traced (Coro::State coro)
 	OUTPUT:
         RETVAL
 
-IV
+UV
 rss (Coro::State coro)
         PROTOTYPE: $
         ALIAS:
@@ -2206,7 +2208,7 @@ _pool_2 (SV *cb)
         SvREFCNT_dec ((SV *)PL_defoutgv); PL_defoutgv = (GV *)coro->saved_deffh;
         coro->saved_deffh = 0;
 
-  	if (coro_rss (aTHX_ coro) > SvIV (sv_pool_rss)
+  	if (coro_rss (aTHX_ coro) > SvUV (sv_pool_rss)
             || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
           {
             SV *old = PL_diehook;
