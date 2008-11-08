@@ -5,7 +5,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-5.0
+4.9  Sat Nov  8 17:45:27 CET 2008
  	- (libcoro) did not preserve rbp with CORO_ASM (we are getting there).
         - (libcoro) no longer leak threads in the experimental pthread backend,
           also speed it up considerably.
