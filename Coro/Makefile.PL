@@ -49,6 +49,9 @@ $DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq
 
 my $iface;
 
+# default to assembly on x86 and x86_64 sometimes
+my $iface_asm = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : undef;
+
 if (exists $ENV{CORO_INTERFACE}) {
    $iface = $ENV{CORO_INTERFACE};
 
@@ -59,17 +62,24 @@ if (exists $ENV{CORO_INTERFACE}) {
    $iface = "i";
 
 } elsif ($^O =~ /linux/) {
-   # default to assembly on x86 and x86_64, and setjmp on others
-   $iface = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : "s";
+   $iface = $iface_asm || "s";
 
-} elsif ($^O =~ /(free|net|open)bsd/) {
+} elsif ($^O =~ /freebsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
+   #
+   # FreeBSD 6.2 has working ucontext, setjmp and asm.
 
+   $iface = $iface_asm || "s";
+
+} elsif ($^O =~ /netbsd/) {
    # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switching mechanisms)
-
    # therefore, default to pthread - hey, it might actually work, with some hacks
    $iface = "p";
+
+} elsif ($^O =~ /openbsd/) {
+   # asm seems to work, setjmp might, ucontext is missing
+   $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /solaris/) {
    $iface = "s";
