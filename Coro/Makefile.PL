@@ -82,7 +82,8 @@ if (exists $ENV{CORO_INTERFACE}) {
    $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /solaris/) {
-   $iface = "s";
+   # setjmp, ucontext seem to work, as well as asm
+   $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /darwin/) {
    $iface = "s";
