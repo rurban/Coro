@@ -294,7 +294,7 @@ typedef struct coro *Coro__State_or_hashref;
 /* for Coro.pm */
 static SV *coro_current;
 static SV *coro_readyhook;
-static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
+static AV *coro_ready [PRIO_MAX - PRIO_MIN + 1];
 static int coro_nready;
 static struct coro *coro_first;
 
