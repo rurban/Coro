@@ -1099,13 +1099,36 @@ static coro_cctx *
 cctx_new ()
 {
   coro_cctx *cctx;
-  void *stack_start;
-  size_t stack_size;
 
   ++cctx_count;
-  Newz (0, cctx, 1, coro_cctx);
+  New (0, cctx, 1, coro_cctx);
 
-  cctx->gen = cctx_gen;
+  cctx->gen   = cctx_gen;
+  cctx->flags = 0;
+
+  return cctx;
+}
+
+/* create a new cctx only suitable as source */
+static coro_cctx *
+cctx_new_empty ()
+{
+  coro_cctx *cctx = cctx_new ();
+
+  cctx->sptr    = 0;
+  cctx->idle_sp = 0; /* should never be a valid address */
+  coro_create (&cctx->cctx, 0, 0, 0, 0);
+
+  return cctx;
+}
+
+/* create a new cctx suitable as destination/running a perl interpreter */
+static coro_cctx *
+cctx_new_run ()
+{
+  coro_cctx *cctx = cctx_new ();
+  void *stack_start;
+  size_t stack_size;
 
 #if HAVE_MMAP
   cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
@@ -1188,7 +1211,7 @@ cctx_get (pTHX)
       cctx_destroy (cctx);
     }
 
-  return cctx_new ();
+  return cctx_new_run ();
 }
 
 static void
@@ -1254,11 +1277,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       if (expect_false (prev->flags & CF_NEW))
         {
           /* create a new empty/source context */
-          ++cctx_count;
-          New (0, prev->cctx, 1, coro_cctx);
-          prev->cctx->sptr = 0;
-          coro_create (&prev->cctx->cctx, 0, 0, 0, 0);
-
+          prev->cctx = cctx_new_empty ();
           prev->flags &= ~CF_NEW;
           prev->flags |=  CF_RUNNING;
         }
@@ -1656,7 +1675,7 @@ api_trace (SV *coro_sv, int flags)
   if (flags & CC_TRACE)
     {
       if (!coro->cctx)
-        coro->cctx = cctx_new ();
+        coro->cctx = cctx_new_run ();
       else if (!(coro->cctx->flags & CC_TRACE))
         croak ("cannot enable tracing on coroutine with custom stack");
 
