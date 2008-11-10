@@ -5,6 +5,8 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- "port" to threaded perls.
+
 4.91 Mon Nov 10 05:36:38 CET 2008
         - the ->throw exception object no longer leaks.
         - creating a new cctx leaked a scopestack entry (memleak).

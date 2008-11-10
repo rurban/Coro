@@ -1070,9 +1070,9 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
   SPAGAIN;
 }
 
-/* the tail of transfer: execute stuff we can onyl do afetr a transfer */
+/* the tail of transfer: execute stuff we can only do after a transfer */
 static void
-transfer_tail (void)
+transfer_tail (pTHX)
 {
   struct coro *next = (struct coro *)transfer_next;
   transfer_next = 0; //D for temporary assertion in transfer
@@ -1115,7 +1115,7 @@ cctx_run (void *arg)
     cctx_prepare (aTHX_ (coro_cctx *)arg);
 
     /* cctx_run is the alternative tail of transfer() */
-    transfer_tail ();
+    transfer_tail (aTHX);
 
     /* somebody or something will hit me for both perl_run and PL_restartop */
     PL_restartop = PL_op;
@@ -1375,7 +1375,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
           coro_transfer (&prev__cctx->cctx, &next->cctx->cctx);
         }
 
-      transfer_tail ();
+      transfer_tail (aTHX);
     }
 }
 
