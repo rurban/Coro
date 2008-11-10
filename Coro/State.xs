@@ -183,6 +183,12 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
+static volatile struct coro *transfer_next;
+
+struct transfer_args
+{
+  struct coro *prev, *next;
+};
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
@@ -294,7 +300,7 @@ typedef struct coro *Coro__State_or_hashref;
 /* for Coro.pm */
 static SV *coro_current;
 static SV *coro_readyhook;
-static AV *coro_ready [PRIO_MAX-PRIO_MIN+1];
+static AV *coro_ready [PRIO_MAX - PRIO_MIN + 1];
 static int coro_nready;
 static struct coro *coro_first;
 
@@ -836,9 +842,9 @@ coro_setup (pTHX_ struct coro *coro)
 
   {
     dSP;
-    LOGOP myop;
+    UNOP myop;
 
-    Zero (&myop, 1, LOGOP);
+    Zero (&myop, 1, UNOP);
     myop.op_next = Nullop;
     myop.op_flags = OPf_WANT_VOID;
 
@@ -853,7 +859,7 @@ coro_setup (pTHX_ struct coro *coro)
   /* this newly created coroutine might be run on an existing cctx which most
    * likely was suspended in set_stacklevel, called from entersub.
    * set_stacklevl doesn't do anything on return, but entersub does LEAVE,
-   * so we ENTER here for symmetry
+   * so we ENTER here for symmetry.
    */
   ENTER;
 }
@@ -1028,32 +1034,61 @@ runops_trace (pTHX)
   return 0;
 }
 
+static void
+prepare_set_stacklevel (struct transfer_args *ta, struct coro_cctx *cctx)
+{
+  ta->prev  = (struct coro *)cctx;
+  ta->next  = 0;
+}
+
 /* inject a fake call to Coro::State::_cctx_init into the execution */
 /* _cctx_init should be careful, as it could be called at almost any time */
 /* during execution of a perl program */
+/* also initialises PL_top_env */
 static void NOINLINE
 cctx_prepare (pTHX_ coro_cctx *cctx)
 {
   dSP;
-  LOGOP myop;
+  UNOP myop;
 
   PL_top_env = &PL_start_env;
 
   if (cctx->flags & CC_TRACE)
     PL_runops = runops_trace;
 
-  Zero (&myop, 1, LOGOP);
-  myop.op_next = PL_op;
+  Zero (&myop, 1, UNOP);
+  myop.op_next  = PL_op;
   myop.op_flags = OPf_WANT_VOID | OPf_STACKED;
 
   PUSHMARK (SP);
   EXTEND (SP, 2);
-  PUSHs (sv_2mortal (newSViv (PTR2IV (cctx))));
+  PUSHs (sv_2mortal (newSViv ((IV)cctx)));
   PUSHs ((SV *)get_cv ("Coro::State::_cctx_init", FALSE));
   PUTBACK;
   PL_op = (OP *)&myop;
   PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
   SPAGAIN;
+}
+
+/* the tail of transfer: execute stuff we can onyl do afetr a transfer */
+static void
+transfer_tail (void)
+{
+  struct coro *next = (struct coro *)transfer_next;
+  transfer_next = 0; //D for temporary assertion in transfer
+  assert (("FATAL ERROR: internal error 1067 in Coro module, please report", next));//D
+
+  free_coro_mortal (aTHX);
+  UNLOCK;
+
+  if (expect_false (next->throw))
+    {
+      SV *exception = sv_2mortal (next->throw);
+
+      next->throw = 0;
+      sv_setsv (ERRSV, exception);
+      croak (0);
+    }
 }
 
 /*
@@ -1070,14 +1105,17 @@ cctx_run (void *arg)
   {
     dTHX;
 
-    /* cctx_run is the alternative tail of transfer(), so unlock here. */
-    UNLOCK;
+    /* entersub called ENTER, but we never 'returned', undo that here */
+    LEAVE;
 
-    /* we now skip the entersub that lead to transfer() */
+    /* we now skip the entersub that did lead to transfer() */
     PL_op = PL_op->op_next;
 
     /* inject a fake subroutine call to cctx_init */
     cctx_prepare (aTHX_ (coro_cctx *)arg);
+
+    /* cctx_run is the alternative tail of transfer() */
+    transfer_tail ();
 
     /* somebody or something will hit me for both perl_run and PL_restartop */
     PL_restartop = PL_op;
@@ -1099,13 +1137,36 @@ static coro_cctx *
 cctx_new ()
 {
   coro_cctx *cctx;
-  void *stack_start;
-  size_t stack_size;
 
   ++cctx_count;
-  Newz (0, cctx, 1, coro_cctx);
+  New (0, cctx, 1, coro_cctx);
 
-  cctx->gen = cctx_gen;
+  cctx->gen     = cctx_gen;
+  cctx->flags   = 0;
+  cctx->idle_sp = 0; /* can be accessed by transfer between cctx_run and set_stacklevel, on throw */
+
+  return cctx;
+}
+
+/* create a new cctx only suitable as source */
+static coro_cctx *
+cctx_new_empty ()
+{
+  coro_cctx *cctx = cctx_new ();
+
+  cctx->sptr = 0;
+  coro_create (&cctx->cctx, 0, 0, 0, 0);
+
+  return cctx;
+}
+
+/* create a new cctx suitable as destination/running a perl interpreter */
+static coro_cctx *
+cctx_new_run ()
+{
+  coro_cctx *cctx = cctx_new ();
+  void *stack_start;
+  size_t stack_size;
 
 #if HAVE_MMAP
   cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
@@ -1188,7 +1249,7 @@ cctx_get (pTHX)
       cctx_destroy (cctx);
     }
 
-  return cctx_new ();
+  return cctx_new_run ();
 }
 
 static void
@@ -1248,17 +1309,12 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
     }
   else if (expect_true (prev != next))
     {
-      static volatile int has_throw;
       coro_cctx *prev__cctx;
 
       if (expect_false (prev->flags & CF_NEW))
         {
           /* create a new empty/source context */
-          ++cctx_count;
-          New (0, prev->cctx, 1, coro_cctx);
-          prev->cctx->sptr = 0;
-          coro_create (&prev->cctx->cctx, 0, 0, 0, 0);
-
+          prev->cctx = cctx_new_empty ();
           prev->flags &= ~CF_NEW;
           prev->flags |=  CF_RUNNING;
         }
@@ -1309,7 +1365,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       if (expect_true (!next->cctx))
         next->cctx = cctx_get (aTHX);
 
-      has_throw = !!next->throw;
+      assert (("FATAL ERROR: internal error 1352 in Coro, please report", !transfer_next));//D
+      transfer_next = next;
 
       if (expect_false (prev__cctx != next->cctx))
         {
@@ -1318,28 +1375,9 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
           coro_transfer (&prev__cctx->cctx, &next->cctx->cctx);
         }
 
-      free_coro_mortal (aTHX);
-      UNLOCK;
-
-      if (expect_false (has_throw))
-        {
-          struct coro *coro = SvSTATE (coro_current);
-
-          if (coro->throw)
-            {
-              SV *exception = coro->throw;
-              coro->throw = 0;
-              sv_setsv (ERRSV, exception);
-              croak (0);
-            }
-        }
+      transfer_tail ();
     }
 }
-
-struct transfer_args
-{
-  struct coro *prev, *next;
-};
 
 #define TRANSFER(ta, force_cctx) transfer (aTHX_ (ta).prev, (ta).next, (force_cctx))
 #define TRANSFER_CHECK(ta) transfer_check (aTHX_ (ta).prev, (ta).next)
@@ -1561,7 +1599,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
         {
           UNLOCK;
           SvREFCNT_dec (next_sv);
-          /* coro_nready is already taken care of by destroy */
+          /* coro_nready has already been taken care of by destroy */
           continue;
         }
 
@@ -1656,7 +1694,7 @@ api_trace (SV *coro_sv, int flags)
   if (flags & CC_TRACE)
     {
       if (!coro->cctx)
-        coro->cctx = cctx_new ();
+        coro->cctx = cctx_new_run ();
       else if (!(coro->cctx->flags & CC_TRACE))
         croak ("cannot enable tracing on coroutine with custom stack");
 
@@ -1868,8 +1906,7 @@ _set_stacklevel (...)
         switch (ix)
           {
             case 0:
-              ta.prev  = (struct coro *)INT2PTR (coro_cctx *, SvIV (ST (0)));
-              ta.next  = 0;
+              prepare_set_stacklevel (&ta, (struct coro_cctx *)SvIV (ST (0)));
               break;
 
             case 1:
@@ -2018,6 +2055,13 @@ is_ready (Coro::State coro)
         RETVAL = boolSV (coro->flags & ix);
 	OUTPUT:
         RETVAL
+
+void
+throw (Coro::State self, SV *throw = &PL_sv_undef)
+	PROTOTYPE: $;$
+        CODE:
+        SvREFCNT_dec (self->throw);
+        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
 
 void
 api_trace (SV *coro, int flags = CC_TRACE | CC_TRACE_SUB)
@@ -2170,13 +2214,6 @@ nready (...)
         RETVAL = coro_nready;
 	OUTPUT:
         RETVAL
-
-void
-throw (Coro::State self, SV *throw = &PL_sv_undef)
-	PROTOTYPE: $;$
-        CODE:
-        SvREFCNT_dec (self->throw);
-        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
 
 # for async_pool speedup
 void

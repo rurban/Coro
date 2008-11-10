@@ -92,7 +92,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 4.9;
+   our $VERSION = 4.91;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -211,10 +211,14 @@ in the code below, and use it in your coroutines:
 # this is called for each newly created C coroutine,
 # and is being artificially injected into the opcode flow.
 # its sole purpose is to call transfer() once so it knows
-# the stop level stack frame for stack sharing.
+# the top level stack frame for stack sharing.
 sub _cctx_init {
-   _set_stacklevel $_[0];
+   &_set_stacklevel;
 }
+
+=item $state->throw ([$scalar])
+
+See L<< Coro->throw >>.
 
 =item $state->call ($coderef)
 

@@ -5,6 +5,17 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.91 Mon Nov 10 05:36:38 CET 2008
+        - the ->throw exception object no longer leaks.
+        - creating a new cctx leaked a scopestack entry (memleak).
+	- new coroutines didn't get created with a zero flags field
+          (unknown impact).
+	- calling ->throw on a not-yet-started coroutine should now work
+          instead of being ignored.
+        - ->throw is now supported on Coro::State objects.
+        - clean up cctx creation code a bit.
+        - entersub is actually a UNOP, not a LOGOP (not a bugfix).
+
 4.9  Sat Nov  8 17:45:27 CET 2008
  	- (libcoro) did not preserve rbp with CORO_ASM (we are getting there).
         - (libcoro) no longer leak threads in the experimental pthread backend,
