@@ -183,6 +183,7 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
+static volatile char next_has_throw; /* speedup flag for next->throw check */
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
@@ -1031,6 +1032,7 @@ runops_trace (pTHX)
 /* inject a fake call to Coro::State::_cctx_init into the execution */
 /* _cctx_init should be careful, as it could be called at almost any time */
 /* during execution of a perl program */
+/* also initialises PL_top_env */
 static void NOINLINE
 cctx_prepare (pTHX_ coro_cctx *cctx)
 {
@@ -1056,6 +1058,26 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
   SPAGAIN;
 }
 
+/* the tail of transfer: execute stuff we can onyl do afetr a transfer */
+static void
+transfer_tail (void)
+{
+  UNLOCK;
+
+  if (expect_false (next_has_throw))
+    {
+      struct coro *coro = SvSTATE (coro_current);
+
+      if (coro->throw)
+        {
+          SV *exception = coro->throw;
+          coro->throw = 0;
+          sv_setsv (ERRSV, exception);
+          croak (0);
+        }
+    }
+}
+
 /*
  * this is a _very_ stripped down perl interpreter ;)
  */
@@ -1070,14 +1092,14 @@ cctx_run (void *arg)
   {
     dTHX;
 
-    /* cctx_run is the alternative tail of transfer(), so unlock here. */
-    UNLOCK;
-
-    /* we now skip the entersub that lead to transfer() */
+    /* we now skip the entersub that lead to transfer () */
     PL_op = PL_op->op_next;
 
     /* inject a fake subroutine call to cctx_init */
     cctx_prepare (aTHX_ (coro_cctx *)arg);
+
+    /* cctx_run is the alternative tail of transfer () */
+    transfer_tail ();
 
     /* somebody or something will hit me for both perl_run and PL_restartop */
     PL_restartop = PL_op;
@@ -1103,8 +1125,9 @@ cctx_new ()
   ++cctx_count;
   New (0, cctx, 1, coro_cctx);
 
-  cctx->gen   = cctx_gen;
-  cctx->flags = 0;
+  cctx->gen     = cctx_gen;
+  cctx->flags   = 0;
+  cctx->idle_sp = 0; /* can be accessed by transfer between cctx_run and set_stacklevel */
 
   return cctx;
 }
@@ -1115,8 +1138,7 @@ cctx_new_empty ()
 {
   coro_cctx *cctx = cctx_new ();
 
-  cctx->sptr    = 0;
-  cctx->idle_sp = 0; /* should never be a valid address */
+  cctx->sptr = 0;
   coro_create (&cctx->cctx, 0, 0, 0, 0);
 
   return cctx;
@@ -1271,7 +1293,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
     }
   else if (expect_true (prev != next))
     {
-      static volatile int has_throw;
       coro_cctx *prev__cctx;
 
       if (expect_false (prev->flags & CF_NEW))
@@ -1302,6 +1323,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       prev__cctx = prev->cctx;
 
+      if (prev__cctx->idle_sp == STACKLEVEL) asm volatile("");//D
+
       /* possibly "free" the cctx */
       if (expect_true (
             prev__cctx->idle_sp == STACKLEVEL
@@ -1328,7 +1351,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       if (expect_true (!next->cctx))
         next->cctx = cctx_get (aTHX);
 
-      has_throw = !!next->throw;
+      next_has_throw = !!next->throw;
 
       if (expect_false (prev__cctx != next->cctx))
         {
@@ -1340,18 +1363,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       free_coro_mortal (aTHX);
       UNLOCK;
 
-      if (expect_false (has_throw))
-        {
-          struct coro *coro = SvSTATE (coro_current);
-
-          if (coro->throw)
-            {
-              SV *exception = coro->throw;
-              coro->throw = 0;
-              sv_setsv (ERRSV, exception);
-              croak (0);
-            }
-        }
+      transfer_tail ();
     }
 }
 

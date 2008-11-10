@@ -58,7 +58,7 @@ variables (see L<Coro::State> for more configuration).
 
 package Coro;
 
-use strict;
+use strict qw(vars subs);
 no warnings "uninitialized";
 
 use Coro::State;
@@ -154,7 +154,7 @@ sub _cancel {
 
    # call all destruction callbacks
    $_->(@{$self->{_status}})
-      for @{(delete $self->{_on_destroy}) || []};
+      for @{ delete $self->{_on_destroy} || [] };
 }
 
 # this coroutine is necessary because a coroutine
