@@ -858,7 +858,7 @@ coro_setup (pTHX_ struct coro *coro)
 
   /* this newly created coroutine might be run on an existing cctx which most
    * likely was suspended in set_stacklevel, called from entersub.
-   * set_stacklevl doesn't do anything on return, but entersub does LEAVE,
+   * set_stacklevel doesn't do anything on return, but entersub does LEAVE,
    * so we ENTER here for symmetry.
    */
   ENTER;
@@ -1339,7 +1339,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       prev__cctx = prev->cctx;
 
-      /* possibly "free" the cctx */
+      /* possibly untie and reuse the cctx */
       if (expect_true (
             prev__cctx->idle_sp == STACKLEVEL
             && !(prev__cctx->flags & CC_TRACE)
