@@ -94,7 +94,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = 4.91;
+   our $VERSION = 4.912;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
