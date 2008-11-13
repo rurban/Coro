@@ -107,6 +107,7 @@ use Time::HiRes ();
 use Scalar::Util ();
 
 use AnyEvent ();
+use AnyEvent::Util ();
 use AnyEvent::Socket ();
 
 use Coro ();
@@ -453,8 +454,11 @@ sub new_unix_server {
    my ($class, $path) = @_;
 
    unlink $path;
+   my $unlink_guard = AnyEvent::Util::guard { unlink $path };
+
    AnyEvent::Socket::tcp_server "unix/", $path, sub {
       my ($fh) = @_;
+      $unlink_guard; # mention it
       Coro::async_pool {
          $Coro::current->desc ("[Coro::Debug session]");
          session $fh;
