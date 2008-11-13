@@ -5,6 +5,12 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.912 Thu Nov 13 18:31:23 CET 2008
+	- minor cleanups.
+        - use much larger stacks on linux and perl < 5.8.8.
+        - Coro::Debug::new_unix_server did not unlink the socket
+          when destroyed.
+
 4.911 Tue Nov 11 04:26:17 CET 2008
 	- "port" to threaded perls.
 

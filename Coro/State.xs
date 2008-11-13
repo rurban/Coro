@@ -48,9 +48,6 @@ static long pagesize;
 
 #if CORO_USE_VALGRIND
 # include <valgrind/valgrind.h>
-# define REGISTER_STACK(cctx,start,end) (cctx)->valgrind_id = VALGRIND_STACK_REGISTER ((start), (end))
-#else
-# define REGISTER_STACK(cctx,start,end)
 #endif
 
 /* the maximum number of idle cctx that will be pooled */
@@ -130,10 +127,12 @@ static int cctx_max_idle = 4;
 # define attribute(x) __attribute__(x)
 # define BARRIER __asm__ __volatile__ ("" : : : "memory")
 # define expect(expr,value) __builtin_expect ((expr),(value))
+# define INLINE static inline
 #else
 # define attribute(x)
 # define BARRIER
 # define expect(expr,value) (expr)
+# define INLINE static
 #endif
 
 #define expect_false(expr) expect ((expr) != 0, 0)
@@ -415,7 +414,7 @@ static MGVTBL coro_cv_vtbl = {
 #define CORO_MAGIC_cv(cv)    CORO_MAGIC (((SV *)(cv)), CORO_MAGIC_type_cv)
 #define CORO_MAGIC_state(sv) CORO_MAGIC (((SV *)(sv)), CORO_MAGIC_type_state)
 
-static struct coro *
+INLINE struct coro *
 SvSTATE_ (pTHX_ SV *coro)
 {
   HV *stash;
@@ -729,6 +728,11 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
                                  (const char*)(mg)->mg_ptr)
 #endif
 
+/* we sometimes need to create the effect of entersub calling us */
+#define ENTERSUB_HEAD ENTER; SAVETMPS
+/* we somtimes need to create the effect of leaving via entersub */
+#define ENTERSUB_TAIL LEAVE
+
 /*
  * This overrides the default magic get method of %SIG elements.
  * The original one doesn't provide for reading back of PL_diehook/PL_warnhook
@@ -861,7 +865,7 @@ coro_setup (pTHX_ struct coro *coro)
    * set_stacklevel doesn't do anything on return, but entersub does LEAVE,
    * so we ENTER here for symmetry.
    */
-  ENTER;
+  ENTERSUB_HEAD;
 }
 
 static void
@@ -900,7 +904,7 @@ coro_destruct (pTHX_ struct coro *coro)
   coro_destruct_stacks (aTHX);
 }
 
-static void
+INLINE void
 free_coro_mortal (pTHX)
 {
   if (expect_true (coro_mortal))
@@ -1071,12 +1075,12 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
 }
 
 /* the tail of transfer: execute stuff we can only do after a transfer */
-static void
+INLINE void
 transfer_tail (pTHX)
 {
   struct coro *next = (struct coro *)transfer_next;
-  transfer_next = 0; //D for temporary assertion in transfer
-  assert (("FATAL ERROR: internal error 1067 in Coro module, please report", next));//D
+  assert (!(transfer_next = 0)); /* just used for the side effect when asserts are enabled */
+  assert (("FATAL: transfer_next was zero in transfer_tail (please report)", next));
 
   free_coro_mortal (aTHX);
   UNLOCK;
@@ -1106,7 +1110,7 @@ cctx_run (void *arg)
     dTHX;
 
     /* entersub called ENTER, but we never 'returned', undo that here */
-    LEAVE;
+    ENTERSUB_TAIL;
 
     /* we now skip the entersub that did lead to transfer() */
     PL_op = PL_op->op_next;
@@ -1175,11 +1179,11 @@ cctx_new_run ()
 
   if (cctx->sptr != (void *)-1)
     {
-# if CORO_STACKGUARD
-      mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
-# endif
-      stack_start = CORO_STACKGUARD * PAGESIZE + (char *)cctx->sptr;
-      stack_size  = cctx->ssize - CORO_STACKGUARD * PAGESIZE;
+      #if CORO_STACKGUARD
+        mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
+      #endif
+      stack_start = (char *)cctx->sptr + CORO_STACKGUARD * PAGESIZE;
+      stack_size  = cctx->ssize        - CORO_STACKGUARD * PAGESIZE;
       cctx->flags |= CC_MAPPED;
     }
   else
@@ -1198,7 +1202,10 @@ cctx_new_run ()
       stack_size  = cctx->ssize;
     }
 
-  REGISTER_STACK (cctx, (char *)stack_start, (char *)stack_start + stack_size);
+  #if CORO_USE_VALGRIND
+    cctx->valgrind_id = VALGRIND_STACK_REGISTER ((char *)stack_start, (char *)stack_start + stack_size);
+  #endif
+
   coro_create (&cctx->cctx, cctx_run, (void *)cctx, stack_start, stack_size);
 
   return cctx;
@@ -1216,9 +1223,9 @@ cctx_destroy (coro_cctx *cctx)
   /* coro_transfer creates new, empty cctx's */
   if (cctx->sptr)
     {
-#if CORO_USE_VALGRIND
-      VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
-#endif
+      #if CORO_USE_VALGRIND
+        VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
+      #endif
 
 #if HAVE_MMAP
       if (cctx->flags & CC_MAPPED)
@@ -1255,7 +1262,7 @@ cctx_get (pTHX)
 static void
 cctx_put (coro_cctx *cctx)
 {
-  assert (("cctx_put called on non-initialised cctx", cctx->sptr));
+  assert (("FATAL: cctx_put called on non-initialised cctx in Coro (please report)", cctx->sptr));
 
   /* free another cctx if overlimit */
   if (expect_false (cctx_idle >= cctx_max_idle))
@@ -1347,7 +1354,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
          ))
         {
           /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
-          assert (("ERROR: current top_env must equal previous top_env", PL_top_env == prev__cctx->idle_te));
+          assert (("FATAL: current top_env must equal previous top_env in Coro (please report)", PL_top_env == prev__cctx->idle_te));
 
           prev->cctx = 0;
 
@@ -1365,7 +1372,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       if (expect_true (!next->cctx))
         next->cctx = cctx_get (aTHX);
 
-      assert (("FATAL ERROR: internal error 1352 in Coro, please report", !transfer_next));//D
+      assert (("FATAL: transfer_next already nonzero in Coro (please report)", !transfer_next));
       transfer_next = next;
 
       if (expect_false (prev__cctx != next->cctx))
@@ -1560,10 +1567,11 @@ static int
 api_is_ready (SV *coro_sv)
 {
   dTHX;
+
   return !!(SvSTATE (coro_sv)->flags & CF_READY);
 }
 
-static void
+INLINE void
 prepare_schedule (pTHX_ struct transfer_args *ta)
 {
   SV *prev_sv, *next_sv;
@@ -1612,7 +1620,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
   prev_sv = SvRV (coro_current);
   ta->prev = SvSTATE (prev_sv);
   TRANSFER_CHECK (*ta);
-  assert (ta->next->flags & CF_READY);
+  assert (("FATAL: next coroutine isn't marked as ready in Coro (please report)", ta->next->flags & CF_READY));
   ta->next->flags &= ~CF_READY;
   SvRV_set (coro_current, next_sv);
 
@@ -1622,7 +1630,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
   UNLOCK;
 }
 
-static void
+INLINE void
 prepare_cede (pTHX_ struct transfer_args *ta)
 {
   api_ready (coro_current);
@@ -2144,8 +2152,7 @@ BOOT:
           coro_ready[i] = newAV ();
 
         {
-          SV *sv = perl_get_sv ("Coro::API", TRUE);
-                   perl_get_sv ("Coro::API", TRUE); /* silence 5.10 warning */
+          SV *sv = coro_get_sv (aTHX_ "Coro::API", TRUE);
 
           coroapi.schedule     = api_schedule;
           coroapi.cede         = api_cede;
@@ -2423,3 +2430,4 @@ MODULE = Coro::State                PACKAGE = PerlIO::cede
 
 BOOT:
 	PerlIO_define_layer (aTHX_ &PerlIO_cede);
+

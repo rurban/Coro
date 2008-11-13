@@ -233,7 +233,9 @@ Coro::State::cctx_stacksize.
 
 EOF
 
-my $stacksize = prompt ("C stack size factor?", "16384");
+my $stacksize = $^O eq "linux" && $] < 5.008008 ? 128 * 1024 : 16384;
+
+$stacksize = prompt ("C stack size factor?", $stacksize);
 $DEFINE .= " -DCORO_STACKSIZE=$stacksize";
 
 print "using a stacksize of $stacksize * sizeof(long)\n";
