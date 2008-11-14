@@ -301,8 +301,8 @@ typedef struct coro *Coro__State_or_hashref;
 static SV *coro_current;
 static SV *coro_readyhook;
 static AV *coro_ready [PRIO_MAX - PRIO_MIN + 1];
-static int coro_nready;
 static struct coro *coro_first;
+#define coro_nready coroapi.nready
 
 /** lowlevel stuff **********************************************************/
 
@@ -1507,9 +1507,8 @@ prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev_sv, SV *next_sv)
 }
 
 static void
-api_transfer (SV *prev_sv, SV *next_sv)
+api_transfer (pTHX_ SV *prev_sv, SV *next_sv)
 {
-  dTHX;
   struct transfer_args ta;
 
   prepare_transfer (aTHX_ &ta, prev_sv, next_sv);
@@ -1537,9 +1536,8 @@ coro_deq (pTHX)
 }
 
 static int
-api_ready (SV *coro_sv)
+api_ready (pTHX_ SV *coro_sv)
 {
-  dTHX;
   struct coro *coro;
   SV *sv_hook;
   void (*xs_hook)(void);
@@ -1587,10 +1585,8 @@ api_ready (SV *coro_sv)
 }
 
 static int
-api_is_ready (SV *coro_sv)
+api_is_ready (pTHX_ SV *coro_sv)
 {
-  dTHX;
-
   return !!(SvSTATE (coro_sv)->flags & CF_READY);
 }
 
@@ -1656,7 +1652,7 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
 INLINE void
 prepare_cede (pTHX_ struct transfer_args *ta)
 {
-  api_ready (coro_current);
+  api_ready (aTHX_ coro_current);
   prepare_schedule (aTHX_ ta);
 }
 
@@ -1668,16 +1664,15 @@ prepare_cede_notself (pTHX_ struct transfer_args *ta)
   if (coro_nready)
     {
       prepare_schedule (aTHX_ ta);
-      api_ready (prev);
+      api_ready (aTHX_ prev);
     }
   else
     ta->prev = ta->next = SvSTATE (prev);
 }
 
 static void
-api_schedule (void)
+api_schedule (pTHX)
 {
-  dTHX;
   struct transfer_args ta;
 
   prepare_schedule (aTHX_ &ta);
@@ -1685,9 +1680,8 @@ api_schedule (void)
 }
 
 static int
-api_cede (void)
+api_cede (pTHX)
 {
-  dTHX;
   struct transfer_args ta;
 
   prepare_cede (aTHX_ &ta);
@@ -1702,11 +1696,10 @@ api_cede (void)
 }
 
 static int
-api_cede_notself (void)
+api_cede_notself (pTHX)
 {
   if (coro_nready)
     {
-      dTHX;
       struct transfer_args ta;
 
       prepare_cede_notself (aTHX_ &ta);
@@ -1718,9 +1711,8 @@ api_cede_notself (void)
 }
 
 static void
-api_trace (SV *coro_sv, int flags)
+api_trace (pTHX_ SV *coro_sv, int flags)
 {
-  dTHX;
   struct coro *coro = SvSTATE (coro_sv);
 
   if (flags & CC_TRACE)
@@ -1797,7 +1789,7 @@ PerlIOCede_flush (pTHX_ PerlIO *f)
 
   if (now >= self->next)
     {
-      api_cede ();
+      api_cede (aTHX);
       self->next = now + self->every;
     }
 
@@ -1864,6 +1856,12 @@ pp_restore (pTHX)
 
 #define OPpENTERSUB_SLF 15 /* the part of op_private entersub hopefully doesn't use */
 
+enum {
+  CORO_SLF_CUSTOM         = 0,
+  CORO_SLF_SET_STACKLEVEL = 1,
+  CORO_SLF_TRANSFER       = 2
+};
+
 /* declare prototype */
 XS(XS_Coro__State__set_stacklevel);
 
@@ -1880,6 +1878,8 @@ pp_slf (pTHX)
   struct transfer_args ta;
   SV **arg = PL_stack_base + TOPMARK + 1;
   int items = SP - arg; /* args without function object */
+  int ix = PL_op->op_private & OPpENTERSUB_SLF;
+  struct CoroSLF *slf = 0;
 
   /* do a quick consistency check on the "function" object, and if it isn't */
   /* for us, divert to the real entersub */
@@ -1898,39 +1898,46 @@ pp_slf (pTHX)
     }
 
   PUTBACK;
-  switch (PL_op->op_private & OPpENTERSUB_SLF)
+
+  if (!ix)
     {
-      case 0:
+      slf = (struct CoroSLF *)CvSTART (GvCV (*sp));
+      ix  = slf->prepare (aTHX_ arg, items);
+    }
+
+  switch (ix)
+    {
+      case CORO_SLF_SET_STACKLEVEL:
         prepare_set_stacklevel (&ta, (struct coro_cctx *)SvIV (arg [0]));
         break;
 
-      case 1:
+      case CORO_SLF_TRANSFER:
         if (items != 2)
           croak ("Coro::State::transfer (prev, next) expects two arguments, not %d.", items);
 
         prepare_transfer (aTHX_ &ta, arg [0], arg [1]);
         break;
 
-      case 2:
+      case CORO_SLF_SCHEDULE:
         prepare_schedule (aTHX_ &ta);
         break;
 
-      case 3:
+      case CORO_SLF_CEDE:
         prepare_cede (aTHX_ &ta);
         break;
 
-      case 4:
+      case CORO_SLF_CEDE_NOTSELF:
         prepare_cede_notself (aTHX_ &ta);
         break;
-
-      case 5:
-        abort ();
 
       default:
         abort ();
     }
 
-  TRANSFER (ta, 0);
+  do
+    TRANSFER (ta, 0);
+  while (slf && slf->check (aTHX));
+
   SPAGAIN;
 
   PUTBACK;
@@ -2050,10 +2057,11 @@ new (char *klass, ...)
 void
 _set_stacklevel (...)
 	ALIAS:
-        Coro::State::transfer = 1
-        Coro::schedule        = 2
-        Coro::cede            = 3
-        Coro::cede_notself    = 4
+        _set_stacklevel       = CORO_SLF_SET_STACKLEVEL
+        Coro::State::transfer = CORO_SLF_TRANSFER
+        Coro::schedule        = CORO_SLF_SCHEDULE
+        Coro::cede            = CORO_SLF_CEDE
+        Coro::cede_notself    = CORO_SLF_CEDE_NOTSELF
         CODE:
 	coro_slf_patch (aTHX_ cv, ix, &ST (0), items);
 
@@ -2183,6 +2191,7 @@ throw (Coro::State self, SV *throw = &PL_sv_undef)
 
 void
 api_trace (SV *coro, int flags = CC_TRACE | CC_TRACE_SUB)
+	C_ARGS: aTHX_ coro, flags
 
 SV *
 has_cctx (Coro::State coro)
@@ -2269,7 +2278,7 @@ BOOT:
           coroapi.cede_notself = api_cede_notself;
           coroapi.ready        = api_ready;
           coroapi.is_ready     = api_is_ready;
-          coroapi.nready       = &coro_nready;
+          coroapi.nready       = coro_nready;
           coroapi.current      = coro_current;
 
           GCoroAPI = &coroapi;
@@ -2320,7 +2329,7 @@ SV *
 ready (SV *self)
         PROTOTYPE: $
 	CODE:
-        RETVAL = boolSV (api_ready (self));
+        RETVAL = boolSV (api_ready (aTHX_ self));
 	OUTPUT:
         RETVAL
 
@@ -2400,7 +2409,7 @@ _pool_2 (SV *cb)
         coro->prio = 0;
 
         if (coro->cctx && (coro->cctx->flags & CC_TRACE))
-          api_trace (coro_current, 0);
+          api_trace (aTHX_ coro_current, 0);
 
         av_push (av_async_pool, newSVsv (coro_current));
 }
@@ -2482,7 +2491,7 @@ _get_state (SV *self)
 
         XPUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
 
-        api_ready (self);
+        api_ready (aTHX_ self);
 }
 
 void
@@ -2517,10 +2526,10 @@ _schedule (...)
 {
   	static int incede;
 
-        api_cede_notself ();
+        api_cede_notself (aTHX);
 
         ++incede;
-        while (coro_nready >= incede && api_cede ())
+        while (coro_nready >= incede && api_cede (aTHX))
           ;
 
         sv_setsv (sv_activity, &PL_sv_undef);

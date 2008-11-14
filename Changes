@@ -7,12 +7,14 @@ TODO: maybe implement a default message channel, very much like Erlang's
 
 5.0
 	- NEW ARCHITECTURE: use 4.912 for the stable version.
+        - bump API version to 7 - all dependents must be recompiled.
         - directly patch the entersub opcode calling ssl functions (cede,
           transfer and so on). this does speed up context switching by
           up to 10%. More importanly, it frees us from the hardcoded
           behaviour of entersub, so we might actually be able to return
           something from those functions.
         - take advanatge of __builtin_frame_address on gcc.
+        - expose THX in coroapi (not sure whether this was a wise decision).
 
 4.912 Thu Nov 13 18:31:23 CET 2008
 	- minor cleanups.

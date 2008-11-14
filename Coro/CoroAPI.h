@@ -14,37 +14,52 @@
 
 /*struct coro;*/ /* opaque */
 
+enum {
+  CORO_SLF_SCHEDULE     = 3,
+  CORO_SLF_CEDE         = 4,
+  CORO_SLF_CEDE_NOTSELF = 5
+};
+
+struct CoroSLF
+{
+  int (*prepare) (pTHX_ SV **arg, int items); /* returns CORO_SLF_* */
+  int (*check) (pTHX); /* returns repeat-flag */
+};
+
 /* private structure, always use the provided macros below */
-struct CoroAPI {
+struct CoroAPI
+{
   I32 ver;
   I32 rev;
-#define CORO_API_VERSION 6
-#define CORO_API_REVISION 1
-  void (*transfer) (SV *prev_sv, SV *next_sv); /* Coro::State */
+#define CORO_API_VERSION 7
+#define CORO_API_REVISION 0
+  void (*transfer) (pTHX_ SV *prev_sv, SV *next_sv); /* Coro::State */
 
-  void (*schedule) (void); /* Coro */
-  int (*cede) (void);
-  int (*cede_notself) (void);
-  int (*ready) (SV *coro_sv);
-  int (*is_ready) (SV *coro_sv);
-  int *nready;
+  void (*schedule) (pTHX); /* Coro */
+  int (*cede) (pTHX);
+  int (*cede_notself) (pTHX);
+  int (*ready) (pTHX_ SV *coro_sv);
+  int (*is_ready) (pTHX_ SV *coro_sv);
+  int nready;
   SV *current;
 
   void (*readyhook) (void);
+  void (*execute_slf) (pTHX_ struct CoroSLF *slf);
 };
 
 static struct CoroAPI *GCoroAPI;
 
 /* public API macros */
 #define CORO_TRANSFER(prev,next) GCoroAPI->transfer (aTHX_ (prev), (next))
-#define CORO_SCHEDULE            GCoroAPI->schedule ()
-#define CORO_CEDE                GCoroAPI->cede ()
-#define CORO_CEDE_NOTSELF        GCoroAPI->cede_notself ()
-#define CORO_READY(coro)         GCoroAPI->ready (coro)
+#define CORO_SCHEDULE            GCoroAPI->schedule (aTHX)
+#define CORO_CEDE                GCoroAPI->cede (aTHX)
+#define CORO_CEDE_NOTSELF        GCoroAPI->cede_notself (aTHX)
+#define CORO_READY(coro)         GCoroAPI->ready (aTHX_ coro)
 #define CORO_IS_READY(coro)      GCoroAPI->is_ready (coro)
-#define CORO_NREADY              (*GCoroAPI->nready)
+#define CORO_NREADY              GCoroAPI->nready
 #define CORO_CURRENT             SvRV (GCoroAPI->current)
-#define CORO_READYHOOK           (GCoroAPI->readyhook)
+#define CORO_READYHOOK           GCoroAPI->readyhook
+#define CORO_EXECUTE_SLF(slf)    GCoroAPI->execute_slf (aTHX_ &(slf))
 
 #define I_CORO_API(YourName)                                                             \
 STMT_START {                                                                             \
