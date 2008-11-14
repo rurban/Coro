@@ -1880,10 +1880,11 @@ pp_slf (pTHX)
   int items = SP - arg; /* args without function object */
   int ix = PL_op->op_private & OPpENTERSUB_SLF;
   struct CoroSLF *slf = 0;
+  SV *gv = *sp;
 
   /* do a quick consistency check on the "function" object, and if it isn't */
   /* for us, divert to the real entersub */
-  if (SvTYPE (*sp) != SVt_PVGV || CvXSUB (GvCV (*sp)) != XS_Coro__State__set_stacklevel)
+  if (SvTYPE (gv) != SVt_PVGV || CvXSUB (GvCV (gv)) != XS_Coro__State__set_stacklevel)
     return PL_ppaddr[OP_ENTERSUB](aTHX);
 
   /* pop args */
@@ -1901,7 +1902,7 @@ pp_slf (pTHX)
 
   if (!ix)
     {
-      slf = (struct CoroSLF *)CvSTART (GvCV (*sp));
+      slf = (struct CoroSLF *)CvXSUBANY (GvCV (gv)).any_ptr;
       ix  = slf->prepare (aTHX_ arg, items);
     }
 
@@ -1971,6 +1972,13 @@ coro_slf_patch (pTHX_ CV *cv, int ix, SV **args, int items)
   PL_op = (OP *)&slf_restore;
 }
 
+static void
+api_execute_slf (pTHX_ CV *cv, const struct CoroSLF *slf, SV **arg, int items)
+{
+  CvXSUBANY (cv).any_ptr = (void *)slf;
+  coro_slf_patch (aTHX_ cv, CORO_SLF_CUSTOM, arg, items);
+}
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
@@ -2009,9 +2017,10 @@ BOOT:
         while (main_top_env->je_prev)
           main_top_env = main_top_env->je_prev;
 
-        coroapi.ver       = CORO_API_VERSION;
-        coroapi.rev       = CORO_API_REVISION;
-        coroapi.transfer  = api_transfer;
+        coroapi.ver         = CORO_API_VERSION;
+        coroapi.rev         = CORO_API_REVISION;
+        coroapi.transfer    = api_transfer;
+        coroapi.execute_slf = api_execute_slf;
 
         {
           SV **svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);

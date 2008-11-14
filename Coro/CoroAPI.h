@@ -33,18 +33,22 @@ struct CoroAPI
   I32 rev;
 #define CORO_API_VERSION 7
 #define CORO_API_REVISION 0
-  void (*transfer) (pTHX_ SV *prev_sv, SV *next_sv); /* Coro::State */
 
-  void (*schedule) (pTHX); /* Coro */
+  /* Coro */
+  int nready;
+  SV *current;
+  void (*readyhook) (void);
+
+  void (*schedule) (pTHX);
   int (*cede) (pTHX);
   int (*cede_notself) (pTHX);
   int (*ready) (pTHX_ SV *coro_sv);
   int (*is_ready) (pTHX_ SV *coro_sv);
-  int nready;
-  SV *current;
 
-  void (*readyhook) (void);
-  void (*execute_slf) (pTHX_ struct CoroSLF *slf);
+  /* Coro::State */
+  void (*transfer) (pTHX_ SV *prev_sv, SV *next_sv); /* Coro::State */
+  void (*execute_slf) (pTHX_ CV *cv, const struct CoroSLF *slf, SV **arg, int nitems);
+
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -59,7 +63,9 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_NREADY              GCoroAPI->nready
 #define CORO_CURRENT             SvRV (GCoroAPI->current)
 #define CORO_READYHOOK           GCoroAPI->readyhook
-#define CORO_EXECUTE_SLF(slf)    GCoroAPI->execute_slf (aTHX_ &(slf))
+
+#define CORO_EXECUTE_SLF(cv,slf,arg,nitems) GCoroAPI->execute_slf (aTHX_ (cv), &(slf), (arg), (nitems))
+#define CORO_EXECUTE_SLF_XS(slf) CORO_EXECUTE_SLF (cv, (slf), &ST (0), nitems)
 
 #define I_CORO_API(YourName)                                                             \
 STMT_START {                                                                             \
