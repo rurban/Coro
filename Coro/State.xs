@@ -718,13 +718,13 @@ coro_rss (pTHX_ struct coro *coro)
 
 /** set stacklevel support **************************************************/
 
-/* we sometimes need to create the effect of pp_set_stacklevel calling us */
-#define SSL_HEAD (void)0
-/* we sometimes need to create the effect of leaving via pp_set_stacklevel */
-#define SSL_TAIL set_stacklevel_tail (aTHX)
+/* we sometimes need to create the effect of pp_slf calling us */
+#define SLF_HEAD (void)0
+/* we sometimes need to create the effect of leaving via pp_slf */
+#define SLF_TAIL slf_tail (aTHX)
 
 INLINE void
-set_stacklevel_tail (pTHX)
+slf_tail (pTHX)
 {
   dSP;
   SV **bot = SP;
@@ -887,7 +887,7 @@ coro_setup (pTHX_ struct coro *coro)
    * likely was suspended in set_stacklevel, called from pp_set_stacklevel,
    * so we have to emulate entering pp_set_stacklevel here.
    */
-  SSL_HEAD;
+  SLF_HEAD;
 }
 
 static void
@@ -1133,7 +1133,7 @@ cctx_run (void *arg)
 
     /* we are the alternative tail to pp_set_stacklevel */
     /* so do the same things here */
-    SSL_TAIL;
+    SLF_TAIL;
 
     /* we now skip the op that did lead to transfer() */
     PL_op = PL_op->op_next;
@@ -1838,11 +1838,11 @@ static PerlIO_funcs PerlIO_cede =
 
 /*****************************************************************************/
 
-static const CV *ssl_cv; /* for quick consistency check */
+static const CV *slf_cv; /* for quick consistency check */
 
-static UNOP ssl_restore; /* restore stack as entersub did, for first-re-run */
-static SV *ssl_arg0;
-static SV *ssl_arg1;
+static UNOP slf_restore; /* restore stack as entersub did, for first-re-run */
+static SV *slf_arg0;
+static SV *slf_arg1;
 
 /* this restores the stack in the case we patched the entersub, to */
 /* recreate the stack frame as perl will on following calls */
@@ -1855,14 +1855,14 @@ pp_restore (pTHX)
   PUSHMARK (SP);
 
   EXTEND (SP, 3);
-  if (ssl_arg0) PUSHs (sv_2mortal (ssl_arg0)), ssl_arg0 = 0;
-  if (ssl_arg1) PUSHs (sv_2mortal (ssl_arg1)), ssl_arg1 = 0;
-  PUSHs ((SV *)CvGV (ssl_cv));
+  if (slf_arg0) PUSHs (sv_2mortal (slf_arg0));
+  if (slf_arg1) PUSHs (sv_2mortal (slf_arg1));
+  PUSHs ((SV *)CvGV (slf_cv));
 
-  RETURNOP (ssl_restore.op_first);
+  RETURNOP (slf_restore.op_first);
 }
 
-#define OPpENTERSUB_SSL 15 /* the part of op_private entersub hopefully doesn't use */
+#define OPpENTERSUB_SLF 15 /* the part of op_private entersub hopefully doesn't use */
 
 /* declare prototype */
 XS(XS_Coro__State__set_stacklevel);
@@ -1871,9 +1871,10 @@ XS(XS_Coro__State__set_stacklevel);
  * these not obviously related functions are all rolled into one
  * function to increase chances that they all will call transfer with the same
  * stack offset
+ * SLF stands for "schedule-like-function".
  */
 static OP *
-pp_set_stacklevel (pTHX)
+pp_slf (pTHX)
 {
   dSP;
   struct transfer_args ta;
@@ -1897,7 +1898,7 @@ pp_set_stacklevel (pTHX)
     }
 
   PUTBACK;
-  switch (PL_op->op_private & OPpENTERSUB_SSL)
+  switch (PL_op->op_private & OPpENTERSUB_SLF)
     {
       case 0:
         prepare_set_stacklevel (&ta, (struct coro_cctx *)SvIV (arg [0]));
@@ -1921,40 +1922,46 @@ pp_set_stacklevel (pTHX)
       case 4:
         prepare_cede_notself (aTHX_ &ta);
         break;
+
+      case 5:
+        abort ();
+
+      default:
+        abort ();
     }
 
   TRANSFER (ta, 0);
   SPAGAIN;
 
-skip:
   PUTBACK;
-  SSL_TAIL;
+  SLF_TAIL;
   SPAGAIN;
   RETURN;
 }
 
 static void
-coro_ssl_patch (pTHX_ CV *cv, int ix, SV **args, int items)
+coro_slf_patch (pTHX_ CV *cv, int ix, SV **args, int items)
 {
-  assert (("FATAL: ssl call recursion in Coro module (please report)", PL_op->op_ppaddr != pp_set_stacklevel));
+  assert (("FATAL: SLF call recursion in Coro module (please report)", PL_op->op_ppaddr != pp_slf));
 
-  assert (("FATAL: ssl call with illegal CV value", CvGV (cv)));
-  ssl_cv = cv;
+  assert (("FATAL: SLF call with illegal CV value", CvGV (cv)));
+  slf_cv = cv;
 
   /* we patch the op, and then re-run the whole call */
-  /* we have to put some dummy argument on the stack for this to work */
-  ssl_restore.op_next = (OP *)&ssl_restore;
-  ssl_restore.op_type = OP_NULL;
-  ssl_restore.op_ppaddr = pp_restore;
-  ssl_restore.op_first = PL_op;
+  /* we have to put the same argument on the stack for this to work */
+  /* and this will be done by pp_restore */
+  slf_restore.op_next = (OP *)&slf_restore;
+  slf_restore.op_type = OP_NULL;
+  slf_restore.op_ppaddr = pp_restore;
+  slf_restore.op_first = PL_op;
 
-  ssl_arg0 = items > 0 ? SvREFCNT_inc (args [0]) : 0;
-  ssl_arg1 = items > 1 ? SvREFCNT_inc (args [1]) : 0;
+  slf_arg0 = items > 0 ? SvREFCNT_inc (args [0]) : 0;
+  slf_arg1 = items > 1 ? SvREFCNT_inc (args [1]) : 0;
 
-  PL_op->op_ppaddr  = pp_set_stacklevel;
-  PL_op->op_private = PL_op->op_private & ~OPpENTERSUB_SSL | ix; /* we potentially share our private flags with entersub */
+  PL_op->op_ppaddr  = pp_slf;
+  PL_op->op_private = PL_op->op_private & ~OPpENTERSUB_SLF | ix; /* we potentially share our private flags with entersub */
 
-  PL_op = (OP *)&ssl_restore;
+  PL_op = (OP *)&slf_restore;
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
@@ -2048,7 +2055,7 @@ _set_stacklevel (...)
         Coro::cede            = 3
         Coro::cede_notself    = 4
         CODE:
-	coro_ssl_patch (aTHX_ cv, ix, &ST (0), items);
+	coro_slf_patch (aTHX_ cv, ix, &ST (0), items);
 
 bool
 _destroy (SV *coro_sv)
