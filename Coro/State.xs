@@ -118,8 +118,11 @@ static int cctx_max_idle = 4;
 
 /* The next macros try to return the current stack pointer, in an as
  * portable way as possible. */
-#define dSTACKLEVEL volatile char stacklevel
-#define STACKLEVEL ((void *)&stacklevel)
+#if __GNUC__ >= 4
+# define dSTACKLEVEL void *stacklevel = __builtin_frame_address (0)
+#else
+# define dSTACKLEVEL volatile void *stacklevel = (volatile void *)&stacklevel
+#endif
 
 #define IN_DESTRUCT (PL_main_cv == Nullcv)
 
@@ -1331,7 +1334,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
   /* sometimes transfer is only called to set idle_sp */
   if (expect_false (!next))
     {
-      ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
+      ((coro_cctx *)prev)->idle_sp = stacklevel;
       assert (((coro_cctx *)prev)->idle_te = PL_top_env); /* just for the side-effect when asserts are enabled */
     }
   else if (expect_true (prev != next))
@@ -1368,12 +1371,12 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       /* possibly untie and reuse the cctx */
       if (expect_true (
-            prev__cctx->idle_sp == STACKLEVEL
+            prev__cctx->idle_sp == stacklevel
             && !(prev__cctx->flags & CC_TRACE)
             && !force_cctx
          ))
         {
-          /* I assume that STACKLEVEL is a stronger indicator than PL_top_env changes */
+          /* I assume that stacklevel is a stronger indicator than PL_top_env changes */
           assert (("FATAL: current top_env must equal previous top_env in Coro (please report)", PL_top_env == prev__cctx->idle_te));
 
           prev->cctx = 0;
