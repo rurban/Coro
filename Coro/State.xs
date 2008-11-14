@@ -125,12 +125,10 @@ static int cctx_max_idle = 4;
 
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
-# define BARRIER __asm__ __volatile__ ("" : : : "memory")
 # define expect(expr,value) __builtin_expect ((expr),(value))
 # define INLINE static inline
 #else
 # define attribute(x)
-# define BARRIER
 # define expect(expr,value) (expr)
 # define INLINE static
 #endif
@@ -729,9 +727,9 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
 #endif
 
 /* we sometimes need to create the effect of entersub calling us */
-#define ENTERSUB_HEAD ENTER; SAVETMPS
+#define SSL_HEAD (void)0
 /* we somtimes need to create the effect of leaving via entersub */
-#define ENTERSUB_TAIL LEAVE
+#define SSL_TAIL (void)0
 
 /*
  * This overrides the default magic get method of %SIG elements.
@@ -865,7 +863,7 @@ coro_setup (pTHX_ struct coro *coro)
    * set_stacklevel doesn't do anything on return, but entersub does LEAVE,
    * so we ENTER here for symmetry.
    */
-  ENTERSUB_HEAD;
+  SSL_HEAD;
 }
 
 static void
@@ -1080,7 +1078,7 @@ transfer_tail (pTHX)
 {
   struct coro *next = (struct coro *)transfer_next;
   assert (!(transfer_next = 0)); /* just used for the side effect when asserts are enabled */
-  assert (("FATAL: transfer_next was zero in transfer_tail (please report)", next));
+  assert (("FATAL: next coroutine was zero in transfer_tail (please report)", next));
 
   free_coro_mortal (aTHX);
   UNLOCK;
@@ -1110,9 +1108,9 @@ cctx_run (void *arg)
     dTHX;
 
     /* entersub called ENTER, but we never 'returned', undo that here */
-    ENTERSUB_TAIL;
+    SSL_TAIL;
 
-    /* we now skip the entersub that did lead to transfer() */
+    /* we now skip the op that did lead to transfer() */
     PL_op = PL_op->op_next;
 
     /* inject a fake subroutine call to cctx_init */
@@ -1194,7 +1192,7 @@ cctx_new_run ()
 
       if (!cctx->sptr)
         {
-          perror ("FATAL: unable to allocate stack for coroutine");
+          perror ("FATAL: unable to allocate stack for coroutine, exiting.");
           _exit (EXIT_FAILURE);
         }
 
@@ -1812,10 +1810,130 @@ static PerlIO_funcs PerlIO_cede =
   PerlIOBuf_set_ptrcnt,
 };
 
+/*****************************************************************************/
+
+static const CV *ssl_cv; /* for quick consistency check */
+
+static UNOP ssl_restore; /* restore stack as entersub did, for first-re-run */
+static SV *ssl_arg0;
+static SV *ssl_arg1;
+
+/* this restores the stack in the case we patched the entersub, to */
+/* recreate the stack frame as perl will on following calls */
+/* since entersub cleared the stack */
+static OP *
+pp_restore (pTHX)
+{
+  dSP;
+
+  PUSHMARK (SP);
+
+  EXTEND (SP, 3);
+  if (ssl_arg0) PUSHs (sv_2mortal (ssl_arg0)), ssl_arg0 = 0;
+  if (ssl_arg1) PUSHs (sv_2mortal (ssl_arg1)), ssl_arg1 = 0;
+  PUSHs ((SV *)CvGV (ssl_cv));
+
+  RETURNOP (ssl_restore.op_first);
+}
+
+/* declare prototype */
+XS(XS_Coro__State__set_stacklevel);
+
+static OP *
+pp_set_stacklevel (pTHX)
+{
+  dSP;
+  struct transfer_args ta;
+  SV **arg = PL_stack_base + TOPMARK + 1;
+  int items = SP - arg; /* args without function object */
+
+  /* do a quick consistency check on the "function" object, and if it isn't */
+  /* for us, divert to the real entersub */
+  if (SvTYPE (*sp) != SVt_PVGV || CvXSUB (GvCV (*sp)) != XS_Coro__State__set_stacklevel)
+    return PL_ppaddr[OP_ENTERSUB](aTHX);
+
+  /* pop args */
+  SP = PL_stack_base + POPMARK;
+
+  if (!(PL_op->op_flags & OPf_STACKED))
+    {
+      /* ampersand-form of call, use @_ instead of stack */
+      AV *av = GvAV (PL_defgv);
+      arg = AvARRAY (av);
+      items = AvFILLp (av) + 1;
+    }
+
+  PUTBACK;
+  switch (PL_op->op_private & 7)
+    {
+      case 0:
+        prepare_set_stacklevel (&ta, (struct coro_cctx *)SvIV (arg [0]));
+        break;
+
+      case 1:
+        if (items != 2)
+          croak ("Coro::State::transfer (prev, next) expects two arguments, not %d.", items);
+
+        prepare_transfer (aTHX_ &ta, arg [0], arg [1]);
+        break;
+
+      case 2:
+        prepare_schedule (aTHX_ &ta);
+        break;
+
+      case 3:
+        prepare_cede (aTHX_ &ta);
+        break;
+
+      case 4:
+        if (!prepare_cede_notself (aTHX_ &ta))
+          RETURN;
+
+        break;
+    }
+
+  TRANSFER (ta, 0);
+  SPAGAIN;
+
+skip:
+
+  RETURN;
+}
 
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
+
+# these not obviously related functions are all rolled into the same xs
+# function to increase chances that they all will call transfer with the same
+# stack offset
+void
+_set_stacklevel (...)
+	ALIAS:
+        Coro::State::transfer = 1
+        Coro::schedule        = 2
+        Coro::cede            = 3
+        Coro::cede_notself    = 4
+        CODE:
+{
+        assert (("FATAL: ssl call recursion in Coro module (please report)", PL_op->op_ppaddr != pp_set_stacklevel));
+
+        /* we patch the op, and then re-run the whole call */
+        /* we have to put some dummy argument on the stack for this to work */
+        /* TODO: walk back the opcode chain (but how?), nuke the pp_gv etc. */
+        ssl_restore.op_next = (OP *)&ssl_restore;
+        ssl_restore.op_type = OP_NULL;
+        ssl_restore.op_ppaddr = pp_restore;
+        ssl_restore.op_first = PL_op;
+
+        ssl_arg0 = items > 0 ? SvREFCNT_inc (ST (0)) : 0;
+        ssl_arg1 = items > 1 ? SvREFCNT_inc (ST (1)) : 0;
+
+        PL_op->op_ppaddr  = pp_set_stacklevel;
+        PL_op->op_private = PL_op->op_private & ~7 | ix; /* we potentially share our private flags with entersub */
+
+        PL_op = (OP *)&ssl_restore;
+}
 
 BOOT:
 {
@@ -1826,6 +1944,8 @@ BOOT:
 # endif
 #endif
         BOOT_PAGESIZE;
+
+        ssl_cv = get_cv ("Coro::State::_set_stacklevel", 0);
 
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
@@ -1895,57 +2015,6 @@ new (char *klass, ...)
 }
         OUTPUT:
         RETVAL
-
-# these not obviously related functions are all rolled into the same xs
-# function to increase chances that they all will call transfer with the same
-# stack offset
-void
-_set_stacklevel (...)
-	ALIAS:
-        Coro::State::transfer = 1
-        Coro::schedule        = 2
-        Coro::cede            = 3
-        Coro::cede_notself    = 4
-        CODE:
-{
-	struct transfer_args ta;
-
-        PUTBACK;
-        switch (ix)
-          {
-            case 0:
-              prepare_set_stacklevel (&ta, (struct coro_cctx *)SvIV (ST (0)));
-              break;
-
-            case 1:
-              if (items != 2)
-                croak ("Coro::State::transfer (prev, next) expects two arguments, not %d", items);
-
-              prepare_transfer (aTHX_ &ta, ST (0), ST (1));
-              break;
-
-            case 2:
-              prepare_schedule (aTHX_ &ta);
-              break;
-
-            case 3:
-              prepare_cede (aTHX_ &ta);
-              break;
-
-            case 4:
-              if (!prepare_cede_notself (aTHX_ &ta))
-                XSRETURN_EMPTY;
-
-              break;
-          }
-        SPAGAIN;
-
-        BARRIER;
-        PUTBACK;
-        TRANSFER (ta, 0);
-        SPAGAIN; /* might be the sp of a different coroutine now */
-        /* be extra careful not to ever do anything after TRANSFER */
-}
 
 bool
 _destroy (SV *coro_sv)
