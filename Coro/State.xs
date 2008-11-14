@@ -713,6 +713,25 @@ coro_rss (pTHX_ struct coro *coro)
   return rss;
 }
 
+/** set stacklevel support **************************************************/
+
+/* we sometimes need to create the effect of pp_set_stacklevel calling us */
+#define SSL_HEAD (void)0
+/* we somtimes need to create the effect of leaving via pp_set_stacklevel */
+#define SSL_TAIL set_stacklevel_tail (aTHX)
+
+INLINE void
+set_stacklevel_tail (pTHX)
+{
+  dSP;
+  int gimme = GIMME_V;
+
+  if (gimme == G_SCALAR)
+    XPUSHs (&PL_sv_undef);
+
+  PUTBACK;
+}
+
 /** coroutine stack handling ************************************************/
 
 static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
@@ -725,11 +744,6 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
                                  SvPV_nolen((SV*)((mg)->mg_ptr)) :  \
                                  (const char*)(mg)->mg_ptr)
 #endif
-
-/* we sometimes need to create the effect of entersub calling us */
-#define SSL_HEAD (void)0
-/* we somtimes need to create the effect of leaving via entersub */
-#define SSL_TAIL (void)0
 
 /*
  * This overrides the default magic get method of %SIG elements.
@@ -859,9 +873,8 @@ coro_setup (pTHX_ struct coro *coro)
   }
 
   /* this newly created coroutine might be run on an existing cctx which most
-   * likely was suspended in set_stacklevel, called from entersub.
-   * set_stacklevel doesn't do anything on return, but entersub does LEAVE,
-   * so we ENTER here for symmetry.
+   * likely was suspended in set_stacklevel, called from pp_set_stacklevel,
+   * so we have to emulate entering pp_set_stacklevel here.
    */
   SSL_HEAD;
 }
@@ -1107,7 +1120,8 @@ cctx_run (void *arg)
   {
     dTHX;
 
-    /* entersub called ENTER, but we never 'returned', undo that here */
+    /* we are the alternative tail to pp_set_stacklevel */
+    /* so do the same things here */
     SSL_TAIL;
 
     /* we now skip the op that did lead to transfer() */
@@ -1887,7 +1901,7 @@ pp_set_stacklevel (pTHX)
 
       case 4:
         if (!prepare_cede_notself (aTHX_ &ta))
-          RETURN;
+          goto skip;
 
         break;
     }
@@ -1896,7 +1910,9 @@ pp_set_stacklevel (pTHX)
   SPAGAIN;
 
 skip:
-
+  PUTBACK;
+  SSL_TAIL;
+  SPAGAIN;
   RETURN;
 }
 

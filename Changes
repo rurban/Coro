@@ -6,7 +6,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 
 5.0
-	- ARCHITECTURAL REDESIGN, use 4.912 for the stable version.
+	- NEW ARCHITECTURE: use 4.912 for the stable version.
         - directly patch the entersub opcode calling ssl functions (cede,
           transfer and so on). this does speed up context switching by
           up to 10%. More importanly, it frees us from the hardcoded
