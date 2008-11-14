@@ -724,10 +724,18 @@ INLINE void
 set_stacklevel_tail (pTHX)
 {
   dSP;
+  SV **bot = SP;
+
   int gimme = GIMME_V;
 
+  /* make sure we put something on the stack in scalar context */
   if (gimme == G_SCALAR)
-    XPUSHs (&PL_sv_undef);
+    {
+      if (sp == bot)
+        XPUSHs (&PL_sv_undef);
+
+      SP = bot + 1;
+    }
 
   PUTBACK;
 }
@@ -1853,6 +1861,8 @@ pp_restore (pTHX)
 /* declare prototype */
 XS(XS_Coro__State__set_stacklevel);
 
+#define OPpENTERSUB_SSL 15
+
 static OP *
 pp_set_stacklevel (pTHX)
 {
@@ -1878,7 +1888,7 @@ pp_set_stacklevel (pTHX)
     }
 
   PUTBACK;
-  switch (PL_op->op_private & 7)
+  switch (PL_op->op_private & OPpENTERSUB_SSL)
     {
       case 0:
         prepare_set_stacklevel (&ta, (struct coro_cctx *)SvIV (arg [0]));
@@ -1934,9 +1944,11 @@ _set_stacklevel (...)
 {
         assert (("FATAL: ssl call recursion in Coro module (please report)", PL_op->op_ppaddr != pp_set_stacklevel));
 
+        assert (("FATAL: ssl call with illegal CV value", CvGV (cv)));
+        ssl_cv = cv;
+
         /* we patch the op, and then re-run the whole call */
         /* we have to put some dummy argument on the stack for this to work */
-        /* TODO: walk back the opcode chain (but how?), nuke the pp_gv etc. */
         ssl_restore.op_next = (OP *)&ssl_restore;
         ssl_restore.op_type = OP_NULL;
         ssl_restore.op_ppaddr = pp_restore;
@@ -1946,7 +1958,7 @@ _set_stacklevel (...)
         ssl_arg1 = items > 1 ? SvREFCNT_inc (ST (1)) : 0;
 
         PL_op->op_ppaddr  = pp_set_stacklevel;
-        PL_op->op_private = PL_op->op_private & ~7 | ix; /* we potentially share our private flags with entersub */
+        PL_op->op_private = PL_op->op_private & ~OPpENTERSUB_SSL | ix; /* we potentially share our private flags with entersub */
 
         PL_op = (OP *)&ssl_restore;
 }
@@ -1960,8 +1972,6 @@ BOOT:
 # endif
 #endif
         BOOT_PAGESIZE;
-
-        ssl_cv = get_cv ("Coro::State::_set_stacklevel", 0);
 
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
