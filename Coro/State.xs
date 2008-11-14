@@ -717,7 +717,7 @@ coro_rss (pTHX_ struct coro *coro)
 
 /* we sometimes need to create the effect of pp_set_stacklevel calling us */
 #define SSL_HEAD (void)0
-/* we somtimes need to create the effect of leaving via pp_set_stacklevel */
+/* we sometimes need to create the effect of leaving via pp_set_stacklevel */
 #define SSL_TAIL set_stacklevel_tail (aTHX)
 
 INLINE void
@@ -1657,18 +1657,18 @@ prepare_cede (pTHX_ struct transfer_args *ta)
   prepare_schedule (aTHX_ ta);
 }
 
-static int
+static void
 prepare_cede_notself (pTHX_ struct transfer_args *ta)
 {
+  SV *prev = SvRV (coro_current);
+
   if (coro_nready)
     {
-      SV *prev = SvRV (coro_current);
       prepare_schedule (aTHX_ ta);
       api_ready (prev);
-      return 1;
     }
   else
-    return 0;
+    ta->prev = ta->next = SvSTATE (prev);
 }
 
 static void
@@ -1701,11 +1701,12 @@ api_cede (void)
 static int
 api_cede_notself (void)
 {
-  dTHX;
-  struct transfer_args ta;
-
-  if (prepare_cede_notself (aTHX_ &ta))
+  if (coro_nready)
     {
+      dTHX;
+      struct transfer_args ta;
+
+      prepare_cede_notself (aTHX_ &ta);
       TRANSFER (ta, 1);
       return 1;
     }
@@ -1858,11 +1859,16 @@ pp_restore (pTHX)
   RETURNOP (ssl_restore.op_first);
 }
 
+#define OPpENTERSUB_SSL 15 /* the part of op_private entersub hopefully doesn't use */
+
 /* declare prototype */
 XS(XS_Coro__State__set_stacklevel);
 
-#define OPpENTERSUB_SSL 15
-
+/*
+ * these not obviously related functions are all rolled into one
+ * function to increase chances that they all will call transfer with the same
+ * stack offset
+ */
 static OP *
 pp_set_stacklevel (pTHX)
 {
@@ -1910,9 +1916,7 @@ pp_set_stacklevel (pTHX)
         break;
 
       case 4:
-        if (!prepare_cede_notself (aTHX_ &ta))
-          goto skip;
-
+        prepare_cede_notself (aTHX_ &ta);
         break;
     }
 
@@ -1926,42 +1930,33 @@ skip:
   RETURN;
 }
 
+static void
+coro_ssl_patch (pTHX_ CV *cv, int ix, SV **args, int items)
+{
+  assert (("FATAL: ssl call recursion in Coro module (please report)", PL_op->op_ppaddr != pp_set_stacklevel));
+
+  assert (("FATAL: ssl call with illegal CV value", CvGV (cv)));
+  ssl_cv = cv;
+
+  /* we patch the op, and then re-run the whole call */
+  /* we have to put some dummy argument on the stack for this to work */
+  ssl_restore.op_next = (OP *)&ssl_restore;
+  ssl_restore.op_type = OP_NULL;
+  ssl_restore.op_ppaddr = pp_restore;
+  ssl_restore.op_first = PL_op;
+
+  ssl_arg0 = items > 0 ? SvREFCNT_inc (args [0]) : 0;
+  ssl_arg1 = items > 1 ? SvREFCNT_inc (args [1]) : 0;
+
+  PL_op->op_ppaddr  = pp_set_stacklevel;
+  PL_op->op_private = PL_op->op_private & ~OPpENTERSUB_SSL | ix; /* we potentially share our private flags with entersub */
+
+  PL_op = (OP *)&ssl_restore;
+}
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
-
-# these not obviously related functions are all rolled into the same xs
-# function to increase chances that they all will call transfer with the same
-# stack offset
-void
-_set_stacklevel (...)
-	ALIAS:
-        Coro::State::transfer = 1
-        Coro::schedule        = 2
-        Coro::cede            = 3
-        Coro::cede_notself    = 4
-        CODE:
-{
-        assert (("FATAL: ssl call recursion in Coro module (please report)", PL_op->op_ppaddr != pp_set_stacklevel));
-
-        assert (("FATAL: ssl call with illegal CV value", CvGV (cv)));
-        ssl_cv = cv;
-
-        /* we patch the op, and then re-run the whole call */
-        /* we have to put some dummy argument on the stack for this to work */
-        ssl_restore.op_next = (OP *)&ssl_restore;
-        ssl_restore.op_type = OP_NULL;
-        ssl_restore.op_ppaddr = pp_restore;
-        ssl_restore.op_first = PL_op;
-
-        ssl_arg0 = items > 0 ? SvREFCNT_inc (ST (0)) : 0;
-        ssl_arg1 = items > 1 ? SvREFCNT_inc (ST (1)) : 0;
-
-        PL_op->op_ppaddr  = pp_set_stacklevel;
-        PL_op->op_private = PL_op->op_private & ~OPpENTERSUB_SSL | ix; /* we potentially share our private flags with entersub */
-
-        PL_op = (OP *)&ssl_restore;
-}
 
 BOOT:
 {
@@ -2041,6 +2036,16 @@ new (char *klass, ...)
 }
         OUTPUT:
         RETVAL
+
+void
+_set_stacklevel (...)
+	ALIAS:
+        Coro::State::transfer = 1
+        Coro::schedule        = 2
+        Coro::cede            = 3
+        Coro::cede_notself    = 4
+        CODE:
+	coro_ssl_patch (aTHX_ cv, ix, &ST (0), items);
 
 bool
 _destroy (SV *coro_sv)
