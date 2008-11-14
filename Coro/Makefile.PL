@@ -68,7 +68,8 @@ if (exists $ENV{CORO_INTERFACE}) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
    # man context). Assume the same problem for all other BSDs.
    #
-   # FreeBSD 6.2 has working ucontext, setjmp and asm.
+   # FreeBSD 6.2 has working ucontext, setjmp and asm, but
+   # some 5.8.8's barf when threaded due to broken threading.
 
    $iface = $iface_asm || "s";
 

@@ -185,11 +185,6 @@ static HV *coro_state_stash, *coro_stash;
 static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
 static volatile struct coro *transfer_next;
 
-struct transfer_args
-{
-  struct coro *prev, *next;
-};
-
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
 static SV *rv_diehook;
@@ -217,7 +212,8 @@ enum {
 };
 
 /* this is a structure representing a c-level coroutine */
-typedef struct coro_cctx {
+typedef struct coro_cctx
+{
   struct coro_cctx *next;
 
   /* the stack */
@@ -245,7 +241,8 @@ enum {
 };
 
 /* the structure where most of the perl state is stored, overlaid on the cxstack */
-typedef struct {
+typedef struct
+{
   SV *defsv;
   AV *defav;
   SV *errsv;
@@ -257,12 +254,23 @@ typedef struct {
 
 #define SLOT_COUNT ((sizeof (perl_slots) + sizeof (PERL_CONTEXT) - 1) / sizeof (PERL_CONTEXT))
 
+/* this is the per-perl-coro slf frame info */
+/* it is treated like other "global" interpreter data */
+/* and unfortunately is copied around, so kepe it small */
+struct slf_frame
+{
+  void (*prepare) (struct coro_transfer_args *ta); /* 0 means not yet initialised */
+  int (*check) (pTHX);
+};
+
 /* this is a structure representing a perl-level coroutine */
 struct coro {
-  /* the c coroutine allocated to this perl coroutine, if any */
+  /* the C coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
 
   /* process data */
+  struct slf_frame slf_frame; /* saved slf frame */
+  void *slf_data;
   AV *mainstack;
   perl_slots *slot; /* basically the saved sp */
 
@@ -287,6 +295,8 @@ struct coro {
 
 typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
+
+static struct slf_frame slf_frame; /* the current slf frame */
 
 /** Coro ********************************************************************/
 
@@ -516,11 +526,17 @@ load_perl (pTHX_ Coro__State c)
 
     PUTBACK;
   }
+
+  slf_frame = c->slf_frame;
+  coroapi.slf_data = c->slf_data;
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
+  c->slf_data = coroapi.slf_data;
+  c->slf_frame = slf_frame;
+
   {
     dSP;
     I32 cxix = cxstack_ix;
@@ -597,7 +613,7 @@ save_perl (pTHX_ Coro__State c)
 }
 
 /*
- * allocate various perl stacks. This is an exact copy
+ * allocate various perl stacks. This is almost an exact copy
  * of perl.c:init_stacks, except that it uses less memory
  * on the (sometimes correct) assumption that coroutines do
  * not usually need a lot of stackspace.
@@ -716,33 +732,6 @@ coro_rss (pTHX_ struct coro *coro)
   return rss;
 }
 
-/** set stacklevel support **************************************************/
-
-/* we sometimes need to create the effect of pp_slf calling us */
-#define SLF_HEAD (void)0
-/* we sometimes need to create the effect of leaving via pp_slf */
-#define SLF_TAIL slf_tail (aTHX)
-
-INLINE void
-slf_tail (pTHX)
-{
-  dSP;
-  SV **bot = SP;
-
-  int gimme = GIMME_V;
-
-  /* make sure we put something on the stack in scalar context */
-  if (gimme == G_SCALAR)
-    {
-      if (sp == bot)
-        XPUSHs (&PL_sv_undef);
-
-      SP = bot + 1;
-    }
-
-  PUTBACK;
-}
-
 /** coroutine stack handling ************************************************/
 
 static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
@@ -836,6 +825,19 @@ coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
 }
 
 static void
+prepare_nop (aTHX_ struct coro_transfer_args *ta)
+{
+  /* kind of mega-hacky, but works */
+  ta->next = ta->prev = (struct coro *)ta;
+}
+
+static int
+slf_check_nop (aTHX)
+{
+  return 0;
+}
+
+static void
 coro_setup (pTHX_ struct coro *coro)
 {
   /*
@@ -884,10 +886,10 @@ coro_setup (pTHX_ struct coro *coro)
   }
 
   /* this newly created coroutine might be run on an existing cctx which most
-   * likely was suspended in set_stacklevel, called from pp_set_stacklevel,
-   * so we have to emulate entering pp_set_stacklevel here.
+   * likely was suspended in pp_slf, so we have to emulate entering pp_slf here.
    */
-  SLF_HEAD;
+  slf_frame.prepare = prepare_nop;   /* provide a nop function for an eventual pp_slf */
+  slf_frame.check   = slf_check_nop; /* signal pp_slf to not repeat */
 }
 
 static void
@@ -1061,7 +1063,7 @@ runops_trace (pTHX)
 }
 
 static void
-prepare_set_stacklevel (struct transfer_args *ta, struct coro_cctx *cctx)
+prepare_set_stacklevel (struct coro_transfer_args *ta, struct coro_cctx *cctx)
 {
   ta->prev  = (struct coro *)cctx;
   ta->next  = 0;
@@ -1131,17 +1133,15 @@ cctx_run (void *arg)
   {
     dTHX;
 
-    /* we are the alternative tail to pp_set_stacklevel */
-    /* so do the same things here */
-    SLF_TAIL;
-
-    /* we now skip the op that did lead to transfer() */
-    PL_op = PL_op->op_next;
+    /* normally we would need to skip the entersub here */
+    /* not doing so will re-execute it, which is exactly what we want */
+    /* PL_nop = PL_nop->op_next */
 
     /* inject a fake subroutine call to cctx_init */
     cctx_prepare (aTHX_ (coro_cctx *)arg);
 
     /* cctx_run is the alternative tail of transfer() */
+    /* TODO: throwing an exception here might be deadly, VERIFY */
     transfer_tail (aTHX);
 
     /* somebody or something will hit me for both perl_run and PL_restartop */
@@ -1499,7 +1499,7 @@ static MGVTBL coro_state_vtbl = {
 };
 
 static void
-prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev_sv, SV *next_sv)
+prepare_transfer (pTHX_ struct coro_transfer_args *ta, SV *prev_sv, SV *next_sv)
 {
   ta->prev = SvSTATE (prev_sv);
   ta->next = SvSTATE (next_sv);
@@ -1509,7 +1509,7 @@ prepare_transfer (pTHX_ struct transfer_args *ta, SV *prev_sv, SV *next_sv)
 static void
 api_transfer (pTHX_ SV *prev_sv, SV *next_sv)
 {
-  struct transfer_args ta;
+  struct coro_transfer_args ta;
 
   prepare_transfer (aTHX_ &ta, prev_sv, next_sv);
   TRANSFER (ta, 1);
@@ -1591,7 +1591,7 @@ api_is_ready (pTHX_ SV *coro_sv)
 }
 
 INLINE void
-prepare_schedule (pTHX_ struct transfer_args *ta)
+prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 {
   SV *prev_sv, *next_sv;
 
@@ -1650,14 +1650,14 @@ prepare_schedule (pTHX_ struct transfer_args *ta)
 }
 
 INLINE void
-prepare_cede (pTHX_ struct transfer_args *ta)
+prepare_cede (pTHX_ struct coro_transfer_args *ta)
 {
   api_ready (aTHX_ coro_current);
   prepare_schedule (aTHX_ ta);
 }
 
-static void
-prepare_cede_notself (pTHX_ struct transfer_args *ta)
+INLINE void
+prepare_cede_notself (pTHX_ struct coro_transfer_args *ta)
 {
   SV *prev = SvRV (coro_current);
 
@@ -1667,13 +1667,13 @@ prepare_cede_notself (pTHX_ struct transfer_args *ta)
       api_ready (aTHX_ prev);
     }
   else
-    ta->prev = ta->next = SvSTATE (prev);
+    prepare_nop (aTHX_ ta);
 }
 
 static void
 api_schedule (pTHX)
 {
-  struct transfer_args ta;
+  struct coro_transfer_args ta;
 
   prepare_schedule (aTHX_ &ta);
   TRANSFER (ta, 1);
@@ -1682,7 +1682,7 @@ api_schedule (pTHX)
 static int
 api_cede (pTHX)
 {
-  struct transfer_args ta;
+  struct coro_transfer_args ta;
 
   prepare_cede (aTHX_ &ta);
 
@@ -1700,7 +1700,7 @@ api_cede_notself (pTHX)
 {
   if (coro_nready)
     {
-      struct transfer_args ta;
+      struct coro_transfer_args ta;
 
       prepare_cede_notself (aTHX_ &ta);
       TRANSFER (ta, 1);
@@ -1854,16 +1854,47 @@ pp_restore (pTHX)
   RETURNOP (slf_restore.op_first);
 }
 
-#define OPpENTERSUB_SLF 15 /* the part of op_private entersub hopefully doesn't use */
+static void
+slf_init_set_stacklevel (pTHX_ SV **arg, int items)
+{
+  assert (("FATAL: set_stacklevel needs the coro cctx as sole argument", items == 1));
+  CORO_SLF_DATA = (void *)SvIV (arg [0]);
+}
 
-enum {
-  CORO_SLF_CUSTOM         = 0,
-  CORO_SLF_SET_STACKLEVEL = 1,
-  CORO_SLF_TRANSFER       = 2
-};
+static void
+slf_prepare_set_stacklevel (pTHX_ struct coro_transfer_args *ta)
+{
+  prepare_set_stacklevel (ta, (struct coro_cctx *)CORO_SLF_DATA);
+}
 
-/* declare prototype */
-XS(XS_Coro__State__set_stacklevel);
+static void
+slf_init_transfer (pTHX_ SV **arg, int items)
+{
+  if (items != 2)
+    croak ("Coro::State::transfer (prev, next) expects two arguments, not %d.", items);
+
+  CORO_SLF_DATA = (void *)arg; /* let's hope it will stay valid */
+}
+
+static void
+slf_prepare_transfer (pTHX_ struct coro_transfer_args *ta)
+{
+  SV **arg = (SV **)CORO_SLF_DATA;
+
+  prepare_transfer (ta, arg [0], arg [1]);
+}
+
+static void
+slf_init_nop (pTHX_ SV **arg, int items)
+{
+}
+
+/* slf_prepare_schedule == prepare_schedule */
+/* slf_prepare_cede     == prepare_cede */
+/* slf_prepare_notself  == prepare_notself */
+
+/* we hijack an hopefully unused CV flag for our purposes */
+#define CVf_SLF 0x4000
 
 /*
  * these not obviously related functions are all rolled into one
@@ -1874,85 +1905,89 @@ XS(XS_Coro__State__set_stacklevel);
 static OP *
 pp_slf (pTHX)
 {
-  dSP;
-  struct transfer_args ta;
-  SV **arg = PL_stack_base + TOPMARK + 1;
-  int items = SP - arg; /* args without function object */
-  int ix = PL_op->op_private & OPpENTERSUB_SLF;
-  struct CoroSLF *slf = 0;
-  SV *gv = *sp;
+  I32 checkmark; /* mark SP to see how many elements check has pushed */
 
-  /* do a quick consistency check on the "function" object, and if it isn't */
-  /* for us, divert to the real entersub */
-  if (SvTYPE (gv) != SVt_PVGV || CvXSUB (GvCV (gv)) != XS_Coro__State__set_stacklevel)
-    return PL_ppaddr[OP_ENTERSUB](aTHX);
-
-  /* pop args */
-  SP = PL_stack_base + POPMARK;
-
-  if (!(PL_op->op_flags & OPf_STACKED))
+  if (expect_true (!slf_frame.prepare))
     {
-      /* ampersand-form of call, use @_ instead of stack */
-      AV *av = GvAV (PL_defgv);
-      arg = AvARRAY (av);
-      items = AvFILLp (av) + 1;
-    }
+      /* first iteration */
+      dSP;
+      SV **arg = PL_stack_base + TOPMARK + 1;
+      int items = SP - arg; /* args without function object */
+      SV *gv = *sp;
+      struct CoroSLF *slf;
 
-  PUTBACK;
+      /* do a quick consistency check on the "function" object, and if it isn't */
+      /* for us, divert to the real entersub */
+      if (SvTYPE (gv) != SVt_PVGV || !(CvFLAGS (GvCV (gv)) & CVf_SLF))
+        return PL_ppaddr[OP_ENTERSUB](aTHX);
 
-  if (!ix)
-    {
+      /* pop args */
+      SP = PL_stack_base + POPMARK;
+
+      if (!(PL_op->op_flags & OPf_STACKED))
+        {
+          /* ampersand-form of call, use @_ instead of stack */
+          AV *av = GvAV (PL_defgv);
+          arg = AvARRAY (av);
+          items = AvFILLp (av) + 1;
+        }
+
+      PUTBACK;
+
       slf = (struct CoroSLF *)CvXSUBANY (GvCV (gv)).any_ptr;
-      ix  = slf->prepare (aTHX_ arg, items);
+      slf_frame.prepare = slf->prepare;
+      slf_frame.check   = slf->check;
+      slf->init (aTHX_ arg, items);
     }
 
-  switch (ix)
-    {
-      case CORO_SLF_SET_STACKLEVEL:
-        prepare_set_stacklevel (&ta, (struct coro_cctx *)SvIV (arg [0]));
-        break;
-
-      case CORO_SLF_TRANSFER:
-        if (items != 2)
-          croak ("Coro::State::transfer (prev, next) expects two arguments, not %d.", items);
-
-        prepare_transfer (aTHX_ &ta, arg [0], arg [1]);
-        break;
-
-      case CORO_SLF_SCHEDULE:
-        prepare_schedule (aTHX_ &ta);
-        break;
-
-      case CORO_SLF_CEDE:
-        prepare_cede (aTHX_ &ta);
-        break;
-
-      case CORO_SLF_CEDE_NOTSELF:
-        prepare_cede_notself (aTHX_ &ta);
-        break;
-
-      default:
-        abort ();
-    }
+  /* now interpret the slf_frame */
+  /* we use a callback system not to make the code needlessly */
+  /* complicated, but so we can run multiple perl coros from one cctx */
 
   do
-    TRANSFER (ta, 0);
-  while (slf && slf->check (aTHX));
+    {
+      struct coro_transfer_args ta;
 
-  SPAGAIN;
+      slf_frame.prepare (aTHX_ &ta);
+      TRANSFER (ta, 0);
 
-  PUTBACK;
-  SLF_TAIL;
-  SPAGAIN;
-  RETURN;
+      checkmark = PL_stack_sp - PL_stack_base;
+    }
+  while (slf_frame.check (aTHX));
+
+  {
+    dSP;
+    SV **bot = PL_stack_base + checkmark;
+    int gimme = GIMME_V;
+
+    slf_frame.prepare = 0; /* signal pp_slf that we need a new frame */
+
+    /* make sure we put something on the stack in scalar context */
+    if (gimme == G_SCALAR)
+      {
+        if (sp == bot)
+          XPUSHs (&PL_sv_undef);
+
+        SP = bot + 1;
+      }
+
+    PUTBACK;
+  }
+
+  return NORMAL;
 }
 
 static void
-coro_slf_patch (pTHX_ CV *cv, int ix, SV **args, int items)
+api_execute_slf (pTHX_ CV *cv, const struct CoroSLF *slf, SV **arg, int items)
 {
   assert (("FATAL: SLF call recursion in Coro module (please report)", PL_op->op_ppaddr != pp_slf));
+  assert (("FATAL: SLF call with illegal CV value", !CvANON (cv)));
 
-  assert (("FATAL: SLF call with illegal CV value", CvGV (cv)));
+  if (items > 2)
+    croak ("Coro only supports a max of two arguments to SLF functions.");
+
+  CvFLAGS (cv) |= CVf_SLF;
+  CvXSUBANY (cv).any_ptr = (void *)slf;
   slf_cv = cv;
 
   /* we patch the op, and then re-run the whole call */
@@ -1963,20 +1998,12 @@ coro_slf_patch (pTHX_ CV *cv, int ix, SV **args, int items)
   slf_restore.op_ppaddr = pp_restore;
   slf_restore.op_first = PL_op;
 
-  slf_arg0 = items > 0 ? SvREFCNT_inc (args [0]) : 0;
-  slf_arg1 = items > 1 ? SvREFCNT_inc (args [1]) : 0;
+  slf_arg0 = items > 0 ? SvREFCNT_inc (arg [0]) : 0;
+  slf_arg1 = items > 1 ? SvREFCNT_inc (arg [1]) : 0;
 
   PL_op->op_ppaddr  = pp_slf;
-  PL_op->op_private = PL_op->op_private & ~OPpENTERSUB_SLF | ix; /* we potentially share our private flags with entersub */
 
   PL_op = (OP *)&slf_restore;
-}
-
-static void
-api_execute_slf (pTHX_ CV *cv, const struct CoroSLF *slf, SV **arg, int items)
-{
-  CvXSUBANY (cv).any_ptr = (void *)slf;
-  coro_slf_patch (aTHX_ cv, CORO_SLF_CUSTOM, arg, items);
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
@@ -2021,6 +2048,7 @@ BOOT:
         coroapi.rev         = CORO_API_REVISION;
         coroapi.transfer    = api_transfer;
         coroapi.execute_slf = api_execute_slf;
+        coroapi.sv_state    = SvSTATE_;
 
         {
           SV **svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
@@ -2065,14 +2093,19 @@ new (char *klass, ...)
 
 void
 _set_stacklevel (...)
-	ALIAS:
-        _set_stacklevel       = CORO_SLF_SET_STACKLEVEL
-        Coro::State::transfer = CORO_SLF_TRANSFER
-        Coro::schedule        = CORO_SLF_SCHEDULE
-        Coro::cede            = CORO_SLF_CEDE
-        Coro::cede_notself    = CORO_SLF_CEDE_NOTSELF
-        CODE:
-	coro_slf_patch (aTHX_ cv, ix, &ST (0), items);
+	CODE:
+{
+        static struct CoroSLF slf = { slf_init_set_stacklevel, slf_prepare_set_stacklevel, slf_check_nop };
+        api_execute_slf (aTHX_ cv, &slf, &ST (0), items);
+}
+
+void
+transfer (...)
+	CODE:
+{
+        static struct CoroSLF slf = { slf_init_transfer, slf_prepare_transfer, slf_check_nop };
+        api_execute_slf (aTHX_ cv, &slf, &ST (0), items);
+}
 
 bool
 _destroy (SV *coro_sv)
@@ -2294,6 +2327,30 @@ BOOT:
           sv_setiv (sv, (IV)&coroapi);
           SvREADONLY_on (sv);
         }
+}
+
+void
+schedule (...)
+	CODE:
+{
+        static struct CoroSLF slf = { slf_init_nop, prepare_schedule, slf_check_nop };
+        api_execute_slf (aTHX_ cv, &slf, &ST (0), items);
+}
+
+void
+cede (...)
+	CODE:
+{
+        static struct CoroSLF slf = { slf_init_nop, prepare_cede, slf_check_nop };
+        api_execute_slf (aTHX_ cv, &slf, &ST (0), items);
+}
+
+void
+cede_notself (...)
+	CODE:
+{
+        static struct CoroSLF slf = { slf_init_nop, prepare_cede_notself, slf_check_nop };
+        api_execute_slf (aTHX_ cv, &slf, &ST (0), items);
 }
 
 void

@@ -12,18 +12,20 @@
 # define aTHX
 #endif
 
-/*struct coro;*/ /* opaque */
+/* C-level coroutine struct, opaque, not used much */
+struct coro;
 
-enum {
-  CORO_SLF_SCHEDULE     = 3,
-  CORO_SLF_CEDE         = 4,
-  CORO_SLF_CEDE_NOTSELF = 5
+/* used for schedule-like-function prepares */
+struct coro_transfer_args
+{
+  struct coro *prev, *next;
 };
 
 struct CoroSLF
 {
-  int (*prepare) (pTHX_ SV **arg, int items); /* returns CORO_SLF_* */
-  int (*check) (pTHX); /* returns repeat-flag */
+  void (*init) (pTHX_ SV **arg, int items); /* returns CORO_SLF_* */
+  void (*prepare) (struct coro_transfer_args *ta);
+  int (*check) (pTHX); /* returns repeat-flag, may be zero */
 };
 
 /* private structure, always use the provided macros below */
@@ -48,7 +50,8 @@ struct CoroAPI
   /* Coro::State */
   void (*transfer) (pTHX_ SV *prev_sv, SV *next_sv); /* Coro::State */
   void (*execute_slf) (pTHX_ CV *cv, const struct CoroSLF *slf, SV **arg, int nitems);
-
+  struct coro *(*sv_state) (pTHX_ SV *coro);
+  void *slf_data;
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -60,12 +63,16 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_CEDE_NOTSELF        GCoroAPI->cede_notself (aTHX)
 #define CORO_READY(coro)         GCoroAPI->ready (aTHX_ coro)
 #define CORO_IS_READY(coro)      GCoroAPI->is_ready (coro)
-#define CORO_NREADY              GCoroAPI->nready
-#define CORO_CURRENT             SvRV (GCoroAPI->current)
-#define CORO_READYHOOK           GCoroAPI->readyhook
+#define CORO_NREADY              (GCoroAPI->nready)
+#define CORO_CURRENT             (SvRV (GCoroAPI->current))
+#define CORO_READYHOOK           (GCoroAPI->readyhook)
 
 #define CORO_EXECUTE_SLF(cv,slf,arg,nitems) GCoroAPI->execute_slf (aTHX_ (cv), &(slf), (arg), (nitems))
 #define CORO_EXECUTE_SLF_XS(slf) CORO_EXECUTE_SLF (cv, (slf), &ST (0), nitems)
+
+#define CORO_SV_STATE(coro)      GCoroAPI->sv_state (aTHX_ (coro))
+
+#define CORO_SLF_DATA            (GCoroAPI->slf_data)
 
 #define I_CORO_API(YourName)                                                             \
 STMT_START {                                                                             \
