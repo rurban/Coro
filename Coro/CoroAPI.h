@@ -21,12 +21,18 @@ struct coro_transfer_args
   struct coro *prev, *next;
 };
 
+/* this is the per-perl-coro slf frame info */
+/* it is treated like other "global" interpreter data */
+/* and unfortunately is copied around, so keep it small */
 struct CoroSLF
 {
-  void (*init) (pTHX_ SV **arg, int items); /* returns CORO_SLF_* */
-  void (*prepare) (struct coro_transfer_args *ta);
-  int (*check) (pTHX); /* returns repeat-flag, may be zero */
+  void (*prepare) (struct coro_transfer_args *ta); /* 0 means not yet initialised */
+  int (*check) (pTHX_ struct CoroSLF *frame);
+  void *data; /* for use by prepare/check */
 };
+
+/* needs to fill in the *frame */
+typedef void (*coro_slf_cb) (pTHX_ struct CoroSLF *frame, SV **arg, int items);
 
 /* private structure, always use the provided macros below */
 struct CoroAPI
@@ -49,30 +55,34 @@ struct CoroAPI
 
   /* Coro::State */
   void (*transfer) (pTHX_ SV *prev_sv, SV *next_sv); /* Coro::State */
-  void (*execute_slf) (pTHX_ CV *cv, const struct CoroSLF *slf, SV **arg, int nitems);
+
+  /* SLF */
   struct coro *(*sv_state) (pTHX_ SV *coro);
-  void *slf_data;
+  void (*execute_slf) (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int nitems);
+  /* for use as CoroSLF.prepare */
+  void (*prepare_nop)          (aTHX_ struct coro_transfer_args *ta);
+  void (*prepare_schedule)     (aTHX_ struct coro_transfer_args *ta);
+  void (*prepare_cede)         (aTHX_ struct coro_transfer_args *ta);
+  void (*prepare_cede_notself) (aTHX_ struct coro_transfer_args *ta);
 };
 
 static struct CoroAPI *GCoroAPI;
 
 /* public API macros */
 #define CORO_TRANSFER(prev,next) GCoroAPI->transfer (aTHX_ (prev), (next))
+
+#define CORO_SV_STATE(coro)      GCoroAPI->sv_state (aTHX_ (coro))
+#define CORO_EXECUTE_SLF(cv,init,arg,items) GCoroAPI->execute_slf (aTHX_ (cv), (init), (arg), (items))
+#define CORO_EXECUTE_SLF_XS(init) CORO_EXECUTE_SLF (cv, (init), &ST (0), items)
+
 #define CORO_SCHEDULE            GCoroAPI->schedule (aTHX)
 #define CORO_CEDE                GCoroAPI->cede (aTHX)
 #define CORO_CEDE_NOTSELF        GCoroAPI->cede_notself (aTHX)
 #define CORO_READY(coro)         GCoroAPI->ready (aTHX_ coro)
 #define CORO_IS_READY(coro)      GCoroAPI->is_ready (coro)
-#define CORO_NREADY              (GCoroAPI->nready)
-#define CORO_CURRENT             (SvRV (GCoroAPI->current))
-#define CORO_READYHOOK           (GCoroAPI->readyhook)
-
-#define CORO_EXECUTE_SLF(cv,slf,arg,nitems) GCoroAPI->execute_slf (aTHX_ (cv), &(slf), (arg), (nitems))
-#define CORO_EXECUTE_SLF_XS(slf) CORO_EXECUTE_SLF (cv, (slf), &ST (0), nitems)
-
-#define CORO_SV_STATE(coro)      GCoroAPI->sv_state (aTHX_ (coro))
-
-#define CORO_SLF_DATA            (GCoroAPI->slf_data)
+#define CORO_NREADY              GCoroAPI->nready
+#define CORO_CURRENT             SvRV (GCoroAPI->current)
+#define CORO_READYHOOK           GCoroAPI->readyhook
 
 #define I_CORO_API(YourName)                                                             \
 STMT_START {                                                                             \

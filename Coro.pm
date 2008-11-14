@@ -667,11 +667,29 @@ sub unblock_sub(&) {
 
 =head1 BUGS/LIMITATIONS
 
+=over 4
+
+=item perl process emulation ("threads")
+
 This module is not perl-pseudo-thread-safe. You should only ever use this
 module from the same thread (this requirement might be removed in the
 future to allow per-thread schedulers, but Coro::State does not yet allow
-this). I recommend disabling thread support and using processes, as this
-is much faster and uses less memory.
+this). I recommend disabling thread support and using processes, as having
+the windows process emulation enabled under unix roughly halves perl
+performance, even when not used.
+
+=item coroutine switching not signal safe
+
+You must not switch to another coroutine from within a signal handler
+(only relevant with %SIG - most event libraries provide safe signals).
+
+That means you I<MUST NOT> call any fucntion that might "block" the
+current coroutine - C<cede>, C<schedule> C<< Coro::Semaphore->down >> or
+anything that calls those. Everything else, including calling C<ready>,
+works.
+
+=back
+
 
 =head1 SEE ALSO
 

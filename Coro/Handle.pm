@@ -455,6 +455,7 @@ for my $rw (qw(readable writable)) {
       } elsif ($AnyEvent::MODEL eq "AnyEvent::Impl::CoroEV" or $AnyEvent::MODEL eq "AnyEvent::Impl::EV") {
          require Coro::EV;
          *$rw = \&{"Coro::EV::$rw\_ev"};
+         return &$rw; # Coro 5.0+ doesn't support goto &SLF
       } else {
          *$rw = \&{"$rw\_anyevent"};
       }
