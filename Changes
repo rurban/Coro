@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+4.913 Sat Nov 15 07:58:28 CET 2008
+        - async_pool did free a scalar value twice
+          ("Attempt to unreference...").
+
 4.912 Thu Nov 13 18:31:23 CET 2008
 	- minor cleanups.
         - use much larger stacks on linux and perl < 5.8.8.

@@ -37,7 +37,7 @@ no warnings;
 
 use Coro ();
 
-$VERSION = 4.912;
+$VERSION = 4.913;
 
 =item new [inital count]
 
@@ -67,6 +67,8 @@ sub count {
 Atomically adds the amount given to the current semaphore count. If the
 count becomes positive, wakes up any waiters. Does not block if the count
 becomes negative, however.
+
+BUG: in 4.x versions of Coro, adjust may not wake up enough waiters.
 
 =cut
 

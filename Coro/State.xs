@@ -2259,8 +2259,6 @@ _pool_1 (SV *cb)
             for (i = 0; i < len; ++i)
               av_store (defav, i, SvREFCNT_inc_NN (AvARRAY (invoke_av)[i + 1]));
           }
-
-        SvREFCNT_dec (invoke);
 }
 
 void
