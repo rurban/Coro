@@ -4,7 +4,6 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
-TODO: MAP_STACK
 
 5.0
 	- NEW ARCHITECTURE: use 4.912 for the stable version.
