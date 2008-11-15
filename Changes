@@ -30,6 +30,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
           annoying to support anyways :
         - used new SLF interface to massively speed up Coro::Semaphore by a factor
           of three.
+        - forgot to include Coro/libcoro/README in the dist for all these years.
 
 4.913 Sat Nov 15 07:58:28 CET 2008
         - async_pool did free a scalar value twice

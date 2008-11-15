@@ -33,6 +33,7 @@ Coro/Storable.pm
 Coro/AnyEvent.pm
 
 Coro/libcoro/LICENSE
+Coro/libcoro/README
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c
 Coro/libcoro/conftest.c
