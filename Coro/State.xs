@@ -1989,7 +1989,7 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
 
   if (PL_op->op_ppaddr != PL_ppaddr [OP_ENTERSUB]
       && PL_op->op_ppaddr != pp_slf)
-    croak ("FATAL: Coro SLF calls can only be made normally, not via goto or other means, caught");
+    croak ("FATAL: Coro SLF calls can only be made normally, not via goto or any other means, caught");
 
   if (items > 3)
     croak ("Coro only supports up to three arguments to SLF functions currently, caught");
