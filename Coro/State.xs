@@ -1992,7 +1992,7 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
     croak ("FATAL: Coro SLF calls can only be made normally, not via goto or any other means, caught");
 
   if (items > 3)
-    croak ("Coro only supports up to three arguments to SLF functions currently, caught");
+    croak ("Coro only supports up to three arguments to SLF functions currently (not %d), caught", items);
 
   CvFLAGS (cv) |= CVf_SLF;
   CvXSUBANY (cv).any_ptr = (void *)init_cb;
@@ -2013,6 +2013,57 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
   PL_op->op_ppaddr  = pp_slf;
 
   PL_op = (OP *)&slf_restore;
+}
+
+/*****************************************************************************/
+
+static int
+slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
+{
+  AV *av = (AV *)frame->data;
+  SV *count_sv = AvARRAY (av)[0];
+
+  if (SvIVX (count_sv) > 0)
+    {
+      SvIVX (count_sv) = SvIVX (count_sv) - 1;
+      return 0;
+    }
+  else
+    {
+      int i;
+      /* if we were woken up but can't down, we look through the whole */
+      /* waiters list and only add us if we aren't in there already */
+      /* this avoids some degenerate memory usage cases */
+
+      for (i = 1; i <= AvFILLp (av); ++i)
+        if (AvARRAY (av)[i] == SvRV (coro_current))
+          return 1;
+
+      av_push (av, SvREFCNT_inc (SvRV (coro_current)));
+      return 1;
+    }
+}
+
+static void
+slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, SV **arg, int items)
+{
+  AV *av = (AV *)SvRV (arg [0]);
+
+  if (SvIVX (AvARRAY (av)[0]) > 0)
+    {
+      frame->data    = (void *)av;
+      frame->prepare = prepare_nop;
+    }
+  else
+    {
+      av_push (av, SvREFCNT_inc (SvRV (coro_current)));
+
+      frame->data    = (void *)sv_2mortal (SvREFCNT_inc ((SV *)av));
+      frame->prepare = prepare_schedule;
+    }
+
+  frame->check = slf_check_semaphore_down;
+
 }
 
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
@@ -2131,6 +2182,7 @@ _exit (int code)
 
 int
 cctx_stacksize (int new_stacksize = 0)
+	PROTOTYPE: ;$
 	CODE:
         RETVAL = cctx_stacksize;
         if (new_stacksize)
@@ -2143,6 +2195,7 @@ cctx_stacksize (int new_stacksize = 0)
 
 int
 cctx_max_idle (int max_idle = 0)
+	PROTOTYPE: ;$
 	CODE:
         RETVAL = cctx_max_idle;
         if (max_idle > 1)
@@ -2152,6 +2205,7 @@ cctx_max_idle (int max_idle = 0)
 
 int
 cctx_count ()
+	PROTOTYPE:
 	CODE:
         RETVAL = cctx_count;
 	OUTPUT:
@@ -2159,6 +2213,7 @@ cctx_count ()
 
 int
 cctx_idle ()
+	PROTOTYPE:
 	CODE:
         RETVAL = cctx_idle;
 	OUTPUT:
@@ -2166,6 +2221,7 @@ cctx_idle ()
 
 void
 list ()
+	PROTOTYPE:
 	PPCODE:
 {
   	struct coro *coro;
@@ -2242,6 +2298,7 @@ throw (Coro::State self, SV *throw = &PL_sv_undef)
 
 void
 api_trace (SV *coro, int flags = CC_TRACE | CC_TRACE_SUB)
+	PROTOTYPE: $;$
 	C_ARGS: aTHX_ coro, flags
 
 SV *
@@ -2276,6 +2333,7 @@ rss (Coro::State coro)
 
 void
 force_cctx ()
+	PROTOTYPE:
 	CODE:
         struct coro *coro = SvSTATE (coro_current);
         coro->cctx->idle_sp = 0;
@@ -2371,6 +2429,7 @@ _set_readyhook (SV *hook)
 
 int
 prio (Coro::State coro, int newprio = 0)
+	PROTOTYPE: $;$
         ALIAS:
         nice = 1
         CODE:
@@ -2444,8 +2503,6 @@ _pool_1 (SV *cb)
             for (i = 0; i < len; ++i)
               av_store (defav, i, SvREFCNT_inc_NN (AvARRAY (invoke_av)[i + 1]));
           }
-
-        SvREFCNT_dec (invoke);
 }
 
 void
@@ -2533,6 +2590,7 @@ MODULE = Coro::State                PACKAGE = Coro::AIO
 
 void
 _get_state (SV *self)
+	PROTOTYPE: $
 	PPCODE:
 {
         AV *defav = GvAV (PL_defgv);
@@ -2587,7 +2645,6 @@ BOOT:
 
 SV *
 _schedule (...)
-	PROTOTYPE: @
 	CODE:
 {
   	static int incede;
@@ -2615,4 +2672,97 @@ MODULE = Coro::State                PACKAGE = PerlIO::cede
 
 BOOT:
 	PerlIO_define_layer (aTHX_ &PerlIO_cede);
+
+MODULE = Coro::State                PACKAGE = Coro::Semaphore
+
+SV *
+new (SV *klass, SV *count_ = 0)
+	CODE:
+{
+        /* a semaphore contains a counter IV in $sem->[0] and any waiters after that */
+        AV *av = newAV ();
+        av_push (av, newSViv (count_ && SvOK (count_) ? SvIV (count_) : 1));
+        RETVAL = sv_bless (newRV_noinc ((SV *)av), GvSTASH (CvGV (cv)));
+}
+	OUTPUT:
+        RETVAL
+
+SV *
+count (SV *self)
+	CODE:
+        RETVAL = newSVsv (AvARRAY ((AV *)SvRV (self))[0]);
+	OUTPUT:
+        RETVAL
+
+void
+up (SV *self, int adjust = 1)
+	ALIAS:
+        adjust = 1
+        CODE:
+{
+        AV *av = (AV *)SvRV (self);
+        SV *count_sv = AvARRAY (av)[0];
+        IV count = SvIVX (count_sv);
+
+        count += ix ? adjust : 1;
+        SvIVX (count_sv) = count;
+
+        /* now wake up as many waiters as possible */
+        while (count > 0 && AvFILLp (av) >= count)
+          {
+            SV *cb;
+
+            /* swap first two elements so we can shift a waiter */
+            AvARRAY (av)[0] = AvARRAY (av)[1];
+            AvARRAY (av)[1] = count_sv;
+            cb = av_shift (av);
+
+            if (SvOBJECT (cb))
+              api_ready (cb);
+            else
+              croak ("callbacks not yet supported");
+
+            SvREFCNT_dec (cb);
+          }
+}
+
+void
+down (SV *self)
+        CODE:
+        api_execute_slf (aTHX_ cv, slf_init_semaphore_down, &ST (0), items);
+
+void
+try (SV *self)
+        PPCODE:
+{
+        AV *av = (AV *)SvRV (self);
+        SV *count_sv = AvARRAY (av)[0];
+        IV count = SvIVX (count_sv);
+
+        if (count > 0)
+          {
+            --count;
+            SvIVX (count_sv) = count;
+            XSRETURN_YES;
+          }
+        else
+          XSRETURN_NO;
+}
+
+void
+waiters (SV *self)
+    	CODE:
+{
+        AV *av = (AV *)SvRV (self);
+
+        if (GIMME_V == G_SCALAR)
+          XPUSHs (sv_2mortal (newSVsv (AvARRAY (av)[0])));
+        else
+          {
+            int i;
+            EXTEND (SP, AvFILLp (av) + 1 - 1);
+            for (i = 1; i <= AvFILLp (av); ++i)
+              PUSHs (newSVsv (AvARRAY (av)[i]));
+          }
+}
 

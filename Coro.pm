@@ -277,7 +277,7 @@ sub pool_handler {
 }
 
 sub async_pool(&@) {
-   # this is also inlined into the unlock_scheduler
+   # this is also inlined into the unblock_scheduler
    my $coro = (pop @async_pool) || new Coro \&pool_handler;
 
    $coro->{_invoke} = [@_];

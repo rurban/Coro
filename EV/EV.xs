@@ -120,7 +120,9 @@ slf_init_timer (aTHX_ struct CoroSLF *frame, SV **arg, int items)
     croak ("Coro::EV::timer_once requires exactly one parameter, not %d.\n", items);
 
   data = sv_2mortal (newRV_inc (CORO_CURRENT));
-  frame->data = (void *)data;
+  frame->data    = (void *)data;
+  frame->prepare = GCoroAPI->prepare_schedule;
+  frame->check   = slf_check_once;
 
   after = SvNV (arg [0]);
 
@@ -322,10 +324,12 @@ timer_once (...)
 void
 readable_ev (...)
 	CODE:
+        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
         CORO_EXECUTE_SLF_XS (slf_init_readable);
 
 void
 writable_ev (...)
 	CODE:
+        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
         CORO_EXECUTE_SLF_XS (slf_init_writable);
 
