@@ -88,7 +88,7 @@ slf_check_once (pTHX_ struct CoroSLF *frame)
 }
 
 static void
-slf_init_timed_io (aTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_timed_io (pTHX_ struct CoroSLF *frame, SV **arg, int items)
 {
   SV *data;
 
@@ -111,7 +111,7 @@ slf_init_timed_io (aTHX_ struct CoroSLF *frame, SV **arg, int items)
 }
 
 static void
-slf_init_timer (aTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_timer (pTHX_ struct CoroSLF *frame, SV **arg, int items)
 {
   SV *data;
   NV after;
@@ -205,7 +205,7 @@ slf_check_rw (pTHX_ struct CoroSLF *frame)
 }
 
 static void
-slf_init_rw (aTHX_ struct CoroSLF *frame, SV *arg, int wr)
+slf_init_rw (pTHX_ struct CoroSLF *frame, SV *arg, int wr)
 {
   AV *handle = (AV *)SvRV (arg);
   SV *data_sv = AvARRAY (handle)[5];
@@ -257,13 +257,13 @@ slf_init_rw (aTHX_ struct CoroSLF *frame, SV *arg, int wr)
 }
 
 static void
-slf_init_readable (aTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_readable (pTHX_ struct CoroSLF *frame, SV **arg, int items)
 {
   slf_init_rw (aTHX_ frame, arg [0], 0);
 }
 
 static void
-slf_init_writable (aTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_writable (pTHX_ struct CoroSLF *frame, SV **arg, int items)
 {
   slf_init_rw (aTHX_ frame, arg [0], 1);
 }

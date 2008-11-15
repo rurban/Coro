@@ -813,14 +813,14 @@ coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
 }
 
 static void
-prepare_nop (aTHX_ struct coro_transfer_args *ta)
+prepare_nop (pTHX_ struct coro_transfer_args *ta)
 {
   /* kind of mega-hacky, but works */
   ta->next = ta->prev = (struct coro *)ta;
 }
 
 static int
-slf_check_nop (aTHX)
+slf_check_nop (pTHX_ struct CoroSLF *frame)
 {
   return 0;
 }
@@ -1322,7 +1322,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
   /* sometimes transfer is only called to set idle_sp */
   if (expect_false (!next))
     {
-      ((coro_cctx *)prev)->idle_sp = stacklevel;
+      ((coro_cctx *)prev)->idle_sp = (void *)stacklevel;
       assert (((coro_cctx *)prev)->idle_te = PL_top_env); /* just for the side-effect when asserts are enabled */
     }
   else if (expect_true (prev != next))
@@ -1359,7 +1359,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       /* possibly untie and reuse the cctx */
       if (expect_true (
-            prev__cctx->idle_sp == stacklevel
+            prev__cctx->idle_sp == (void *)stacklevel
             && !(prev__cctx->flags & CC_TRACE)
             && !force_cctx
          ))
@@ -1864,7 +1864,7 @@ slf_prepare_transfer (pTHX_ struct coro_transfer_args *ta)
 {
   SV **arg = (SV **)slf_frame.data;
 
-  prepare_transfer (ta, arg [0], arg [1]);
+  prepare_transfer (aTHX_ ta, arg [0], arg [1]);
 }
 
 static void
@@ -2644,7 +2644,7 @@ MODULE = Coro::State                PACKAGE = Coro::AnyEvent
 BOOT:
         sv_activity = coro_get_sv (aTHX_ "Coro::AnyEvent::ACTIVITY", TRUE);
 
-SV *
+void
 _schedule (...)
 	CODE:
 {
@@ -2719,7 +2719,7 @@ up (SV *self, int adjust = 1)
             cb = av_shift (av);
 
             if (SvOBJECT (cb))
-              api_ready (cb);
+              api_ready (aTHX_ cb);
             else
               croak ("callbacks not yet supported");
 

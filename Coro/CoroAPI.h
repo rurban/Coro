@@ -26,7 +26,7 @@ struct coro_transfer_args
 /* and unfortunately is copied around, so keep it small */
 struct CoroSLF
 {
-  void (*prepare) (struct coro_transfer_args *ta); /* 0 means not yet initialised */
+  void (*prepare) (pTHX_ struct coro_transfer_args *ta); /* 0 means not yet initialised */
   int (*check) (pTHX_ struct CoroSLF *frame);
   void *data; /* for use by prepare/check */
 };
@@ -60,10 +60,10 @@ struct CoroAPI
   struct coro *(*sv_state) (pTHX_ SV *coro);
   void (*execute_slf) (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int nitems);
   /* for use as CoroSLF.prepare */
-  void (*prepare_nop)          (aTHX_ struct coro_transfer_args *ta);
-  void (*prepare_schedule)     (aTHX_ struct coro_transfer_args *ta);
-  void (*prepare_cede)         (aTHX_ struct coro_transfer_args *ta);
-  void (*prepare_cede_notself) (aTHX_ struct coro_transfer_args *ta);
+  void (*prepare_nop)          (pTHX_ struct coro_transfer_args *ta);
+  void (*prepare_schedule)     (pTHX_ struct coro_transfer_args *ta);
+  void (*prepare_cede)         (pTHX_ struct coro_transfer_args *ta);
+  void (*prepare_cede_notself) (pTHX_ struct coro_transfer_args *ta);
 };
 
 static struct CoroAPI *GCoroAPI;
