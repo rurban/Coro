@@ -2164,6 +2164,7 @@ _set_stacklevel (...)
 
 void
 transfer (...)
+        PROTOTYPE: $$
 	CODE:
         api_execute_slf (aTHX_ cv, slf_init_transfer, &ST (0), items);
 
@@ -2399,17 +2400,17 @@ BOOT:
 void
 schedule (...)
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_schedule, &ST (0), items);
+        api_execute_slf (aTHX_ cv, slf_init_schedule, &ST (0), 0);
 
 void
 cede (...)
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_cede, &ST (0), items);
+        api_execute_slf (aTHX_ cv, slf_init_cede, &ST (0), 0);
 
 void
 cede_notself (...)
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_cede_notself, &ST (0), items);
+        api_execute_slf (aTHX_ cv, slf_init_cede_notself, &ST (0), 0);
 
 void
 _set_current (SV *current)
@@ -2729,7 +2730,7 @@ up (SV *self, int adjust = 1)
 void
 down (SV *self)
         CODE:
-        api_execute_slf (aTHX_ cv, slf_init_semaphore_down, &ST (0), items);
+        api_execute_slf (aTHX_ cv, slf_init_semaphore_down, &ST (0), 1);
 
 void
 try (SV *self)
