@@ -1,5 +1,5 @@
 $|=1;
-print "1..1\n";
+print "1..2\n";
 
 use Coro;
 use Coro::Semaphore;
@@ -30,5 +30,27 @@ $_->join for
    } 1..15
 ;
 
-print $counter == 750 ? "" : "not ", "ok 1 # $counter\n"
+print $counter == 750 ? "" : "not ", "ok 1 # $counter\n";
+
+{
+   my $sem = new Coro::Semaphore 0;
+
+   $as1 = async {
+      my $g = $sem->guard;
+      print "not ok 2\n";
+   };    
+
+   $as2 = async {
+      my $g = $sem->guard;
+      print "ok 2\n";
+   };    
+
+   cede;
+
+   $sem->up; # wake up as1
+   $as1->cancel; # destroy as1 before it could ->guard
+   $as1->join;
+   $as2->join;
+}
+
 

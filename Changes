@@ -14,6 +14,10 @@ TODO: Coro::Semaphore
         - Coro::Semaphore->adjust didn't correctly wake up enough waiters.
         - async_pool did free a scalar value twice
           ("Attempt to unreference...").
+        - fix a longstanding bug where calling terminate on a coro that
+          was waiting for a semaphore that was just becoming available
+          would cause a deadlock (semaphore would get into a state where
+          it was available but waiters were waiting(.
         - perl's process emulation is now not even theoretically supported
           anymore.
         - directly patch the entersub opcode calling SLF functions (cede,

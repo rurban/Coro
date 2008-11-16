@@ -144,25 +144,10 @@ static int cctx_max_idle = 4;
 #include "CoroAPI.h"
 
 #ifdef USE_ITHREADS
-
-static perl_mutex coro_lock;
-# define LOCK   do { MUTEX_LOCK   (&coro_lock); } while (0)
-# define UNLOCK do { MUTEX_UNLOCK (&coro_lock); } while (0)
 # if CORO_PTHREAD
 static void *coro_thx;
 # endif
-
-#else
-
-# define LOCK   (void)0
-# define UNLOCK (void)0
-
 #endif
-
-# undef LOCK
-# define LOCK   (void)0
-# undef UNLOCK
-# define UNLOCK (void)0
 
 /* helper storage struct for Coro::AIO */
 struct io_state
@@ -268,6 +253,7 @@ struct coro {
   int refcnt; /* coroutines are refcounted, yes */
   int flags;  /* CF_ flags */
   HV *hv;     /* the perl hash associated with this coro, if any */
+  void (*on_destroy)(pTHX_ struct coro *coro);
 
   /* statistics */
   int usecount; /* number of transfers to this coro */
@@ -1095,7 +1081,6 @@ transfer_tail (pTHX)
   assert (("FATAL: next coroutine was zero in transfer_tail (please report)", next));
 
   free_coro_mortal (aTHX);
-  UNLOCK;
 
   if (expect_false (next->throw))
     {
@@ -1340,8 +1325,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       prev->flags &= ~CF_RUNNING;
       next->flags |=  CF_RUNNING;
 
-      LOCK;
-
       /* first get rid of the old state */
       save_perl (aTHX_ prev);
 
@@ -1408,15 +1391,16 @@ coro_state_destroy (pTHX_ struct coro *coro)
   if (coro->flags & CF_DESTROYED)
     return 0;
 
+  if (coro->on_destroy)
+    coro->on_destroy (aTHX_ coro);
+
   coro->flags |= CF_DESTROYED;
   
   if (coro->flags & CF_READY)
     {
       /* reduce nready, as destroying a ready coro effectively unreadies it */
       /* alternative: look through all ready queues and remove the coro */
-      LOCK;
       --coro_nready;
-      UNLOCK;
     }
   else
     coro->flags |= CF_READY; /* make sure it is NOT put into the readyqueue */
@@ -1539,16 +1523,12 @@ api_ready (pTHX_ SV *coro_sv)
 
   coro->flags |= CF_READY;
 
-  LOCK;
-
   sv_hook = coro_nready ? 0 : coro_readyhook;
   xs_hook = coro_nready ? 0 : coroapi.readyhook;
 
   coro_enq (aTHX_ SvREFCNT_inc_NN (coro_sv));
   ++coro_nready;
 
-  UNLOCK;
-  
   if (sv_hook)
     {
       dSP;
@@ -1584,14 +1564,12 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 
   for (;;)
     {
-      LOCK;
       next_sv = coro_deq (aTHX);
 
       /* nothing to schedule: call the idle handler */
       if (expect_false (!next_sv))
         {
           dSP;
-          UNLOCK;
 
           ENTER;
           SAVETMPS;
@@ -1611,14 +1589,12 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
       /* cannot transfer to destroyed coros, skip and look for next */
       if (expect_false (ta->next->flags & CF_DESTROYED))
         {
-          UNLOCK;
           SvREFCNT_dec (next_sv);
           /* coro_nready has already been taken care of by destroy */
           continue;
         }
 
       --coro_nready;
-      UNLOCK;
       break;
     }
 
@@ -1630,10 +1606,8 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
   ta->next->flags &= ~CF_READY;
   SvRV_set (coro_current, next_sv);
 
-  LOCK;
   free_coro_mortal (aTHX);
   coro_mortal = prev_sv;
-  UNLOCK;
 }
 
 INLINE void
@@ -1924,10 +1898,12 @@ pp_slf (pTHX)
 
       PUTBACK;
 
-      ((coro_slf_cb)CvXSUBANY (GvCV (gv)).any_ptr) (aTHX_ &slf_frame, GvCV (gv), arg, items);
+      /* now call the init function, which needs to set up slf_frame */
+      ((coro_slf_cb)CvXSUBANY (GvCV (gv)).any_ptr)
+        (aTHX_ &slf_frame, GvCV (gv), arg, items);
     }
 
-  /* now interpret the slf_frame */
+  /* now that we have a slf_frame, interpret it! */
   /* we use a callback system not to make the code needlessly */
   /* complicated, but so we can run multiple perl coros from one cctx */
 
@@ -1947,7 +1923,7 @@ pp_slf (pTHX)
     SV **bot = PL_stack_base + checkmark;
     int gimme = GIMME_V;
 
-    slf_frame.prepare = 0; /* signal pp_slf that we need a new frame */
+    slf_frame.prepare = 0; /* invalidate the frame, so it gets initialised again next time */
 
     /* make sure we put something on the stack in scalar context */
     if (gimme == G_SCALAR)
@@ -1984,7 +1960,7 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
   /* we have to put the same argument on the stack for this to work */
   /* and this will be done by pp_restore */
   slf_restore.op_next = (OP *)&slf_restore;
-  slf_restore.op_type = OP_NULL;
+  slf_restore.op_type = OP_CUSTOM;
   slf_restore.op_ppaddr = pp_restore;
   slf_restore.op_first = PL_op;
 
@@ -1999,6 +1975,43 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
 
 /*****************************************************************************/
 
+static void
+coro_semaphore_adjust (AV *av, int adjust)
+{
+  SV *count_sv = AvARRAY (av)[0];
+  IV count = SvIVX (count_sv);
+
+  count += adjust;
+  SvIVX (count_sv) = count;
+
+  /* now wake up as many waiters as possible */
+  while (count > 0 && AvFILLp (av) >= count)
+    {
+      SV *cb;
+
+      /* swap first two elements so we can shift a waiter */
+      AvARRAY (av)[0] = AvARRAY (av)[1];
+      AvARRAY (av)[1] = count_sv;
+      cb = av_shift (av);
+
+      if (SvOBJECT (cb))
+        api_ready (aTHX_ cb);
+      else
+        croak ("callbacks not yet supported");
+
+      SvREFCNT_dec (cb);
+
+      --count;
+    }
+}
+
+static void
+coro_semaphore_on_destroy (pTHX_ struct coro *coro)
+{
+  /* call $sem->adjust (0) to possibly wake up some waiters */
+  coro_semaphore_adjust ((AV *)coro->slf_frame.data, 0);
+}
+
 static int
 slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
 {
@@ -2007,6 +2020,7 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
 
   if (SvIVX (count_sv) > 0)
     {
+      SvSTATE (coro_current)->on_destroy = 0;
       SvIVX (count_sv) = SvIVX (count_sv) - 1;
       return 0;
     }
@@ -2042,6 +2056,10 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 
       frame->data    = (void *)sv_2mortal (SvREFCNT_inc ((SV *)av));
       frame->prepare = prepare_schedule;
+
+      /* to avoid race conditions when a woken-up coro gets terminated */
+      /* we arrange for a temporary on_destroy that calls adjust (0) */
+      SvSTATE (coro_current)->on_destroy = coro_semaphore_on_destroy;
     }
 
   frame->check = slf_check_semaphore_down;
@@ -2109,6 +2127,18 @@ BOOT:
 
         while (main_top_env->je_prev)
           main_top_env = main_top_env->je_prev;
+
+        {
+          SV *slf = sv_2mortal (newSViv (PTR2IV (pp_slf)));
+
+          if (!PL_custom_op_names) PL_custom_op_names = newHV ();
+          hv_store_ent (PL_custom_op_names, slf,
+            newSVpv ("coro_slf", 0), 0);
+
+          if (!PL_custom_op_descs) PL_custom_op_descs = newHV ();
+          hv_store_ent (PL_custom_op_descs, slf,
+            newSVpv ("coro schedule like function", 0), 0);
+        }
 
         coroapi.ver         = CORO_API_VERSION;
         coroapi.rev         = CORO_API_REVISION;
@@ -2429,10 +2459,8 @@ void
 _set_readyhook (SV *hook)
 	PROTOTYPE: $
         CODE:
-        LOCK;
         SvREFCNT_dec (coro_readyhook);
         coro_readyhook = SvOK (hook) ? newSVsv (hook) : 0;
-        UNLOCK;
 
 int
 prio (Coro::State coro, int newprio = 0)
@@ -2658,32 +2686,7 @@ up (SV *self, int adjust = 1)
 	ALIAS:
         adjust = 1
         CODE:
-{
-        AV *av = (AV *)SvRV (self);
-        SV *count_sv = AvARRAY (av)[0];
-        IV count = SvIVX (count_sv);
-
-        count += ix ? adjust : 1;
-        SvIVX (count_sv) = count;
-
-        /* now wake up as many waiters as possible */
-        while (count > 0 && AvFILLp (av) >= count)
-          {
-            SV *cb;
-
-            /* swap first two elements so we can shift a waiter */
-            AvARRAY (av)[0] = AvARRAY (av)[1];
-            AvARRAY (av)[1] = count_sv;
-            cb = av_shift (av);
-
-            if (SvOBJECT (cb))
-              api_ready (aTHX_ cb);
-            else
-              croak ("callbacks not yet supported");
-
-            SvREFCNT_dec (cb);
-          }
-}
+        coro_semaphore_adjust ((AV *)SvRV (self), ix ? adjust : 1);
 
 void
 down (SV *self)
