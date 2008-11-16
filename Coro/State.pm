@@ -316,6 +316,25 @@ sub debug_desc {
    $_[0]{desc}
 }
 
+# for very deep reasons, we must initialise $Coro::main here.
+
+{
+   package Coro;
+
+   our $main;    # main coroutine
+   our $current; # current coroutine
+
+   $main = Coro::State::new Coro::;
+
+   $main->{desc} = "[main::]";
+
+   # maybe some other module used Coro::Specific before...
+   $main->{_specific} = $current->{_specific}
+      if $current;
+
+   _set_current $main;
+}
+
 1;
 
 =back

@@ -9,6 +9,7 @@ TODO: testcancel
 TODO: aio
 TODO: Coro::Semaphore
 TODO: trow disturbs cleanup path inside pp_slf?
+TODO: throw special-case in transfer?
 5.0
 	- NEW ARCHITECTURE: use 4.912 for the stable version.
         - bump API version to 7 - all dependents must be recompiled.

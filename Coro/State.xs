@@ -168,7 +168,6 @@ static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
-static volatile struct coro *transfer_next;
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
@@ -1089,20 +1088,7 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
 INLINE void
 transfer_tail (pTHX)
 {
-  struct coro *next = (struct coro *)transfer_next;
-  assert (!(transfer_next = 0)); /* just used for the side effect when asserts are enabled */
-  assert (("FATAL: next coroutine was zero in transfer_tail (please report)", next));
-
   free_coro_mortal (aTHX);
-
-  if (expect_false (next->throw))
-    {
-      SV *exception = sv_2mortal (next->throw);
-
-      next->throw = 0;
-      sv_setsv (ERRSV, exception);
-      croak (0);
-    }
 }
 
 /*
@@ -1127,7 +1113,6 @@ cctx_run (void *arg)
     cctx_prepare (aTHX_ (coro_cctx *)arg);
 
     /* cctx_run is the alternative tail of transfer() */
-    /* TODO: throwing an exception here might be deadly, VERIFY */
     transfer_tail (aTHX);
 
     /* somebody or something will hit me for both perl_run and PL_restartop */
@@ -1378,9 +1363,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       if (expect_true (!next->cctx))
         next->cctx = cctx_get (aTHX);
-
-      assert (("FATAL: transfer_next already nonzero in Coro (please report)", !transfer_next));
-      transfer_next = next;
 
       if (expect_false (prev__cctx != next->cctx))
         {
@@ -1834,6 +1816,17 @@ slf_prepare_transfer (pTHX_ struct coro_transfer_args *ta)
   SV **arg = (SV **)slf_frame.data;
 
   prepare_transfer (aTHX_ ta, arg [0], arg [1]);
+
+  /* if the destination has ->throw set, then copy it */
+  /* into the current coro's throw slot, so it will be raised */
+  /* after the schedule */
+  if (expect_false (ta->next->throw))
+    {
+      struct coro *coro = SvSTATE_current;
+      SvREFCNT_dec (coro->throw);
+      coro->throw = ta->next->throw;
+      ta->next->throw = 0;
+    }
 }
 
 static void
@@ -1898,9 +1891,6 @@ pp_slf (pTHX)
       if (SvTYPE (gv) != SVt_PVGV || !(CvFLAGS (GvCV (gv)) & CVf_SLF))
         return PL_ppaddr[OP_ENTERSUB](aTHX);
 
-      /* pop args */
-      SP = PL_stack_base + POPMARK;
-
       if (!(PL_op->op_flags & OPf_STACKED))
         {
           /* ampersand-form of call, use @_ instead of stack */
@@ -1914,6 +1904,11 @@ pp_slf (pTHX)
       /* now call the init function, which needs to set up slf_frame */
       ((coro_slf_cb)CvXSUBANY (GvCV (gv)).any_ptr)
         (aTHX_ &slf_frame, GvCV (gv), arg, items);
+
+      /* pop args */
+      SP = PL_stack_base + POPMARK;
+
+      PUTBACK;
     }
 
   /* now that we have a slf_frame, interpret it! */
@@ -1948,6 +1943,19 @@ pp_slf (pTHX)
       }
 
     PUTBACK;
+  }
+
+  {
+    struct coro *coro = SvSTATE_current;
+
+    if (expect_false (coro->throw))
+      {
+        SV *exception = sv_2mortal (coro->throw);
+
+        coro->throw = 0;
+        sv_setsv (ERRSV, exception);
+        croak (0);
+      }
   }
 
   return NORMAL;

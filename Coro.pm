@@ -88,27 +88,19 @@ whether you are running in the main program or not.
 
 =cut
 
-$main = new Coro;
+# $main is now being initialised by Coro::State
 
 =item $Coro::current
 
 The coroutine object representing the current coroutine (the last
 coroutine that the Coro scheduler switched to). The initial value is
-C<$main> (of course).
+C<$Coro::main> (of course).
 
 This variable is B<strictly> I<read-only>. You can take copies of the
 value stored in it and use it as any other coroutine object, but you must
 not otherwise modify the variable itself.
 
 =cut
-
-$main->{desc} = "[main::]";
-
-# maybe some other module used Coro::Specific before...
-$main->{_specific} = $current->{_specific}
-   if $current;
-
-_set_current $main;
 
 sub current() { $current } # [DEPRECATED]
 
