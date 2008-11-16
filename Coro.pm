@@ -669,6 +669,13 @@ sub unblock_sub(&) {
 
 =over 4
 
+=item fork with pthread backend
+
+When Coro is compiled using the pthread backend (which isn't recommended
+but required on many BSDs as their libcs are completely broken), then
+coroutines will not survive a fork. There is no known workaround except to
+fix your libc and use a saner backend.
+
 =item perl process emulation ("threads")
 
 This module is not perl-pseudo-thread-safe. You should only ever use this
