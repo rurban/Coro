@@ -1989,7 +1989,7 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
 /*****************************************************************************/
 
 static void
-coro_semaphore_adjust (pTHX_ AV *av, int adjust)
+coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
 {
   SV *count_sv = AvARRAY (av)[0];
   IV count = SvIVX (count_sv);
@@ -1997,8 +1997,8 @@ coro_semaphore_adjust (pTHX_ AV *av, int adjust)
   count += adjust;
   SvIVX (count_sv) = count;
 
-  /* now wake up as many waiters as possible */
-  while (count > 0 && AvFILLp (av) >= count)
+  /* now wake up as many waiters as are expected to lock */
+  while (count > 0 && AvFILLp (av) > 0)
     {
       SV *cb;
 
@@ -2021,7 +2021,7 @@ coro_semaphore_adjust (pTHX_ AV *av, int adjust)
 static void
 coro_semaphore_on_destroy (pTHX_ struct coro *coro)
 {
-  /* call $sem->adjust (0) to possibly wake up some waiters */
+  /* call $sem->adjust (0) to possibly wake up some other waiters */
   coro_semaphore_adjust (aTHX_ (AV *)coro->slf_frame.data, 0);
 }
 
@@ -2062,6 +2062,7 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
     {
       frame->data    = (void *)av;
       frame->prepare = prepare_nop;
+      SvSTATE_current->on_destroy = coro_semaphore_on_destroy;
     }
   else
     {
@@ -2072,6 +2073,7 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 
       /* to avoid race conditions when a woken-up coro gets terminated */
       /* we arrange for a temporary on_destroy that calls adjust (0) */
+      assert (!SvSTATE_current->on_destroy);//D
       SvSTATE_current->on_destroy = coro_semaphore_on_destroy;
     }
 
