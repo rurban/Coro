@@ -391,11 +391,11 @@ static MGVTBL coro_cv_vtbl = {
   coro_cv_free
 };
 
-#define CORO_MAGIC(sv, type)		\
-  SvMAGIC (sv)				\
-    ? SvMAGIC (sv)->mg_type == type	\
-        ? SvMAGIC (sv)			\
-        : mg_find (sv, type)		\
+#define CORO_MAGIC(sv, type)				\
+  expect_true (SvMAGIC (sv))				\
+    ? expect_true (SvMAGIC (sv)->mg_type == type)	\
+        ? SvMAGIC (sv)					\
+        : mg_find (sv, type)				\
     : 0
 
 #define CORO_MAGIC_cv(cv)    CORO_MAGIC (((SV *)(cv)), CORO_MAGIC_type_cv)
@@ -426,6 +426,19 @@ SvSTATE_ (pTHX_ SV *coro)
 }
 
 #define SvSTATE(sv) SvSTATE_ (aTHX_ (sv))
+
+/* fastert than SvSTATE, but expects a coroutine hv */
+INLINE struct coro *
+SvSTATE_hv (SV *sv)
+{
+  MAGIC *mg = expect_true (SvMAGIC (sv)->mg_type == CORO_MAGIC_type_state)
+              ? SvMAGIC (sv)
+              : mg_find (sv, CORO_MAGIC_type_state);
+
+  return (struct coro *)mg->mg_ptr;
+}
+
+#define SvSTATE_current SvSTATE_hv (SvRV (coro_current))
 
 /* the next two functions merely cache the padlists */
 static void
@@ -917,7 +930,7 @@ runops_trace (pTHX)
 {
   COP *oldcop = 0;
   int oldcxix = -2;
-  struct coro *coro = SvSTATE (coro_current); /* trace cctx is tied to specific coro */
+  struct coro *coro = SvSTATE_current; /* trace cctx is tied to specific coro */
   coro_cctx *cctx = coro->cctx;
 
   while ((PL_op = CALL_FPTR (PL_op->op_ppaddr) (aTHX)))
@@ -1488,13 +1501,13 @@ api_transfer (pTHX_ SV *prev_sv, SV *next_sv)
 
 /** Coro ********************************************************************/
 
-static void
-coro_enq (pTHX_ SV *coro_sv)
+INLINE void
+coro_enq (pTHX_ struct coro *coro)
 {
-  av_push (coro_ready [SvSTATE (coro_sv)->prio - PRIO_MIN], coro_sv);
+  av_push (coro_ready [coro->prio - PRIO_MIN], SvREFCNT_inc_NN (coro->hv));
 }
 
-static SV *
+INLINE SV *
 coro_deq (pTHX)
 {
   int prio;
@@ -1526,7 +1539,7 @@ api_ready (pTHX_ SV *coro_sv)
   sv_hook = coro_nready ? 0 : coro_readyhook;
   xs_hook = coro_nready ? 0 : coroapi.readyhook;
 
-  coro_enq (aTHX_ SvREFCNT_inc_NN (coro_sv));
+  coro_enq (aTHX_ coro);
   ++coro_nready;
 
   if (sv_hook)
@@ -1584,7 +1597,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
           continue;
         }
 
-      ta->next = SvSTATE (next_sv);
+      ta->next = SvSTATE_hv (next_sv);
 
       /* cannot transfer to destroyed coros, skip and look for next */
       if (expect_false (ta->next->flags & CF_DESTROYED))
@@ -1600,7 +1613,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 
   /* free this only after the transfer */
   prev_sv = SvRV (coro_current);
-  ta->prev = SvSTATE (prev_sv);
+  ta->prev = SvSTATE_hv (prev_sv);
   TRANSFER_CHECK (*ta);
   assert (("FATAL: next coroutine isn't marked as ready in Coro (please report)", ta->next->flags & CF_READY));
   ta->next->flags &= ~CF_READY;
@@ -1976,7 +1989,7 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
 /*****************************************************************************/
 
 static void
-coro_semaphore_adjust (AV *av, int adjust)
+coro_semaphore_adjust (pTHX_ AV *av, int adjust)
 {
   SV *count_sv = AvARRAY (av)[0];
   IV count = SvIVX (count_sv);
@@ -2009,7 +2022,7 @@ static void
 coro_semaphore_on_destroy (pTHX_ struct coro *coro)
 {
   /* call $sem->adjust (0) to possibly wake up some waiters */
-  coro_semaphore_adjust ((AV *)coro->slf_frame.data, 0);
+  coro_semaphore_adjust (aTHX_ (AV *)coro->slf_frame.data, 0);
 }
 
 static int
@@ -2020,7 +2033,7 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
 
   if (SvIVX (count_sv) > 0)
     {
-      SvSTATE (coro_current)->on_destroy = 0;
+      SvSTATE_current->on_destroy = 0;
       SvIVX (count_sv) = SvIVX (count_sv) - 1;
       return 0;
     }
@@ -2059,7 +2072,7 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 
       /* to avoid race conditions when a woken-up coro gets terminated */
       /* we arrange for a temporary on_destroy that calls adjust (0) */
-      SvSTATE (coro_current)->on_destroy = coro_semaphore_on_destroy;
+      SvSTATE_current->on_destroy = coro_semaphore_on_destroy;
     }
 
   frame->check = slf_check_semaphore_down;
@@ -2097,7 +2110,6 @@ PROTOTYPES: DISABLE
 BOOT:
 {
 #ifdef USE_ITHREADS
-        MUTEX_INIT (&coro_lock);
 # if CORO_PTHREAD
         coro_thx = PERL_GET_CONTEXT;
 # endif
@@ -2372,8 +2384,7 @@ void
 force_cctx ()
 	PROTOTYPE:
 	CODE:
-        struct coro *coro = SvSTATE (coro_current);
-        coro->cctx->idle_sp = 0;
+        SvSTATE_current->cctx->idle_sp = 0;
 
 void
 swap_defsv (Coro::State self)
@@ -2506,8 +2517,8 @@ void
 _pool_1 (SV *cb)
 	CODE:
 {
-	struct coro *coro = SvSTATE (coro_current);
         HV *hv = (HV *)SvRV (coro_current);
+	struct coro *coro = SvSTATE_hv ((SV *)hv);
         AV *defav = GvAV (PL_defgv);
         SV *invoke = hv_delete (hv, "_invoke", sizeof ("_invoke") - 1, 0);
         AV *invoke_av;
@@ -2544,7 +2555,7 @@ void
 _pool_2 (SV *cb)
 	CODE:
 {
-  	struct coro *coro = SvSTATE (coro_current);
+  	struct coro *coro = SvSTATE_current;
 
         sv_setsv (cb, &PL_sv_undef);
 
@@ -2686,7 +2697,7 @@ up (SV *self, int adjust = 1)
 	ALIAS:
         adjust = 1
         CODE:
-        coro_semaphore_adjust ((AV *)SvRV (self), ix ? adjust : 1);
+        coro_semaphore_adjust (aTHX_ (AV *)SvRV (self), ix ? adjust : 1);
 
 void
 down (SV *self)
