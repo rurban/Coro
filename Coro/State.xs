@@ -1722,24 +1722,6 @@ api_trace (pTHX_ SV *coro_sv, int flags)
     }
 }
 
-#if 0
-static int
-coro_gensub_free (pTHX_ SV *sv, MAGIC *mg)
-{
-  AV *padlist;
-  AV *av = (AV *)mg->mg_obj;
-
-  abort ();
-
-  return 0;
-}
-
-static MGVTBL coro_gensub_vtbl = {
-  0, 0, 0, 0,
-  coro_gensub_free
-};
-#endif
-
 /*****************************************************************************/
 /* PerlIO::cede */
 
@@ -2065,6 +2047,30 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, SV **arg, int items)
   frame->check = slf_check_semaphore_down;
 
 }
+
+/*****************************************************************************/
+
+#define GENSUB_ARG CvXSUBANY (cv).any_ptr
+
+/* create a closure from XS, returns a code reference */
+/* the arg can be accessed via GENSUB_ARG from the callback */
+/* the callback must use dXSARGS/XSRETURN */
+static SV *
+gensub (pTHX_ void (*xsub)(pTHX_ CV *), void *arg)
+{
+  CV *cv = (CV *)NEWSV (0, 0);
+
+  sv_upgrade ((SV *)cv, SVt_PVCV);
+
+  CvANON_on (cv);
+  CvISXSUB_on (cv);
+  CvXSUB (cv) = xsub;
+  GENSUB_ARG = arg;
+
+  return newRV_noinc ((SV *)cv);
+}
+
+/*****************************************************************************/
 
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
@@ -2537,54 +2543,6 @@ _pool_2 (SV *cb)
 
         av_push (av_async_pool, newSVsv (coro_current));
 }
-
-#if 0
-
-void
-_generator_call (...)
-	PROTOTYPE: @
-        PPCODE:
-        fprintf (stderr, "call %p\n", CvXSUBANY(cv).any_ptr);
-        xxxx
-        abort ();
-
-SV *
-gensub (SV *sub, ...)
-	PROTOTYPE: &;@
-        CODE:
-{
-        struct coro *coro;
-        MAGIC *mg;
-        CV *xcv;
-        CV *ncv = (CV *)newSV_type (SVt_PVCV);
-        int i;
-
-        CvGV   (ncv) = CvGV   (cv);
-        CvFILE (ncv) = CvFILE (cv);
-
-        Newz (0, coro, 1, struct coro);
-        coro->args  = newAV ();
-        coro->flags = CF_NEW;
-
-        av_extend (coro->args, items - 1);
-        for (i = 1; i < items; i++)
-          av_push (coro->args, newSVsv (ST (i)));
-
-        CvISXSUB_on (ncv);
-        CvXSUBANY (ncv).any_ptr = (void *)coro;
-
-        xcv = GvCV (gv_fetchpv ("Coro::_generator_call", 0, SVt_PVCV));
-
-        CvXSUB (ncv) = CvXSUB (xcv);
-        CvANON_on (ncv);
-
-        mg = sv_magicext ((SV *)ncv, 0, CORO_MAGIC_type_state, &coro_gensub_vtbl, (char *)coro, 0);
-        RETVAL = newRV_noinc ((SV *)ncv);
-}
-	OUTPUT:
-        RETVAL
-
-#endif
 
 
 MODULE = Coro::State                PACKAGE = Coro::AIO
