@@ -32,7 +32,7 @@ struct CoroSLF
 };
 
 /* needs to fill in the *frame */
-typedef void (*coro_slf_cb) (pTHX_ struct CoroSLF *frame, SV **arg, int items);
+typedef void (*coro_slf_cb) (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items);
 
 /* private structure, always use the provided macros below */
 struct CoroAPI

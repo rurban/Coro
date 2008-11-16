@@ -1832,7 +1832,7 @@ slf_prepare_set_stacklevel (pTHX_ struct coro_transfer_args *ta)
 }
 
 static void
-slf_init_set_stacklevel (pTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_set_stacklevel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   assert (("FATAL: set_stacklevel needs the coro cctx as sole argument", items == 1));
 
@@ -1850,7 +1850,7 @@ slf_prepare_transfer (pTHX_ struct coro_transfer_args *ta)
 }
 
 static void
-slf_init_transfer (pTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_transfer (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   if (items != 2)
     croak ("Coro::State::transfer (prev, next) expects two arguments, not %d,", items);
@@ -1861,21 +1861,21 @@ slf_init_transfer (pTHX_ struct CoroSLF *frame, SV **arg, int items)
 }
 
 static void
-slf_init_schedule (pTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_schedule (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   frame->prepare = prepare_schedule;
   frame->check   = slf_check_nop;
 }
 
 static void
-slf_init_cede (pTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_cede (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   frame->prepare = prepare_cede;
   frame->check   = slf_check_nop;
 }
 
 static void
-slf_init_cede_notself (pTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_cede_notself (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   frame->prepare = prepare_cede_notself;
   frame->check   = slf_check_nop;
@@ -1924,7 +1924,7 @@ pp_slf (pTHX)
 
       PUTBACK;
 
-      ((coro_slf_cb)CvXSUBANY (GvCV (gv)).any_ptr) (aTHX_ &slf_frame, arg, items);
+      ((coro_slf_cb)CvXSUBANY (GvCV (gv)).any_ptr) (aTHX_ &slf_frame, GvCV (gv), arg, items);
     }
 
   /* now interpret the slf_frame */
@@ -2027,7 +2027,7 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
 }
 
 static void
-slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, SV **arg, int items)
+slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   AV *av = (AV *)SvRV (arg [0]);
 
