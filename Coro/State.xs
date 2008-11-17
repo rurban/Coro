@@ -149,16 +149,6 @@ static void *coro_thx;
 # endif
 #endif
 
-/* helper storage struct for Coro::AIO */
-struct io_state
-{
-  AV *res;
-  int errorno;
-  I32 laststype; /* U16 in 5.10.0 */
-  int laststatval;
-  Stat_t statcache;
-};
-
 static double (*nvtime)(); /* so why doesn't it take void? */
 
 static U32 cctx_gen;
@@ -386,7 +376,7 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
   return 0;
 }
 
-#define CORO_MAGIC_type_cv    PERL_MAGIC_ext
+#define CORO_MAGIC_type_cv    26
 #define CORO_MAGIC_type_state PERL_MAGIC_ext
 
 static MGVTBL coro_cv_vtbl = {
@@ -394,15 +384,18 @@ static MGVTBL coro_cv_vtbl = {
   coro_cv_free
 };
 
-#define CORO_MAGIC(sv, type)				\
-  expect_true (SvMAGIC (sv))				\
-    ? expect_true (SvMAGIC (sv)->mg_type == type)	\
-        ? SvMAGIC (sv)					\
-        : mg_find (sv, type)				\
-    : 0
+#define CORO_MAGIC_NN(sv, type)			\
+  (expect_true (SvMAGIC (sv)->mg_type == type)	\
+    ? SvMAGIC (sv)				\
+    : mg_find (sv, type))
 
-#define CORO_MAGIC_cv(cv)    CORO_MAGIC (((SV *)(cv)), CORO_MAGIC_type_cv)
-#define CORO_MAGIC_state(sv) CORO_MAGIC (((SV *)(sv)), CORO_MAGIC_type_state)
+#define CORO_MAGIC(sv, type)			\
+  (expect_true (SvMAGIC (sv))			\
+    ? CORO_MAGIC_NN (sv, type)			\
+    : 0)
+
+#define CORO_MAGIC_cv(cv)    CORO_MAGIC    (((SV *)(cv)), CORO_MAGIC_type_cv)
+#define CORO_MAGIC_state(sv) CORO_MAGIC_NN (((SV *)(sv)), CORO_MAGIC_type_state)
 
 INLINE struct coro *
 SvSTATE_ (pTHX_ SV *coro)
@@ -430,17 +423,8 @@ SvSTATE_ (pTHX_ SV *coro)
 
 #define SvSTATE(sv) SvSTATE_ (aTHX_ (sv))
 
-/* fastert than SvSTATE, but expects a coroutine hv */
-INLINE struct coro *
-SvSTATE_hv (SV *sv)
-{
-  MAGIC *mg = expect_true (SvMAGIC (sv)->mg_type == CORO_MAGIC_type_state)
-              ? SvMAGIC (sv)
-              : mg_find (sv, CORO_MAGIC_type_state);
-
-  return (struct coro *)mg->mg_ptr;
-}
-
+/* faster than SvSTATE, but expects a coroutine hv */
+#define SvSTATE_hv(hv)  ((struct coro *)CORO_MAGIC_NN ((SV *)hv, CORO_MAGIC_type_state)->mg_ptr)
 #define SvSTATE_current SvSTATE_hv (SvRV (coro_current))
 
 /* the next two functions merely cache the padlists */
@@ -1702,81 +1686,7 @@ api_trace (pTHX_ SV *coro_sv, int flags)
 }
 
 /*****************************************************************************/
-/* PerlIO::cede */
-
-typedef struct
-{
-  PerlIOBuf base;
-  NV next, every;
-} PerlIOCede;
-
-static IV
-PerlIOCede_pushed (pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
-{
-  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
-
-  self->every = SvCUR (arg) ? SvNV (arg) : 0.01;
-  self->next  = nvtime () + self->every;
-
-  return PerlIOBuf_pushed (aTHX_ f, mode, Nullsv, tab);
-}
-
-static SV *
-PerlIOCede_getarg (pTHX_ PerlIO *f, CLONE_PARAMS *param, int flags)
-{
-  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
-
-  return newSVnv (self->every);
-}
-
-static IV
-PerlIOCede_flush (pTHX_ PerlIO *f)
-{
-  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
-  double now = nvtime ();
-
-  if (now >= self->next)
-    {
-      api_cede (aTHX);
-      self->next = now + self->every;
-    }
-
-  return PerlIOBuf_flush (aTHX_ f);
-}
-
-static PerlIO_funcs PerlIO_cede =
-{
-  sizeof(PerlIO_funcs),
-  "cede",
-  sizeof(PerlIOCede),
-  PERLIO_K_DESTRUCT | PERLIO_K_RAW,
-  PerlIOCede_pushed,
-  PerlIOBuf_popped,
-  PerlIOBuf_open,
-  PerlIOBase_binmode,
-  PerlIOCede_getarg,
-  PerlIOBase_fileno,
-  PerlIOBuf_dup,
-  PerlIOBuf_read,
-  PerlIOBuf_unread,
-  PerlIOBuf_write,
-  PerlIOBuf_seek,
-  PerlIOBuf_tell,
-  PerlIOBuf_close,
-  PerlIOCede_flush,
-  PerlIOBuf_fill,
-  PerlIOBase_eof,
-  PerlIOBase_error,
-  PerlIOBase_clearerr,
-  PerlIOBase_setlinebuf,
-  PerlIOBuf_get_base,
-  PerlIOBuf_bufsiz,
-  PerlIOBuf_get_ptr,
-  PerlIOBuf_get_cnt,
-  PerlIOBuf_set_ptrcnt,
-};
-
-/*****************************************************************************/
+/* schedule-like-function opcode (SLF) */
 
 static UNOP slf_restore; /* restore stack as entersub did, for first-re-run */
 static const CV *slf_cv;
@@ -1888,7 +1798,9 @@ pp_slf (pTHX)
 
       /* do a quick consistency check on the "function" object, and if it isn't */
       /* for us, divert to the real entersub */
-      if (SvTYPE (gv) != SVt_PVGV || !(CvFLAGS (GvCV (gv)) & CVf_SLF))
+      if (SvTYPE (gv) != SVt_PVGV
+          || !GvCV (gv)
+          || !(CvFLAGS (GvCV (gv)) & CVf_SLF))
         return PL_ppaddr[OP_ENTERSUB](aTHX);
 
       if (!(PL_op->op_flags & OPf_STACKED))
@@ -2008,6 +1920,82 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
 }
 
 /*****************************************************************************/
+/* PerlIO::cede */
+
+typedef struct
+{
+  PerlIOBuf base;
+  NV next, every;
+} PerlIOCede;
+
+static IV
+PerlIOCede_pushed (pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
+{
+  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
+
+  self->every = SvCUR (arg) ? SvNV (arg) : 0.01;
+  self->next  = nvtime () + self->every;
+
+  return PerlIOBuf_pushed (aTHX_ f, mode, Nullsv, tab);
+}
+
+static SV *
+PerlIOCede_getarg (pTHX_ PerlIO *f, CLONE_PARAMS *param, int flags)
+{
+  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
+
+  return newSVnv (self->every);
+}
+
+static IV
+PerlIOCede_flush (pTHX_ PerlIO *f)
+{
+  PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
+  double now = nvtime ();
+
+  if (now >= self->next)
+    {
+      api_cede (aTHX);
+      self->next = now + self->every;
+    }
+
+  return PerlIOBuf_flush (aTHX_ f);
+}
+
+static PerlIO_funcs PerlIO_cede =
+{
+  sizeof(PerlIO_funcs),
+  "cede",
+  sizeof(PerlIOCede),
+  PERLIO_K_DESTRUCT | PERLIO_K_RAW,
+  PerlIOCede_pushed,
+  PerlIOBuf_popped,
+  PerlIOBuf_open,
+  PerlIOBase_binmode,
+  PerlIOCede_getarg,
+  PerlIOBase_fileno,
+  PerlIOBuf_dup,
+  PerlIOBuf_read,
+  PerlIOBuf_unread,
+  PerlIOBuf_write,
+  PerlIOBuf_seek,
+  PerlIOBuf_tell,
+  PerlIOBuf_close,
+  PerlIOCede_flush,
+  PerlIOBuf_fill,
+  PerlIOBase_eof,
+  PerlIOBase_error,
+  PerlIOBase_clearerr,
+  PerlIOBase_setlinebuf,
+  PerlIOBuf_get_base,
+  PerlIOBuf_bufsiz,
+  PerlIOBuf_get_ptr,
+  PerlIOBuf_get_cnt,
+  PerlIOBuf_set_ptrcnt,
+};
+
+/*****************************************************************************/
+/* Coro::Semaphore */
 
 static void
 coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
@@ -2103,6 +2091,7 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 }
 
 /*****************************************************************************/
+/* gensub: simple closure generation utility */
 
 #define GENSUB_ARG CvXSUBANY (cv).any_ptr
 
@@ -2112,7 +2101,7 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 static SV *
 gensub (pTHX_ void (*xsub)(pTHX_ CV *), void *arg)
 {
-  CV *cv = (CV *)NEWSV (0, 0);
+  CV *cv = (CV *)newSV (0);
 
   sv_upgrade ((SV *)cv, SVt_PVCV);
 
@@ -2122,6 +2111,166 @@ gensub (pTHX_ void (*xsub)(pTHX_ CV *), void *arg)
   GENSUB_ARG = arg;
 
   return newRV_noinc ((SV *)cv);
+}
+
+/*****************************************************************************/
+/* Coro::AIO */
+
+#define CORO_MAGIC_type_aio PERL_MAGIC_ext
+
+/* helper storage struct */
+struct io_state
+{
+  int errorno;
+  I32 laststype; /* U16 in 5.10.0 */
+  int laststatval;
+  Stat_t statcache;
+};
+
+static void
+coro_aio_callback (pTHX_ CV *cv)
+{
+  dXSARGS;
+  AV *state = (AV *)GENSUB_ARG;
+  SV *coro = av_pop (state);
+  SV *data_sv = newSV (sizeof (struct io_state));
+
+  av_extend (state, items);
+
+  sv_upgrade (data_sv, SVt_PV);
+  SvCUR_set (data_sv, sizeof (struct io_state));
+  SvPOK_only (data_sv);
+
+  {
+    struct io_state *data = (struct io_state *)SvPVX (data_sv);
+
+    data->errorno     = errno;
+    data->laststype   = PL_laststype;
+    data->laststatval = PL_laststatval;
+    data->statcache   = PL_statcache;
+  }
+
+  /* now build the result vector out of all the parameters and the data_sv */
+  {
+    int i;
+
+    for (i = 0; i < items; ++i)
+      av_push (state, SvREFCNT_inc_NN (ST (i)));
+  }
+
+  av_push (state, data_sv);
+
+  api_ready (aTHX_ coro);
+  SvREFCNT_dec (coro);
+  SvREFCNT_dec ((AV *)state);
+}
+
+static int
+slf_check_aio_req (pTHX_ struct CoroSLF *frame)
+{
+  AV *state = (AV *)frame->data;
+
+  /* one element that is an RV? repeat! */
+  if (AvFILLp (state) == 0 && SvROK (AvARRAY (state)[0]))
+    return 1;
+
+  /* restore status */
+  {
+    SV *data_sv = av_pop (state);
+    struct io_state *data = (struct io_state *)SvPVX (data_sv);
+
+    errno          = data->errorno;
+    PL_laststype   = data->laststype;
+    PL_laststatval = data->laststatval;
+    PL_statcache   = data->statcache;
+
+    SvREFCNT_dec (data_sv);
+  }
+
+  /* push result values */
+  {
+    dSP;
+    int i;
+
+    EXTEND (SP, AvFILLp (state) + 1);
+    for (i = 0; i <= AvFILLp (state); ++i)
+      PUSHs (sv_2mortal (SvREFCNT_inc_NN (AvARRAY (state)[i])));
+
+    PUTBACK;
+  }
+
+  return 0;
+}
+
+static void
+slf_init_aio_req (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  AV *state = (AV *)sv_2mortal ((SV *)newAV ());
+  SV *coro_hv = SvRV (coro_current);
+  struct coro *coro = SvSTATE_hv (coro_hv);
+
+  /* put our coroutine id on the state arg */
+  av_push (state, SvREFCNT_inc_NN (coro_hv));
+
+  /* first see whether we have a non-zero priority and set it as AIO prio */
+  if (coro->prio)
+    {
+      dSP;
+
+      static SV *prio_cv;
+      static SV *prio_sv;
+
+      if (expect_false (!prio_cv))
+        {
+          prio_cv = (SV *)get_cv ("IO::AIO::aioreq_pri", 0);
+          prio_sv = newSViv (0);
+        }
+
+      PUSHMARK (SP);
+      sv_setiv (prio_sv, coro->prio);
+      XPUSHs (prio_sv);
+
+      PUTBACK;
+      call_sv (prio_cv, G_VOID | G_DISCARD);
+    }
+
+  /* now call the original request */
+  {
+    dSP;
+    CV *req = (CV *)CORO_MAGIC_NN ((SV *)cv, CORO_MAGIC_type_aio)->mg_obj;
+    int i;
+
+    PUSHMARK (SP);
+
+    /* first push all args to the stack */
+    EXTEND (SP, items + 1);
+
+    for (i = 0; i < items; ++i)
+      PUSHs (arg [i]);
+
+    /* now push the callback closure */
+    PUSHs (sv_2mortal (gensub (coro_aio_callback, (void *)SvREFCNT_inc_NN ((SV *)state))));
+
+    /* now call the AIO function - we assume our request is uncancelable */
+    PUTBACK;
+    call_sv ((SV *)req, G_VOID | G_DISCARD);
+  }
+
+  /* now that the requets is going, we loop toll we have a result */
+  frame->data    = (void *)state;
+  frame->prepare = prepare_schedule;
+  frame->check   = slf_check_aio_req;
+}
+
+static void
+coro_aio_req_xs (pTHX_ CV *cv)
+{
+  dVAR;
+  dXSARGS;
+
+  CORO_EXECUTE_SLF_XS (slf_init_aio_req);
+
+  XSRETURN_EMPTY;
 }
 
 /*****************************************************************************/
@@ -2429,6 +2578,7 @@ swap_defsv (Coro::State self)
             SV *tmp = *src; *src = *dst; *dst = tmp;
           }
 
+
 MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
@@ -2612,92 +2762,11 @@ _pool_2 (SV *cb)
 }
 
 
-MODULE = Coro::State                PACKAGE = Coro::AIO
-
-void
-_get_state (SV *self)
-	PROTOTYPE: $
-	PPCODE:
-{
-        AV *defav = GvAV (PL_defgv);
-        AV *av = newAV ();
-        int i;
-        SV *data_sv = newSV (sizeof (struct io_state));
-	struct io_state *data = (struct io_state *)SvPVX (data_sv);
-        SvCUR_set (data_sv, sizeof (struct io_state));
-        SvPOK_only (data_sv);
-
-        data->errorno     = errno;
-        data->laststype   = PL_laststype;
-        data->laststatval = PL_laststatval;
-        data->statcache   = PL_statcache;
-
-        av_extend (av, AvFILLp (defav) + 1 + 1);
-
-        for (i = 0; i <= AvFILLp (defav); ++i)
-          av_push (av, SvREFCNT_inc_NN (AvARRAY (defav)[i]));
-
-        av_push (av, data_sv);
-
-        XPUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
-
-        api_ready (aTHX_ self);
-}
-
-void
-_set_state (SV *state)
-	PROTOTYPE: $
-	PPCODE:
-{
-  	AV *av = (AV *)SvRV (state);
-	struct io_state *data = (struct io_state *)SvPVX (AvARRAY (av)[AvFILLp (av)]);
-        int i;
-
-        errno          = data->errorno;
-        PL_laststype   = data->laststype;
-        PL_laststatval = data->laststatval;
-        PL_statcache   = data->statcache;
-
-        EXTEND (SP, AvFILLp (av));
-        for (i = 0; i < AvFILLp (av); ++i)
-          PUSHs (sv_2mortal (SvREFCNT_inc_NN (AvARRAY (av)[i])));
-}
-
-
-MODULE = Coro::State                PACKAGE = Coro::AnyEvent
-
-BOOT:
-        sv_activity = coro_get_sv (aTHX_ "Coro::AnyEvent::ACTIVITY", TRUE);
-
-void
-_schedule (...)
-	CODE:
-{
-  	static int incede;
-
-        api_cede_notself (aTHX);
-
-        ++incede;
-        while (coro_nready >= incede && api_cede (aTHX))
-          ;
-
-        sv_setsv (sv_activity, &PL_sv_undef);
-        if (coro_nready >= incede)
-          {
-            PUSHMARK (SP);
-            PUTBACK;
-            call_pv ("Coro::AnyEvent::_activity", G_DISCARD | G_EVAL);
-            SPAGAIN;
-          }
-
-        --incede;
-}
-
-
 MODULE = Coro::State                PACKAGE = PerlIO::cede
 
 BOOT:
 	PerlIO_define_layer (aTHX_ &PerlIO_cede);
+
 
 MODULE = Coro::State                PACKAGE = Coro::Semaphore
 
@@ -2765,5 +2834,49 @@ waiters (SV *self)
             for (i = 1; i <= AvFILLp (av); ++i)
               PUSHs (newSVsv (AvARRAY (av)[i]));
           }
+}
+
+
+MODULE = Coro::State                PACKAGE = Coro::AnyEvent
+
+BOOT:
+        sv_activity = coro_get_sv (aTHX_ "Coro::AnyEvent::ACTIVITY", TRUE);
+
+void
+_schedule (...)
+	CODE:
+{
+  	static int incede;
+
+        api_cede_notself (aTHX);
+
+        ++incede;
+        while (coro_nready >= incede && api_cede (aTHX))
+          ;
+
+        sv_setsv (sv_activity, &PL_sv_undef);
+        if (coro_nready >= incede)
+          {
+            PUSHMARK (SP);
+            PUTBACK;
+            call_pv ("Coro::AnyEvent::_activity", G_DISCARD | G_EVAL);
+            SPAGAIN;
+          }
+
+        --incede;
+}
+
+
+MODULE = Coro::State                PACKAGE = Coro::AIO
+
+void
+_register (char *target, char *proto, SV *req)
+	CODE:
+{
+  	HV *st;
+        GV *gvp;
+        CV *req_cv = sv_2cv (req, &st, &gvp, 0);
+        CV *slf_cv = newXSproto (target, coro_aio_req_xs, __FILE__, proto);
+        sv_magicext ((SV *)slf_cv, (SV *)req_cv, CORO_MAGIC_type_aio, 0, 0, 0);
 }
 

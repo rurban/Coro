@@ -11,7 +11,8 @@ TODO: Coro::Semaphore
 TODO: trow disturbs cleanup path inside pp_slf?
 TODO: throw special-case in transfer?
 5.0
-	- NEW ARCHITECTURE: use 4.912 for the stable version.
+	- NEW ARCHITECTURE: use the latest 4.x version if you experience
+          stability issues.
         - bump API version to 7 - all dependents must be recompiled.
         - Coro::Semaphore->adjust didn't correctly wake up enough waiters.
         - async_pool did free a scalar value twice
@@ -33,13 +34,15 @@ TODO: throw special-case in transfer?
           as "threaded" perls are running at half speed anyways).
         - implement execute_slf (schedule-like-function) interface that makes
           it possible to implement schedule-like-functions in XS.
-        - use new SLF interface to massively speed up Coro::EV by roughly a factor
-          of two.
-        - removed timed_down and timed_guard functions - they were not being used
-          anyways and should be replaced by a more generic mechanism - and were
-          annoying to support anyways :
-        - used new SLF interface to massively speed up Coro::Semaphore by a factor
-          of three.
+        - use new SLF interface to massively speed up Coro::EV by roughly a
+          factor of two.
+        - removed timed_down and timed_guard functions - they were not being
+          used anyways and should be replaced by a more generic mechanism -
+          and were annoying to support anyways :)
+        - used new SLF interface to massively speed up Coro::Semaphore by a
+          factor of three.
+        - used new SLF interface to speed up Coro::AIO by roughly 40-60% and
+          reduce its memory usage considerably.
         - forgot to include Coro/libcoro/README in the dist for all these years.
         - work around a freebsd pthreads bug (manual testcancel is required as
           pthread_cond_wait isn't a cancellation point on freebsd).
