@@ -97,6 +97,9 @@ static int cctx_max_idle = 4;
 #ifndef newSV
 # define newSV(l) NEWSV(0,l)
 #endif
+#ifndef CvISXSUB_on
+# define CvISXSUB_on(cv) (void)cv
+#endif
 
 /* 5.8.7 */
 #ifndef SvRV_set
@@ -2249,7 +2252,7 @@ slf_init_aio_req (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
       PUSHs (arg [i]);
 
     /* now push the callback closure */
-    PUSHs (sv_2mortal (gensub (coro_aio_callback, (void *)SvREFCNT_inc_NN ((SV *)state))));
+    PUSHs (sv_2mortal (gensub (aTHX_ coro_aio_callback, (void *)SvREFCNT_inc_NN ((SV *)state))));
 
     /* now call the AIO function - we assume our request is uncancelable */
     PUTBACK;
@@ -2265,7 +2268,6 @@ slf_init_aio_req (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 static void
 coro_aio_req_xs (pTHX_ CV *cv)
 {
-  dVAR;
   dXSARGS;
 
   CORO_EXECUTE_SLF_XS (slf_init_aio_req);
@@ -2876,7 +2878,9 @@ _register (char *target, char *proto, SV *req)
   	HV *st;
         GV *gvp;
         CV *req_cv = sv_2cv (req, &st, &gvp, 0);
-        CV *slf_cv = newXSproto (target, coro_aio_req_xs, __FILE__, proto);
+        /* newXSproto doesn't return the CV on 5.8 */
+        CV *slf_cv = newXS (target, coro_aio_req_xs, __FILE__);
+        sv_setpv ((SV *)slf_cv, proto);
         sv_magicext ((SV *)slf_cv, (SV *)req_cv, CORO_MAGIC_type_aio, 0, 0, 0);
 }
 
