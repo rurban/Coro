@@ -60,14 +60,15 @@ $timeout seconds, otherwise true.
 =cut
 
 sub down {
+#   Coro::Semaphore::down ($_[0][1]{$_[1]} ||= Coro::Semaphore::new undef, $_[0][0]);
    while () {
       my $sem = ($_[0][1]{$_[1]} ||= [$_[0][0]]);
-
+ 
       if ($sem->[0] > 0) {
          --$sem->[0];
          return 1;
       }
-
+ 
       push @{$sem->[1]}, $Coro::current;
       &Coro::schedule;
    }
@@ -109,11 +110,11 @@ Unlock the semaphore again.
 
 sub up {
    my $sem = $_[0][1]{$_[1]};
-
+ 
    if (++$sem->[0] > 0) {
       (shift @{$sem->[1]})->ready if @{$sem->[1]};
    }
-
+ 
    delete $_[0][1]{$_[1]} if $sem->[0] == $_[0][0] && !@{$sem->[1] || []};
 }
 

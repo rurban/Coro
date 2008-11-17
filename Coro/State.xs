@@ -2778,7 +2778,16 @@ new (SV *klass, SV *count_ = 0)
 {
         /* a semaphore contains a counter IV in $sem->[0] and any waiters after that */
         AV *av = newAV ();
-        av_push (av, newSViv (count_ && SvOK (count_) ? SvIV (count_) : 1));
+        SV **ary;
+
+        /* unfortunately, building manually saves memory */
+        Newx (ary, 2, SV *);
+        AvALLOC (av) = ary;
+        AvARRAY (av) = ary;
+        AvMAX   (av) = 1;
+        AvFILLp (av) = 0;
+        ary [0] = newSViv (count_ && SvOK (count_) ? SvIV (count_) : 1);
+
         RETVAL = sv_bless (newRV_noinc ((SV *)av), GvSTASH (CvGV (cv)));
 }
 	OUTPUT:
