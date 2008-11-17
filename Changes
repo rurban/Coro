@@ -41,7 +41,7 @@ TODO: throw special-case in transfer?
           and were annoying to support anyways :)
         - used new SLF interface to massively speed up Coro::Semaphore by a
           factor of three.
-        - used new SLF interface to speed up Coro::AIO by roughly 40-60% and
+        - used new SLF interface to speed up Coro::AIO by roughly 400% and
           reduce its memory usage considerably.
         - forgot to include Coro/libcoro/README in the dist for all these years.
         - work around a freebsd pthreads bug (manual testcancel is required as
