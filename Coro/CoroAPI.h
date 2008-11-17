@@ -58,7 +58,7 @@ struct CoroAPI
 
   /* SLF */
   struct coro *(*sv_state) (pTHX_ SV *coro);
-  void (*execute_slf) (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int nitems);
+  void (*execute_slf) (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax);
   /* for use as CoroSLF.prepare */
   void (*prepare_nop)          (pTHX_ struct coro_transfer_args *ta);
   void (*prepare_schedule)     (pTHX_ struct coro_transfer_args *ta);
@@ -72,8 +72,8 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_TRANSFER(prev,next) GCoroAPI->transfer (aTHX_ (prev), (next))
 
 #define CORO_SV_STATE(coro)      GCoroAPI->sv_state (aTHX_ (coro))
-#define CORO_EXECUTE_SLF(cv,init,arg,items) GCoroAPI->execute_slf (aTHX_ (cv), (init), (arg), (items))
-#define CORO_EXECUTE_SLF_XS(init) CORO_EXECUTE_SLF (cv, (init), &ST (0), items)
+#define CORO_EXECUTE_SLF(cv,init,ax) GCoroAPI->execute_slf (aTHX_ (cv), (init), (ax))
+#define CORO_EXECUTE_SLF_XS(init) CORO_EXECUTE_SLF (cv, (init), ax)
 
 #define CORO_SCHEDULE            GCoroAPI->schedule (aTHX)
 #define CORO_CEDE                GCoroAPI->cede (aTHX)

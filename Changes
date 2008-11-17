@@ -20,6 +20,7 @@ TODO: throw special-case in transfer?
           was waiting for a semaphore that was just becoming available
           would cause a deadlock (semaphore would get into a state where
           it was available but waiters were waiting(.
+        - avoid deadlock in Coro::Channel if maxsize == 1 (Richard Hundt).
         - perl's process emulation is now not even theoretically supported
           anymore.
         - directly patch the entersub opcode calling SLF functions (cede,

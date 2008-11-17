@@ -1768,12 +1768,12 @@ static PerlIO_funcs PerlIO_cede =
 
 /*****************************************************************************/
 
-static const CV *slf_cv; /* for quick consistency check */
-
 static UNOP slf_restore; /* restore stack as entersub did, for first-re-run */
+static const CV *slf_cv;
 static SV *slf_arg0;
 static SV *slf_arg1;
 static SV *slf_arg2;
+static I32 slf_ax; /* top of stack, for restore */
 
 /* this restores the stack in the case we patched the entersub, to */
 /* recreate the stack frame as perl will on following calls */
@@ -1781,7 +1781,7 @@ static SV *slf_arg2;
 static OP *
 pp_restore (pTHX)
 {
-  dSP;
+  SV **SP = PL_stack_base + slf_ax;
 
   PUSHMARK (SP);
 
@@ -1899,8 +1899,6 @@ pp_slf (pTHX)
           items = AvFILLp (av) + 1;
         }
 
-      PUTBACK;
-
       /* now call the init function, which needs to set up slf_frame */
       ((coro_slf_cb)CvXSUBANY (GvCV (gv)).any_ptr)
         (aTHX_ &slf_frame, GvCV (gv), arg, items);
@@ -1962,16 +1960,21 @@ pp_slf (pTHX)
 }
 
 static void
-api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
+api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
 {
+  SV **arg = PL_stack_base + ax;
+  int items = PL_stack_sp - arg + 1;
+
   assert (("FATAL: SLF call with illegal CV value", !CvANON (cv)));
 
   if (PL_op->op_ppaddr != PL_ppaddr [OP_ENTERSUB]
       && PL_op->op_ppaddr != pp_slf)
     croak ("FATAL: Coro SLF calls can only be made normally, not via goto or any other means, caught");
 
+#if 0
   if (items > 3)
     croak ("Coro only supports up to three arguments to SLF functions currently (not %d), caught", items);
+#endif
 
   CvFLAGS (cv) |= CVf_SLF;
   CvXSUBANY (cv).any_ptr = (void *)init_cb;
@@ -1980,16 +1983,18 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, SV **arg, int items)
   /* we patch the op, and then re-run the whole call */
   /* we have to put the same argument on the stack for this to work */
   /* and this will be done by pp_restore */
-  slf_restore.op_next = (OP *)&slf_restore;
-  slf_restore.op_type = OP_CUSTOM;
+  slf_restore.op_next   = (OP *)&slf_restore;
+  slf_restore.op_type   = OP_CUSTOM;
   slf_restore.op_ppaddr = pp_restore;
-  slf_restore.op_first = PL_op;
+  slf_restore.op_first  = PL_op;
 
+  slf_ax   = ax - 1; /* undo the ax++ inside dAXMARK */
   slf_arg0 = items > 0 ? SvREFCNT_inc (arg [0]) : 0;
   slf_arg1 = items > 1 ? SvREFCNT_inc (arg [1]) : 0;
   slf_arg2 = items > 2 ? SvREFCNT_inc (arg [2]) : 0;
 
   PL_op->op_ppaddr  = pp_slf;
+  PL_op->op_type    = OP_CUSTOM; /* maybe we should leave it at entersub? */
 
   PL_op = (OP *)&slf_restore;
 }
@@ -2218,13 +2223,13 @@ new (char *klass, ...)
 void
 _set_stacklevel (...)
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_set_stacklevel, &ST (0), items);
+        CORO_EXECUTE_SLF_XS (slf_init_set_stacklevel);
 
 void
 transfer (...)
         PROTOTYPE: $$
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_transfer, &ST (0), items);
+        CORO_EXECUTE_SLF_XS (slf_init_transfer);
 
 bool
 _destroy (SV *coro_sv)
@@ -2457,17 +2462,17 @@ BOOT:
 void
 schedule (...)
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_schedule, &ST (0), 0);
+        CORO_EXECUTE_SLF_XS (slf_init_schedule);
 
 void
 cede (...)
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_cede, &ST (0), 0);
+        CORO_EXECUTE_SLF_XS (slf_init_cede);
 
 void
 cede_notself (...)
 	CODE:
-        api_execute_slf (aTHX_ cv, slf_init_cede_notself, &ST (0), 0);
+        CORO_EXECUTE_SLF_XS (slf_init_cede_notself);
 
 void
 _set_current (SV *current)
@@ -2712,7 +2717,7 @@ up (SV *self, int adjust = 1)
 void
 down (SV *self)
         CODE:
-        api_execute_slf (aTHX_ cv, slf_init_semaphore_down, &ST (0), 1);
+        CORO_EXECUTE_SLF_XS (slf_init_semaphore_down);
 
 void
 try (SV *self)
