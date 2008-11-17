@@ -243,7 +243,7 @@ struct coro {
   /* the C coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
 
-  /* process data */
+  /* state data */
   struct CoroSLF slf_frame; /* saved slf frame */
   AV *mainstack;
   perl_slots *slot; /* basically the saved sp */
@@ -271,7 +271,11 @@ struct coro {
 typedef struct coro *Coro__State;
 typedef struct coro *Coro__State_or_hashref;
 
+/* the following variables are effectively part of the perl context */
+/* and get copied between struct coro and these variables */
+/* the mainr easonw e don't support windows process emulation */
 static struct CoroSLF slf_frame; /* the current slf frame */
+static SV *coro_throw;
 
 /** Coro ********************************************************************/
 
@@ -515,12 +519,14 @@ load_perl (pTHX_ Coro__State c)
     PUTBACK;
   }
 
-  slf_frame = c->slf_frame;
+  slf_frame  = c->slf_frame;
+  coro_throw = c->throw;
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
+  c->throw     = coro_throw;
   c->slf_frame = slf_frame;
 
   {
@@ -823,7 +829,7 @@ slf_check_nop (pTHX_ struct CoroSLF *frame)
   return 0;
 }
 
-static void
+static void NOINLINE /* noinline to keep it out of the transfer fast path */
 coro_setup (pTHX_ struct coro *coro)
 {
   /*
@@ -876,6 +882,8 @@ coro_setup (pTHX_ struct coro *coro)
    */
   slf_frame.prepare = prepare_nop;   /* provide a nop function for an eventual pp_slf */
   slf_frame.check   = slf_check_nop; /* signal pp_slf to not repeat */
+
+  coro_throw = coro->throw;
 }
 
 static void
@@ -909,7 +917,7 @@ coro_destruct (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_warnhook);
   
   SvREFCNT_dec (coro->saved_deffh);
-  SvREFCNT_dec (coro->throw);
+  SvREFCNT_dec (coro_throw);
 
   coro_destruct_stacks (aTHX);
 }
@@ -1278,6 +1286,8 @@ cctx_put (coro_cctx *cctx)
 static void
 transfer_check (pTHX_ struct coro *prev, struct coro *next)
 {
+  /* TODO: throwing up here is considered harmful */
+
   if (expect_true (prev != next))
     {
       if (expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
@@ -1297,7 +1307,7 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
 }
 
 /* always use the TRANSFER macro */
-static void NOINLINE
+static void NOINLINE /* noinline so we have a fixed stackframe */
 transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 {
   dSTACKLEVEL;
@@ -1770,9 +1780,8 @@ static PerlIO_funcs PerlIO_cede =
 
 static UNOP slf_restore; /* restore stack as entersub did, for first-re-run */
 static const CV *slf_cv;
-static SV *slf_arg0;
-static SV *slf_arg1;
-static SV *slf_arg2;
+static SV **slf_argv;
+static int slf_argc, slf_arga; /* count, allocated */
 static I32 slf_ax; /* top of stack, for restore */
 
 /* this restores the stack in the case we patched the entersub, to */
@@ -1781,14 +1790,16 @@ static I32 slf_ax; /* top of stack, for restore */
 static OP *
 pp_restore (pTHX)
 {
+  int i;
   SV **SP = PL_stack_base + slf_ax;
 
   PUSHMARK (SP);
 
-  EXTEND (SP, 3);
-  if (slf_arg0) PUSHs (sv_2mortal (slf_arg0));
-  if (slf_arg1) PUSHs (sv_2mortal (slf_arg1));
-  if (slf_arg2) PUSHs (sv_2mortal (slf_arg2));
+  EXTEND (SP, slf_argc + 1);
+
+  for (i = 0; i < slf_argc; ++i)
+    PUSHs (sv_2mortal (slf_argv [i]));
+
   PUSHs ((SV *)CvGV (slf_cv));
 
   RETURNOP (slf_restore.op_first);
@@ -1816,17 +1827,6 @@ slf_prepare_transfer (pTHX_ struct coro_transfer_args *ta)
   SV **arg = (SV **)slf_frame.data;
 
   prepare_transfer (aTHX_ ta, arg [0], arg [1]);
-
-  /* if the destination has ->throw set, then copy it */
-  /* into the current coro's throw slot, so it will be raised */
-  /* after the schedule */
-  if (expect_false (ta->next->throw))
-    {
-      struct coro *coro = SvSTATE_current;
-      SvREFCNT_dec (coro->throw);
-      coro->throw = ta->next->throw;
-      ta->next->throw = 0;
-    }
 }
 
 static void
@@ -1924,12 +1924,13 @@ pp_slf (pTHX)
     }
   while (slf_frame.check (aTHX_ &slf_frame));
 
+  slf_frame.prepare = 0; /* invalidate the frame, we are done processing it */
+
+  /* return value handling - mostly like entersub */
   {
     dSP;
     SV **bot = PL_stack_base + checkmark;
     int gimme = GIMME_V;
-
-    slf_frame.prepare = 0; /* invalidate the frame, so it gets initialised again next time */
 
     /* make sure we put something on the stack in scalar context */
     if (gimme == G_SCALAR)
@@ -1943,18 +1944,15 @@ pp_slf (pTHX)
     PUTBACK;
   }
 
-  {
-    struct coro *coro = SvSTATE_current;
+  /* exception handling */
+  if (expect_false (coro_throw))
+    {
+      SV *exception = sv_2mortal (coro_throw);
 
-    if (expect_false (coro->throw))
-      {
-        SV *exception = sv_2mortal (coro->throw);
-
-        coro->throw = 0;
-        sv_setsv (ERRSV, exception);
-        croak (0);
-      }
-  }
+      coro_throw = 0;
+      sv_setsv (ERRSV, exception);
+      croak (0);
+    }
 
   return NORMAL;
 }
@@ -1962,6 +1960,7 @@ pp_slf (pTHX)
 static void
 api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
 {
+  int i;
   SV **arg = PL_stack_base + ax;
   int items = PL_stack_sp - arg + 1;
 
@@ -1970,11 +1969,6 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
   if (PL_op->op_ppaddr != PL_ppaddr [OP_ENTERSUB]
       && PL_op->op_ppaddr != pp_slf)
     croak ("FATAL: Coro SLF calls can only be made normally, not via goto or any other means, caught");
-
-#if 0
-  if (items > 3)
-    croak ("Coro only supports up to three arguments to SLF functions currently (not %d), caught", items);
-#endif
 
   CvFLAGS (cv) |= CVf_SLF;
   CvXSUBANY (cv).any_ptr = (void *)init_cb;
@@ -1989,9 +1983,18 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
   slf_restore.op_first  = PL_op;
 
   slf_ax   = ax - 1; /* undo the ax++ inside dAXMARK */
-  slf_arg0 = items > 0 ? SvREFCNT_inc (arg [0]) : 0;
-  slf_arg1 = items > 1 ? SvREFCNT_inc (arg [1]) : 0;
-  slf_arg2 = items > 2 ? SvREFCNT_inc (arg [2]) : 0;
+
+  if (items > slf_arga)
+    {
+      slf_arga = items;
+      free (slf_argv);
+      slf_argv = malloc (slf_arga * sizeof (SV *));
+    }
+
+  slf_argc = items;
+
+  for (i = 0; i < items; ++i)
+    slf_argv [i] = SvREFCNT_inc (arg [i]);
 
   PL_op->op_ppaddr  = pp_slf;
   PL_op->op_type    = OP_CUSTOM; /* maybe we should leave it at entersub? */
@@ -2357,8 +2360,12 @@ void
 throw (Coro::State self, SV *throw = &PL_sv_undef)
 	PROTOTYPE: $;$
         CODE:
-        SvREFCNT_dec (self->throw);
-        self->throw = SvOK (throw) ? newSVsv (throw) : 0;
+{
+	struct coro *current = SvSTATE_current;
+	SV **throwp = self == current ? &coro_throw : &self->throw;
+        SvREFCNT_dec (*throwp);
+        *throwp = SvOK (throw) ? newSVsv (throw) : 0;
+}
 
 void
 api_trace (SV *coro, int flags = CC_TRACE | CC_TRACE_SUB)
@@ -2570,7 +2577,8 @@ void
 _pool_2 (SV *cb)
 	CODE:
 {
-  	struct coro *coro = SvSTATE_current;
+        HV *hv = (HV *)SvRV (coro_current);
+	struct coro *coro = SvSTATE_hv ((SV *)hv);
 
         sv_setsv (cb, &PL_sv_undef);
 
@@ -2587,7 +2595,7 @@ _pool_2 (SV *cb)
           }
 
         av_clear (GvAV (PL_defgv));
-        hv_store ((HV *)SvRV (coro_current), "desc", sizeof ("desc") - 1,
+        hv_store (hv, "desc", sizeof ("desc") - 1,
                   newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
 
         coro->prio = 0;
