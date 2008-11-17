@@ -1984,17 +1984,22 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
 
   slf_ax   = ax - 1; /* undo the ax++ inside dAXMARK */
 
-  if (items > slf_arga)
+  if (PL_op->op_flags & OPf_STACKED)
     {
-      slf_arga = items;
-      free (slf_argv);
-      slf_argv = malloc (slf_arga * sizeof (SV *));
+      if (items > slf_arga)
+        {
+          slf_arga = items;
+          free (slf_argv);
+          slf_argv = malloc (slf_arga * sizeof (SV *));
+        }
+
+      slf_argc = items;
+
+      for (i = 0; i < items; ++i)
+        slf_argv [i] = SvREFCNT_inc (arg [i]);
     }
-
-  slf_argc = items;
-
-  for (i = 0; i < items; ++i)
-    slf_argv [i] = SvREFCNT_inc (arg [i]);
+  else
+    slf_argc = 0;
 
   PL_op->op_ppaddr  = pp_slf;
   PL_op->op_type    = OP_CUSTOM; /* maybe we should leave it at entersub? */
