@@ -1072,7 +1072,7 @@ slf_check_set_stacklevel (pTHX_ struct CoroSLF *frame)
 {
   *frame = cctx_ssl_frame;
 
-  return 0;
+  return 1;
 }
 
 /* initialises PL_top_env and injects a pseudo-slf-call to sett he stacklevel */
