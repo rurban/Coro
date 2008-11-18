@@ -276,7 +276,6 @@ sub command($) {
       my $buf = sprintf "%20s %s%s %4s %4s $desc %s\n",
                         "PID", "S", "C", "RSS", "USES", "Description", "Where";
       for my $coro (reverse Coro::State::list) {
-         Coro::cede;
          my @bt;
          Coro::State::call ($coro, sub {
             # we try to find *the* definite frame that gives msot useful info
@@ -296,7 +295,6 @@ sub command($) {
                          $coro->debug_desc,
                          (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
       }
-      Coro::cede;
       print $buf;
 
    } elsif ($cmd =~ /^bt\s+(\d+)$/) {
@@ -385,7 +383,6 @@ EOF
       my @res = eval $cmd;
       print $@ ? $@ : (join " ", @res) . "\n";
    }
-   Coro::cede;
 }
 
 =item session $fh
@@ -427,6 +424,8 @@ EOF
       } else {
          command $cmd;
       }
+
+      Coro::cede;
    }
 }
 

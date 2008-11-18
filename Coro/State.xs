@@ -122,9 +122,11 @@ static int cctx_max_idle = 4;
 /* The next macros try to return the current stack pointer, in an as
  * portable way as possible. */
 #if __GNUC__ >= 4
-# define dSTACKLEVEL void *stacklevel = __builtin_frame_address (0)
+# define dSTACKLEVEL int stacklevel_dummy
+# define STACKLEVEL __builtin_frame_address (0)
 #else
-# define dSTACKLEVEL volatile void *stacklevel = (volatile void *)&stacklevel
+# define dSTACKLEVEL volatile void *stacklevel
+# define STACKLEVEL ((void *)&stacklevel)
 #endif
 
 #define IN_DESTRUCT (PL_main_cv == Nullcv)
@@ -859,7 +861,7 @@ coro_setup (pTHX_ struct coro *coro)
     UNOP myop;
 
     Zero (&myop, 1, UNOP);
-    myop.op_next = Nullop;
+    myop.op_next  = Nullop;
     myop.op_flags = OPf_WANT_VOID;
 
     PUSHMARK (SP);
@@ -877,9 +879,10 @@ coro_setup (pTHX_ struct coro *coro)
   slf_frame.check   = slf_check_nop; /* signal pp_slf to not repeat */
 
   /* and we have to provide the pp_slf op in any case, so pp_slf can skip it */
+  coro_setup_op.op_next   = PL_op;
   coro_setup_op.op_type   = OP_CUSTOM;
   coro_setup_op.op_ppaddr = pp_slf;
-  coro_setup_op.op_next   = PL_op;
+  /* no flags required, as an init function won't be called */
 
   PL_op = (OP *)&coro_setup_op;
 
@@ -1072,10 +1075,10 @@ slf_check_set_stacklevel (pTHX_ struct CoroSLF *frame)
 {
   *frame = cctx_ssl_frame;
 
-  return 1; /* execute the restored frame - there must be one */
+  return frame->check (aTHX_ frame); /* execute the restored frame - there must be one */
 }
 
-/* initialises PL_top_env and injects a pseudo-slf-call to sett he stacklevel */
+/* initialises PL_top_env and injects a pseudo-slf-call to set the stacklevel */
 static void NOINLINE
 cctx_prepare (pTHX_ coro_cctx *cctx)
 {
@@ -1089,6 +1092,7 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
   assert (("FATAL: can't prepare slf-less cctx in Coro module (please report)",
            slf_frame.prepare && PL_op->op_ppaddr == pp_slf));
 
+  /* we must emulate leaving pp_slf, which is done inside slf_check_set_stacklevel */
   cctx_ssl_cctx  = cctx;
   cctx_ssl_frame = slf_frame;
 
@@ -1319,7 +1323,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
   /* sometimes transfer is only called to set idle_sp */
   if (expect_false (!next))
     {
-      ((coro_cctx *)prev)->idle_sp = (void *)stacklevel;
+      ((coro_cctx *)prev)->idle_sp = STACKLEVEL;
       assert (((coro_cctx *)prev)->idle_te = PL_top_env); /* just for the side-effect when asserts are enabled */
     }
   else if (expect_true (prev != next))
@@ -1354,7 +1358,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
       /* possibly untie and reuse the cctx */
       if (expect_true (
-            prev__cctx->idle_sp == (void *)stacklevel
+            prev__cctx->idle_sp == STACKLEVEL
             && !(prev__cctx->flags & CC_TRACE)
             && !force_cctx
          ))
