@@ -25,6 +25,8 @@ TODO: Coro::Signal as SLF.
           was waiting for a semaphore that was just becoming available
           would cause a deadlock (semaphore would get into a state where
           it was available but waiters were waiting(.
+        - calling throw on a coroutine that is waiting for a semaphore will
+          no longer make it acquire the semaphore (and thus leak a count).
         - perl's process emulation is now not even theoretically supported
           anymore.
         - use named constants in Coro::Channel (Richard Hundt).

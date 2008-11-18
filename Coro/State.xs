@@ -1841,6 +1841,16 @@ pp_slf (pTHX)
 
   slf_frame.prepare = 0; /* invalidate the frame, we are done processing it */
 
+  /* exception handling */
+  if (expect_false (coro_throw))
+    {
+      SV *exception = sv_2mortal (coro_throw);
+
+      coro_throw = 0;
+      sv_setsv (ERRSV, exception);
+      croak (0);
+    }
+
   /* return value handling - mostly like entersub */
   /* make sure we put something on the stack in scalar context */
   if (GIMME_V == G_SCALAR)
@@ -1856,16 +1866,6 @@ pp_slf (pTHX)
       SP = bot + 1;
 
       PUTBACK;
-    }
-
-  /* exception handling */
-  if (expect_false (coro_throw))
-    {
-      SV *exception = sv_2mortal (coro_throw);
-
-      coro_throw = 0;
-      sv_setsv (ERRSV, exception);
-      croak (0);
     }
 
   return NORMAL;
@@ -2043,7 +2043,7 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
   SV *count_sv = AvARRAY (av)[0];
 
   /* if we are about to throw, don't actually acquire the lock, just throw */
-  if (coro_throw && 0)//D
+  if (coro_throw)
     return 0;
   else if (SvIVX (count_sv) > 0)
     {
@@ -2172,6 +2172,12 @@ static int
 slf_check_aio_req (pTHX_ struct CoroSLF *frame)
 {
   AV *state = (AV *)frame->data;
+
+  /* if we are about to throw, return early */
+  /* this does not cancel the aio request, but at least */
+  /* it quickly returns */
+  if (coro_throw)
+    return 0;
 
   /* one element that is an RV? repeat! */
   if (AvFILLp (state) == 0 && SvROK (AvARRAY (state)[0]))

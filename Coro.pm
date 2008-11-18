@@ -443,9 +443,8 @@ clears the exception object.
 
 Coro will check for the exception each time a schedule-like-function
 returns, i.e. after each C<schedule>, C<cede>, C<< Coro::Semaphore->down
->>, C<< Coro::Handle->readable >> and so on. Note that this means that
-when a coroutine is acquiring a lock, it might only throw after it has
-sucessfully acquired it.
+>>, C<< Coro::Handle->readable >> and so on. Most of these functions
+detect this case and return early in case an exception is pending.
 
 The exception object will be thrown "as is" with the specified scalar in
 C<$@>, i.e. if it is a string, no line number or newline will be appended
