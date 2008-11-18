@@ -75,7 +75,7 @@ this, as this is rather inefficient.
 
 This module installs overrides for AnyEvent's condvars. That is, when
 the module is loaded it will provide its own condition variables. This
-makes the coroutine-safe, i.e. you can safely block on them from within a
+makes them coroutine-safe, i.e. you can safely block on them from within a
 coroutine.
 
 =item * lead to data corruption or worse
