@@ -61,6 +61,16 @@ becomes negative, however.
 Decrement the counter, therefore "locking" the semaphore. This method
 waits until the semaphore is available if the counter is zero.
 
+=item $sem->wait
+
+Similar to C<down>, but does not actually decrement the counter. Instead,
+when this function returns, a following call to C<down> or C<try> is
+guaranteed to succeed without blocking, until the next coroutine switch
+(C<cede> etc.).
+
+Note that using C<wait> is much less efficient than using C<down>, so try
+to prefer C<down> whenever possible.
+
 =cut
 
 #=item $status = $sem->timed_down ($timeout)

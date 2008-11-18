@@ -2037,7 +2037,7 @@ coro_semaphore_on_destroy (pTHX_ struct coro *coro)
 }
 
 static int
-slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
+slf_check_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, int acquire)
 {
   AV *av = (AV *)frame->data;
   SV *count_sv = AvARRAY (av)[0];
@@ -2048,7 +2048,12 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
   else if (SvIVX (count_sv) > 0)
     {
       SvSTATE_current->on_destroy = 0;
-      SvIVX (count_sv) = SvIVX (count_sv) - 1;
+
+      if (acquire)
+        SvIVX (count_sv) = SvIVX (count_sv) - 1;
+      else
+        coro_semaphore_adjust (aTHX_ av, 0);
+
       return 0;
     }
   else
@@ -2067,8 +2072,20 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
     }
 }
 
+static int
+slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
+{
+  return slf_check_semaphore_down_or_wait (aTHX_ frame, 1);
+}
+
+static int
+slf_check_semaphore_wait (pTHX_ struct CoroSLF *frame)
+{
+  return slf_check_semaphore_down_or_wait (aTHX_ frame, 0);
+}
+
 static void
-slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+slf_init_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   AV *av = (AV *)SvRV (arg [0]);
 
@@ -2088,9 +2105,20 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
       /* we arrange for a temporary on_destroy that calls adjust (0) */
       SvSTATE_current->on_destroy = coro_semaphore_on_destroy;
     }
+}
 
+static void
+slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  slf_init_semaphore_down_or_wait (aTHX_ frame, cv, arg, items);
   frame->check = slf_check_semaphore_down;
+}
 
+static void
+slf_init_semaphore_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  slf_init_semaphore_down_or_wait (aTHX_ frame, cv, arg, items);
+  frame->check = slf_check_semaphore_wait;
 }
 
 /*****************************************************************************/
@@ -2812,6 +2840,11 @@ void
 down (SV *self)
         CODE:
         CORO_EXECUTE_SLF_XS (slf_init_semaphore_down);
+
+void
+wait (SV *self)
+        CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_semaphore_wait);
 
 void
 try (SV *self)

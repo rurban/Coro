@@ -24,11 +24,12 @@ TODO: Coro::Signal as SLF.
         - fix a longstanding bug where calling terminate on a coro that
           was waiting for a semaphore that was just becoming available
           would cause a deadlock (semaphore would get into a state where
-          it was available but waiters were waiting(.
+          it was available but waiters were still blocked).
         - calling throw on a coroutine that is waiting for a semaphore will
           no longer make it acquire the semaphore (and thus leak a count).
         - perl's process emulation is now not even theoretically supported
           anymore.
+        - new function Coro::Semaphore::wait.
         - use named constants in Coro::Channel (Richard Hundt).
         - directly patch the entersub opcode calling SLF functions (cede,
           transfer and so on). this does speed up context switching, but

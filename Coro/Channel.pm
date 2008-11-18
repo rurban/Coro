@@ -53,7 +53,7 @@ sub new {
    bless [
       [],
       (new Coro::Semaphore 0),
-      (new Coro::Semaphore +($_[1] || 1000000000) - 1),
+      (new Coro::Semaphore +($_[1] || 1_000_000_000) - 1),
    ]
 }
 
