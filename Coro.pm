@@ -438,9 +438,14 @@ sub cancel {
 =item $coroutine->throw ([$scalar])
 
 If C<$throw> is specified and defined, it will be thrown as an exception
-inside the coroutine at the next convenient point in time (usually after
-it gains control at the next schedule/transfer/cede). Otherwise clears the
-exception object.
+inside the coroutine at the next convenient point in time. Otherwise
+clears the exception object.
+
+Coro will check for the exception each time a schedule-like-function
+returns, i.e. after each C<schedule>, C<cede>, C<< Coro::Semaphore->down
+>>, C<< Coro::Handle->readable >> and so on. Note that this means that
+when a coroutine is acquiring a lock, it might only throw after it has
+sucessfully acquired it.
 
 The exception object will be thrown "as is" with the specified scalar in
 C<$@>, i.e. if it is a string, no line number or newline will be appended

@@ -6,11 +6,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 
 TODO: testcancel
-TODO: aio
-TODO: Coro::Semaphore
-TODO: trow disturbs cleanup path inside pp_slf?
-TODO: throw special-case in transfer?
-TODO: document throw limitations
+TODO: guard as SLF - to avoid deadlocks.
+        - avoid deadlock in Coro::Channel if maxsize == 1 (Richard Hundt).
+
 5.0
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience
           stability issues.
@@ -22,9 +20,9 @@ TODO: document throw limitations
           was waiting for a semaphore that was just becoming available
           would cause a deadlock (semaphore would get into a state where
           it was available but waiters were waiting(.
-        - avoid deadlock in Coro::Channel if maxsize == 1 (Richard Hundt).
         - perl's process emulation is now not even theoretically supported
           anymore.
+        - use named constants in Coro::Channel (Richard Hundt).
         - directly patch the entersub opcode calling SLF functions (cede,
           transfer and so on). this does speed up context switching, but
           more importanly, it frees us from the hardcoded behaviour of

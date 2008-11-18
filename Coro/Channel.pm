@@ -33,6 +33,11 @@ use Coro ();
 
 our $VERSION = 5.0;
 
+sub DATA (){ 0 }
+sub WGET (){ 1 }
+sub MXSZ (){ 2 }
+sub WPUT (){ 3 }
+
 =item $q = new Coro:Channel $maxsize
 
 Create a new channel with the given maximum size (unlimited if C<maxsize>
@@ -54,11 +59,11 @@ Put the given scalar into the queue.
 =cut
 
 sub put {
-   push @{$_[0][0]}, $_[1];
-   (pop @{$_[0][1]})->ready if @{$_[0][1]};
+   push @{$_[0][DATA]}, $_[1];
+   (pop @{$_[0][WGET]})->ready if @{$_[0][WGET]};
 
-   while (@{$_[0][0]} >= $_[0][2]) {
-      push @{$_[0][3]}, $Coro::current;
+   while (@{$_[0][DATA]} >= $_[0][MXSZ]) {
+      push @{$_[0][WPUT]}, $Coro::current;
       &Coro::schedule;
    }
 }
@@ -76,28 +81,28 @@ will be returned.
 =cut
 
 sub get {
-   while (!@{$_[0][0]}) {
-      push @{$_[0][1]}, $Coro::current;
+   while (!@{$_[0][DATA]}) {
+      push @{$_[0][WGET]}, $Coro::current;
       &Coro::schedule;
    }
 
-   (pop @{$_[0][3]})->ready if @{$_[0][3]};
-   shift @{$_[0][0]}
+   (pop @{$_[0][WPUT]})->ready if @{$_[0][WPUT]};
+   shift @{$_[0][DATA]}
 }
 
 sub timed_get {
    require Coro::Timer;
    my $timeout = Coro::Timer::timeout ($_[0]);
 
-   (pop @{$_[0][3]})->ready if @{$_[0][3]};
+   (pop @{$_[0][WPUT]})->ready if @{$_[0][WPUT]};
 
-   while (!@{$_[0][0]}) {
-      push @{$_[0][1]}, $Coro::current;
+   while (!@{$_[0][DATA]}) {
+      push @{$_[0][WGET]}, $Coro::current;
       &Coro::schedule;
       return if $timeout;
    }
 
-   shift @{$_[0][0]}
+   shift @{$_[0][DATA]}
 }
 
 =item $q->size
@@ -113,7 +118,7 @@ is NOT a race condition but works fine.
 =cut
 
 sub size {
-   scalar @{$_[0][0]}
+   scalar @{$_[0][DATA]}
 }
 
 1;
