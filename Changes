@@ -7,6 +7,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
 
 TODO: testcancel
 TODO: guard as SLF - to avoid deadlocks.
+TODO: Coro::Signal as SLF.
         - avoid deadlock in Coro::Channel if maxsize == 1 (Richard Hundt).
 
 5.0

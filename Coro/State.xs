@@ -2042,7 +2042,10 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
   AV *av = (AV *)frame->data;
   SV *count_sv = AvARRAY (av)[0];
 
-  if (SvIVX (count_sv) > 0)
+  /* if we are about to throw, don't actually acquire the lock, just throw */
+  if (coro_throw && 0)//D
+    return 0;
+  else if (SvIVX (count_sv) > 0)
     {
       SvSTATE_current->on_destroy = 0;
       SvIVX (count_sv) = SvIVX (count_sv) - 1;
@@ -2073,7 +2076,6 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
     {
       frame->data    = (void *)av;
       frame->prepare = prepare_nop;
-      SvSTATE_current->on_destroy = coro_semaphore_on_destroy;
     }
   else
     {
@@ -2084,7 +2086,6 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 
       /* to avoid race conditions when a woken-up coro gets terminated */
       /* we arrange for a temporary on_destroy that calls adjust (0) */
-      assert (!SvSTATE_current->on_destroy);//D
       SvSTATE_current->on_destroy = coro_semaphore_on_destroy;
     }
 
