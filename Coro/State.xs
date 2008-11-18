@@ -147,6 +147,7 @@ static int cctx_max_idle = 4;
 #define NOINLINE attribute ((noinline))
 
 #include "CoroAPI.h"
+#define GCoroAPI (&coroapi) /* very sneaky */
 
 #ifdef USE_ITHREADS
 # if CORO_PTHREAD
@@ -258,7 +259,7 @@ struct coro {
 
   /* coro process data */
   int prio;
-  SV *throw; /* exception to be thrown */
+  SV *except; /* exception to be thrown */
 
   /* async_pool */
   SV *saved_deffh;
@@ -274,7 +275,6 @@ typedef struct coro *Coro__State_or_hashref;
 /* and get copied between struct coro and these variables */
 /* the mainr easonw e don't support windows process emulation */
 static struct CoroSLF slf_frame; /* the current slf frame */
-static SV *coro_throw;
 
 /** Coro ********************************************************************/
 
@@ -513,13 +513,13 @@ load_perl (pTHX_ Coro__State c)
   }
 
   slf_frame  = c->slf_frame;
-  coro_throw = c->throw;
+  CORO_THROW = c->except;
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
-  c->throw     = coro_throw;
+  c->except    = CORO_THROW;
   c->slf_frame = slf_frame;
 
   {
@@ -887,7 +887,7 @@ coro_setup (pTHX_ struct coro *coro)
   PL_op = (OP *)&coro_setup_op;
 
   /* copy throw, in case it was set before coro_setup */
-  coro_throw = coro->throw;
+  CORO_THROW = coro->except;
 }
 
 static void
@@ -921,7 +921,7 @@ coro_destruct (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_warnhook);
   
   SvREFCNT_dec (coro->saved_deffh);
-  SvREFCNT_dec (coro_throw);
+  SvREFCNT_dec (CORO_THROW);
 
   coro_destruct_stacks (aTHX);
 }
@@ -1842,11 +1842,11 @@ pp_slf (pTHX)
   slf_frame.prepare = 0; /* invalidate the frame, we are done processing it */
 
   /* exception handling */
-  if (expect_false (coro_throw))
+  if (expect_false (CORO_THROW))
     {
-      SV *exception = sv_2mortal (coro_throw);
+      SV *exception = sv_2mortal (CORO_THROW);
 
-      coro_throw = 0;
+      CORO_THROW = 0;
       sv_setsv (ERRSV, exception);
       croak (0);
     }
@@ -2043,7 +2043,7 @@ slf_check_semaphore_down (pTHX_ struct CoroSLF *frame)
   SV *count_sv = AvARRAY (av)[0];
 
   /* if we are about to throw, don't actually acquire the lock, just throw */
-  if (coro_throw)
+  if (CORO_THROW)
     return 0;
   else if (SvIVX (count_sv) > 0)
     {
@@ -2176,7 +2176,7 @@ slf_check_aio_req (pTHX_ struct CoroSLF *frame)
   /* if we are about to throw, return early */
   /* this does not cancel the aio request, but at least */
   /* it quickly returns */
-  if (coro_throw)
+  if (CORO_THROW)
     return 0;
 
   /* one element that is an RV? repeat! */
@@ -2519,7 +2519,7 @@ throw (Coro::State self, SV *throw = &PL_sv_undef)
         CODE:
 {
 	struct coro *current = SvSTATE_current;
-	SV **throwp = self == current ? &coro_throw : &self->throw;
+	SV **throwp = self == current ? &CORO_THROW : &self->except;
         SvREFCNT_dec (*throwp);
         *throwp = SvOK (throw) ? newSVsv (throw) : 0;
 }
@@ -2618,7 +2618,7 @@ BOOT:
           coroapi.nready       = coro_nready;
           coroapi.current      = coro_current;
 
-          GCoroAPI = &coroapi;
+          /*GCoroAPI = &coroapi;*/
           sv_setiv (sv, (IV)&coroapi);
           SvREADONLY_on (sv);
         }

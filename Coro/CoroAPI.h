@@ -45,6 +45,7 @@ struct CoroAPI
   /* Coro */
   int nready;
   SV *current;
+  SV *except;
   void (*readyhook) (void);
 
   void (*schedule) (pTHX);
@@ -80,9 +81,10 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_CEDE_NOTSELF        GCoroAPI->cede_notself (aTHX)
 #define CORO_READY(coro)         GCoroAPI->ready (aTHX_ coro)
 #define CORO_IS_READY(coro)      GCoroAPI->is_ready (coro)
-#define CORO_NREADY              GCoroAPI->nready
+#define CORO_NREADY              (GCoroAPI->nready)
+#define CORO_THROW               (GCoroAPI->except)
 #define CORO_CURRENT             SvRV (GCoroAPI->current)
-#define CORO_READYHOOK           GCoroAPI->readyhook
+#define CORO_READYHOOK           (GCoroAPI->readyhook)
 
 #define I_CORO_API(YourName)                                                             \
 STMT_START {                                                                             \

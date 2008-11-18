@@ -67,12 +67,17 @@ once_cb (int revents, void *arg)
 
   CORO_READY (data);
   sv_setiv (data, revents);
+  SvREFCNT_dec (data);
 }
 
 static int
 slf_check_once (pTHX_ struct CoroSLF *frame)
 {
   SV *data = (SV *)frame->data;
+
+  /* return early when an exception is pending */
+  if (CORO_THROW)
+    return 0;
 
   if (SvROK (data))
     return 1; /* repeat until we have been signalled */
@@ -106,7 +111,7 @@ slf_init_timed_io (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     SvIV (arg [1]),
     items >= 3 && SvOK (arg [2]) ? SvNV (arg [2]) : -1.,
     once_cb,
-    data
+    SvREFCNT_inc (data)
   );
 }
 
@@ -132,7 +137,7 @@ slf_init_timer (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     0,
     after >= 0. ? after : 0.,
     once_cb,
-    data
+    SvREFCNT_inc (data)
   );
 }
 
