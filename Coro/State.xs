@@ -1084,7 +1084,7 @@ cctx_prepare (pTHX_ coro_cctx *cctx)
   if (cctx->flags & CC_TRACE)
     PL_runops = runops_trace;
 
-  /* we already must be in an SLF call, there is no other valid way
+  /* we already must be executing an SLF op, there is no other valid way
    * that can lead to creation of a new cctx */
   assert (("FATAL: can't prepare slf-less cctx in Coro module (please report)",
            slf_frame.prepare && PL_op->op_ppaddr == pp_slf));
