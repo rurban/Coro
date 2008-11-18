@@ -10,6 +10,7 @@ TODO: aio
 TODO: Coro::Semaphore
 TODO: trow disturbs cleanup path inside pp_slf?
 TODO: throw special-case in transfer?
+TODO: document throw limitations
 5.0
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience
           stability issues.

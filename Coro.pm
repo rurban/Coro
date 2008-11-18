@@ -682,7 +682,7 @@ performance, even when not used.
 You must not switch to another coroutine from within a signal handler
 (only relevant with %SIG - most event libraries provide safe signals).
 
-That means you I<MUST NOT> call any fucntion that might "block" the
+That means you I<MUST NOT> call any function that might "block" the
 current coroutine - C<cede>, C<schedule> C<< Coro::Semaphore->down >> or
 anything that calls those. Everything else, including calling C<ready>,
 works.

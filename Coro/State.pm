@@ -208,14 +208,6 @@ in the code below, and use it in your coroutines:
 
 =cut
 
-# this is called for each newly created C coroutine,
-# and is being artificially injected into the opcode flow.
-# its sole purpose is to call transfer() once so it knows
-# the top level stack frame for stack sharing.
-sub _cctx_init {
-   &_set_stacklevel;
-}
-
 =item $state->throw ([$scalar])
 
 See L<< Coro->throw >>.

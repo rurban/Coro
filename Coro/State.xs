@@ -154,6 +154,10 @@ static void *coro_thx;
 
 static double (*nvtime)(); /* so why doesn't it take void? */
 
+/* we hijack an hopefully unused CV flag for our purposes */
+#define CVf_SLF 0x4000
+static OP *pp_slf (pTHX);
+
 static U32 cctx_gen;
 static size_t cctx_stacksize = CORO_STACKSIZE;
 static struct CoroAPI coroapi;
@@ -816,6 +820,8 @@ slf_check_nop (pTHX_ struct CoroSLF *frame)
   return 0;
 }
 
+static UNOP coro_setup_op;
+
 static void NOINLINE /* noinline to keep it out of the transfer fast path */
 coro_setup (pTHX_ struct coro *coro)
 {
@@ -870,6 +876,14 @@ coro_setup (pTHX_ struct coro *coro)
   slf_frame.prepare = prepare_nop;   /* provide a nop function for an eventual pp_slf */
   slf_frame.check   = slf_check_nop; /* signal pp_slf to not repeat */
 
+  /* and we have to provide the pp_slf op in any case, so pp_slf can skip it */
+  coro_setup_op.op_type   = OP_CUSTOM;
+  coro_setup_op.op_ppaddr = pp_slf;
+  coro_setup_op.op_next   = PL_op;
+
+  PL_op = (OP *)&coro_setup_op;
+
+  /* copy throw, in case it was set before coro_setup */
   coro_throw = coro->throw;
 }
 
@@ -1043,40 +1057,43 @@ runops_trace (pTHX)
   return 0;
 }
 
+static struct coro_cctx *cctx_ssl_cctx;
+static struct CoroSLF cctx_ssl_frame;
+
 static void
-prepare_set_stacklevel (struct coro_transfer_args *ta, struct coro_cctx *cctx)
+slf_prepare_set_stacklevel (pTHX_ struct coro_transfer_args *ta)
 {
-  ta->prev  = (struct coro *)cctx;
+  ta->prev  = (struct coro *)cctx_ssl_cctx;
   ta->next  = 0;
 }
 
-/* inject a fake call to Coro::State::_cctx_init into the execution */
-/* _cctx_init should be careful, as it could be called at almost any time */
-/* during execution of a perl program */
-/* also initialises PL_top_env */
+static int
+slf_check_set_stacklevel (pTHX_ struct CoroSLF *frame)
+{
+  *frame = cctx_ssl_frame;
+
+  return 0;
+}
+
+/* initialises PL_top_env and injects a pseudo-slf-call to sett he stacklevel */
 static void NOINLINE
 cctx_prepare (pTHX_ coro_cctx *cctx)
 {
-  dSP;
-  UNOP myop;
-
   PL_top_env = &PL_start_env;
 
   if (cctx->flags & CC_TRACE)
     PL_runops = runops_trace;
 
-  Zero (&myop, 1, UNOP);
-  myop.op_next  = PL_op;
-  myop.op_flags = OPf_WANT_VOID | OPf_STACKED;
+  /* we already must be in an SLF call, there is no other valid way
+   * that can lead to creation of a new cctx */
+  assert (("FATAL: can't prepare slf-less cctx in Coro module (please report)",
+           slf_frame.prepare && PL_op->op_ppaddr == pp_slf));
 
-  PUSHMARK (SP);
-  EXTEND (SP, 2);
-  PUSHs (sv_2mortal (newSViv ((IV)cctx)));
-  PUSHs ((SV *)get_cv ("Coro::State::_cctx_init", FALSE));
-  PUTBACK;
-  PL_op = (OP *)&myop;
-  PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
-  SPAGAIN;
+  cctx_ssl_cctx  = cctx;
+  cctx_ssl_frame = slf_frame;
+
+  slf_frame.prepare = slf_prepare_set_stacklevel;
+  slf_frame.check   = slf_check_set_stacklevel;
 }
 
 /* the tail of transfer: execute stuff we can only do after a transfer */
@@ -1530,8 +1547,7 @@ api_ready (pTHX_ SV *coro_sv)
 
       PUSHMARK (SP);
       PUTBACK;
-      call_sv (sv_hook, G_DISCARD);
-      SPAGAIN;
+      call_sv (sv_hook, G_VOID | G_DISCARD);
 
       FREETMPS;
       LEAVE;
@@ -1568,8 +1584,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 
           PUSHMARK (SP);
           PUTBACK;
-          call_sv (get_sv ("Coro::idle", FALSE), G_DISCARD);
-          SPAGAIN;
+          call_sv (get_sv ("Coro::idle", FALSE), G_VOID | G_DISCARD);
 
           FREETMPS;
           LEAVE;
@@ -1719,22 +1734,6 @@ pp_restore (pTHX)
 }
 
 static void
-slf_prepare_set_stacklevel (pTHX_ struct coro_transfer_args *ta)
-{
-  prepare_set_stacklevel (ta, (struct coro_cctx *)slf_frame.data);
-}
-
-static void
-slf_init_set_stacklevel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
-{
-  assert (("FATAL: set_stacklevel needs the coro cctx as sole argument", items == 1));
-
-  frame->prepare = slf_prepare_set_stacklevel;
-  frame->check   = slf_check_nop;
-  frame->data    = (void *)SvIV (arg [0]);
-}
-
-static void
 slf_prepare_transfer (pTHX_ struct coro_transfer_args *ta)
 {
   SV **arg = (SV **)slf_frame.data;
@@ -1773,9 +1772,6 @@ slf_init_cede_notself (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   frame->prepare = prepare_cede_notself;
   frame->check   = slf_check_nop;
 }
-
-/* we hijack an hopefully unused CV flag for our purposes */
-#define CVf_SLF 0x4000
 
 /*
  * these not obviously related functions are all rolled into one
@@ -1842,22 +1838,21 @@ pp_slf (pTHX)
   slf_frame.prepare = 0; /* invalidate the frame, we are done processing it */
 
   /* return value handling - mostly like entersub */
-  {
-    dSP;
-    SV **bot = PL_stack_base + checkmark;
-    int gimme = GIMME_V;
+  /* make sure we put something on the stack in scalar context */
+  if (GIMME_V == G_SCALAR)
+    {
+      dSP;
+      SV **bot = PL_stack_base + checkmark;
 
-    /* make sure we put something on the stack in scalar context */
-    if (gimme == G_SCALAR)
-      {
-        if (sp == bot)
-          XPUSHs (&PL_sv_undef);
+      if (sp == bot) /* too few, push undef */
+        bot [1] = &PL_sv_undef;
+      else if (sp != bot + 1) /* too many, take last one */
+        bot [1] = *sp;
 
-        SP = bot + 1;
-      }
+      SP = bot + 1;
 
-    PUTBACK;
-  }
+      PUTBACK;
+    }
 
   /* exception handling */
   if (expect_false (coro_throw))
@@ -2380,11 +2375,6 @@ new (char *klass, ...)
         RETVAL
 
 void
-_set_stacklevel (...)
-	CODE:
-        CORO_EXECUTE_SLF_XS (slf_init_set_stacklevel);
-
-void
 transfer (...)
         PROTOTYPE: $$
 	CODE:
@@ -2843,7 +2833,7 @@ waiters (SV *self)
             int i;
             EXTEND (SP, AvFILLp (av) + 1 - 1);
             for (i = 1; i <= AvFILLp (av); ++i)
-              PUSHs (newSVsv (AvARRAY (av)[i]));
+              PUSHs (sv_2mortal (newRV_inc (AvARRAY (av)[i])));
           }
 }
 
@@ -2870,8 +2860,7 @@ _schedule (...)
           {
             PUSHMARK (SP);
             PUTBACK;
-            call_pv ("Coro::AnyEvent::_activity", G_DISCARD | G_EVAL);
-            SPAGAIN;
+            call_pv ("Coro::AnyEvent::_activity", G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
           }
 
         --incede;
