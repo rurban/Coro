@@ -71,6 +71,19 @@ guaranteed to succeed without blocking, until the next coroutine switch
 Note that using C<wait> is much less efficient than using C<down>, so try
 to prefer C<down> whenever possible.
 
+=item $sem->wait ($callback)
+
+If you pass a callback argument to C<wait>, it will not wait, but
+immediately return. The callback will be called as soon as the semaphore
+becomes available (which might be instantly), and gets passed the
+semaphore as first argument.
+
+The callback might C<down> the semaphore exactly once, might wake up other
+coroutines, but is I<NOT> allowed to block (switch to other coroutines).
+
+This is considered a rather experimental interface, and is subject to
+change.
+
 =cut
 
 #=item $status = $sem->timed_down ($timeout)

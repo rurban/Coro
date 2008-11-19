@@ -2176,13 +2176,20 @@ coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
       cb = av_shift (av);
 
       if (SvOBJECT (cb))
-        api_ready (aTHX_ cb);
-      else
-        croak ("callbacks not yet supported");
+        {
+          api_ready (aTHX_ cb);
+          --count;
+        }
+      else if (SvTYPE (cb) == SVt_PVCV)
+        {
+          dSP;
+          PUSHMARK (SP);
+          XPUSHs (sv_2mortal (newRV_inc ((SV *)av)));
+          PUTBACK;
+          call_sv (cb, G_VOID | G_DISCARD | G_EVAL | G_KEEPERR);
+        }
 
       SvREFCNT_dec (cb);
-
-      --count;
     }
 }
 
@@ -2274,8 +2281,27 @@ slf_init_semaphore_down (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 static void
 slf_init_semaphore_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
-  slf_init_semaphore_down_or_wait (aTHX_ frame, cv, arg, items);
-  frame->check = slf_check_semaphore_wait;
+  if (items >= 2)
+    {
+      /* callback form */
+      AV *av = (AV *)SvRV (arg [0]);
+      HV *st;
+      GV *gvp;
+      CV *cb_cv = sv_2cv (arg [1], &st, &gvp, 0);
+
+      av_push (av, (SV *)SvREFCNT_inc_NN (cb_cv));
+
+      if (SvIVX (AvARRAY (av)[0]) > 0)
+        coro_semaphore_adjust (aTHX_ av, 0);
+
+      frame->prepare = prepare_nop;
+      frame->check   = slf_check_nop;
+    }
+  else
+    {
+      slf_init_semaphore_down_or_wait (aTHX_ frame, cv, arg, items);
+      frame->check = slf_check_semaphore_wait;
+    }
 }
 
 /* signal */
@@ -2992,7 +3018,7 @@ rouse_cb ()
         RETVAL
 
 void
-rouse_wait (SV *cb = 0)
+rouse_wait (...)
         PROTOTYPE: ;$
 	PPCODE:
         CORO_EXECUTE_SLF_XS (slf_init_rouse_wait);
@@ -3039,12 +3065,12 @@ up (SV *self, int adjust = 1)
         coro_semaphore_adjust (aTHX_ (AV *)SvRV (self), ix ? adjust : 1);
 
 void
-down (SV *self)
+down (...)
         CODE:
         CORO_EXECUTE_SLF_XS (slf_init_semaphore_down);
 
 void
-wait (SV *self)
+wait (...)
         CODE:
         CORO_EXECUTE_SLF_XS (slf_init_semaphore_wait);
 
@@ -3097,7 +3123,7 @@ new (SV *klass)
         RETVAL
 
 void
-wait (SV *self)
+wait (...)
         CODE:
         CORO_EXECUTE_SLF_XS (slf_init_signal_wait);
 
