@@ -535,7 +535,7 @@ sub READLINE {
             return $res;
          }
 
-         $ofs = length $_[0][3] - length $irs;
+         $ofs = (length $_[0][3]) - (length $irs);
       }
 
       $len = sysread $_[0][0], $_[0][3], $len + 4096, length $_[0][3];
