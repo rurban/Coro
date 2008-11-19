@@ -52,8 +52,8 @@ sub new {
    # we cheat and set infinity == 10**9
    bless [
       [],
-      (new Coro::Semaphore 0),
-      (new Coro::Semaphore +($_[1] || 1_000_000_000) - 1),
+      (Coro::Semaphore::_alloc 0),
+      (Coro::Semaphore::_alloc +($_[1] || 1_000_000_000) - 1),
    ]
 }
 

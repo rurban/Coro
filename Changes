@@ -52,6 +52,8 @@ TODO: Coro::Signal as SLF.
           a new method "sem" to get at the underlying semaphore object.
         - implement Coro::Channel in terms of Coro::Semaphore, for a moderate
           (in comparison) 20-40% speedup.
+        - implement Coro::Signal (mostly) in terms of Coro::Semaphore,
+          for some unknown (because I was too lazy), but certain, speedup.
         - forgot to include Coro/libcoro/README in the dist for all these years.
         - work around a freebsd pthreads bug (manual testcancel is required as
           pthread_cond_wait isn't a cancellation point on freebsd).

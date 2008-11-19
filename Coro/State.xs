@@ -1999,6 +1999,24 @@ static PerlIO_funcs PerlIO_cede =
 /*****************************************************************************/
 /* Coro::Semaphore */
 
+static SV *
+coro_semaphore_new (int count)
+{
+  /* a semaphore contains a counter IV in $sem->[0] and any waiters after that */
+  AV *av = newAV ();
+  SV **ary;
+
+  /* unfortunately, building manually saves memory */
+  Newx (ary, 2, SV *);
+  AvALLOC (av) = ary;
+  AvARRAY (av) = ary;
+  AvMAX   (av) = 1;
+  AvFILLp (av) = 0;
+  ary [0] = newSViv (count);
+
+  return newRV_noinc ((SV *)av);
+}
+
 static void
 coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
 {
@@ -2802,23 +2820,20 @@ BOOT:
 MODULE = Coro::State                PACKAGE = Coro::Semaphore
 
 SV *
-new (SV *klass, SV *count_ = 0)
+new (SV *klass, SV *count = 0)
 	CODE:
-{
-        /* a semaphore contains a counter IV in $sem->[0] and any waiters after that */
-        AV *av = newAV ();
-        SV **ary;
+        RETVAL = sv_bless (
+                   coro_semaphore_new (count && SvOK (count) ? SvIV (count) : 1),
+                   GvSTASH (CvGV (cv))
+                 );
+	OUTPUT:
+        RETVAL
 
-        /* unfortunately, building manually saves memory */
-        Newx (ary, 2, SV *);
-        AvALLOC (av) = ary;
-        AvARRAY (av) = ary;
-        AvMAX   (av) = 1;
-        AvFILLp (av) = 0;
-        ary [0] = newSViv (count_ && SvOK (count_) ? SvIV (count_) : 1);
-
-        RETVAL = sv_bless (newRV_noinc ((SV *)av), GvSTASH (CvGV (cv)));
-}
+# helper for Coro::Channel
+SV *
+_alloc (int count)
+	CODE:
+        RETVAL = coro_semaphore_new (count);
 	OUTPUT:
         RETVAL
 
@@ -2838,6 +2853,8 @@ up (SV *self, int adjust = 1)
 
 void
 down (SV *self)
+	ALIAS:
+        Coro::Signal::wait = 0
         CODE:
         CORO_EXECUTE_SLF_XS (slf_init_semaphore_down);
 
@@ -2866,19 +2883,42 @@ try (SV *self)
 
 void
 waiters (SV *self)
-    	CODE:
+    	PPCODE:
 {
         AV *av = (AV *)SvRV (self);
+        int wcount = AvFILLp (av) + 1 - 1;
 
         if (GIMME_V == G_SCALAR)
-          XPUSHs (sv_2mortal (newSVsv (AvARRAY (av)[0])));
+          XPUSHs (sv_2mortal (newSViv (wcount)));
         else
           {
             int i;
-            EXTEND (SP, AvFILLp (av) + 1 - 1);
-            for (i = 1; i <= AvFILLp (av); ++i)
+            EXTEND (SP, wcount);
+            for (i = 1; i <= wcount; ++i)
               PUSHs (sv_2mortal (newRV_inc (AvARRAY (av)[i])));
           }
+}
+
+MODULE = Coro::State                PACKAGE = Coro::Signal
+
+SV *
+new (SV *klass)
+	CODE:
+        RETVAL = sv_bless (
+                   coro_semaphore_new (0),
+                   GvSTASH (CvGV (cv))
+                 );
+        OUTPUT:
+        RETVAL
+
+void
+broadcast (SV *self, int adjust = 1)
+        CODE:
+{
+	AV *av = (AV *)SvRV (self);
+        SvIVX (AvARRAY (av)[0]) = 0; /* not necessary, but gives me fuzzy warm feelings */
+        coro_semaphore_adjust (aTHX_ av, AvFILLp (av) + 1 - 1);
+        SvIVX (AvARRAY (av)[0]) = 0; /* necessary */
 }
 
 

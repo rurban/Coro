@@ -53,6 +53,7 @@ t/12_exit.t
 t/13_diewarn.t
 t/14_load.t
 t/15_semaphore.t
+t/16_signal.t
 
 EV/Makefile.PL
 EV/EV.pm
