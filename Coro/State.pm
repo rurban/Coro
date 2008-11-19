@@ -45,7 +45,7 @@ When Perl code calls a C function (e.g. in an extension module) and that
 C function then calls back into Perl or does a coroutine switch the C
 coroutine can no longer execute other Perl coroutines, so it stays tied to
 the specific coroutine until it returns to the original Perl caller, after
-which it is again avaikable to run other Perl coroutines.
+which it is again available to run other Perl coroutines.
 
 The main program always has its own "C coroutine" (which really is
 *the* Perl interpreter running the whole program), so there will always

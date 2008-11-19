@@ -873,14 +873,14 @@ coro_setup (pTHX_ struct coro *coro)
 
     Zero (&myop, 1, UNOP);
     myop.op_next  = Nullop;
+    myop.op_type  = OP_ENTERSUB;
     myop.op_flags = OPf_WANT_VOID;
 
     PUSHMARK (SP);
-    XPUSHs (sv_2mortal (av_shift (GvAV (PL_defgv))));
+    PUSHs ((SV *)coro->startcv);
     PUTBACK;
     PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
-    SPAGAIN;
   }
 
   /* this newly created coroutine might be run on an existing cctx which most
@@ -893,7 +893,7 @@ coro_setup (pTHX_ struct coro *coro)
   coro_setup_op.op_next   = PL_op;
   coro_setup_op.op_type   = OP_CUSTOM;
   coro_setup_op.op_ppaddr = pp_slf;
-  /* no flags required, as an init function won't be called */
+  /* no flags etc. required, as an init function won't be called */
 
   PL_op = (OP *)&coro_setup_op;
 
@@ -931,7 +931,6 @@ coro_destruct (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_diehook);
   SvREFCNT_dec (PL_warnhook);
   
-  SvREFCNT_dec (CORO_THROW);
   SvREFCNT_dec (coro->saved_deffh);
   SvREFCNT_dec (coro->rouse_cb);
 
@@ -1146,6 +1145,10 @@ cctx_run (void *arg)
     /* somebody or something will hit me for both perl_run and PL_restartop */
     PL_restartop = PL_op;
     perl_run (PL_curinterp);
+    /*
+     * Unfortunately, there is no way to get at the return values of the
+     * coro body here, as perl_run destroys these
+     */
 
     /*
      * If perl-run returns we assume exit() was being called or the coro
@@ -1449,6 +1452,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
   cctx_destroy (coro->cctx);
   SvREFCNT_dec (coro->startcv);
   SvREFCNT_dec (coro->args);
+  SvREFCNT_dec (CORO_THROW);
 
   if (coro->next) coro->next->prev = coro->prev;
   if (coro->prev) coro->prev->next = coro->next;
@@ -2649,7 +2653,6 @@ new (char *klass, ...)
             coro->startcv = SvREFCNT_inc_NN (cb);
 
             av_extend (coro->args, items - 1);
-            av_push (coro->args, SvREFCNT_inc (cb));
             for (i = 2; i < items; i++)
               av_push (coro->args, newSVsv (ST (i)));
           }
