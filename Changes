@@ -28,6 +28,7 @@ TODO: guard as SLF - to avoid deadlocks.
           no longer make it acquire the semaphore (and thus leak a count).
         - perl's process emulation is now not even theoretically supported
           anymore.
+        - new functions Coro::rouse_cb and Coro::rouse_wait.
         - new function Coro::Semaphore::wait.
         - use named constants in Coro::Channel (Richard Hundt).
         - directly patch the entersub opcode calling SLF functions (cede,

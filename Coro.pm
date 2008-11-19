@@ -307,24 +307,7 @@ yourself to sleep. Note that a lot of things can wake your coroutine up,
 so you need to check whether the event indeed happened, e.g. by storing the
 status in a variable.
 
-The canonical way to wait on external events is this:
-
-   {
-      # remember current coroutine
-      my $current = $Coro::current;
-
-      # register a hypothetical event handler
-      on_event_invoke sub {
-         # wake up sleeping coroutine
-         $current->ready;
-         undef $current;
-      };
-
-      # call schedule until event occurred.
-      # in case we are woken up for other reasons
-      # (current still defined), loop.
-      Coro::schedule while $current;
-   }
+See B<HOW TO WAIT FOR A CALLBACK>, below, for some ways to wait for callbacks.
 
 =item cede
 
@@ -655,11 +638,96 @@ sub unblock_sub(&) {
    }
 }
 
+=item $cb = Coro::rouse_cb
+
+Create and return a "rouse callback". That's a code reference that, when
+called, will save its arguments and notify the owner coroutine of the
+callback.
+
+See the next function.
+
+=item @args = Coro::rouse_wait [$cb]
+
+Wait for the specified rouse callback (or the last one tht was created in
+this coroutine).
+
+As soon as the callback is invoked (or when the calback was invoked before
+C<rouse_wait>), it will return a copy of the arguments originally passed
+to the rouse callback.
+
+See the section B<HOW TO WAIT FOR A CALLBACK> for an actual usage example.
+
 =back
 
 =cut
 
 1;
+
+=head1 HOW TO WAIT FOR A CALLBACK
+
+It is very common for a coroutine to wait for some callback to be
+called. This occurs naturally when you use coroutines in an otherwise
+event-based program, or when you use event-based libraries.
+
+These typically register a callback for some event, and call that callback
+when the event occured.  In a coroutine, however, you typically want to
+just wait for the event, simplyifying things.
+
+For example C<< AnyEvent->child >> registers a callback to be called when
+a specific child has exited:
+
+   my $child_watcher = AnyEvent->child (pid => $pid, cb => sub { ... });
+
+But from withina coroutine, you often just want to write this:
+
+   my $status = wait_for_child $pid;
+
+Coro offers two functions specifically designed to make this easy,
+C<Coro::rouse_cb> and C<Coro::rouse_wait>.
+
+The first function, C<rouse_cb>, generates and returns a callback that,
+when invoked, will save it's arguments and notify the coroutine that
+created the callback.
+
+The second function, C<rouse_wait>, waits for the callback to be called
+(by calling C<schedule> to go to sleep) and returns the arguments
+originally passed to the callback.
+
+Using these functions, it becomes easy to write the C<wait_for_child>
+function mentioned above:
+
+   sub wait_for_child($) {
+      my ($pid) = @_;
+
+      my $watcher = AnyEvent->child (pid => $pid, cb => Coro::rouse_cb);
+
+      my ($rpid, $rstatus) = Coro::rouse_wait;
+      $rstatus
+   }
+
+In the case where C<rouse_cb> and C<rouse_wait> are not flexible enough,
+you can roll your own, using C<schedule>:
+
+   sub wait_for_child($) {
+      my ($pid) = @_;
+
+      # store the current coroutine in $current,
+      # and provide result variables for the closure passed to ->child
+      my $current = $Coro::current;
+      my ($done, $rstatus);
+
+      # pass a closure to ->child
+      my $watcher = AnyEvent->child (pid => $pid, cb => sub {
+         $rstatus = $_[1]; # remember rstatus
+         $done = 1; # mark $rstatus as valud
+      });
+
+      # wait until the closure has been called
+      schedule while !$done;
+
+      $rstatus
+   }
+
 
 =head1 BUGS/LIMITATIONS
 

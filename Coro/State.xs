@@ -1754,8 +1754,9 @@ coro_rouse_callback (pTHX_ CV *cv)
       api_ready (aTHX_ coro);
       SvREFCNT_dec (coro);
 
+      /* better take a full copy of the arguments */
       while (items--)
-        av_store (av, items, SvREFCNT_inc_NN (ST (items)));
+        av_store (av, items, newSVsv (ST (items)));
     }
 
   XSRETURN_EMPTY;
@@ -1780,7 +1781,11 @@ slf_check_rouse_wait (pTHX_ struct CoroSLF *frame)
 
     EXTEND (SP, AvFILLp (av) + 1);
     for (i = 0; i <= AvFILLp (av); ++i)
-      PUSHs (AvARRAY (av)[i]);
+      PUSHs (sv_2mortal (AvARRAY (av)[i]));
+
+    /* we have stolen the elements, so ste length to zero and free */
+    AvFILLp (av) = -1;
+    av_undef (av);
 
     PUTBACK;
   }
@@ -1830,6 +1835,7 @@ coro_new_rouse_cb (pTHX)
   SV *cb = gensub (aTHX_ coro_rouse_callback, (void *)data);
 
   sv_magicext (SvRV (cb), data, CORO_MAGIC_type_rouse, 0, 0, 0);
+  SvREFCNT_dec (data); /* magicext increases the refcount */
 
   SvREFCNT_dec (coro->rouse_cb);
   coro->rouse_cb = SvREFCNT_inc_NN (cb);
