@@ -451,7 +451,7 @@ get_padlist (pTHX_ CV *cv)
 #if CORO_PREFER_PERL_FUNCTIONS
      /* this is probably cleaner? but also slower! */
      /* in practise, it seems to be less stable */
-     CV *cp = Perl_cv_clone (cv);
+     CV *cp = Perl_cv_clone (aTHX_ cv);
      CvPADLIST (cv) = CvPADLIST (cp);
      CvPADLIST (cp) = 0;
      SvREFCNT_dec (cp);
@@ -605,7 +605,7 @@ save_perl (pTHX_ Coro__State c)
  * not usually need a lot of stackspace.
  */
 #if CORO_PREFER_PERL_FUNCTIONS
-# define coro_init_stacks init_stacks
+# define coro_init_stacks(thx) init_stacks ()
 #else
 static void
 coro_init_stacks (pTHX)
@@ -2145,7 +2145,8 @@ coro_waitarray_new (pTHX_ int count)
   /* unfortunately, building manually saves memory */
   Newx (ary, 2, SV *);
   AvALLOC (av) = ary;
-  SvPV_set ((SV *)av, (char *)ary); /* 5.8.8 needs this syntax instead of AvARRAY = ary */
+  /*AvARRAY (av) = ary;*/
+  SvPVX ((SV *)av) = (char *)ary; /* 5.8.8 needs this syntax instead of AvARRAY = ary */
   AvMAX   (av) = 1;
   AvFILLp (av) = 0;
   ary [0] = newSViv (count);

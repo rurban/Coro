@@ -59,6 +59,7 @@ TODO: guard as SLF - to avoid deadlocks.
         - work around a freebsd pthreads bug (manual testcancel is required as
           pthread_cond_wait isn't a cancellation point on freebsd).
         - use new rouse functions to speed up and simplify Coro::BDB.
+        - make "prefer perl native functions" work with threaded perls.
         - (libcoro) lots of minor cleanups and portability improvements.
 
 4.913 Sat Nov 15 07:58:28 CET 2008
