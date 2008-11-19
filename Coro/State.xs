@@ -248,10 +248,11 @@ struct coro {
   AV *mainstack;
   perl_slots *slot; /* basically the saved sp */
 
-  AV *args;   /* data associated with this coroutine (initial args) */
-  int refcnt; /* coroutines are refcounted, yes */
-  int flags;  /* CF_ flags */
-  HV *hv;     /* the perl hash associated with this coro, if any */
+  CV *startcv; /* the CV to execute */
+  AV *args;    /* data associated with this coroutine (initial args) */
+  int refcnt;  /* coroutines are refcounted, yes */
+  int flags;   /* CF_ flags */
+  HV *hv;      /* the perl hash associated with this coro, if any */
   void (*on_destroy)(pTHX_ struct coro *coro);
 
   /* statistics */
@@ -323,6 +324,15 @@ coro_get_hv (pTHX_ const char *name, int create)
          get_hv (name, create);
 #endif
   return get_hv (name, create);
+}
+
+/* may croak */
+INLINE CV *
+coro_sv_2cv (SV *sv)
+{
+  HV *st;
+  GV *gvp;
+  return sv_2cv (sv, &st, &gvp, 0);
 }
 
 static AV *
@@ -1020,7 +1030,7 @@ runops_trace (pTHX)
                           PUSHMARK (SP);
                           PUSHs (&PL_sv_yes);
                           PUSHs (fullname);
-                          PUSHs (CxHASARGS (cx)  ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
+                          PUSHs (CxHASARGS (cx) ? sv_2mortal (newRV_inc ((SV *)cx->blk_sub.argarray)) : &PL_sv_undef);
                           PUTBACK;
                           cb = hv_fetch ((HV *)SvRV (coro_current), "_trace_sub_cb", sizeof ("_trace_sub_cb") - 1, 0);
                           if (cb) call_sv (*cb, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
@@ -1437,6 +1447,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
     }
 
   cctx_destroy (coro->cctx);
+  SvREFCNT_dec (coro->startcv);
   SvREFCNT_dec (coro->args);
 
   if (coro->next) coro->next->prev = coro->prev;
@@ -2285,9 +2296,7 @@ slf_init_semaphore_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
     {
       /* callback form */
       AV *av = (AV *)SvRV (arg [0]);
-      HV *st;
-      GV *gvp;
-      CV *cb_cv = sv_2cv (arg [1], &st, &gvp, 0);
+      CV *cb_cv = coro_sv_2cv (arg [1]);
 
       av_push (av, (SV *)SvREFCNT_inc_NN (cb_cv));
 
@@ -2608,7 +2617,19 @@ new (char *klass, ...)
         struct coro *coro;
         MAGIC *mg;
         HV *hv;
+        CV *cb;
         int i;
+
+        if (items > 1)
+          {
+            cb = coro_sv_2cv (ST (1));
+
+            if (CvISXSUB (cb))
+              croak ("Coro::State doesn't support XS functions as coroutine start, caught");
+
+            if (!CvROOT (cb))
+              croak ("Coro::State doesn't support autoloaded or undefined functions as coroutine start, caught");
+          }
 
         Newz (0, coro, 1, struct coro);
         coro->args  = newAV ();
@@ -2623,9 +2644,15 @@ new (char *klass, ...)
         mg->mg_flags |= MGf_DUP;
         RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
 
-        av_extend (coro->args, items - 1);
-        for (i = 1; i < items; i++)
-          av_push (coro->args, newSVsv (ST (i)));
+        if (items > 1)
+          {
+            coro->startcv = SvREFCNT_inc_NN (cb);
+
+            av_extend (coro->args, items - 1);
+            av_push (coro->args, SvREFCNT_inc (cb));
+            for (i = 2; i < items; i++)
+              av_push (coro->args, newSVsv (ST (i)));
+          }
 }
         OUTPUT:
         RETVAL
@@ -3190,9 +3217,7 @@ void
 _register (char *target, char *proto, SV *req)
 	CODE:
 {
-  	HV *st;
-        GV *gvp;
-        CV *req_cv = sv_2cv (req, &st, &gvp, 0);
+        CV *req_cv = coro_sv_2cv (req);
         /* newXSproto doesn't return the CV on 5.8 */
         CV *slf_cv = newXS (target, coro_aio_req_xs, __FILE__);
         sv_setpv ((SV *)slf_cv, proto);
