@@ -1,9 +1,8 @@
 Revision history for Perl extension Coro.
 
-TODO: should explore PerlIO::coroaio (perl leaks like hell).
-TODO: maybe implement a default message channel, very much like Erlang's
-      actor model (which is cool in a lot of important aspects (failures!),
-      but very lacking in others (higher level ipc)).
+4.914 Wed Nov 19 12:54:18 CET 2008
+	- fix a disastrous bug in the readline optimisation
+          introduced in 4.801.
 
 4.913 Sat Nov 15 07:58:28 CET 2008
         - async_pool did free a scalar value twice
