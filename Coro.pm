@@ -151,8 +151,8 @@ sub _cancel {
 
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
-my @destroy;
-my $manager;
+our @destroy;
+our $manager;
 
 $manager = new Coro sub {
    while () {
@@ -342,7 +342,10 @@ program calls this function, there will be some one-time resource leak.
 =cut
 
 sub terminate {
-   $current->cancel (@_);
+   $current->{_status} = [@_];
+   push @destroy, $current;
+   $manager->ready;
+   do { &schedule } while 1;
 }
 
 sub killall {
@@ -401,13 +404,11 @@ current coroutine.
 
 sub cancel {
    my $self = shift;
-   $self->{_status} = [@_];
 
    if ($current == $self) {
-      push @destroy, $self;
-      $manager->ready;
-      &schedule while 1;
+      terminate @_;
    } else {
+      $self->{_status} = [@_];
       $self->_cancel;
    }
 }

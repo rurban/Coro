@@ -6,6 +6,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 
 TODO: async_pool to SLF
+TODO: _cancel to xs
 5.0
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience
           stability issues.
@@ -54,7 +55,7 @@ TODO: async_pool to SLF
         - used new SLF interface to reimplement Coro::Signal gaining
           some unknown (because I was too lazy), but certain, speedup, and also
           making signals reliable for the first time.
-        - sped up coroutine creation/destruction by 20%.
+        - sped up coroutine creation/destruction by 40%.
         - forgot to include Coro/libcoro/README in the dist for all these years.
         - work around a freebsd pthreads bug (manual testcancel is required as
           pthread_cond_wait isn't a cancellation point on freebsd).

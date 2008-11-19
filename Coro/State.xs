@@ -167,7 +167,6 @@ static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
-static CV *coro_run_cv;
 static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
 
 static GV *irsgv;    /* $/ */
@@ -292,6 +291,7 @@ static struct CoroSLF slf_frame; /* the current slf frame */
 static SV *coro_current;
 static SV *coro_readyhook;
 static AV *coro_ready [PRIO_MAX - PRIO_MIN + 1];
+static CV *cv_coro_run;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
 
@@ -2631,11 +2631,14 @@ new (char *klass, ...)
           {
             cb = coro_sv_2cv (ST (1));
 
-            if (CvISXSUB (cb))
-              croak ("Coro::State doesn't support XS functions as coroutine start, caught");
+            if (!ix)
+              {
+                if (CvISXSUB (cb))
+                  croak ("Coro::State doesn't support XS functions as coroutine start, caught");
 
-            if (!CvROOT (cb))
-              croak ("Coro::State doesn't support autoloaded or undefined functions as coroutine start, caught");
+                if (!CvROOT (cb))
+                  croak ("Coro::State doesn't support autoloaded or undefined functions as coroutine start, caught");
+              }
           }
 
         Newz (0, coro, 1, struct coro);
@@ -2658,7 +2661,7 @@ new (char *klass, ...)
             if (ix)
               {
                 av_push (coro->args, SvREFCNT_inc_NN ((SV *)cb));
-                cb = coro_run_cv;
+                cb = cv_coro_run;
               }
 
             coro->startcv = (CV *)SvREFCNT_inc_NN ((SV *)cb);
@@ -2876,7 +2879,7 @@ BOOT:
         av_async_pool = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
         sv_pool_rss   = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size  = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-        coro_run_cv   =      get_cv (aTHX_ "Coro::_terminate", GV_ADD);
+        cv_coro_run   =      get_cv (aTHX_ "Coro::_terminate", GV_ADD);
         coro_current  = coro_get_sv (aTHX_ "Coro::current"   , FALSE);
         SvREADONLY_on (coro_current);
 
