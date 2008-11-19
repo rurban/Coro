@@ -2145,7 +2145,7 @@ coro_waitarray_new (pTHX_ int count)
   /* unfortunately, building manually saves memory */
   Newx (ary, 2, SV *);
   AvALLOC (av) = ary;
-  AvARRAY (av) = ary;
+  SvPV_set ((SV *)av, (char *)ary); /* 5.8.8 needs this syntax instead of AvARRAY = ary */
   AvMAX   (av) = 1;
   AvFILLp (av) = 0;
   ary [0] = newSViv (count);
