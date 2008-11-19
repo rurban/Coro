@@ -54,6 +54,7 @@ TODO: async_pool to SLF
         - used new SLF interface to reimplement Coro::Signal gaining
           some unknown (because I was too lazy), but certain, speedup, and also
           making signals reliable for the first time.
+        - sped up coroutine creation/destruction by 20%.
         - forgot to include Coro/libcoro/README in the dist for all these years.
         - work around a freebsd pthreads bug (manual testcancel is required as
           pthread_cond_wait isn't a cancellation point on freebsd).

@@ -373,14 +373,8 @@ coroutine environment.
 
 =cut
 
-sub _run_coro {
+sub _terminate {
    terminate &{+shift};
-}
-
-sub new {
-   my $class = shift;
-
-   $class->SUPER::new (\&_run_coro, @_)
 }
 
 =item $success = $coroutine->ready

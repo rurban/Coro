@@ -131,6 +131,9 @@ main program, too, unless they have been overwritten already.
 The default handlers provided will behave like the built-in ones (as if
 they weren't there).
 
+If you don't want to exit your program on uncaught exceptions, you can
+must not return from your die hook - terminate instead.
+
 Note 1: You I<must> store a valid code reference in these variables,
 C<undef> will I<not> do.
 
@@ -151,7 +154,16 @@ Similar to above die hook, but augments C<$SIG{__WARN__}>.
 =item $coro = new Coro::State [$coderef[, @args...]]
 
 Create a new coroutine and return it. The first C<transfer> call to this
-coroutine will start execution at the given coderef.
+coroutine will start execution at the given coderef, with the given
+arguments.
+
+Note that the arguments will not be copied. Instead, as with normal
+function calls, the coroutine receives passed arguments by reference, so
+make sure you don't change them in unexpected ways.
+
+Returning from such a coroutine is I<NOT> supported. Neither is calling
+C<exit> or throwing an uncaught exception. The following paragraphs
+describe what happens in current versions of Coro.
 
 If the subroutine returns the program will be terminated as if execution
 of the main program ended.

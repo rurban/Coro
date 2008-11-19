@@ -167,6 +167,7 @@ static struct CoroAPI coroapi;
 static AV *main_mainstack; /* used to differentiate between $main and others */
 static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
+static CV *coro_run_cv;
 static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
 
 static GV *irsgv;    /* $/ */
@@ -2616,6 +2617,8 @@ BOOT:
 
 SV *
 new (char *klass, ...)
+	ALIAS:
+        Coro::new = 1
         CODE:
 {
         struct coro *coro;
@@ -2650,9 +2653,16 @@ new (char *klass, ...)
 
         if (items > 1)
           {
-            coro->startcv = SvREFCNT_inc_NN (cb);
+            av_extend (coro->args, items - 1 + ix);
 
-            av_extend (coro->args, items - 1);
+            if (ix)
+              {
+                av_push (coro->args, SvREFCNT_inc_NN ((SV *)cb));
+                cb = coro_run_cv;
+              }
+
+            coro->startcv = (CV *)SvREFCNT_inc_NN ((SV *)cb);
+
             for (i = 2; i < items; i++)
               av_push (coro->args, newSVsv (ST (i)));
           }
@@ -2866,8 +2876,8 @@ BOOT:
         av_async_pool = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
         sv_pool_rss   = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size  = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-
-        coro_current  = coro_get_sv (aTHX_ "Coro::current", FALSE);
+        coro_run_cv   =      get_cv (aTHX_ "Coro::_terminate", GV_ADD);
+        coro_current  = coro_get_sv (aTHX_ "Coro::current"   , FALSE);
         SvREADONLY_on (coro_current);
 
 	coro_stash = gv_stashpv ("Coro", TRUE);
