@@ -2160,7 +2160,7 @@ coro_signal_wake (pTHX_ AV *av, int count)
 
       cb = av_shift (av);
 
-      api_ready (cb);
+      api_ready (aTHX_ cb);
       sv_setiv (cb, 0); /* signal waiter */
       SvREFCNT_dec (cb);
 
@@ -2988,7 +2988,7 @@ send (SV *self)
 	AV *av = (AV *)SvRV (self);
 
         if (AvFILLp (av))
-          coro_signal_wake (av, 1);
+          coro_signal_wake (aTHX_ av, 1);
         else
           SvIVX (AvARRAY (av)[0]) = 1; /* remember the signal */
 }
