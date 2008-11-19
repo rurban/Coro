@@ -633,7 +633,7 @@ ignore:
             or last;
 
          $tbf->request (length $buf);
-         my $w = syswrite $self->{fh}, $buf
+         my $w = $self->{fh}->syswrite ($buf)
             or last;
          $::written += $w;
          $self->{written} += $w;

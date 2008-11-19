@@ -318,7 +318,7 @@ sub PRINT {
 }
 
 sub PRINTF {
-   WRITE (shift, sprintf shift,@_)
+   WRITE (shift, sprintf shift, @_)
 }
 
 sub GETC {

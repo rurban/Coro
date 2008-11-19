@@ -19,7 +19,7 @@ abbrev \%complete, @commands;
 sub shell {
    my $fh = shift;
 
-   while (defined (print $fh "cmd> "), $_ = <$fh>) {
+   while (defined (print $fh "cmd> "), $_ = $fh->readline) {
       s/\015?\012$//;
       if (s/^(\S+)\s*// && (my $cmd = $complete{$1})) {
          if ($cmd eq "quit") {
