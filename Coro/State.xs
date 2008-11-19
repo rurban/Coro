@@ -1997,10 +1997,10 @@ static PerlIO_funcs PerlIO_cede =
 };
 
 /*****************************************************************************/
-/* Coro::Semaphore */
+/* Coro::Semaphore & Coro::Signal */
 
 static SV *
-coro_semaphore_new (int count)
+coro_waitarray_new (pTHX_ int count)
 {
   /* a semaphore contains a counter IV in $sem->[0] and any waiters after that */
   AV *av = newAV ();
@@ -2016,6 +2016,8 @@ coro_semaphore_new (int count)
 
   return newRV_noinc ((SV *)av);
 }
+
+/* semaphore */
 
 static void
 coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
@@ -2137,6 +2139,63 @@ slf_init_semaphore_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
 {
   slf_init_semaphore_down_or_wait (aTHX_ frame, cv, arg, items);
   frame->check = slf_check_semaphore_wait;
+}
+
+/* signal */
+
+static void
+coro_signal_wake (pTHX_ AV *av, int count)
+{
+  SvIVX (AvARRAY (av)[0]) = 0;
+
+  /* now signal count waiters */
+  while (count > 0 && AvFILLp (av) > 0)
+    {
+      SV *cb;
+
+      /* swap first two elements so we can shift a waiter */
+      cb = AvARRAY (av)[0];
+      AvARRAY (av)[0] = AvARRAY (av)[1];
+      AvARRAY (av)[1] = cb;
+
+      cb = av_shift (av);
+
+      api_ready (cb);
+      sv_setiv (cb, 0); /* signal waiter */
+      SvREFCNT_dec (cb);
+
+      --count;
+    }
+}
+
+static int
+slf_check_signal_wait (pTHX_ struct CoroSLF *frame)
+{
+  /* if we are about to throw, also stop waiting */
+  return SvROK ((SV *)frame->data) && !CORO_THROW;
+}
+
+static void
+slf_init_signal_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  AV *av = (AV *)SvRV (arg [0]);
+
+  if (SvIVX (AvARRAY (av)[0]))
+    {
+      SvIVX (AvARRAY (av)[0]) = 0;
+      frame->prepare = prepare_nop;
+      frame->check   = slf_check_nop;
+    }
+  else
+    {
+      SV *waiter = newRV_inc (SvRV (coro_current)); /* owned by signal av */
+
+      av_push (av, waiter);
+
+      frame->data    = (void *)sv_2mortal (SvREFCNT_inc_NN (waiter)); /* owned by process */
+      frame->prepare = prepare_schedule;
+      frame->check   = slf_check_signal_wait;
+    }
 }
 
 /*****************************************************************************/
@@ -2823,7 +2882,7 @@ SV *
 new (SV *klass, SV *count = 0)
 	CODE:
         RETVAL = sv_bless (
-                   coro_semaphore_new (count && SvOK (count) ? SvIV (count) : 1),
+                   coro_waitarray_new (aTHX_ count && SvOK (count) ? SvIV (count) : 1),
                    GvSTASH (CvGV (cv))
                  );
 	OUTPUT:
@@ -2833,7 +2892,7 @@ new (SV *klass, SV *count = 0)
 SV *
 _alloc (int count)
 	CODE:
-        RETVAL = coro_semaphore_new (count);
+        RETVAL = coro_waitarray_new (aTHX_ count);
 	OUTPUT:
         RETVAL
 
@@ -2853,8 +2912,6 @@ up (SV *self, int adjust = 1)
 
 void
 down (SV *self)
-	ALIAS:
-        Coro::Signal::wait = 0
         CODE:
         CORO_EXECUTE_SLF_XS (slf_init_semaphore_down);
 
@@ -2905,21 +2962,43 @@ SV *
 new (SV *klass)
 	CODE:
         RETVAL = sv_bless (
-                   coro_semaphore_new (0),
+                   coro_waitarray_new (aTHX_ 0),
                    GvSTASH (CvGV (cv))
                  );
         OUTPUT:
         RETVAL
 
 void
-broadcast (SV *self, int adjust = 1)
+wait (SV *self)
+        CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_signal_wait);
+
+void
+broadcast (SV *self)
+        CODE:
+{
+  	AV *av = (AV *)SvRV (self);
+        coro_signal_wake (aTHX_ av, AvFILLp (av));
+}
+
+void
+send (SV *self)
         CODE:
 {
 	AV *av = (AV *)SvRV (self);
-        SvIVX (AvARRAY (av)[0]) = 0; /* not necessary, but gives me fuzzy warm feelings */
-        coro_semaphore_adjust (aTHX_ av, AvFILLp (av) + 1 - 1);
-        SvIVX (AvARRAY (av)[0]) = 0; /* necessary */
+
+        if (AvFILLp (av))
+          coro_signal_wake (av, 1);
+        else
+          SvIVX (AvARRAY (av)[0]) = 1; /* remember the signal */
 }
+
+IV
+awaited (SV *self)
+    	CODE:
+        RETVAL = AvFILLp ((AV *)SvRV (self)) + 1 - 1;
+	OUTPUT:
+        RETVAL
 
 
 MODULE = Coro::State                PACKAGE = Coro::AnyEvent

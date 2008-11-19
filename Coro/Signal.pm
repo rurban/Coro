@@ -38,30 +38,28 @@ use Coro::Semaphore ();
 
 our $VERSION = 5.0;
 
-=item $s = new Coro::Signal;
+=item $sig = new Coro::Signal;
 
 Create a new signal.
 
-=item $s->wait
+=item $sig->wait
 
 Wait for the signal to occur (via either C<send> or C<broadcast>). Returns
 immediately if the signal has been sent before.
 
-=item $s->broadcast
+=item $sig->send
+
+Send the signal, waking up I<one> waiting process or remember the signal
+if no process is waiting.
+
+=item $sig->broadcast
 
 Send the signal, waking up I<all> waiting process. If no process is
 waiting the signal is lost.
 
-=item $s->awaited
+=item $sig->awaited
 
 Return true when the signal is being awaited by some process.
-
-=cut
-
-=item $s->send
-
-Send the signal, waking up I<one> waiting process or remember the signal
-if no process is waiting.
 
 =cut
 
@@ -87,12 +85,6 @@ if no process is waiting.
 #
 #  1
 #
-
-sub send {
-   &Coro::Semaphore::up unless &Coro::Semaphore::count;
-}
-
-*awaited = \&Coro::Semaphore::count;
 
 1;
 

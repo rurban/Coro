@@ -7,7 +7,6 @@ TODO: maybe implement a default message channel, very much like Erlang's
 
 TODO: testcancel
 TODO: guard as SLF - to avoid deadlocks.
-TODO: Coro::Signal as SLF.
         - avoid deadlock in Coro::Channel if maxsize == 1 (Richard Hundt).
 
 5.0
@@ -52,8 +51,9 @@ TODO: Coro::Signal as SLF.
           a new method "sem" to get at the underlying semaphore object.
         - implement Coro::Channel in terms of Coro::Semaphore, for a moderate
           (in comparison) 20-40% speedup.
-        - implement Coro::Signal (mostly) in terms of Coro::Semaphore,
-          for some unknown (because I was too lazy), but certain, speedup.
+        - used new SLF interface to reimplement Coro::Signal gaining
+          some unknown (because I was too lazy), but certain, speedup, and also
+          making signals reliable for the first time.
         - forgot to include Coro/libcoro/README in the dist for all these years.
         - work around a freebsd pthreads bug (manual testcancel is required as
           pthread_cond_wait isn't a cancellation point on freebsd).
