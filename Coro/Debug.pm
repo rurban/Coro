@@ -273,6 +273,7 @@ sub command($) {
    if ($cmd =~ /^ps (?:\s* (\S+))? $/x) {
       my $flags = $1;
       my $desc = $flags =~ /w/ ? "%-24s" : "%-24.24s";
+      my $verbose = $flags =~ /v/;
       my $buf = sprintf "%20s %s%s %4s %4s $desc %s\n",
                         "PID", "S", "C", "RSS", "USES", "Description", "Where";
       for my $coro (reverse Coro::State::list) {
@@ -286,6 +287,7 @@ sub command($) {
                last unless $bt[0] =~ /^Coro/;
             }
          });
+         $bt[1] =~ s/^.*[\/\\]// if @bt && !$verbose;
          $buf .= sprintf "%20s %s%s %4s %4s $desc %s\n",
                          $coro+0,
                          $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
@@ -348,7 +350,7 @@ sub command($) {
 
    } elsif ($cmd =~ /^help$/) {
       print <<EOF;
-ps                      show the list of all coroutines
+ps [w|v]                show the list of all coroutines (wide, verbose)
 bt <pid>                show a full backtrace of coroutine <pid>
 eval <pid> <perl>       evaluate <perl> expression in context of <pid>
 trace <pid>             enable tracing for this coroutine
