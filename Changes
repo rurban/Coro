@@ -5,7 +5,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-5.0
+5.0  Thu Nov 20 10:35:05 CET 2008
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience
           stability issues.
         - bump API version to 7 - all dependents must be recompiled.
