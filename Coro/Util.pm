@@ -96,7 +96,6 @@ C<Anyevent::Util::inet_aton> internally.
 =cut
 
 sub gethostbyname($) {
-   my $current = $Coro::current;
    my @res = inet_aton $_[0];
 
    ($_[0], $_[0], &Socket::AF_INET, 4, map +(format_ip $_), grep length == 4, @res)

@@ -82,14 +82,8 @@ and, most important, without blocking other coroutines.
 =cut
 
 sub sleep {
-   my $current = $Coro::current;
-
-   my $timer = AnyEvent->timer (after => $_[0], cb => sub {
-      $current->ready;
-      undef $current;
-   });
-
-   do { &Coro::schedule } while $current;
+   my $timer = AnyEvent->timer (after => $_[0], cb => Coro::rouse_cb);
+   Coro::rouse_wait;
 }
 
 1;
