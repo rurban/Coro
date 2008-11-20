@@ -28,7 +28,10 @@ TODO: _cancel to xs
           no longer make it acquire the semaphore (and thus leak a count).
         - perl's process emulation is now not even theoretically supported
           anymore.
-        - new functions Coro::rouse_cb and Coro::rouse_wait.
+        - new functions Coro::rouse_cb and Coro::rouse_wait for easier
+          conversion of callback-style to blocking-style.
+        - new methods $coro->schedule_to and ->cede_to, to specifically
+          schedule or cede to a specific coroutine.
         - new function Coro::Semaphore::wait.
         - use named constants in Coro::Channel (Richard Hundt).
         - directly patch the entersub opcode calling SLF functions (cede,

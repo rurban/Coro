@@ -393,6 +393,25 @@ sub cancel {
    }
 }
 
+=item $coroutine->schedule_to
+
+Puts the current coroutine to sleep (like C<Coro::schedule>), but instead
+of continuing with the next coro from the ready queue, always switch to
+the given coroutine object (regardless of priority etc.). The readyness
+state of that coroutine isn't changed.
+
+This is an advanced method for special cases - I'd love to hear about any
+uses for this one.
+
+=item $coroutine->cede_to
+
+Like C<schedule_to>, but puts the current coroutine into the ready
+queue. This has the effect of temporarily switching to the given
+coroutine, and continuing some time later.
+
+This is an advanced method for special cases - I'd love to hear about any
+uses for this one.
+
 =item $coroutine->throw ([$scalar])
 
 If C<$throw> is specified and defined, it will be thrown as an exception
