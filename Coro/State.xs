@@ -329,7 +329,7 @@ coro_get_hv (pTHX_ const char *name, int create)
 
 /* may croak */
 INLINE CV *
-coro_sv_2cv (SV *sv)
+coro_sv_2cv (pTHX_ SV *sv)
 {
   HV *st;
   GV *gvp;
@@ -2301,7 +2301,7 @@ slf_init_semaphore_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
     {
       /* callback form */
       AV *av = (AV *)SvRV (arg [0]);
-      CV *cb_cv = coro_sv_2cv (arg [1]);
+      CV *cb_cv = coro_sv_2cv (aTHX_ arg [1]);
 
       av_push (av, (SV *)SvREFCNT_inc_NN (cb_cv));
 
@@ -2629,7 +2629,7 @@ new (char *klass, ...)
 
         if (items > 1)
           {
-            cb = coro_sv_2cv (ST (1));
+            cb = coro_sv_2cv (aTHX_ ST (1));
 
             if (!ix)
               {
@@ -2879,7 +2879,7 @@ BOOT:
         av_async_pool = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
         sv_pool_rss   = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size  = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-        cv_coro_run   =      get_cv (aTHX_ "Coro::_terminate", GV_ADD);
+        cv_coro_run   =      get_cv (      "Coro::_terminate", GV_ADD);
         coro_current  = coro_get_sv (aTHX_ "Coro::current"   , FALSE);
         SvREADONLY_on (coro_current);
 
@@ -3233,7 +3233,7 @@ void
 _register (char *target, char *proto, SV *req)
 	CODE:
 {
-        CV *req_cv = coro_sv_2cv (req);
+        CV *req_cv = coro_sv_2cv (aTHX_ req);
         /* newXSproto doesn't return the CV on 5.8 */
         CV *slf_cv = newXS (target, coro_aio_req_xs, __FILE__);
         sv_setpv ((SV *)slf_cv, proto);
