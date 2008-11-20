@@ -249,33 +249,13 @@ our $POOL_RSS  = 16 * 1024;
 our @async_pool;
 
 sub pool_handler {
-   my $cb;
-
    while () {
       eval {
-         while () {
-            _pool_1 $cb;
-            &$cb;
-            _pool_2 $cb;
-            &schedule;
-         }
+         &{&_pool_handler} while 1;
       };
 
-      if ($@) {
-         last if $@ eq "\3async_pool terminate\2\n";
-         warn $@;
-      }
+      warn $@ if $@;
    }
-}
-
-sub async_pool(&@) {
-   # this is also inlined into the unblock_scheduler
-   my $coro = (pop @async_pool) || new Coro \&pool_handler;
-
-   $coro->{_invoke} = [@_];
-   $coro->ready;
-
-   $coro
 }
 
 =back
@@ -612,12 +592,12 @@ our @unblock_queue;
 our $unblock_scheduler = new Coro sub {
    while () {
       while (my $cb = pop @unblock_queue) {
-         # this is an inlined copy of async_pool
-         my $coro = (pop @async_pool) || new Coro \&pool_handler;
+         &async_pool (@$cb);
 
-         $coro->{_invoke} = $cb;
-         $coro->ready;
-         cede; # for short-lived callbacks, this reduces pressure on the coro pool
+         # for short-lived callbacks, this reduces pressure on the coro pool
+         # as the chance is very high that the async_poll coro will be back
+         # in the idle state when cede returns
+         cede;
       }
       schedule; # sleep well
    }
