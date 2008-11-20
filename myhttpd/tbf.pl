@@ -2,14 +2,14 @@ package tbf;
 
 # kind of token-bucket-filter
 
-my $max_per_client = $::TBF_MAX_PER_CLIENT || 24000;
+my $max_per_client = $::TBF_MAX_PER_CLIENT || 118000;
 
 sub new {
    my $class = shift;
    my %arg = @_;
    my $self = bless \%arg, $class;
 
-   $self->{maxbucket} ||= $self->{rate} * 3; # max 3s bucket
+   $self->{maxbucket} ||= $self->{rate} * 60; # max bucket
    $self->{minbucket} ||= $self->{rate}; # minimum bucket to share
    $self->{interval}  ||= $::BUFSIZE / $max_per_client; # good default interval
 
@@ -60,17 +60,17 @@ sub request {
 
    $weight ||= 1;
 
-   my $coro = $Coro::current;
-   my $id   = $_tbf_id++;
+   my $id = $_tbf_id++;
+   my $cb = Coro::rouse_cb;
 
    $self->{waitw} += $weight;
    $self->{waitq}{$id} = [$weight, 0, $bytes, sub {
       delete $self->{waitq}{$id};
       $self->{waitw} -= $weight;
-      $coro->ready;
+      &$cb;
    }];
 
-   Coro::schedule;
+   Coro::rouse_wait;
 }
 
 1;
