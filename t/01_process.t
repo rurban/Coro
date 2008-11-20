@@ -1,5 +1,5 @@
 $|=1;
-print "1..9\n";
+print "1..13\n";
 
 use Coro;
 
@@ -34,4 +34,41 @@ print "ok 8\n";
 cede; cede;
 
 print "ok 9\n";
+
+{
+   my $as1 = async {
+      print "not ok 10\n";
+   };
+
+   my $as2 = async {
+      print "ok 10\n";
+      $as1->cancel;
+   };
+
+   $as2->cede_to;
+}
+
+{
+   my $as1 = async {
+      print "not ok 11\n";
+   };
+
+   my $as2 = async {
+      print "ok 11\n";
+      $as1->cancel;
+      cede;
+      print "ok 12\n";
+      $Coro::main->ready;
+      $Coro::main->throw ("exit");
+   };
+
+   local $SIG{__DIE__} = sub {
+      print "ok 13\n";
+      exit if $@ eq "exit";
+   };
+
+   $as2->schedule_to;
+}
+
+print "not ok 12\n";
 

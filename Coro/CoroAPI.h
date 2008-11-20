@@ -49,6 +49,7 @@ struct CoroAPI
   void (*readyhook) (void);
 
   void (*schedule) (pTHX);
+  void (*schedule_to) (pTHX_ SV *coro_sv);
   int (*cede) (pTHX);
   int (*cede_notself) (pTHX);
   int (*ready) (pTHX_ SV *coro_sv);

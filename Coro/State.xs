@@ -1616,7 +1616,7 @@ api_is_ready (pTHX_ SV *coro_sv)
 
 /* expects to own a reference to next->hv */
 INLINE void
-prepare_cede_to (pTHX_ struct coro_transfer_args *ta, struct coro *next)
+prepare_schedule_to (pTHX_ struct coro_transfer_args *ta, struct coro *next)
 {
   SV *prev_sv = SvRV (coro_current);
 
@@ -1625,7 +1625,7 @@ prepare_cede_to (pTHX_ struct coro_transfer_args *ta, struct coro *next)
 
   TRANSFER_CHECK (*ta);
 
-  SvRV_set (coro_current, next->hv);
+  SvRV_set (coro_current, (SV *)next->hv);
 
   free_coro_mortal (aTHX);
   coro_mortal = prev_sv;
@@ -1638,7 +1638,22 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
     {
       SV *next_sv = coro_deq (aTHX);
 
-      if (expect_false (!next_sv))
+      if (expect_true (next_sv))
+        {
+          struct coro *next = SvSTATE_hv (next_sv);
+
+          /* cannot transfer to destroyed coros, skip and look for next */
+          if (expect_false (next->flags & CF_DESTROYED))
+            SvREFCNT_dec (next_sv); /* coro_nready has already been taken care of by destroy */
+          else
+            {
+              next->flags &= ~CF_READY;
+              --coro_nready;
+
+              return prepare_schedule_to (aTHX_ ta, next);
+            }
+        }
+      else
         {
           /* nothing to schedule: call the idle handler */
           dSP;
@@ -1652,21 +1667,6 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 
           FREETMPS;
           LEAVE;
-        }
-      else
-        {
-          struct coro *next = SvSTATE_hv (next_sv);
-
-          /* cannot transfer to destroyed coros, skip and look for next */
-          if (expect_false (next->flags & CF_DESTROYED))
-            SvREFCNT_dec (next_sv); /* coro_nready has already been taken care of by destroy */
-          else
-            {
-              next->flags &= ~CF_READY;
-              --coro_nready;
-
-              return prepare_cede_to (aTHX_ ta, next);
-            }
         }
     }
 }
@@ -1699,6 +1699,16 @@ api_schedule (pTHX)
 
   prepare_schedule (aTHX_ &ta);
   TRANSFER (ta, 1);
+}
+
+static void
+api_schedule_to (pTHX_ SV *coro_sv)
+{
+  struct coro_transfer_args ta;
+  struct coro *next = SvSTATE (coro_sv);
+
+  SvREFCNT_inc_NN (coro_sv);
+  prepare_schedule_to (aTHX_ &ta, next);
 }
 
 static int
@@ -1997,6 +2007,34 @@ slf_init_schedule (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   frame->prepare = prepare_schedule;
   frame->check   = slf_check_nop;
+}
+
+static void
+slf_prepare_schedule_to (pTHX_ struct coro_transfer_args *ta)
+{
+  struct coro *next = (struct coro *)slf_frame.data;
+
+  SvREFCNT_inc_NN (next->hv);
+  prepare_schedule_to (aTHX_ ta, next);
+}
+
+static void
+slf_init_schedule_to (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  if (!items)
+    croak ("Coro::schedule_to expects a coroutine argument, caught");
+
+  frame->data    = (void *)SvSTATE (arg [0]);
+  frame->prepare = slf_prepare_schedule_to;
+  frame->check   = slf_check_nop;
+}
+
+static void
+slf_init_cede_to (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  api_ready (aTHX_ SvRV (coro_current));
+
+  slf_init_schedule_to (aTHX_ frame, cv, arg, items);
 }
 
 static void
@@ -2988,6 +3026,7 @@ BOOT:
           SV *sv = coro_get_sv (aTHX_ "Coro::API", TRUE);
 
           coroapi.schedule     = api_schedule;
+          coroapi.schedule_to  = api_schedule_to;
           coroapi.cede         = api_cede;
           coroapi.cede_notself = api_cede_notself;
           coroapi.ready        = api_ready;
@@ -3005,6 +3044,16 @@ void
 schedule (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_schedule);
+
+void
+schedule_to (...)
+	CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_schedule_to);
+
+void
+cede_to (...)
+	CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_cede_to);
 
 void
 cede (...)
