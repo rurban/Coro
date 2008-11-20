@@ -214,9 +214,9 @@ terminate or join on it (although you are allowed to), and you get a
 coroutine that might have executed other code already (which can be good
 or bad :).
 
-On the plus side, this function is faster than creating (and destroying)
-a completly new coroutine, so if you need a lot of generic coroutines in
-quick successsion, use C<async_pool>, not C<async>.
+On the plus side, this function is about twice as fast as creating (and
+destroying) a completely new coroutine, so if you need a lot of generic
+coroutines in quick successsion, use C<async_pool>, not C<async>.
 
 The code block is executed in an C<eval> context and a warning will be
 issued in case of an exception instead of terminating the program, as

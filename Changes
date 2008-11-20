@@ -57,7 +57,8 @@ TODO: _cancel to xs
           making signals reliable for the first time.
         - used new SLF interface and other optimisations to speed up async_pool
           by a factor of two. It also doesn't rely on perl's exception mechanism
-          to exit anymore.
+          to exit anymore. The overhead for terminating an async_pool, coro over
+          a normal async is now very small.
         - sped up coroutine creation/destruction by 40%.
         - forgot to include Coro/libcoro/README in the dist for all these years.
         - work around a freebsd pthreads bug (manual testcancel is required as

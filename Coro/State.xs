@@ -57,7 +57,7 @@ static int cctx_max_idle = 4;
   (PERL_REVISION > (a)						\
    || (PERL_REVISION == (a)					\
        && (PERL_VERSION > (b)					\
-           || (PERL_VERSION == (b) && PERLSUBVERSION >= (c)))))
+           || (PERL_VERSION == (b) && PERL_SUBVERSION >= (c)))))
 
 #if !PERL_VERSION_ATLEAST (5,6,0)
 # ifndef PL_ppaddr
@@ -178,7 +178,11 @@ static HV *hv_sig;   /* %SIG */
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
 static SV *sv_pool_size;
+static SV *sv_async_pool_idle;
 static AV *av_async_pool;
+static SV *sv_Coro;
+static CV *cv_pool_handler;
+static CV *cv_coro_new;
 
 /* Coro::AnyEvent */
 static SV *sv_activity;
@@ -265,6 +269,8 @@ struct coro {
 
   /* async_pool */
   SV *saved_deffh;
+  SV *invoke_cb;
+  AV *invoke_av;
 
   /* linked list */
   struct coro *next, *prev;
@@ -291,7 +297,7 @@ static struct CoroSLF slf_frame; /* the current slf frame */
 static SV *coro_current;
 static SV *coro_readyhook;
 static AV *coro_ready [PRIO_MAX - PRIO_MIN + 1];
-static CV *cv_coro_run;
+static CV *cv_coro_run, *cv_coro_terminate;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
 
@@ -689,6 +695,15 @@ coro_destruct_stacks (pTHX)
 #endif
 }
 
+#define CORO_RSS										\
+  rss += sizeof (SYM (curstackinfo));								\
+  rss += (SYM (curstackinfo->si_cxmax) + 1) * sizeof (PERL_CONTEXT);				\
+  rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvMAX (SYM (curstack))) * sizeof (SV *);	\
+  rss += SYM (tmps_max) * sizeof (SV *);							\
+  rss += (SYM (markstack_max) - SYM (markstack_ptr)) * sizeof (I32);				\
+  rss += SYM (scopestack_max) * sizeof (I32);							\
+  rss += SYM (savestack_max) * sizeof (ANY);
+
 static size_t
 coro_rss (pTHX_ struct coro *coro)
 {
@@ -696,33 +711,17 @@ coro_rss (pTHX_ struct coro *coro)
 
   if (coro->mainstack)
     {
-      perl_slots tmp_slot;
-      perl_slots *slot;
-
       if (coro->flags & CF_RUNNING)
         {
-          slot = &tmp_slot;
-
-          #define VAR(name,type) slot->name = PL_ ## name;
-          # include "state.h"
-          #undef VAR
+          #define SYM(sym) PL_ ## sym
+          CORO_RSS;
+          #undef SYM
         }
       else
-        slot = coro->slot;
-
-      if (slot)
         {
-          rss += sizeof (slot->curstackinfo);
-          rss += (slot->curstackinfo->si_cxmax + 1) * sizeof (PERL_CONTEXT);
-          rss += sizeof (SV) + sizeof (struct xpvav) + (1 + AvMAX (slot->curstack)) * sizeof (SV *);
-          rss += slot->tmps_max * sizeof (SV *);
-          rss += (slot->markstack_max - slot->markstack_ptr) * sizeof (I32);
-          rss += slot->scopestack_max * sizeof (I32);
-          rss += slot->savestack_max * sizeof (ANY);
-
-#if !PERL_VERSION_ATLEAST (5,10,0)
-          rss += slot->retstack_max * sizeof (OP *);
-#endif
+          #define SYM(sym) coro->slot->sym
+          CORO_RSS;
+          #undef SYM
         }
     }
 
@@ -934,6 +933,8 @@ coro_destruct (pTHX_ struct coro *coro)
   
   SvREFCNT_dec (coro->saved_deffh);
   SvREFCNT_dec (coro->rouse_cb);
+  SvREFCNT_dec (coro->invoke_cb);
+  SvREFCNT_dec (coro->invoke_av);
 
   coro_destruct_stacks (aTHX);
 }
@@ -1749,6 +1750,86 @@ api_trace (pTHX_ SV *coro_sv, int flags)
 }
 
 /*****************************************************************************/
+/* async pool handler */
+
+static int
+slf_check_pool_handler (pTHX_ struct CoroSLF *frame)
+{
+  HV *hv = (HV *)SvRV (coro_current);
+  struct coro *coro = (struct coro *)frame->data;
+
+  if (!coro->invoke_cb)
+    return 1; /* loop till we have invoke */
+  else
+    {
+      int i, len;
+
+      hv_store (hv, "desc", sizeof ("desc") - 1,
+                newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
+
+      coro->saved_deffh = SvREFCNT_inc_NN ((SV *)PL_defoutgv);
+
+      len = av_len (coro->invoke_av);
+
+      {
+        dSP;
+        XPUSHs (sv_2mortal (coro->invoke_cb)); coro->invoke_cb = 0;
+        PUTBACK;
+      }
+
+      SvREFCNT_dec (GvAV (PL_defgv));
+      GvAV (PL_defgv) = coro->invoke_av;
+      coro->invoke_av = 0;
+
+      return 0;
+    }
+}
+
+static void
+slf_init_pool_handler (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  HV *hv = (HV *)SvRV (coro_current);
+  struct coro *coro = SvSTATE_hv ((SV *)hv);
+
+  if (expect_true (coro->saved_deffh))
+    {
+      /* subsequent iteration */
+      SvREFCNT_dec ((SV *)PL_defoutgv); PL_defoutgv = (GV *)coro->saved_deffh;
+      coro->saved_deffh = 0;
+
+      if (coro_rss (aTHX_ coro) > SvUV (sv_pool_rss)
+          || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
+        {
+          coro->invoke_cb = SvREFCNT_inc_NN ((SV *)cv_coro_terminate);
+          coro->invoke_av = newAV ();
+
+          frame->prepare = prepare_nop;
+        }
+      else
+        {
+          av_clear (GvAV (PL_defgv));
+          hv_store (hv, "desc", sizeof ("desc") - 1, SvREFCNT_inc_NN (sv_async_pool_idle), 0);
+
+          coro->prio = 0;
+
+          if (coro->cctx && (coro->cctx->flags & CC_TRACE))
+            api_trace (aTHX_ coro_current, 0);
+
+          frame->prepare = prepare_schedule;
+          av_push (av_async_pool, SvREFCNT_inc (hv));
+        }
+    }
+  else
+    {
+      /* first iteration, simply fall through */
+      frame->prepare = prepare_nop;
+    }
+
+  frame->check = slf_check_pool_handler;
+  frame->data  = (void *)coro;
+}
+
+/*****************************************************************************/
 /* rouse callback */
 
 #define CORO_MAGIC_type_rouse PERL_MAGIC_ext
@@ -2397,7 +2478,7 @@ coro_aio_callback (pTHX_ CV *cv)
   SV *coro = av_pop (state);
   SV *data_sv = newSV (sizeof (struct io_state));
 
-  av_extend (state, items);
+  av_extend (state, items - 1);
 
   sv_upgrade (data_sv, SVt_PV);
   SvCUR_set (data_sv, sizeof (struct io_state));
@@ -2656,7 +2737,7 @@ new (char *klass, ...)
 
         if (items > 1)
           {
-            av_extend (coro->args, items - 1 + ix);
+            av_extend (coro->args, items - 1 + ix - 1);
 
             if (ix)
               {
@@ -2876,12 +2957,18 @@ BOOT:
 {
 	int i;
 
-        av_async_pool = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
-        sv_pool_rss   = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
-        sv_pool_size  = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-        cv_coro_run   =      get_cv (      "Coro::_terminate", GV_ADD);
-        coro_current  = coro_get_sv (aTHX_ "Coro::current"   , FALSE);
+        av_async_pool     = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
+        sv_pool_rss       = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
+        sv_pool_size      = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
+        cv_coro_run       =      get_cv (      "Coro::_terminate", GV_ADD);
+        cv_coro_terminate =      get_cv (      "Coro::terminate", GV_ADD);
+        coro_current      = coro_get_sv (aTHX_ "Coro::current"   , FALSE);
         SvREADONLY_on (coro_current);
+
+        sv_async_pool_idle = newSVpv ("[async pool idle]", 0); SvREADONLY_on (sv_async_pool_idle);
+        sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
+        cv_pool_handler    = get_cv ("Coro::_pool_handler", 0); SvREADONLY_on (cv_pool_handler);
+        cv_coro_new        = get_cv ("Coro::new", 0); SvREADONLY_on (cv_coro_new);
 
 	coro_stash = gv_stashpv ("Coro", TRUE);
 
@@ -2980,76 +3067,53 @@ nready (...)
 	OUTPUT:
         RETVAL
 
-# for async_pool speedup
 void
-_pool_1 (SV *cb)
+_pool_handler (...)
 	CODE:
-{
-        HV *hv = (HV *)SvRV (coro_current);
-	struct coro *coro = SvSTATE_hv ((SV *)hv);
-        AV *defav = GvAV (PL_defgv);
-        SV *invoke = hv_delete (hv, "_invoke", sizeof ("_invoke") - 1, 0);
-        AV *invoke_av;
-	int i, len;
-
-        if (!invoke)
-          {
-            SV *old = PL_diehook;
-            PL_diehook = 0;
-            SvREFCNT_dec (old);
-            croak ("\3async_pool terminate\2\n");
-          }
-
-        SvREFCNT_dec (coro->saved_deffh);
-        coro->saved_deffh = SvREFCNT_inc_NN ((SV *)PL_defoutgv);
-
-        hv_store (hv, "desc", sizeof ("desc") - 1,
-                  newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
-
-        invoke_av = (AV *)SvRV (invoke);
-        len = av_len (invoke_av);
-
-        sv_setsv (cb, AvARRAY (invoke_av)[0]);
-
-        if (len > 0)
-          {
-            av_fill (defav, len - 1);
-            for (i = 0; i < len; ++i)
-              av_store (defav, i, SvREFCNT_inc_NN (AvARRAY (invoke_av)[i + 1]));
-          }
-}
+        CORO_EXECUTE_SLF_XS (slf_init_pool_handler);
 
 void
-_pool_2 (SV *cb)
-	CODE:
+async_pool (SV *cv, ...)
+	PROTOTYPE: &@
+        PPCODE:
 {
-        HV *hv = (HV *)SvRV (coro_current);
-	struct coro *coro = SvSTATE_hv ((SV *)hv);
+	HV *hv = (HV *)av_pop (av_async_pool);
+        AV *av = newAV ();
+        SV *cb = ST (0);
+        int i;
 
-        sv_setsv (cb, &PL_sv_undef);
+        av_extend (av, items - 2);
+        for (i = 1; i < items; ++i)
+          av_push (av, SvREFCNT_inc_NN (ST (i)));
 
-        SvREFCNT_dec ((SV *)PL_defoutgv); PL_defoutgv = (GV *)coro->saved_deffh;
-        coro->saved_deffh = 0;
-
-  	if (coro_rss (aTHX_ coro) > SvUV (sv_pool_rss)
-            || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
+        if ((SV *)hv == &PL_sv_undef)
           {
-            SV *old = PL_diehook;
-            PL_diehook = 0;
-            SvREFCNT_dec (old);
-            croak ("\3async_pool terminate\2\n");
+            PUSHMARK (SP);
+            EXTEND (SP, 2);
+            PUSHs (sv_Coro);
+            PUSHs ((SV *)cv_pool_handler);
+            PUTBACK;
+            call_sv (cv_coro_new, G_SCALAR);
+            SPAGAIN;
+
+            hv = (HV *)SvREFCNT_inc_NN (SvRV (POPs));
           }
 
-        av_clear (GvAV (PL_defgv));
-        hv_store (hv, "desc", sizeof ("desc") - 1,
-                  newSVpvn ("[async_pool idle]", sizeof ("[async_pool idle]") - 1), 0);
+        {
+          struct coro *coro = SvSTATE_hv (hv);
 
-        coro->prio = 0;
+          assert (!coro->invoke_cb);
+          assert (!coro->invoke_av);
+          coro->invoke_cb = SvREFCNT_inc (cb);
+          coro->invoke_av = av;
+        }
 
-        if (coro->cctx && (coro->cctx->flags & CC_TRACE))
-          api_trace (aTHX_ coro_current, 0);
+        api_ready ((SV *)hv);
 
-        av_push (av_async_pool, newSVsv (coro_current));
+        if (GIMME_V != G_VOID)
+          XPUSHs (sv_2mortal (newRV_noinc ((SV *)hv)));
+        else
+          SvREFCNT_dec (hv);
 }
 
 SV *
