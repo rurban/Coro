@@ -100,6 +100,9 @@ static int cctx_max_idle = 4;
 #ifndef CvISXSUB_on
 # define CvISXSUB_on(cv) (void)cv
 #endif
+#ifndef CvISXSUB
+# define CvISXSUB(cv) (CvXSUB (cv) ? TRUE : FALSE)
+#endif
 
 /* 5.8.7 */
 #ifndef SvRV_set
