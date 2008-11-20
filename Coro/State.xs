@@ -1028,7 +1028,6 @@ runops_trace (pTHX)
 
                       if (CxTYPE (cx) == CXt_SUB && oldcxix < cxstack_ix)
                         {
-                          runops_proc_t old_runops = PL_runops;
                           dSP;
                           GV *gv = CvGV (cx->blk_sub.cv);
                           SV *fullname = sv_2mortal (newSV (0));
@@ -1659,7 +1658,8 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
               next->flags &= ~CF_READY;
               --coro_nready;
 
-              return prepare_schedule_to (aTHX_ ta, next);
+              prepare_schedule_to (aTHX_ ta, next);
+              break;
             }
         }
       else
@@ -2767,12 +2767,10 @@ BOOT:
           SV *slf = sv_2mortal (newSViv (PTR2IV (pp_slf)));
 
           if (!PL_custom_op_names) PL_custom_op_names = newHV ();
-          hv_store_ent (PL_custom_op_names, slf,
-            newSVpv ("coro_slf", 0), 0);
+          hv_store_ent (PL_custom_op_names, slf, newSVpv ("coro_slf", 0), 0);
 
           if (!PL_custom_op_descs) PL_custom_op_descs = newHV ();
-          hv_store_ent (PL_custom_op_descs, slf,
-            newSVpv ("coro schedule like function", 0), 0);
+          hv_store_ent (PL_custom_op_descs, slf, newSVpv ("coro schedule like function", 0), 0);
         }
 
         coroapi.ver         = CORO_API_VERSION;
