@@ -185,7 +185,7 @@ static SV *sv_async_pool_idle;
 static AV *av_async_pool;
 static SV *sv_Coro;
 static CV *cv_pool_handler;
-static CV *cv_coro_new;
+static CV *cv_coro_state_new;
 
 /* Coro::AnyEvent */
 static SV *sv_activity;
@@ -2959,14 +2959,13 @@ BOOT:
         sv_pool_rss       = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size      = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
         cv_coro_run       =      get_cv (      "Coro::_terminate", GV_ADD);
-        cv_coro_terminate =      get_cv (      "Coro::terminate", GV_ADD);
-        coro_current      = coro_get_sv (aTHX_ "Coro::current"   , FALSE);
-        SvREADONLY_on (coro_current);
+        cv_coro_terminate =      get_cv (      "Coro::terminate" , GV_ADD);
+        coro_current      = coro_get_sv (aTHX_ "Coro::current"   , FALSE); SvREADONLY_on (coro_current);
 
         sv_async_pool_idle = newSVpv ("[async pool idle]", 0); SvREADONLY_on (sv_async_pool_idle);
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
-        cv_pool_handler    = get_cv ("Coro::_pool_handler", 0); SvREADONLY_on (cv_pool_handler);
-        cv_coro_new        = get_cv ("Coro::new", 0); SvREADONLY_on (cv_coro_new);
+        cv_pool_handler    = get_cv ("Coro::pool_handler", GV_ADD); SvREADONLY_on (cv_pool_handler);
+        cv_coro_state_new  = get_cv ("Coro::State::new", 0); SvREADONLY_on (cv_coro_state_new);
 
 	coro_stash = gv_stashpv ("Coro", TRUE);
 
@@ -3091,7 +3090,7 @@ async_pool (SV *cv, ...)
             PUSHs (sv_Coro);
             PUSHs ((SV *)cv_pool_handler);
             PUTBACK;
-            call_sv ((SV *)cv_coro_new, G_SCALAR);
+            call_sv ((SV *)cv_coro_state_new, G_SCALAR);
             SPAGAIN;
 
             hv = (HV *)SvREFCNT_inc_NN (SvRV (POPs));
