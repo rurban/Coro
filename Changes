@@ -16,8 +16,6 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - Coro::Semaphore->adjust didn't correctly wake up enough waiters.
         - async_pool did free a scalar value twice
           ("Attempt to unreference...").
-        - fix a disastrous bug in the readline optimisation
-          introduced in 4.801.
         - fix a longstanding bug where calling terminate on a coro that
           was waiting for a semaphore that was just becoming available
           would cause a deadlock (semaphore would get into a state where
