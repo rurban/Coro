@@ -172,6 +172,9 @@ static JMPENV *main_top_env;
 static HV *coro_state_stash, *coro_stash;
 static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
 
+static AV *av_destroy; /* destruction queue */
+static SV *sv_manager; /* the manager coro */
+
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
 static SV *rv_diehook;
@@ -181,9 +184,9 @@ static HV *hv_sig;   /* %SIG */
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
 static SV *sv_pool_size;
-static SV *sv_async_pool_idle;
-static AV *av_async_pool;
-static SV *sv_Coro;
+static SV *sv_async_pool_idle; /* description string */
+static AV *av_async_pool; /* idle pool */
+static SV *sv_Coro; /* class string */
 static CV *cv_pool_handler;
 static CV *cv_coro_state_new;
 
@@ -834,6 +837,12 @@ static int
 slf_check_nop (pTHX_ struct CoroSLF *frame)
 {
   return 0;
+}
+
+static int
+slf_check_repeat (pTHX_ struct CoroSLF *frame)
+{
+  return 1;
 }
 
 static UNOP coro_setup_op;
@@ -1765,6 +1774,59 @@ api_trace (pTHX_ SV *coro_sv, int flags)
       else
         coro->slot->runops = RUNOPS_DEFAULT;
     }
+}
+
+static void
+coro_call_on_destroy (pTHX_ struct coro *coro)
+{
+  SV **on_destroyp = hv_fetch (coro->hv, "_on_destroy", sizeof ("_on_destroy") - 1, 0);
+  SV **statusp     = hv_fetch (coro->hv, "_status", sizeof ("_status") - 1, 0);
+
+  if (on_destroyp)
+    {
+      AV *on_destroy = (AV *)SvRV (*on_destroyp);
+
+      while (AvFILLp (on_destroy) >= 0)
+        {
+          dSP; /* don't disturb outer sp */
+          SV *cb = av_pop (on_destroy);
+
+          PUSHMARK (SP);
+
+          if (statusp)
+            {
+              int i;
+              AV *status = (AV *)SvRV (*statusp);
+              EXTEND (SP, AvFILLp (status) + 1);
+
+              for (i = 0; i <= AvFILLp (status); ++i)
+                PUSHs (AvARRAY (status)[i]);
+            }
+
+          PUTBACK;
+          call_sv (sv_2mortal (cb), G_VOID | G_DISCARD);
+        }
+    }
+}
+
+static void
+slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  int i;
+  HV *hv = (HV *)SvRV (coro_current);
+  AV *av = newAV ();
+
+  av_extend (av, items - 1);
+  for (i = 0; i < items; ++i)
+    av_push (av, SvREFCNT_inc_NN (arg [i]));
+
+  hv_store (hv, "_status", sizeof ("_status") - 1, newRV_noinc ((SV *)av), 0);
+
+  av_push (av_destroy, (SV *)newRV_inc ((SV *)hv)); /* RVinc for perl */
+  api_ready (aTHX_ sv_manager);
+
+  frame->prepare = prepare_schedule;
+  frame->check   = slf_check_repeat;
 }
 
 /*****************************************************************************/
@@ -2998,12 +3060,14 @@ BOOT:
 {
 	int i;
 
-        av_async_pool     = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
-        sv_pool_rss       = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
-        sv_pool_size      = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-        cv_coro_run       =      get_cv (      "Coro::_terminate", GV_ADD);
-        cv_coro_terminate =      get_cv (      "Coro::terminate" , GV_ADD);
-        coro_current      = coro_get_sv (aTHX_ "Coro::current"   , FALSE); SvREADONLY_on (coro_current);
+        sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
+        sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
+        cv_coro_run        =      get_cv (      "Coro::_terminate", GV_ADD);
+        cv_coro_terminate  =      get_cv (      "Coro::terminate" , GV_ADD);
+        coro_current       = coro_get_sv (aTHX_ "Coro::current"   , FALSE); SvREADONLY_on (coro_current);
+        av_async_pool      = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
+        av_destroy         = coro_get_av (aTHX_ "Coro::destroy"   , TRUE);
+        sv_manager         = coro_get_sv (aTHX_ "Coro::manager"   , TRUE);
 
         sv_async_pool_idle = newSVpv ("[async pool idle]", 0); SvREADONLY_on (sv_async_pool_idle);
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
@@ -3041,6 +3105,11 @@ BOOT:
 }
 
 void
+terminate (...)
+	CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_terminate);
+
+void
 schedule (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_schedule);
@@ -3064,6 +3133,12 @@ void
 cede_notself (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_cede_notself);
+
+void
+_cancel (Coro::State self)
+	CODE:
+	coro_state_destroy (aTHX_ self);
+        coro_call_on_destroy (aTHX_ self);
 
 void
 _set_current (SV *current)

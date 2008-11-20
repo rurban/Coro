@@ -137,18 +137,6 @@ $idle = sub {
    Carp::croak ("FATAL: deadlock detected");
 };
 
-sub _cancel {
-   my ($self) = @_;
-
-   # free coroutine data and mark as destructed
-   $self->_destroy
-      or return;
-
-   # call all destruction callbacks
-   $_->(@{$self->{_status}})
-      for @{ delete $self->{_on_destroy} || [] };
-}
-
 # this coroutine is necessary because a coroutine
 # cannot destroy itself.
 our @destroy;
@@ -156,7 +144,7 @@ our $manager;
 
 $manager = new Coro sub {
    while () {
-      (shift @destroy)->_cancel
+      Coro::_cancel shift @destroy
          while @destroy;
 
       &schedule;
@@ -320,13 +308,6 @@ you cannot free all of them, so if a coroutine that is not the main
 program calls this function, there will be some one-time resource leak.
 
 =cut
-
-sub terminate {
-   $current->{_status} = [@_];
-   push @destroy, $current;
-   $manager->ready;
-   do { &schedule } while 1;
-}
 
 sub killall {
    for (Coro::State::list) {

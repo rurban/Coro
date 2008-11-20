@@ -5,8 +5,6 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-TODO: async_pool to SLF
-TODO: _cancel to xs
 5.0
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience
           stability issues.
