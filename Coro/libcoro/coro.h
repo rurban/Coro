@@ -66,6 +66,8 @@
  *            try harder to get _setjmp/_longjmp.
  *            major code cleanup/restructuring.
  * 2008-11-10 the .cfi hacks are no longer needed.
+ * 2008-11-16 work around a freebsd pthread bug.
+ * 2008-11-19 define coro_*jmp symbols for easier porting.
  */
 
 #ifndef CORO_H
@@ -117,11 +119,13 @@
  * -DCORO_ASM
  *
  *    Handcoded assembly, known to work only on a few architectures/ABI:
- *    ELF Linux x86 && amd64 when gcc is used and optimisation is turned on.
+ *    GCC + x86/IA32 and amd64/x86_64 + GNU/Linux and a few BSDs.
  *
  * -DCORO_PTHREAD
  *
  *    Use the pthread API. You have to provide <pthread.h> and -lpthread.
+ *    This is likely the slowest backend, and it also does not support fork(),
+ *    so avoid it at all costs.
  *
  * If you define neither of these symbols, coro.h will try to autodetect
  * the model. This currently works for CORO_LOSER only. For the other
@@ -149,7 +153,7 @@ typedef struct coro_context coro_context;
  * Allocating/deallocating the stack is your own responsibility.
  *
  * As a special case, if coro, arg, sptr and ssize are all zero,
- * then an "empty" coro_contetx will be created that is suitable
+ * then an "empty" coro_context will be created that is suitable
  * as an initial source for coro_transfer.
  *
  * This function is not reentrant, but putting a mutex around it
@@ -174,7 +178,9 @@ void coro_transfer (coro_context *prev, coro_context *next);
 /*
  * The following prototype defines the coroutine destroy function. It is
  * usually implemented as a macro, so watch out. It also serves
- * no purpose unless you want to use the CORO_PTHREAD backend.
+ * no purpose unless you want to use the CORO_PTHREAD backend,
+ * where it is used to clean up the thread. You are responsible
+ * for freeing the stack and the context itself.
  *
  * This function is thread-safe and reentrant.
  */
@@ -236,22 +242,25 @@ struct coro_context {
 
 # include <setjmp.h>
 
-struct coro_context {
-#if _XOPEN_UNIX > 0 || CORO_LOSER
-  jmp_buf env;
-#else
-  sigjmp_buf env;
-#endif
-};
-
-# if _XOPEN_UNIX > 0
-#  define coro_transfer(p,n) do { if (!  _setjmp ((p)->env   ))   _longjmp ((n)->env, 1); } while (0)
+# if _XOPEN_UNIX > 0 || defined (_setjmp)
+#  define coro_jmp_buf      jmp_buf
+#  define coro_setjmp(env)  _setjmp (env)
+#  define coro_longjmp(env) _longjmp ((env), 1)
 # elif CORO_LOSER
-#  define coro_transfer(p,n) do { if (!   setjmp ((p)->env   ))    longjmp ((n)->env, 1); } while (0)
+#  define coro_jmp_buf      jmp_buf
+#  define coro_setjmp(env)  setjmp (env)
+#  define coro_longjmp(env) longjmp ((env), 1)
 # else
-#  define coro_transfer(p,n) do { if (!sigsetjmp ((p)->env, 0)) siglongjmp ((n)->env, 1); } while (0)
+#  define coro_jmp_buf      sigjmp_buf
+#  define coro_setjmp(env)  sigsetjmp (env, 0)
+#  define coro_longjmp(env) siglongjmp ((env), 1)
 # endif
 
+struct coro_context {
+  coro_jmp_buf env;
+};
+
+# define coro_transfer(p,n) do { if (!coro_setjmp ((p)->env)) coro_longjmp ((n)->env); } while (0)
 # define coro_destroy(ctx) (void *)(ctx)
 
 #elif CORO_ASM

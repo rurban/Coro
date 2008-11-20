@@ -1,7 +1,74 @@
 Revision history for Perl extension Coro.
 
+TODO: should explore PerlIO::coroaio (perl leaks like hell).
+TODO: maybe implement a default message channel, very much like Erlang's
+      actor model (which is cool in a lot of important aspects (failures!),
+      but very lacking in others (higher level ipc)).
+
+5.0  Thu Nov 20 10:35:05 CET 2008
+	- NEW ARCHITECTURE: use the latest 4.x version if you experience
+          stability issues.
+        - bump API version to 7 - all dependents must be recompiled.
+        - removed timed_* functions - they were not being used anyways
+          and should be replaced by a more generic mechanism -
+          and were annoying to support anyways :)
+        - removed SemaphoreSet's waiter method - use sem method instead.
+        - Coro::Semaphore->adjust didn't correctly wake up enough waiters.
+        - async_pool did free a scalar value twice
+          ("Attempt to unreference...").
+        - fix a longstanding bug where calling terminate on a coro that
+          was waiting for a semaphore that was just becoming available
+          would cause a deadlock (semaphore would get into a state where
+          it was available but waiters were still blocked).
+        - calling throw on a coroutine that is waiting for a semaphore will
+          no longer make it acquire the semaphore (and thus leak a count).
+        - perl's process emulation is now not even theoretically supported
+          anymore.
+        - new functions Coro::rouse_cb and Coro::rouse_wait for easier
+          conversion of callback-style to blocking-style.
+        - new methods $coro->schedule_to and ->cede_to, to specifically
+          schedule or cede to a specific coroutine.
+        - new function Coro::Semaphore::wait.
+        - use named constants in Coro::Channel (Richard Hundt).
+        - directly patch the entersub opcode calling SLF functions (cede,
+          transfer and so on). this does speed up context switching, but
+          more importanly, it frees us from the hardcoded behaviour of
+          entersub, so we might actually be able to return something from
+          those functions and atcually create new ones.
+        - take advantage of __builtin_frame_address on gcc.
+        - expose THX in coroapi (not sure whether this was a wise decision,
+          as "threaded" perls are running at half speed anyways).
+        - implement execute_slf (schedule-like-function) interface that makes
+          it possible to implement schedule-like-functions in XS.
+        - use new SLF interface to massively speed up Coro::EV by roughly a
+          factor of two.
+        - used new SLF interface to massively speed up Coro::Semaphore by a
+          factor of three.
+        - used new SLF interface to speed up Coro::AIO by roughly a factor of
+          four and reduce its memory usage considerably.
+        - implement Coro::SemaphoreSet purely in terms of Coro::Semaphore,
+          for a nice speedup and vastly more correct behaviour. Also implement
+          a new method "sem" to get at the underlying semaphore object.
+        - implement Coro::Channel in terms of Coro::Semaphore, for a moderate
+          (in comparison) 20-40% speedup.
+        - used new SLF interface to reimplement Coro::Signal gaining
+          some unknown (because I was too lazy), but certain, speedup, and also
+          making signals reliable for the first time.
+        - used new SLF interface and other optimisations to speed up async_pool
+          by a factor of two. It also doesn't rely on perl's exception mechanism
+          to exit anymore. The overhead for terminating an async_pool, coro over
+          a normal async is now very small.
+        - sped up coroutine creation/destruction by 40%.
+        - forgot to include Coro/libcoro/README in the dist for all these years.
+        - work around a freebsd pthreads bug (manual testcancel is required as
+          pthread_cond_wait isn't a cancellation point on freebsd).
+        - use new rouse functions to speed up and simplify Coro::BDB.
+        - make "prefer perl native functions" work with threaded perls.
+        - condense Coro::Debug ps output, hint at v and w flags.
+        - (libcoro) lots of minor cleanups and portability improvements.
+
 4.914 Wed Nov 19 12:54:18 CET 2008
-	- fix a disastrous bug in the readline optimisation
+        - fix a disastrous bug in the readline optimisation
           introduced in 4.801.
 
 4.913 Sat Nov 15 07:58:28 CET 2008

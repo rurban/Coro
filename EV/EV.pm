@@ -52,7 +52,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 4.914;
+   our $VERSION = "5.0";
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -74,37 +74,11 @@ Blocks the coroutine until either the given event set has occured on the
 fd, or the timeout has been reached (if timeout is zero, there is no
 timeout). Returns the received flags.
 
-=cut
-
-sub timed_io_once($$;$) {
-   &_timed_io_once;
-   do { &Coro::schedule } while !$#_;
-   pop
-}
-
 =item Coro::EV::timer_once $after
 
 Blocks the coroutine for at least C<$after> seconds.
 
 =cut
-
-sub timer_once($) {
-   &_timer_once;
-   do { &Coro::schedule } while !$#_;
-   pop
-}
-
-sub readable_ev {
-   _readable_ev $_[0], my $done;
-   do { &Coro::schedule } while !defined $done;
-   $done
-}
-
-sub writable_ev {
-   _writable_ev $_[0], my $done;
-   do { &Coro::schedule } while !defined $done;
-   $done
-}
 
 1;
 

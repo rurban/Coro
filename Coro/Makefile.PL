@@ -9,24 +9,7 @@ $|=1;
 my $DEFINE;
 my @LIBS = [];
 
-# check for completely broken platforms (such as netbsd)
-if ($Config{usethreads} && $^O eq "netbsd") {
-   print <<EOF;
-
-***
-*** Your platform is BROKEN - netbsd pthreads are known to be completely broken.
-*** There is *no* way to implement coroutines on this platform until the bugs
-*** are fixed (this has been true for at least netbsd version 4.0).
-***
-*** This affects many modules currently, so the recommended build option
-*** for perl is to DISABLE THREAD support - it serves no practical purpose
-*** on POSIX systems anyways, except that it slows down your programs a lot
-*** and uses a lot more memory than fork (perl threads do not give you threads,
-*** they are only windows-process emulation ported to unix).
-***
-
-EOF
-}
+my $threads = $Config{usethreads};
 
 print <<EOF;
 
@@ -56,29 +39,35 @@ if (exists $ENV{CORO_INTERFACE}) {
    $iface = $ENV{CORO_INTERFACE};
 
 } elsif ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
+   # nothing works, really, without deep hacks
    $iface = 'w';
 
 } elsif ($^O =~ /irix/) {
+   # sigaltstack works like sigstack, i.e. expects stack pointer, not stack base
+   # but wikipeida lists it as 100% posix compliant. geeeee.
    $iface = "i";
 
 } elsif ($^O =~ /linux/) {
+   # everything "just works", as expected
    $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /freebsd/) {
    # FreeBSD 4.x has ucontext.h but no makecontext et al. (see BUGS section of
-   # man context). Assume the same problem for all other BSDs.
+   # man context).
    #
-   # FreeBSD 6.2 has working ucontext, setjmp and asm.
+   # FreeBSD 6.2 has marginally working ucontext, setjmp and asm, but
+   # some 5.8.8's barf when threaded due to broken threading.
 
    $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /netbsd/) {
-   # netbsd is totally broken (pthreads are incomaptible with ucontext or other stack switching mechanisms)
-   # therefore, default to pthread - hey, it might actually work, with some hacks
+   # netbsd is totally broken (pthreads are incomaptible with ucontext or
+   # other stack switching mechanisms) therefore, default to pthread -
+   # hey, it might actually work, with some hacks
    $iface = "p";
 
 } elsif ($^O =~ /openbsd/) {
-   # asm seems to work, setjmp might, ucontext is missing
+   # asm seems to work, setjmp might, ucontext is missing, threads lets not talk about
    $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /solaris/) {
@@ -86,6 +75,9 @@ if (exists $ENV{CORO_INTERFACE}) {
    $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /darwin/) {
+   # assembler doesn't support .type
+   # ucontext is of course totally broken (it just crashes)
+   # surprisingly, pthreads seem to work
    $iface = "s";
 
 } elsif ($^O =~ /dragonfly/) {

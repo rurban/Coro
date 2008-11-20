@@ -33,6 +33,7 @@ Coro/Storable.pm
 Coro/AnyEvent.pm
 
 Coro/libcoro/LICENSE
+Coro/libcoro/README
 Coro/libcoro/coro.h
 Coro/libcoro/coro.c
 Coro/libcoro/conftest.c
@@ -51,6 +52,9 @@ t/11_deadlock.t
 t/12_exit.t
 t/13_diewarn.t
 t/14_load.t
+t/15_semaphore.t
+t/16_signal.t
+t/17_rouse.t
 
 EV/Makefile.PL
 EV/EV.pm

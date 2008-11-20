@@ -5,7 +5,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 use Config;
 use base 'Exporter';
 
-our $VERSION = 4.914;
+our $VERSION = "5.0";
 
 @EXPORT_OK = qw(&coro_args $installsitearch);
 

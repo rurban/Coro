@@ -6,21 +6,8 @@
 #include <assert.h>
 #include <string.h>
 
-#define EV_PROTOTYPES 0
 #include "EVAPI.h"
 #include "../Coro/CoroAPI.h"
-
-static void
-once_cb (int revents, void *arg)
-{
-  AV *av = (AV *)arg; /* @_ */
-  av_push (av, newSViv (revents));
-  CORO_READY (AvARRAY (av)[0]);
-  SvREFCNT_dec (av);
-}
-
-#define ONCE_INIT  AV *av = GvAV (PL_defgv)
-#define ONCE_DONE  av_clear (av); av_push (av, newRV_inc (CORO_CURRENT))
 
 static struct ev_prepare scheduler;
 static struct ev_idle idler;
@@ -73,19 +60,100 @@ readyhook (void)
 
 /*****************************************************************************/
 
+static void
+once_cb (int revents, void *arg)
+{
+  SV *data = (SV *)arg;
+
+  CORO_READY (data);
+  sv_setiv (data, revents);
+  SvREFCNT_dec (data);
+}
+
+static int
+slf_check_once (pTHX_ struct CoroSLF *frame)
+{
+  SV *data = (SV *)frame->data;
+
+  /* return early when an exception is pending */
+  if (CORO_THROW)
+    return 0;
+
+  if (SvROK (data))
+    return 1; /* repeat until we have been signalled */
+  else
+    {
+      dSP;
+
+      XPUSHs (data);
+
+      PUTBACK;
+      return 0;
+    }
+}
+
+static void
+slf_init_timed_io (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  SV *data;
+
+  if (items < 2 || items > 3)
+    croak ("Coro::EV::timed_io_once requires exactly two or three parameters, not %d.\n", items);
+
+  data = sv_2mortal (newRV_inc (CORO_CURRENT));
+  frame->data    = (void *)data;
+  frame->prepare = GCoroAPI->prepare_schedule;
+  frame->check   = slf_check_once;
+
+  ev_once (
+    EV_DEFAULT_UC,
+    sv_fileno (arg [0]),
+    SvIV (arg [1]),
+    items >= 3 && SvOK (arg [2]) ? SvNV (arg [2]) : -1.,
+    once_cb,
+    SvREFCNT_inc (data)
+  );
+}
+
+static void
+slf_init_timer (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  SV *data;
+  NV after;
+
+  if (items != 1)
+    croak ("Coro::EV::timer_once requires exactly one parameter, not %d.\n", items);
+
+  data = sv_2mortal (newRV_inc (CORO_CURRENT));
+  frame->data    = (void *)data;
+  frame->prepare = GCoroAPI->prepare_schedule;
+  frame->check   = slf_check_once;
+
+  after = SvNV (arg [0]);
+
+  ev_once (
+    EV_DEFAULT_UC,
+    -1,
+    0,
+    after >= 0. ? after : 0.,
+    once_cb,
+    SvREFCNT_inc (data)
+  );
+}
+
+/*****************************************************************************/
+
 typedef struct
 {
   ev_io io;
   ev_timer tw;
-  SV *done;
-  SV *current;
+  SV *data;
 } coro_dir;
 
 typedef struct
 {
   coro_dir r, w;
 } coro_handle;
-
 
 static int
 handle_free (pTHX_ SV *sv, MAGIC *mg)
@@ -95,8 +163,6 @@ handle_free (pTHX_ SV *sv, MAGIC *mg)
 
   ev_io_stop    (EV_DEFAULT_UC, &data->r.io); ev_io_stop    (EV_DEFAULT_UC, &data->w.io);
   ev_timer_stop (EV_DEFAULT_UC, &data->r.tw); ev_timer_stop (EV_DEFAULT_UC, &data->w.tw);
-  SvREFCNT_dec (data->r.done);                SvREFCNT_dec (data->w.done);
-  SvREFCNT_dec (data->r.current);             SvREFCNT_dec (data->w.current);
 
   return 0;
 }
@@ -104,17 +170,13 @@ handle_free (pTHX_ SV *sv, MAGIC *mg)
 static MGVTBL handle_vtbl = { 0,  0,  0,  0, handle_free };
 
 static void
-handle_cb (coro_dir *dir, int done)
+handle_cb (coro_dir *dir, int success)
 {
   ev_io_stop    (EV_DEFAULT_UC, &dir->io);
   ev_timer_stop (EV_DEFAULT_UC, &dir->tw);
 
-  sv_setiv (dir->done, done);
-  SvREFCNT_dec (dir->done);
-  dir->done = 0;
-  CORO_READY (dir->current);
-  SvREFCNT_dec (dir->current);
-  dir->current = 0;
+  CORO_READY (dir->data);
+  sv_setiv (dir->data, success);
 }
 
 static void
@@ -127,6 +189,88 @@ static void
 handle_timer_cb (EV_P_ ev_timer *w, int revents)
 {
   handle_cb ((coro_dir *)(((char *)w) - offsetof (coro_dir, tw)), 0);
+}
+
+static int
+slf_check_rw (pTHX_ struct CoroSLF *frame)
+{
+  SV *data = (SV *)frame->data;
+
+  if (SvROK (data))
+    return 1;
+  else
+    {
+      dSP;
+
+      XPUSHs (data);
+
+      PUTBACK;
+      return 0;
+    }
+}
+
+static void
+slf_init_rw (pTHX_ struct CoroSLF *frame, SV *arg, int wr)
+{
+  AV *handle = (AV *)SvRV (arg);
+  SV *data_sv = AvARRAY (handle)[5];
+  coro_handle *data;
+  coro_dir *dir;
+  assert (AvFILLp (handle) >= 7);
+
+  if (!SvOK (data_sv))
+    {
+      int fno = sv_fileno (AvARRAY (handle)[0]);
+      data_sv = AvARRAY (handle)[5] = NEWSV (0, sizeof (coro_handle));
+      SvPOK_only (data_sv);
+      SvREADONLY_on (data_sv);
+      data = (coro_handle *)SvPVX (data_sv);
+      memset (data, 0, sizeof (coro_handle));
+
+      ev_io_init (&data->r.io, handle_io_cb, fno, EV_READ);
+      ev_io_init (&data->w.io, handle_io_cb, fno, EV_WRITE);
+      ev_init    (&data->r.tw, handle_timer_cb);
+      ev_init    (&data->w.tw, handle_timer_cb);
+
+      sv_magicext (data_sv, 0, PERL_MAGIC_ext, &handle_vtbl, (char *)data, 0);
+    }
+  else
+    data = (coro_handle *)SvPVX (data_sv);
+
+  dir = wr ? &data->w : &data->r;
+
+  if (ev_is_active (&dir->io) || ev_is_active (&dir->tw))
+    croak ("recursive invocation of readable_ev or writable_ev");
+
+  dir->data = sv_2mortal (newRV_inc (CORO_CURRENT));
+
+  {
+    SV *to = AvARRAY (handle)[2];
+
+    if (SvOK (to))
+      {
+        ev_timer_set (&dir->tw, 0., SvNV (to));
+        ev_timer_again (EV_DEFAULT_UC, &dir->tw);
+      }
+  }
+
+  ev_io_start (EV_DEFAULT_UC, &dir->io);
+
+  frame->data    = (void *)dir->data;
+  frame->prepare = GCoroAPI->prepare_schedule;
+  frame->check   = slf_check_rw;
+}
+
+static void
+slf_init_readable (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  slf_init_rw (aTHX_ frame, arg [0], 0);
+}
+
+static void
+slf_init_writable (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  slf_init_rw (aTHX_ frame, arg [0], 1);
 }
 
 /*****************************************************************************/
@@ -173,88 +317,24 @@ _loop_oneshot ()
 }
 
 void
-_timed_io_once (...)
+timed_io_once (...)
 	CODE:
-{
-	ONCE_INIT;
-        assert (AvFILLp (av) >= 1);
-        ev_once (
-          EV_DEFAULT_UC,
-          sv_fileno (AvARRAY (av)[0]),
-          SvIV (AvARRAY (av)[1]),
-          AvFILLp (av) >= 2 && SvOK (AvARRAY (av)[2]) ? SvNV (AvARRAY (av)[2]) : -1.,
-          once_cb,
-          (void *)SvREFCNT_inc (av)
-        );
-        ONCE_DONE;
-}
+        CORO_EXECUTE_SLF_XS (slf_init_timed_io);
 
 void
-_timer_once (...)
+timer_once (...)
 	CODE:
-{
-	ONCE_INIT;
-        NV after = SvNV (AvARRAY (av)[0]);
-        ev_once (
-          EV_DEFAULT_UC,
-          -1,
-          0,
-          after >= 0. ? after : 0.,
-          once_cb,
-          (void *)SvREFCNT_inc (av)
-        );
-        ONCE_DONE;
-}
+        CORO_EXECUTE_SLF_XS (slf_init_timer);
 
 void
-_readable_ev (SV *handle_sv, SV *done_sv)
-	ALIAS:
-        _writable_ev = 1
+readable_ev (...)
 	CODE:
-{
-	AV *handle = (AV *)SvRV (handle_sv);
-        SV *data_sv = AvARRAY (handle)[5];
-        coro_handle *data;
-        coro_dir *dir;
-        assert (AvFILLp (handle) >= 7);
+        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
+        CORO_EXECUTE_SLF_XS (slf_init_readable);
 
-        if (!SvOK (data_sv))
-          {
-            int fno = sv_fileno (AvARRAY (handle)[0]);
-            data_sv = AvARRAY (handle)[5] = NEWSV (0, sizeof (coro_handle));
-            SvPOK_only (data_sv);
-            SvREADONLY_on (data_sv);
-            data = (coro_handle *)SvPVX (data_sv);
-            memset (data, 0, sizeof (coro_handle));
-
-            ev_io_init (&data->r.io, handle_io_cb, fno, EV_READ);
-            ev_io_init (&data->w.io, handle_io_cb, fno, EV_WRITE);
-            ev_init    (&data->r.tw, handle_timer_cb);
-            ev_init    (&data->w.tw, handle_timer_cb);
-
-            sv_magicext (data_sv, 0, PERL_MAGIC_ext, &handle_vtbl, (char *)data, 0);
-          }
-        else
-          data = (coro_handle *)SvPVX (data_sv);
-
-        dir = ix ? &data->w : &data->r;
-
-        if (ev_is_active (&dir->io) || ev_is_active (&dir->tw))
-          croak ("recursive invocation of readable_ev or writable_ev");
-
-        dir->done = SvREFCNT_inc (done_sv);
-        dir->current = SvREFCNT_inc (CORO_CURRENT);
-
-        {
-          SV *to = AvARRAY (handle)[2];
-
-          if (SvOK (to))
-            {
-              ev_timer_set (&dir->tw, 0., SvNV (to));
-              ev_timer_again (EV_DEFAULT_UC, &dir->tw);
-            }
-        }
-
-        ev_io_start (EV_DEFAULT_UC, &dir->io);
-}
+void
+writable_ev (...)
+	CODE:
+        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
+        CORO_EXECUTE_SLF_XS (slf_init_writable);
 
