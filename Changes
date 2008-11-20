@@ -5,6 +5,10 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+	- convert Coro::Timer and Coro::Select to rouse API.
+        - Coro::Select did errornously dup the file descriptors
+          and didn't work with all AnyEvent backends.
+
 5.0  Thu Nov 20 10:35:05 CET 2008
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience
           stability issues.

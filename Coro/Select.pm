@@ -34,8 +34,9 @@ package Coro::Select;
 
 use strict;
 
-use Coro;
-use AnyEvent;
+use Coro ();
+use AnyEvent ();
+use Coro::AnyEvent ();
 
 use base Exporter::;
 
@@ -62,6 +63,8 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       my $current = $Coro::current;
       my $nfound = 0;
       my @w;
+      my $wakeup = Coro::rouse_cb;
+
       # AnyEvent does not do 'e', so replace it by 'r'
       for ([0, 'r', '<'], [1, 'w', '>'], [2, 'r', '<']) {
          my ($i, $poll, $mode) = @$_;
@@ -70,14 +73,13 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
             for my $b (0 .. (8 * length $vec)) {
                if (vec $vec, $b, 1) {
                   (vec $$rvec, $b, 1) = 0;
-                  open my $fh, "$mode&$b"
+                  open my $fh, "$mode&=$b"
                      or die "Coro::Select::fd2fh($b): $!";
                   push @w,
                      AnyEvent->io (fh => $fh, poll => $poll, cb => sub {
                         (vec $$rvec, $b, 1) = 1;
                         $nfound++;
-                        $current->ready;
-                        undef $current;
+                        $wakeup->();
                      });
                }
             }
@@ -85,15 +87,10 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       }
 
       push @w,
-         AnyEvent->timer (after => $_[3], cb => sub {
-            $current->ready;
-            undef $current;
-         })
-         if defined $_[3];
+         AnyEvent->timer (after => $_[3], cb => $wakeup)
+            if defined $_[3];
 
-      # wait here
-      &Coro::schedule;
-      &Coro::schedule while $current;
+      Coro::rouse_wait;
 
       return $nfound
    }
