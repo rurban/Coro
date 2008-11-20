@@ -1762,14 +1762,10 @@ slf_check_pool_handler (pTHX_ struct CoroSLF *frame)
     return 1; /* loop till we have invoke */
   else
     {
-      int i, len;
-
       hv_store (hv, "desc", sizeof ("desc") - 1,
                 newSVpvn ("[async_pool]", sizeof ("[async_pool]") - 1), 0);
 
       coro->saved_deffh = SvREFCNT_inc_NN ((SV *)PL_defoutgv);
-
-      len = av_len (coro->invoke_av);
 
       {
         dSP;
@@ -1843,7 +1839,6 @@ coro_rouse_callback (pTHX_ CV *cv)
   if (SvTYPE (SvRV (data)) != SVt_PVAV)
     {
       /* first call, set args */
-      int i;
       AV *av = newAV ();
       SV *coro = SvRV (data);
 
@@ -3093,7 +3088,7 @@ async_pool (SV *cv, ...)
             PUSHs (sv_Coro);
             PUSHs ((SV *)cv_pool_handler);
             PUTBACK;
-            call_sv (cv_coro_new, G_SCALAR);
+            call_sv ((SV *)cv_coro_new, G_SCALAR);
             SPAGAIN;
 
             hv = (HV *)SvREFCNT_inc_NN (SvRV (POPs));
@@ -3108,7 +3103,7 @@ async_pool (SV *cv, ...)
           coro->invoke_av = av;
         }
 
-        api_ready ((SV *)hv);
+        api_ready (aTHX_ (SV *)hv);
 
         if (GIMME_V != G_VOID)
           XPUSHs (sv_2mortal (newRV_noinc ((SV *)hv)));
