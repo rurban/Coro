@@ -1614,18 +1614,33 @@ api_is_ready (pTHX_ SV *coro_sv)
   return !!(SvSTATE (coro_sv)->flags & CF_READY);
 }
 
+/* expects to own a reference to next->hv */
 INLINE void
+prepare_cede_to (pTHX_ struct coro_transfer_args *ta, struct coro *next)
+{
+  SV *prev_sv = SvRV (coro_current);
+
+  ta->prev = SvSTATE_hv (prev_sv);
+  ta->next = next;
+
+  TRANSFER_CHECK (*ta);
+
+  SvRV_set (coro_current, next->hv);
+
+  free_coro_mortal (aTHX);
+  coro_mortal = prev_sv;
+}
+
+static void
 prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 {
-  SV *prev_sv, *next_sv;
-
   for (;;)
     {
-      next_sv = coro_deq (aTHX);
+      SV *next_sv = coro_deq (aTHX);
 
-      /* nothing to schedule: call the idle handler */
       if (expect_false (!next_sv))
         {
+          /* nothing to schedule: call the idle handler */
           dSP;
 
           ENTER;
@@ -1637,33 +1652,23 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 
           FREETMPS;
           LEAVE;
-          continue;
         }
-
-      ta->next = SvSTATE_hv (next_sv);
-
-      /* cannot transfer to destroyed coros, skip and look for next */
-      if (expect_false (ta->next->flags & CF_DESTROYED))
+      else
         {
-          SvREFCNT_dec (next_sv);
-          /* coro_nready has already been taken care of by destroy */
-          continue;
+          struct coro *next = SvSTATE_hv (next_sv);
+
+          /* cannot transfer to destroyed coros, skip and look for next */
+          if (expect_false (next->flags & CF_DESTROYED))
+            SvREFCNT_dec (next_sv); /* coro_nready has already been taken care of by destroy */
+          else
+            {
+              next->flags &= ~CF_READY;
+              --coro_nready;
+
+              return prepare_cede_to (aTHX_ ta, next);
+            }
         }
-
-      --coro_nready;
-      break;
     }
-
-  /* free this only after the transfer */
-  prev_sv = SvRV (coro_current);
-  ta->prev = SvSTATE_hv (prev_sv);
-  TRANSFER_CHECK (*ta);
-  assert (("FATAL: next coroutine isn't marked as ready in Coro (please report)", ta->next->flags & CF_READY));
-  ta->next->flags &= ~CF_READY;
-  SvRV_set (coro_current, next_sv);
-
-  free_coro_mortal (aTHX);
-  coro_mortal = prev_sv;
 }
 
 INLINE void
