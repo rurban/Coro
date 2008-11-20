@@ -77,29 +77,6 @@ sub unused_bandwidth {
    }
 }
 
-my @newcons;
-my @pool;
-
-# one "execution thread"
-sub handler {
-   while () {
-      if (@newcons) {
-         eval {
-            conn->new (@{pop @newcons})->handle;
-         };
-         slog 1, "$@" if $@ && !ref $@;
-
-         $httpevent->broadcast; # only for testing, but doesn't matter much
-
-         $connections->up;
-      } else {
-         last if @pool >= $MAX_POOL;
-         push @pool, $Coro::current;
-         schedule;
-      }
-   }
-}
-
 sub listen_on {
    my $listen = $_[0];
 
@@ -110,12 +87,18 @@ sub listen_on {
       slog 1, "accepting connections";
       while () {
          $connections->down;
-         push @newcons, [$listen->accept];
+         my @conn = $listen->accept;
          #slog 3, "accepted @$connections ".scalar(@pool);
-         if (@pool) {
-            (pop @pool)->ready;
-         } else {
-            async \&handler;
+
+         async_pool {
+            eval {
+               conn->new (@conn)->handle;
+            };
+            slog 1, "$@" if $@ && !ref $@;
+
+            $httpevent->broadcast; # only for testing, but doesn't matter much
+
+            $connections->up;
          }
       }
    };
