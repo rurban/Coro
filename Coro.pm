@@ -500,6 +500,11 @@ sub desc {
    $old;
 }
 
+sub transfer {
+   require Carp;
+   Carp::croak ("You must not call ->transfer on Coro objects. Use Coro::State objects or the ->schedule_to method. Caught");
+}
+
 =back
 
 =head2 GLOBAL FUNCTIONS
