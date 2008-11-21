@@ -903,7 +903,7 @@ coro_setup (pTHX_ struct coro *coro)
 
   /* and we have to provide the pp_slf op in any case, so pp_slf can skip it */
   coro_setup_op.op_next   = PL_op;
-  coro_setup_op.op_type   = OP_CUSTOM;
+  coro_setup_op.op_type   = OP_ENTERSUB;
   coro_setup_op.op_ppaddr = pp_slf;
   /* no flags etc. required, as an init function won't be called */
 
@@ -2252,7 +2252,7 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
     slf_argc = 0;
 
   PL_op->op_ppaddr  = pp_slf;
-  PL_op->op_type    = OP_CUSTOM; /* maybe we should leave it at entersub? */
+  /*PL_op->op_type    = OP_CUSTOM; /* we do behave like entersub still */
 
   PL_op = (OP *)&slf_restore;
 }
