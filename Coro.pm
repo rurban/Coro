@@ -758,11 +758,14 @@ Debugging: L<Coro::Debug>.
 
 Support/Utility: L<Coro::Specific>, L<Coro::Util>.
 
-Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>, L<Coro::SemaphoreSet>, L<Coro::RWLock>.
+Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>,
+L<Coro::SemaphoreSet>, L<Coro::RWLock>.
 
 IO/Timers: L<Coro::Timer>, L<Coro::Handle>, L<Coro::Socket>, L<Coro::AIO>.
 
-Compatibility: L<Coro::LWP>, L<Coro::BDB>, L<Coro::Storable>, L<Coro::Select>.
+Compatibility: L<Coro::LWP> (but see also L<AnyEvent::HTTP> for
+a better-working alternative), L<Coro::BDB>, L<Coro::Storable>,
+L<Coro::Select>.
 
 XS API: L<Coro::MakeMaker>.
 
