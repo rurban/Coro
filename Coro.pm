@@ -227,13 +227,13 @@ coros as required.
 If you are concerned about pooled coroutines growing a lot because a
 single C<async_pool> used a lot of stackspace you can e.g. C<async_pool
 { terminate }> once per second or so to slowly replenish the pool. In
-addition to that, when the stacks used by a handler grows larger than 16kb
+addition to that, when the stacks used by a handler grows larger than 32kb
 (adjustable via $Coro::POOL_RSS) it will also be destroyed.
 
 =cut
 
 our $POOL_SIZE = 8;
-our $POOL_RSS  = 16 * 1024;
+our $POOL_RSS  = 32 * 1024;
 our @async_pool;
 
 sub pool_handler {
