@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro - coroutine process abstraction
+Coro - the real perl threads
 
 =head1 SYNOPSIS
 
@@ -28,31 +28,36 @@ Coro - coroutine process abstraction
 
 =head1 DESCRIPTION
 
-This module collection manages coroutines. Coroutines are similar to
-threads but don't (in general) run in parallel at the same time even
-on SMP machines. The specific flavor of coroutine used in this module
-also guarantees you that it will not switch between coroutines unless
-necessary, at easily-identified points in your program, so locking and
-parallel access are rarely an issue, making coroutine programming much
-safer and easier than threads programming.
+This module collection manages coroutines, that is, cooperative
+threads. Coroutines are similar to kernel threads but don't (in general)
+run in parallel at the same time even on SMP machines. The specific flavor
+of coroutine used in this module also guarantees you that it will not
+switch between coroutines unless necessary, at easily-identified points
+in your program, so locking and parallel access are rarely an issue,
+making coroutine programming much safer and easier than using other thread
+models.
 
-Unlike a normal perl program, however, coroutines allow you to have
-multiple running interpreters that share data, which is especially useful
-to code pseudo-parallel processes and for event-based programming, such as
-multiple HTTP-GET requests running concurrently. See L<Coro::AnyEvent> to
-learn more.
+Unlike the so-called "Perl threads" (which are not actually real threads
+but only the windows process emulation ported to unix), Coro provides a
+full shared address space, which makes communication between coroutines
+very easy. And coroutines are fast, too: disabling the Windows process
+emulation code in your perl and using Coro can easily result in a two to
+four times speed increase for your programs.
 
-Coroutines are also useful because Perl has no support for threads (the so
-called "threads" that perl offers are nothing more than the (bad) process
-emulation coming from the Windows platform: On standard operating systems
-they serve no purpose whatsoever, except by making your programs slow and
-making them use a lot of memory. Best disable them when building perl, or
-aks your software vendor/distributor to do it for you).
+Coro achieves that by supporting multiple running interpreters that share
+data, which is especially useful to code pseudo-parallel processes and
+for event-based programming, such as multiple HTTP-GET requests running
+concurrently. See L<Coro::AnyEvent> to learn more on how to integrate Coro
+into an event-based environment.
 
-In this module, coroutines are defined as "callchain + lexical variables +
-@_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own callchain,
-its own set of lexicals and its own set of perls most important global
-variables (see L<Coro::State> for more configuration).
+In this module, a coroutines is defined as "callchain + lexical variables
++ @_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own
+callchain, its own set of lexicals and its own set of perls most important
+global variables (see L<Coro::State> for more configuration and background
+info).
+
+See also the C<SEE ALSO> section at the end of this document - the Coro
+module family is quite large.
 
 =cut
 
@@ -76,6 +81,8 @@ our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
 our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
+
+=head1 GLOBAL VARIABLES
 
 =over 4
 
@@ -155,7 +162,7 @@ $manager->prio (PRIO_MAX);
 
 =back
 
-=head2 SIMPLE COROUTINE CREATION
+=head1 SIMPLE COROUTINE CREATION
 
 =over 4
 
@@ -248,9 +255,10 @@ sub pool_handler {
 
 =back
 
-=head2 STATIC METHODS
+=head1 STATIC METHODS
 
-Static methods are actually functions that operate on the current coroutine.
+Static methods are actually functions that implicitly operate on the
+current coroutine.
 
 =over 4
 
@@ -318,7 +326,7 @@ sub killall {
 
 =back
 
-=head2 COROUTINE METHODS
+=head1 COROUTINE OBJECT METHODS
 
 These are the methods you can call on coroutine objects (or to create
 them).
@@ -507,7 +515,7 @@ sub transfer {
 
 =back
 
-=head2 GLOBAL FUNCTIONS
+=head1 GLOBAL FUNCTIONS
 
 =over 4
 
