@@ -973,16 +973,14 @@ runops_trace (pTHX)
 {
   COP *oldcop = 0;
   int oldcxix = -2;
-  struct coro *coro = SvSTATE_current; /* trace cctx is tied to specific coro */
-  coro_cctx *cctx = coro->cctx;
 
   while ((PL_op = CALL_FPTR (PL_op->op_ppaddr) (aTHX)))
     {
       PERL_ASYNC_CHECK ();
 
-      if (cctx->flags & CC_TRACE_ALL)
+      if (cctx_current->flags & CC_TRACE_ALL)
         {
-          if (PL_op->op_type == OP_LEAVESUB && cctx->flags & CC_TRACE_SUB)
+          if (PL_op->op_type == OP_LEAVESUB && cctx_current->flags & CC_TRACE_SUB)
             {
               PERL_CONTEXT *cx = &cxstack[cxstack_ix];
               SV **bot, **top;
@@ -1029,7 +1027,7 @@ runops_trace (pTHX)
                 {
                   SV **cb;
 
-                  if (oldcxix != cxstack_ix && cctx->flags & CC_TRACE_SUB)
+                  if (oldcxix != cxstack_ix && cctx_current->flags & CC_TRACE_SUB)
                     {
                       PERL_CONTEXT *cx = &cxstack[cxstack_ix];
 
@@ -1062,7 +1060,7 @@ runops_trace (pTHX)
                       oldcxix = cxstack_ix;
                     }
 
-                  if (cctx->flags & CC_TRACE_LINE)
+                  if (cctx_current->flags & CC_TRACE_LINE)
                     {
                       dSP;
 
@@ -3034,7 +3032,8 @@ SV *
 has_cctx (Coro::State coro)
         PROTOTYPE: $
 	CODE:
-        RETVAL = boolSV (!!coro->cctx);
+        /* maybe manage the running flag differently */
+        RETVAL = boolSV (!!coro->cctx || (coro->flags & CF_RUNNING));
 	OUTPUT:
         RETVAL
 
@@ -3064,7 +3063,7 @@ void
 force_cctx ()
 	PROTOTYPE:
 	CODE:
-        SvSTATE_current->cctx->idle_sp = 0;
+        cctx_current->idle_sp = 0;
 
 void
 swap_defsv (Coro::State self)
