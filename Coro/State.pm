@@ -313,6 +313,56 @@ default being C<4>.
 
 Returns a list of all states currently allocated.
 
+=item $clone = $state->clone
+
+This exciting method takes a Coro::State object and clones, i.e., creates
+a copy. This makes it possible to restore a state more than once.
+
+Since its only known purpose is intellectual self-gratification, and
+because it is a difficult piece of code, it is not enabled by default, and
+not supported.
+
+Among the games you can play with this is implement a scheme-like call/cc:
+
+   sub callcc(&@) {
+      my ($f, @arg) = @_;
+
+      my $c = new Coro::State;
+
+      my $F; $F = new Coro::State sub {
+         $f->(
+            sub {
+               @arg = @_;
+               $F->transfer ($c->clone);
+            },
+            @arg
+         );
+      };
+
+      $c->transfer ($F);
+      @arg
+   }
+
+Here are a few little-known facts: First, coroutines *are* full/true/real
+continuations. Secondly Coro::State objects (without clone) *are* first
+class continuations. Thirdly, nobody has ever found a use for the full
+power of call/cc that isn't better (faster, easier, more efficient)
+implemented differently, and nobody has yet found a useful control
+construct that can't be implemented without it already, just much faster
+and with fewer resources.
+
+Besides, call/cc is much less useful in a Perl-like dynamic language (with
+references, and its scoping rules) then in, say, scheme.
+
+Now, limitations of clone:
+
+It probably only works on perl 5.10; it cannot clone a coroutine inside
+the substition opertaor (but windows perl can't fork from there either),
+and C<abort ()> is the preferred mechanism to signal errors. It probbaly
+also leaks, and sometimes triggers a few assertions inside Coro. Most of
+these limitations *are* fixable with some effort, but that's pointless
+just to make a point that it could be done.
+
 =cut
 
 # used by Coro::Debug only atm.
