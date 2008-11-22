@@ -6,6 +6,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 
       TODO: Coro/Intro
+	- wrote a small introduction - Coro::Intro.
 	- convert Coro::Timer, Coro::Select and Coro::Util to rouse API.
         - Coro::Select did errornously dup the file descriptors
           and didn't work with all AnyEvent backends.
@@ -16,6 +17,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - no longer set the optype to OP_CUSTOM, as B::* understandably
           doesn't like this very much (and we *are* a type of entersub).
         - implement state cloning, just to prove that call/cc can be done.
+        - automatically load Coro::AnyEvent in Coro::Handle.
         - better 5.8.6 compatibility.
 
 5.0  Thu Nov 20 10:35:05 CET 2008

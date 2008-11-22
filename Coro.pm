@@ -28,6 +28,9 @@ Coro - real threads in perl
 
 =head1 DESCRIPTION
 
+For a tutorial-style introduction, please read the L<Coro::Intro>
+manpage. This manpage mainly contains reference information.
+
 This module collection manages coroutines, that is, cooperative
 threads. Coroutines are similar to kernel threads but don't (in general)
 run in parallel at the same time even on SMP machines. The specific flavor

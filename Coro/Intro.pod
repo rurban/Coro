@@ -344,12 +344,17 @@ interactive debug shell of L<Coro::Debug>.
 
 =head1 The Real World - Event Loops
 
-Coro really wants to run in a program using some event loop. It integrates
-well into any event loop supported by L<AnyEvent>, simply by use'ing
-L<Coro::AnyEvent>, but can take special advantage of L<EV> and L<Event>.
+Coro really wants to run in a program using some event loop. In fact, most
+real-world programs using Coro's threads are written in a combination of
+event-based and thread-based techniques, as it is easy to gett he best of
+both worlds with Coro.
+
+Coro integrates well into any event loop supported by L<AnyEvent>, simply
+by C<use>ing L<Coro::AnyEvent>, but can take special advantage of the
+L<EV> and L<Event> modules.
 
 Here is a simple finger client, using whatever event loop L<AnyEvent>
-comes up with (L<Coro::Socket> automatically intiialises all the event
+comes up with (L<Coro::Socket> automatically initialises all the event
 stuff):
 
    use Coro;
@@ -367,6 +372,131 @@ stuff):
       print "$user\@$host: done\n";
    }
 
-   # now run it on two hosts in parallel
+   # now finger a few accounts
+   for (
+      (async { finger "abc", "cornell.edu" }),
+      (async { finger "sebbo", "world.std.com" }),
+      (async { finger "trouble", "noc.dfn.de" }),
+   ) {
+      $_->join; # wait for the result
+   }
 
+There are quite a few new things here. First of all, there
+is L<Coro::Socket>. This module works much the same way as
+L<IO::Socket::INET>, except that it is coroutine-aware. This means that
+L<IO::Socket::INET>, when waiting for the network, will block the whole
+process - that means all threads, which is clearly undesirable.
+
+On the other hand, L<Coro::Socket> knows how to give up the CPU to other
+coroutines when it waits for the network, which makes parallel processing
+possible.
+
+The other new thing is the C<join> method: All we want to do in this
+example is start three C<async> coroutines and only exit when they have
+done their job. This could be done using a counting semaphore, but it is
+much simpler to synchronously wait for them to C<terminate>, which is
+exactly what the C<join> method does.
+
+It doesn't matter that the three async's will probably finish in a
+different order then the for loop C<join>s them - when the coroutine
+is still running, C<join> simply waits. If the coroutine has already
+terminated, it will simply fetch its return status.
+
+If you are experienced in event-based programming, you will see that the
+above program doesn't quite follow the normal pattern, where you start
+some work, and then run the event loop (e.v. C<EV::loop>).
+
+In fact, nontrivial programs follow this pattern even with Coro, so a Coro
+program that uses EV usually looks like this:
+
+   use EV;
+   use Coro;
+   use Coro::AnyEvent;
+
+   # start coroutines or event watchers
+
+   EV::loop; # and loop
+
+In fact, for debugging, you often do something like this:
+
+   use EV;
+   use Coro::Debug;
+
+   my $shell = new_unix_server Coro::Debug "/tmp/myshell";
+
+   EV::loop; # and loop
+
+This runs your program, but also an interactive shell on the unix domain
+socket in F</tmp/myshell>. You can use the F<socat> program to access it:
+
+   # socat readline /tmp/myshell
+   coro debug session. use help for more info
+
+   > ps
+           PID SC  RSS USES Description              Where
+     136672312 RC  19k 177k [main::]                 [myprog:28]
+     136710424 -- 1268   48 [coro manager]           [Coro.pm:349]
+   > help
+   ps [w|v]                show the list of all coroutines (wide, verbose)
+   bt <pid>                show a full backtrace of coroutine <pid>
+   eval <pid> <perl>       evaluate <perl> expression in context of <pid>
+   trace <pid>             enable tracing for this coroutine
+   untrace <pid>           disable tracing for this coroutine
+   kill <pid> <reason>     throws the given <reason> string in <pid>
+   cancel <pid>            cancels this coroutine
+   ready <pid>             force <pid> into the ready queue
+   <anything else>         evaluate as perl and print results
+   <anything else> &       same as above, but evaluate asynchronously
+                           you can use (find_coro <pid>) in perl expressions
+                           to find the coro with the given pid, e.g.
+                           (find_coro 9768720)->ready
+   loglevel <int>          enable logging for messages of level <int> and lower
+   exit                    end this session
+
+Microsft victims can of course use the even less secure C<new_tcp_server>
+constructor.
+
+=head2 The Real World - File I/O
+
+Disk I/O, while often much faster than the network, nevertheless can take
+quite a long time in which the CPU could do other things, if one would
+only be able to do something.
+
+Fortunately, the L<IO::AIO> module on CPAN allows you to move these
+I/O calls into the background, letting you do useful work in the
+foreground. It is event-/callback-based, but Coro has a nice interface to
+it, called L<Coro::AIO>, which let's you use its functions naturally from
+within coroutines:
+
+   use Fcntl;
+   use Coro::AIO;
+
+   my $fh = aio_open "$filename~", O_WRONLY | O_CREAT, 0600
+      or die "$filename~: $!";
+
+   aio_write $fh, 0, (length $data), $data, 0;
+   aio_fsync $fh;
+   aio_close $fh;
+   aio_rename "$filename~", "$filename";
+
+The above creates a new file, writes data into it, syncs the data to disk
+and atomically replaces a base file with a new copy.
+
+=head1 Other Modules
+
+This introduction only mentions a very few methods and modules, Coro has
+many other functions (see the L<Coro> manpage) and modules (documented in
+the C<SEE ALSO> section of the L<Coro> manpage).
+
+Noteworthy modules are L<Coro::LWP> (for parallel LWP request, but
+see L<AnyEvent::HTTP> for a better, but more limited, alternative),
+L<Coro::BDB>, for when you need an asynchronous database, L<Coro::Handle>,
+when you need to use any file handle in a coroutine (popular to access
+C<STDIN> and C<STDOUT>) and L<Coro::EV>, the optimised interface to L<EV>
+(which gets used automatically by L<Coro::AnyEvent>).
+
+=head1 AUTHOR
+
+   Marc Lehmann <schmorp@schmorp.de>
+   http://home.schmorp.de/
 

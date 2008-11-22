@@ -263,6 +263,8 @@ use Errno qw(EAGAIN EINTR);
 use AnyEvent ();
 use AnyEvent::Util qw(WSAEWOULDBLOCK);
 
+use Coro::AnyEvent;
+
 # formerly a hash, but we are speed-critical, so try
 # to be faster even if it hurts.
 #
