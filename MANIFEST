@@ -33,6 +33,8 @@ Coro/Timer.pm
 Coro/Storable.pm
 Coro/AnyEvent.pm
 
+Coro/Intro.pod
+
 Coro/libcoro/LICENSE
 Coro/libcoro/README
 Coro/libcoro/coro.h
