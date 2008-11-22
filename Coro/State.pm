@@ -358,8 +358,9 @@ It probably only works on perl 5.10; it cannot clone a coroutine inside
 the substition operator (but windows perl can't fork from there either)
 and some other contexts, and C<abort ()> is the preferred mechanism to
 signal errors. It cannot clone a state that has a c context attached
-(implementing clone on the C level is too hard for me to even try), which
-rules out calling call/cc from the main coroutine. It doesn't work with
+(implementing clone on the C level is too hard for me to even try),
+which rules out calling call/cc from the main coroutine. It cannot
+clone a context that hasn't even been started yet. It doesn't work with
 C<-DDEBUGGING> (but what does). It probably also leaks, and sometimes
 triggers a few assertions inside Coro. Most of these limitations *are*
 fixable with some effort, but that's pointless just to make a point that
