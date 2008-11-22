@@ -322,24 +322,22 @@ Since its only known purpose is intellectual self-gratification, and
 because it is a difficult piece of code, it is not enabled by default, and
 not supported.
 
-Among the games you can play with this is implement a scheme-like call/cc:
+Among the games you can play with this is implement a scheme-like call/cc,
+as the following code does (well, with small differences).
 
    sub callcc(&@) {
-      my ($f, @arg) = @_;
+      my ($func, @arg) = @_;
 
-      my $c = new Coro::State;
-
-      my $F; $F = new Coro::State sub {
-         $f->(
-            sub {
-               @arg = @_;
-               $F->transfer ($c->clone);
-            },
-            @arg
-         );
+      my $state = new Coro::State;
+      my $wrapper; $wrapper = new Coro::State sub {
+         my $escape = sub {
+            @arg = @_;
+            $wrapper->transfer ($state->clone);
+         };
+         $escape->($func->($escape, @arg));
       };
 
-      $c->transfer ($F);
+      $state->transfer ($wrapper);
       @arg
    }
 
@@ -357,11 +355,14 @@ references, and its scoping rules) then in, say, scheme.
 Now, limitations of clone:
 
 It probably only works on perl 5.10; it cannot clone a coroutine inside
-the substition opertaor (but windows perl can't fork from there either),
-and C<abort ()> is the preferred mechanism to signal errors. It probbaly
-also leaks, and sometimes triggers a few assertions inside Coro. Most of
-these limitations *are* fixable with some effort, but that's pointless
-just to make a point that it could be done.
+the substition operator (but windows perl can't fork from there either)
+and some other contexts, and C<abort ()> is the preferred mechanism to
+signal errors. It cannot clone a state that has a c context attached
+(implementing clone on the C level is too hard for me to even try), which
+rules out calling call/cc from the main coroutine. It probably also
+leaks, and sometimes triggers a few assertions inside Coro. Most of these
+limitations *are* fixable with some effort, but that's pointless just to
+make a point that it could be done.
 
 =cut
 
@@ -388,8 +389,6 @@ sub debug_desc {
 
    _set_current $main;
 }
-
-use Carp; warn Carp::cluck;#d#
 
 1;
 
