@@ -389,6 +389,8 @@ sub debug_desc {
    _set_current $main;
 }
 
+use Carp; warn Carp::cluck;#d#
+
 1;
 
 =back

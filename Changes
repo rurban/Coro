@@ -8,9 +8,13 @@ TODO: maybe implement a default message channel, very much like Erlang's
 	- convert Coro::Timer, Coro::Select and Coro::Util to rouse API.
         - Coro::Select did errornously dup the file descriptors
           and didn't work with all AnyEvent backends.
+        - disassociate c contexts from coro objects - this is agruably more
+          correct, but mostly allows sharing of cctxs between coro and state
+          objects, for added memory savings and speed increases.
         - bumped $Coro::POOL_RSS up to 32kb by default.
         - no longer set the optype to OP_CUSTOM, as B::* understandably
           doesn't like this very much (and we *are* a type of entersub).
+        - implement state cloning, just to prove that call/cc can be done.
         - better 5.8.6 compatibility.
 
 5.0  Thu Nov 20 10:35:05 CET 2008
