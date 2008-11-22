@@ -1385,6 +1385,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       else
         load_perl (aTHX_ next);
 
+      assert (!prev->cctx);//D temporary
+
       /* possibly untie and reuse the cctx */
       if (expect_true (
             cctx_current->idle_sp == STACKLEVEL
@@ -1395,14 +1397,13 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
           /* I assume that stacklevel is a stronger indicator than PL_top_env changes */
           assert (("FATAL: current top_env must equal previous top_env in Coro (please report)", PL_top_env == cctx_current->idle_te));
 
-          /* if the cctx is about to be destroyed we need to make sure we won't see it in cctx_get */
-          /* without this the next cctx_get might destroy the prev__cctx while still in use */
+          /* if the cctx is about to be destroyed we need to make sure we won't see it in cctx_get. */
+          /* without this the next cctx_get might destroy the running cctx while still in use */
           if (expect_false (CCTX_EXPIRED (cctx_current)))
-            if (!next->cctx)
+            if (expect_true (!next->cctx))
               next->cctx = cctx_get (aTHX);
 
           cctx_put (cctx_current);
-          assert (!prev->cctx);//D temporary
         }
       else
         prev->cctx = cctx_current;
@@ -1760,12 +1761,15 @@ api_trace (pTHX_ SV *coro_sv, int flags)
 {
   struct coro *coro = SvSTATE (coro_sv);
 
+  if (coro->flags & CF_RUNNING)
+    croak ("cannot enable tracing on a running coroutine, caught");
+
   if (flags & CC_TRACE)
     {
       if (!coro->cctx)
         coro->cctx = cctx_new_run ();
       else if (!(coro->cctx->flags & CC_TRACE))
-        croak ("cannot enable tracing on coroutine with custom stack,");
+        croak ("cannot enable tracing on coroutine with custom stack, caught");
 
       coro->cctx->flags |= CC_NOREUSE | (flags & (CC_TRACE | CC_TRACE_ALL));
     }
