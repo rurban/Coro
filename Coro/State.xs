@@ -1,3 +1,5 @@
+#define CORO_CLONE 1 //D
+
 #include "libcoro/coro.c"
 
 #define PERL_NO_GET_CONTEXT
@@ -102,6 +104,9 @@ static int cctx_max_idle = 4;
 #endif
 #ifndef CvISXSUB
 # define CvISXSUB(cv) (CvXSUB (cv) ? TRUE : FALSE)
+#endif
+#ifndef Newx
+# define Newx(ptr,nitems,type) New (0,ptr,nitems,type)
 #endif
 
 /* 5.8.7 */
@@ -349,7 +354,7 @@ coro_sv_2cv (pTHX_ SV *sv)
 }
 
 static AV *
-coro_clone_padlist (pTHX_ CV *cv)
+coro_derive_padlist (pTHX_ CV *cv)
 {
   AV *padlist = CvPADLIST (cv);
   AV *newpadlist, *newpad;
@@ -479,7 +484,7 @@ get_padlist (pTHX_ CV *cv)
      CvPADLIST (cp) = 0;
      SvREFCNT_dec (cp);
 #else
-     CvPADLIST (cv) = coro_clone_padlist (aTHX_ cv);
+     CvPADLIST (cv) = coro_derive_padlist (aTHX_ cv);
 #endif
    }
 }
@@ -2726,6 +2731,10 @@ coro_aio_req_xs (pTHX_ CV *cv)
 
 /*****************************************************************************/
 
+#if CORO_CLONE
+# include "clone.c"
+#endif
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
@@ -2873,6 +2882,25 @@ _exit (int code)
         PROTOTYPE: $
 	CODE:
 	_exit (code);
+
+#if CORO_CLONE
+
+SV *
+clone (Coro::State coro)
+	CODE:
+{
+        struct coro *ncoro = coro_clone (coro);
+        MAGIC *mg;
+        /* TODO: too much duplication */
+        ncoro->hv = newHV ();
+        mg = sv_magicext ((SV *)ncoro->hv, 0, CORO_MAGIC_type_state, &coro_state_vtbl, (char *)ncoro, 0);
+        mg->mg_flags |= MGf_DUP;
+        RETVAL = sv_bless (newRV_noinc ((SV *)ncoro->hv), SvSTASH (coro->hv));
+}
+	OUTPUT:
+        RETVAL
+
+#endif
 
 int
 cctx_stacksize (int new_stacksize = 0)

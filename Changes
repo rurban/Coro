@@ -11,6 +11,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - bumped $Coro::POOL_RSS up to 32kb by default.
         - no longer set the optype to OP_CUSTOM, as B::* understandably
           doesn't like this very much (and we *are* a type of entersub).
+        - better 5.8.6 compatibility.
 
 5.0  Thu Nov 20 10:35:05 CET 2008
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience

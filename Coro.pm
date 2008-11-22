@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro - the real perl threads
+Coro - real threads in perl
 
 =head1 SYNOPSIS
 
