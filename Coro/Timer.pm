@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Timer - simple timer package, independent of used event loops
+Coro::Timer - timers and timeouts, independent of any event loop
 
 =head1 SYNOPSIS
 

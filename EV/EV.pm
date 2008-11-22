@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::EV - do events the coro-way
+Coro::EV - do events the coro-way, with EV
 
 =head1 SYNOPSIS
 

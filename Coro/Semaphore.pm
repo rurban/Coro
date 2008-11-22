@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Semaphore - non-binary semaphores
+Coro::Semaphore - counting semaphores
 
 =head1 SYNOPSIS
 

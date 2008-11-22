@@ -18,6 +18,9 @@ LWP really tries very hard to be blocking (and relies on a lot of
 undocumented functionality in IO::Socket), so this module had to be very
 invasive and must be loaded very early to take the proper effect.
 
+Note that the module L<AnyEvent::HTTP> might offer an alternative to the
+full L<LWP> that is designed to be non-blocking.
+
 Here is what it currently does (future versions of LWP might require
 different tricks):
 

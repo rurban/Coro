@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::State - create and manage simple coroutines
+Coro::State - first class continuations
 
 =head1 SYNOPSIS
 

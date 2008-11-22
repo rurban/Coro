@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::SemaphoreSet - hash of semaphores.
+Coro::SemaphoreSet - efficient set of counting semaphores
 
 =head1 SYNOPSIS
 

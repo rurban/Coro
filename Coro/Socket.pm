@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Socket - non-blocking socket-io
+Coro::Socket - non-blocking socket-I/O
 
 =head1 SYNOPSIS
 

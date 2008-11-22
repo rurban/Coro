@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Handle - non-blocking io with a blocking interface.
+Coro::Handle - non-blocking I/O with a blocking interface.
 
 =head1 SYNOPSIS
 
