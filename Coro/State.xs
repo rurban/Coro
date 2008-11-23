@@ -1331,7 +1331,7 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
   if (expect_true (prev != next))
     {
       if (expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
-        croak ("Coro::State::transfer called with non-running/new prev Coro::State, but can only transfer from running or new states,");
+        croak ("Coro::State::transfer called with a suspended prev Coro::State, but can only transfer from running or new states,");
 
       if (expect_false (next->flags & CF_RUNNING))
         croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states,");

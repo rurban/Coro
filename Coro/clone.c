@@ -90,13 +90,11 @@ coro_clone (struct coro *coro)
         av = clone_av ((AV *)TOPs);
         AvREAL_off (av);
 
-#if 0
         for (i = 1; i <= AvFILLp (av); ++i)
           {
             SvREFCNT_dec (AvARRAY (av)[i]);
             AvARRAY (av)[i] = (SV *)clone_av ((AV *)AvARRAY (av)[i]);
           }
-#endif
 
         TOPs = (SV *)av;
 

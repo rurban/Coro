@@ -10,11 +10,13 @@ of the module family.
 Coro started as a simple module that implemented a specific form of
 first class continuations called Coroutines. These basically allow you
 to capture the current point execution and jump to another point, while
-allowing you to return at any time, as kind of non-local jump. This is
-nowadays known as a L<Coro::State>.
+allowing you to return at any time, as kind of non-local jump, not unlike
+C's C<setjmp>/C<longjmp>. This is nowadays known as a L<Coro::State>.
 
 The natural application for these is to include a scheduler, resulting in
-cooperative threads, which is the main use case for Coro today.
+cooperative threads, which is the main use case for Coro today. Still,
+much of the documentation and custom refers to these threads as
+"coroutines" or often just "coros".
 
 A thread is very much like a stripped-down perl interpreter, or a
 process: Unlike a full interpreter process, a thread doesn't have it's own
@@ -92,6 +94,7 @@ program:
    print "main 1\n";
    cede;
    print "main 2\n";
+   cede;
 
 Running this program prints:
 
@@ -102,20 +105,20 @@ Running this program prints:
 
 This nicely illustrates the non-local jump ability: the main program
 prints the first line, and then yields the CPU to whatever other
-coroutines there are. And there there is one other, which runs and prints
-"async 1", and itself yields the CPU. Since the only other coroutine
+threads there are. And there there is one other, which runs and prints
+"async 1", and itself yields the CPU. Since the only other thread
 available is the main program, it continues running and so on.
 
-In more detail, C<async> creates a new coroutine. All new coroutines
+In more detail, C<async> creates a new thread. All new threads
 start in a suspended state. To make them run, they need to be put into
 the ready queue, which is the second thing that C<async> does. Each time
-a coroutine gives up the CPU, Coro runs a so-called I<scheduler>. The
-scheduler selects the next coroutine from the ready queue, removes it from
+a thread gives up the CPU, Coro runs a so-called I<scheduler>. The
+scheduler selects the next thread from the ready queue, removes it from
 the queue, and runs it.
 
-C<cede> also does two things: first it puts the running coroutine into the
+C<cede> also does two things: first it puts the running thread into the
 ready queue, and then it jumps into the scheduler. This has the effect of
-giving up the CPU, but also ensures that, eventually, the coroutine gets
+giving up the CPU, but also ensures that, eventually, the thread gets
 run again.
 
 In fact, C<cede> could be implemented like this:
@@ -126,17 +129,17 @@ In fact, C<cede> could be implemented like this:
    }
 
 This works because C<$Coro::current> always contains the currently running
-coroutine, and the scheduler itself can be called via C<Coro::schedule>.
+thread, and the scheduler itself can be called via C<Coro::schedule>.
 
 What's the effect of just calling C<schedule>? Simple, the scheduler
-selects the next ready coroutine and runs it - the current coroutine, as
+selects the next ready thread and runs it - the current thread, as
 it hasn't been put into the ready queue, will go to sleep until something
 wakes it up.
 
-The following example remembers the current coroutine in a variable,
-creates a coroutine and then puts the main program to sleep.
+The following example remembers the current thread in a variable,
+creates a thread and then puts the main program to sleep.
 
-The newly created coroutine uses rand to wake up the main coroutine by
+The newly created thread uses rand to wake up the main thread by
 calling its C<ready> method - or not.
 
    use Coro;
@@ -150,16 +153,16 @@ calling its C<ready> method - or not.
    schedule;
 
 Now, when you run it, one of two things happen: Either the C<async>
-coroutine wakes up main again, in which case the program silently exits,
+thread wakes up main again, in which case the program silently exits,
 or it doesn't, in which case you get:
 
    FATAL: deadlock detected at - line 0
 
-Why is that? When the C<async> coroutine falls of the end, it will be
+Why is that? When the C<async> thread falls of the end, it will be
 terminated (via a call to C<Coro::terminate>) and the scheduler gets run
-again. Since the C<async> coroutine hasn't woken up the main coroutine,
-and there aren't any other coroutines, there is nothing to wake up,
-and the program cannot continue. Since there I<are> coroutines that
+again. Since the C<async> thread hasn't woken up the main thread,
+and there aren't any other threads, there is nothing to wake up,
+and the program cannot continue. Since there I<are> threads that
 I<could> be running (main) but none are I<ready> to do so, Coro signals a
 I<deadlock> - no progress is possible.
 
@@ -169,16 +172,16 @@ could well wait for I<external> events, such as a timeout, or some data to
 arrive on a socket.
 
 Since a deadlock in such a case would not be very useful, there is a
-module named L<Coro::AnyEvent> that integrates coroutines into an event
+module named L<Coro::AnyEvent> that integrates threads into an event
 loop. It configures Coro in a way that instead of dieing with an error
 message, it instead runs the event loop in the hope of receiving an event
-that will wake up some coroutine.
+that will wake up some thread.
 
 =head2 Semaphores and other locks
 
-Using only C<ready>, C<cede> and C<schedule> to synchronise coroutines
-is difficult, especially if many coroutines are ready at the same
-time. Coro supports a number of modules to help synchronising coroutines
+Using only C<ready>, C<cede> and C<schedule> to synchronise threads
+is difficult, especially if many threads are ready at the same
+time. Coro supports a number of modules to help synchronising threads
 in easier ways. The first such module is L<Coro::Semaphore>, which
 implements counting semaphores (binary semaphores are also available as
 L<Coro::Signal>):
@@ -199,18 +202,18 @@ L<Coro::Signal>):
 
 This program creates a I<locked> semaphore (a semaphore with count C<0>)
 and tries to lock it.  Since the semaphore is already locked, this will
-block the main coroutine until the semaphore becomes available.
+block the main thread until the semaphore becomes available.
 
-This yields the CPU to the C<async> coroutine, which unlocks the
+This yields the CPU to the C<async> thread, which unlocks the
 semaphore (and instantly gets terminated).
 
 Since the semaphore is now available, the main program locks it and
 continues.
 
 Semaphores are most often used to lock resources, or to exclude other
-coroutines from accessing or using a resource. For example, consider
+threads from accessing or using a resource. For example, consider
 a very costly function (that temporarily allocates a lot of ram, for
-example). You wouldn't want to have many coroutines calling this function,
+example). You wouldn't want to have many threads calling this function,
 so you use a semaphore:
 
    my $lock = new Coro::Semaphore; # unlocked initially
@@ -223,10 +226,10 @@ so you use a semaphore:
       $lock->up; # unlock it
    }
 
-No matter how many coroutines call C<costly_function>, only one will run
+No matter how many threads call C<costly_function>, only one will run
 the body of it, all others will wait in the C<down> call.
 
-Why does the comment mention "operation the blocks"? That's because coro
+Why does the comment mention "operation the blocks"? That's because coro's
 threads are cooperative: unless C<costly_function> willingly gives up the
 CPU, other threads of control will simply not run. This makes locking
 superfluous in cases where the fucntion itself never gives up the CPU, but
@@ -251,8 +254,8 @@ This method C<down>s the semaphore and returns a so-called guard
 object. Nothing happens as long as there are references to it, but when
 all references are gone, for example, when C<costly_function> returns or
 throws an exception, it will automatically call C<up> on the semaphore,
-no way to forget it. even when the coroutine gets C<cancel>ed by another
-coroutine will the guard object ensure that the lock is freed.
+no way to forget it. even when the thread gets C<cancel>ed by another
+thread will the guard object ensure that the lock is freed.
 
 Apart from L<Coro::Semaphore> and L<Coro::Signal>, there is
 also a reader-writer lock (L<Coro::RWLock>) and a semaphore set
@@ -265,9 +268,9 @@ data as well. This is where L<Coro::Channel> comes in useful: Channels
 are the Coro equivalent of a unix pipe - you cna put stuff into it on one
 side, and read data from it on the other.
 
-Here is a simple example that creates a coroutine and sends it
-numbers. The coroutine calculates the square of the number, and puts it
-into another channel, which the main coroutine reads the result from:
+Here is a simple example that creates a thread and sends it
+numbers. The thread calculates the square of the number, and puts it
+into another channel, which the main thread reads the result from:
 
    use Coro;
    use Coro::Channel;
@@ -297,10 +300,37 @@ Gives:
    10 ** 2 = 100
    77 ** 2 = 5929
 
-Be careful, however: when multiple coroutines put numbers into
-C<$calculate> and read from C<$result>, they won't know which result is
-theirs. The solution for this is to ither use a semaphore, or send not
-just the number, but also your own private result channel.
+Both C<get> and C<put> methods can block the current thread: C<get>
+first checks whether there I<is> some data available, and if not, it block
+the current thread until some data arrives. C<put> can also block, as
+each Channel has a "maximum buffering capacity", i.e. you cannot store
+more than a specific number of items, which cna be confgiured when the
+Channel gets created.
+
+In the above example, C<put> never blocks, as the default capacity is
+of a Channel is very high.  So the foor loop first puts data into the
+channel, then tries to C<get> the result. Since the async thread hasn't
+put anything in there yet (on the firts iteration it hasn't even run
+yet), the result Channel is still empty, so the main thread blocks.
+
+Since the only other runnable/ready thread at this point is the squaring
+thread, it will be woken up, will C<get> the number, square it and put it
+into the result channel, waking up the main thread again. It will still
+continue to run, as waking up other threads just puts them into the ready
+queue, nothing less, nothing more.
+
+Only when the async thread tries to C<get> the next number from the
+calculate channel will it block (because nothing is there yet) and the
+main thread will continue running. And so on.
+
+In general, Coro will I<only ever block> a thread when it has to: Neither
+the Coro module itself nor any of it's submodules will ever give up the
+CPU unless they have to, because they wait for some event to happen.
+
+Be careful, however: when multiple threads put numbers into C<$calculate>
+and read from C<$result>, they won't know which result is theirs. The
+solution for this is to ither use a semaphore, or send not just the
+number, but also your own private result channel.
 
 L<Coro::Channel> can buffer some amount of items. It is also very
 instructive to read it's source code, as it is very simple and uses two
@@ -308,8 +338,8 @@ counting semaphores internally for synchronisation.
 
 =head2 Debugging
 
-Sometimes it can be useful to find out what each coroutine is doing (or
-which coroutines exist in the first place). The L<Coro::Debug> module has
+Sometimes it can be useful to find out what each thread is doing (or
+which threads exist in the first place). The L<Coro::Debug> module has
 (among other goodies), a function that allows you to print a "ps"-like
 listing:
 
@@ -327,10 +357,10 @@ Running it just after C<< $calculate->get >> outputs something similar to this:
    11546944 N-  152    0 [EV idle process]        -
 
 Interesting - there is more going on in the background than one would
-expect. Ignoring the extra coroutines, the main coroutine has pid
+expect. Ignoring the extra threads, the main thread has pid
 C<8917312>, and the one started by C<async> has pid C<8591752>.
 
-The latter is also the only coroutine that doesn't have a description,
+The latter is also the only thread that doesn't have a description,
 simply because we haven't set one. Setting one is easy, just put it into
 C<< $Coro::current->{desc} >>:
 
@@ -388,18 +418,18 @@ L<IO::Socket::INET>, when waiting for the network, will block the whole
 process - that means all threads, which is clearly undesirable.
 
 On the other hand, L<Coro::Socket> knows how to give up the CPU to other
-coroutines when it waits for the network, which makes parallel processing
+threads when it waits for the network, which makes parallel processing
 possible.
 
 The other new thing is the C<join> method: All we want to do in this
-example is start three C<async> coroutines and only exit when they have
+example is start three C<async> threads and only exit when they have
 done their job. This could be done using a counting semaphore, but it is
 much simpler to synchronously wait for them to C<terminate>, which is
 exactly what the C<join> method does.
 
 It doesn't matter that the three async's will probably finish in a
-different order then the for loop C<join>s them - when the coroutine
-is still running, C<join> simply waits. If the coroutine has already
+different order then the for loop C<join>s them - when the thread
+is still running, C<join> simply waits. If the thread has already
 terminated, it will simply fetch its return status.
 
 If you are experienced in event-based programming, you will see that the
@@ -466,7 +496,7 @@ Fortunately, the L<IO::AIO> module on CPAN allows you to move these
 I/O calls into the background, letting you do useful work in the
 foreground. It is event-/callback-based, but Coro has a nice interface to
 it, called L<Coro::AIO>, which let's you use its functions naturally from
-within coroutines:
+within threads:
 
    use Fcntl;
    use Coro::AIO;
