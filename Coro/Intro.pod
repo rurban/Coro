@@ -263,10 +263,11 @@ also a reader-writer lock (L<Coro::RWLock>) and a semaphore set
 
 =head2 Channels
 
-Semaphores are fine, but usualyl you want to communicate by exchanging
+Semaphores are fine, but usually you want to communicate by exchanging
 data as well. This is where L<Coro::Channel> comes in useful: Channels
-are the Coro equivalent of a unix pipe - you cna put stuff into it on one
-side, and read data from it on the other.
+are the Coro equivalent of a unix pipe (and very similar to amiga message
+ports) - you can put stuff into it on one side, and read data from it on
+the other.
 
 Here is a simple example that creates a thread and sends it
 numbers. The thread calculates the square of the number, and puts it
