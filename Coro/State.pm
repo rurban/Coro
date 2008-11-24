@@ -172,7 +172,8 @@ If it throws an exception the program will terminate unless the exception
 is caught, exactly like in the main program.
 
 Calling C<exit> in a coroutine does the same as calling it in the main
-program.
+program, but due to libc bugs on many BSDs, this doesn't work reliable
+everywhere.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
@@ -200,6 +201,7 @@ and have the stated initial values:
    $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK(*)
    $SIG{__WARN__} aliased to $Coro::State::WARNHOOK(*)
    (default fh)   *STDOUT
+   $^H, %^H       zero/empty.
    $1, $2...      all regex results are initially undefined
 
    (*) reading the value from %SIG is not supported, but local'ising is.

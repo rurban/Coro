@@ -249,6 +249,7 @@ typedef struct
   AV *defav;
   SV *errsv;
   SV *irsgv;
+  HV *hinthv;
 #define VAR(name,type) type name;
 # include "state.h"
 #undef VAR
@@ -519,10 +520,11 @@ load_perl (pTHX_ Coro__State c)
 
   PL_mainstack = c->mainstack;
 
-  GvSV (PL_defgv) = slot->defsv;
-  GvAV (PL_defgv) = slot->defav;
-  GvSV (PL_errgv) = slot->errsv;
-  GvSV (irsgv)    = slot->irsgv;
+  GvSV (PL_defgv)  = slot->defsv;
+  GvAV (PL_defgv)  = slot->defav;
+  GvSV (PL_errgv)  = slot->errsv;
+  GvSV (irsgv)     = slot->irsgv;
+  GvHV (PL_hintgv) = slot->hinthv;
 
   #define VAR(name,type) PL_ ## name = slot->name;
   # include "state.h"
@@ -618,10 +620,11 @@ save_perl (pTHX_ Coro__State c)
   {
     perl_slots *slot = c->slot = (perl_slots *)(cxstack + cxstack_ix + 1);
 
-    slot->defav = GvAV (PL_defgv);
-    slot->defsv = DEFSV;
-    slot->errsv = ERRSV;
-    slot->irsgv = GvSV (irsgv);
+    slot->defav  = GvAV (PL_defgv);
+    slot->defsv  = DEFSV;
+    slot->errsv  = ERRSV;
+    slot->irsgv  = GvSV (irsgv);
+    slot->hinthv = GvHV (PL_hintgv);
 
     #define VAR(name,type) slot->name = PL_ ## name;
     # include "state.h"
@@ -867,6 +870,9 @@ coro_setup (pTHX_ struct coro *coro)
   PL_curcop     = &PL_compiling;
   PL_in_eval    = EVAL_NULL;
   PL_comppad    = 0;
+  PL_comppad_name       = 0;
+  PL_comppad_name_fill  = 0;
+  PL_comppad_name_floor = 0;
   PL_curpm      = 0;
   PL_curpad     = 0;
   PL_localizing = 0;
@@ -875,6 +881,7 @@ coro_setup (pTHX_ struct coro *coro)
 #if PERL_VERSION_ATLEAST (5,10,0)
   PL_parser     = 0;
 #endif
+  PL_hints      = 0;
 
   /* recreate the die/warn hooks */
   PL_diehook  = 0; SvSetMagicSV (*hv_fetch (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, 1), rv_diehook );
@@ -884,6 +891,7 @@ coro_setup (pTHX_ struct coro *coro)
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
   GvSV (PL_errgv)    = newSV (0);
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
+  GvHV (PL_hintgv)   = 0;
   PL_rs              = newSVsv (GvSV (irsgv));
   PL_defoutgv        = (GV *)SvREFCNT_inc_NN (stdoutgv);
 
@@ -947,6 +955,7 @@ coro_destruct (pTHX_ struct coro *coro)
   SvREFCNT_dec (PL_defoutgv);
   SvREFCNT_dec (PL_rs);
   SvREFCNT_dec (GvSV (irsgv));
+  SvREFCNT_dec (GvHV (PL_hintgv));
 
   SvREFCNT_dec (PL_diehook);
   SvREFCNT_dec (PL_warnhook);
@@ -1672,7 +1681,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
               && SvOBJECT (SvRV (sv_idle)))
             {
               ++coro_nready; /* hack so that api_ready doesn't invoke ready hook */
-              api_ready (SvRV (sv_idle));
+              api_ready (aTHX_ SvRV (sv_idle));
               --coro_nready;
             }
           else

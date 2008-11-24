@@ -5,6 +5,7 @@ This tutorial will introduce you to the main features of the Coro module family.
 It first introduces some basic concepts, and later gives a short overview
 of the module family.
 
+
 =head1 What is Coro?
 
 Coro started as a simple module that implemented a specific form of
@@ -38,6 +39,7 @@ threads" are actually artifacts of the unix process emulation code used
 on Windows, which is consequently why they are actually processes and not
 threads. The biggest difference is that the variables (nor code) are not
 shared between processes.
+
 
 =head1 Cooperative Threads
 
@@ -177,6 +179,7 @@ loop. It configures Coro in a way that instead of dieing with an error
 message, it instead runs the event loop in the hope of receiving an event
 that will wake up some thread.
 
+
 =head2 Semaphores and other locks
 
 Using only C<ready>, C<cede> and C<schedule> to synchronise threads
@@ -261,6 +264,7 @@ Apart from L<Coro::Semaphore> and L<Coro::Signal>, there is
 also a reader-writer lock (L<Coro::RWLock>) and a semaphore set
 (L<Coro::SemaphoreSet>).
 
+
 =head2 Channels
 
 Semaphores are fine, but usually you want to communicate by exchanging
@@ -337,6 +341,92 @@ L<Coro::Channel> can buffer some amount of items. It is also very
 instructive to read it's source code, as it is very simple and uses two
 counting semaphores internally for synchronisation.
 
+
+=head2 What is mine, what is ours?
+
+What, exactly, constitutes a thread? Obviously it contains the current
+point of execution.  Not os obviously, it also has to include all
+lexical variables, that means, every thread has its own set of lexical
+variables. To see why this is necessary, consider this program:
+
+   use Coro;
+
+   sub printit {
+      my ($string) = @_;
+
+      cede;
+
+      print $string;
+   }
+
+   async { printit "Hello, " };
+   async { printit "World!\n" };
+
+   cede; cede; # do it
+
+The above prints C<Hello, World!\n>. If C<printit> wouldn't have
+it's own per-thread C<$string> variable, it would probably print
+C<World!\nWorld\n>, which is rather unexpected, and would make it very
+difficult to make good use of threads.
+
+There are quite a numbe rof other things that are per-thread:
+
+=over 4
+
+=item $_, @_, $@ and the regex result vars, $&, %+, $1, $2, ...
+
+C<$_> is used much like a local variable, so it gets localised
+per-thread. The same is true for regex results (C<$1>, C<$2> and so on).
+
+C<@_> contains the arguments, so like lexicals, it also must be
+per-thread.
+
+C<$@> is not obviously required to be per-thread, but it is quite useful.
+
+=item $/ and the default output file handle
+
+Threads most often block when doing I/O. Since C<$/> is used when reading
+lines, it would be very inconvenient if it were a shared variable, so it is per-thread.
+
+The default output handle (see C<select>) is a difficult case: sometimes
+being global is preferable, sometimes per-thread is preferable. Since
+per-thread seems to be more common, it is per-thread.
+
+=item $SIG{__DIE__} and $SIG{__WARN__}
+
+If these weren't per-thread, then common constructs such as:
+
+   eval {
+      local $SIG{__DIE__} = sub { ... };
+      ...
+   };
+
+Would not allow coroutine switching. Since exception-handling is
+per-thread, those variables should be per-thread too.
+
+=item Lots of other esoteric stuff
+
+For example, C<$^H> is per-thread. Most of the additional per-thread state
+is not directly visible to perl, but required to make the interpreter
+work. You won't normally notice these.
+
+=back
+
+Everything else is shared between all threads. For example, the globals
+C<$a> and C<$b> are shared. When does that matter? When using C<sort>,
+these variables become special, and therefore, switching threads when
+sorting might have surprising results.
+
+Other examples are the C<$!>, errno, C<$.>, the current input line number,
+C<$,>, C<$\>, C<$"> and many other special variables.
+
+While in some cases a good argument could be made for localising them to
+the thread, they are rarely used, and sometimes hard to localise.
+
+Future versions of Coro might include more per-thread state when it
+becomes a problem.
+
+
 =head2 Debugging
 
 Sometimes it can be useful to find out what each thread is doing (or
@@ -372,6 +462,7 @@ C<< $Coro::current->{desc} >>:
 
 This can be rather useful when debugging a program, or when using the
 interactive debug shell of L<Coro::Debug>.
+
 
 =head1 The Real World - Event Loops
 
@@ -487,6 +578,7 @@ socket in F</tmp/myshell>. You can use the F<socat> program to access it:
 Microsft victims can of course use the even less secure C<new_tcp_server>
 constructor.
 
+
 =head2 The Real World - File I/O
 
 Disk I/O, while often much faster than the network, nevertheless can take
@@ -513,6 +605,7 @@ within threads:
 The above creates a new file, writes data into it, syncs the data to disk
 and atomically replaces a base file with a new copy.
 
+
 =head1 Other Modules
 
 This introduction only mentions a very few methods and modules, Coro has
@@ -525,6 +618,7 @@ L<Coro::BDB>, for when you need an asynchronous database, L<Coro::Handle>,
 when you need to use any file handle in a coroutine (popular to access
 C<STDIN> and C<STDOUT>) and L<Coro::EV>, the optimised interface to L<EV>
 (which gets used automatically by L<Coro::AnyEvent>).
+
 
 =head1 AUTHOR
 

@@ -25,6 +25,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - allow coroutines in $Coro::IDLE, speeding up Coro::AnyEvent and
           others. It also makes the debugger happier, as you can trace
           through the idle threads now.
+        - add comppad_name* and hints ($^H, %^H) to per-thread variables.
         - eg/event was pretty broken.
         - better 5.8.6 compatibility.
 
