@@ -40,7 +40,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 our @EXPORT_OK = "select";
 
 sub import {
@@ -53,7 +53,6 @@ sub import {
 }
 
 sub select(;*$$$) { # not the correct prototype, but well... :()
-   warn "select<@_>\n";#d#
    if (@_ == 0) {
       return CORE::select
    } elsif (@_ == 1) {

@@ -5,11 +5,13 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-      TODO: Coro/Intro
-	- wrote a small introduction - Coro::Intro.
+5.1  Mon Nov 24 08:54:59 CET 2008
+	- wrote a small introductory tutorial - Coro::Intro.
 	- convert Coro::Timer, Coro::Select and Coro::Util to rouse API.
         - Coro::Select did errornously dup the file descriptors
           and didn't work with all AnyEvent backends.
+        - Coro::Select wasn't imported correctly form Coro::LWP, causing blocking
+          LWP data transfers.
         - disassociate c contexts from coro objects - this is agruably more
           correct, but mostly allows sharing of cctxs between coro and state
           objects, for added memory savings and speed increases.

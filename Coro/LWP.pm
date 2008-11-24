@@ -76,11 +76,13 @@ BEGIN {
    require Net::Config;
 }
 
-# import these so they cna grab Socket::inet_aton
+# do it as early as possible
+use Coro::Select;
+
+# import these so they can grab Socket::inet_aton
 use AnyEvent::Util ();
 use AnyEvent::DNS ();
 
-use Coro::Select ();
 use Coro::Util ();
 use Coro::Socket ();
 
@@ -92,7 +94,7 @@ use Net::HTTP ();
 use Net::FTP ();
 use Net::NNTP ();
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 
