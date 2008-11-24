@@ -106,7 +106,7 @@ Create and return a watcher of the given type.
 
 Examples:
 
-  my $reader = Coro::Event->io(fd => $filehandle, poll => 'r');
+  my $reader = Coro::Event->io (fd => $filehandle, poll => 'r');
   $reader->next;
 
 =cut
@@ -204,15 +204,15 @@ Same as Event::unloop (provided here for your convinience only).
 =cut
 
 # very inefficient
-our $event_idle = new Coro sub {
+our $IDLE = new Coro sub {
    while () {
       &Event::one_event;
       &Coro::schedule;
    }
 };
-$event_idle->{desc} = "[Event idle process]";
+$IDLE->{desc} = "[Event idle process]";
 
-$Coro::idle = sub { $event_idle->ready };
+$Coro::idle = $IDLE;
 
 1;
 

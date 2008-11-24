@@ -177,6 +177,7 @@ static volatile SV *coro_mortal; /* will be freed/thrown after next transfer */
 
 static AV *av_destroy; /* destruction queue */
 static SV *sv_manager; /* the manager coro */
+static SV *sv_idle; /* $Coro::idle */
 
 static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
@@ -1584,9 +1585,6 @@ api_ready (pTHX_ SV *coro_sv)
   SV *sv_hook;
   void (*xs_hook)(void);
 
-  if (SvROK (coro_sv))
-    coro_sv = SvRV (coro_sv);
-
   coro = SvSTATE (coro_sv);
 
   if (coro->flags & CF_READY)
@@ -1670,17 +1668,27 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
       else
         {
           /* nothing to schedule: call the idle handler */
-          dSP;
+          if (SvROK (sv_idle)
+              && SvOBJECT (SvRV (sv_idle)))
+            {
+              ++coro_nready; /* hack so that api_ready doesn't invoke ready hook */
+              api_ready (SvRV (sv_idle));
+              --coro_nready;
+            }
+          else
+            {
+              dSP;
 
-          ENTER;
-          SAVETMPS;
+              ENTER;
+              SAVETMPS;
 
-          PUSHMARK (SP);
-          PUTBACK;
-          call_sv (get_sv ("Coro::idle", FALSE), G_VOID | G_DISCARD);
+              PUSHMARK (SP);
+              PUTBACK;
+              call_sv (sv_idle, G_VOID | G_DISCARD);
 
-          FREETMPS;
-          LEAVE;
+              FREETMPS;
+              LEAVE;
+            }
         }
     }
 }
@@ -3100,6 +3108,7 @@ BOOT:
         av_async_pool      = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
         av_destroy         = coro_get_av (aTHX_ "Coro::destroy"   , TRUE);
         sv_manager         = coro_get_sv (aTHX_ "Coro::manager"   , TRUE);
+        sv_idle            = coro_get_sv (aTHX_ "Coro::idle"      , TRUE);
 
         sv_async_pool_idle = newSVpv ("[async pool idle]", 0); SvREADONLY_on (sv_async_pool_idle);
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);

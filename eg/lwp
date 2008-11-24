@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use Coro;
-use Coro::Event;
+use Coro::AnyEvent;
 use Coro::LWP; # should be use'd as early as possible
 use LWP::Simple;
 

@@ -273,8 +273,8 @@ use Coro::AnyEvent;
 # 2 timeout
 # 3 rb
 # 4 wb # unused
-# 5 read watcher, if Coro::Event used
-# 6 write watcher, if Coro::Event used
+# 5 read watcher, if Coro::Event|EV used
+# 6 write watcher, if Coro::Event|EV used
 # 7 forward class
 # 8 blocking
 
@@ -296,8 +296,10 @@ sub TIEHANDLE {
 }
 
 sub cleanup {
-   $_[0][5]->cancel if $_[0][5];
-   $_[0][6]->cancel if $_[0][6];
+   eval {
+      $_[0][5]->cancel if $_[0][5];
+      $_[0][6]->cancel if $_[0][6];
+   };
    @{$_[0]} = ();
 }
 
@@ -365,56 +367,47 @@ sub FETCH {
 }
 
 sub readable_anyevent {
-   my $current = $Coro::current;
+   my $cb = Coro::rouse_cb;
    my $io = 1;
 
    my $w = AnyEvent->io (
       fh    => $_[0][0],
       poll  => 'r',
-      cb    => sub {
-         $current->ready if $current;
-         undef $current;
-      },
+      cb    => $cb,
    );
 
    my $t = (defined $_[0][2]) && AnyEvent->timer (
       after => $_[0][2],
       cb    => sub {
          $io = 0;
-         $current->ready if $current;
-         undef $current;
+         $cb->();
       },
    );
 
-   &Coro::schedule;
-   &Coro::schedule while $current;
+   Coro::rouse_wait;
 
    $io
 }
 
 sub writable_anyevent {
-   my $current = $Coro::current;
+   my $cb = Coro::rouse_cb;
    my $io = 1;
 
    my $w = AnyEvent->io (
       fh    => $_[0][0],
       poll  => 'w',
-      cb    => sub {
-         $current->ready if $current;
-         undef $current;
-      },
+      cb    => $cb,
    );
 
    my $t = (defined $_[0][2]) && AnyEvent->timer (
       after => $_[0][2],
       cb    => sub {
          $io = 0;
-         $current->ready if $current;
-         undef $current;
+         $cb->();
       },
    );
 
-   &Coro::schedule while $current;
+   Coro::rouse_wait;
 
    $io
 }

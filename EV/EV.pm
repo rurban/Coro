@@ -66,7 +66,7 @@ our $IDLE = new Coro sub {
 };
 $IDLE->{desc} = "[EV idle process]";
 
-$Coro::idle = sub { $IDLE->ready };
+$Coro::idle = $IDLE;
 
 =item $revents = Coro::EV::timed_io_once $fileno_or_fh, $events, $timeout
 

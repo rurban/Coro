@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro - real threads in perl
+Coro - the only real threads in perl
 
 =head1 SYNOPSIS
 
@@ -31,19 +31,19 @@ Coro - real threads in perl
 For a tutorial-style introduction, please read the L<Coro::Intro>
 manpage. This manpage mainly contains reference information.
 
-This module collection manages coroutines, that is, cooperative
-threads. Coroutines are similar to kernel threads but don't (in general)
+This module collection manages continuations in general, most often
+in the form of cooperative threads (also called coroutines in the
+documentation). They are similar to kernel threads but don't (in general)
 run in parallel at the same time even on SMP machines. The specific flavor
-of coroutine used in this module also guarantees you that it will not
-switch between coroutines unless necessary, at easily-identified points
-in your program, so locking and parallel access are rarely an issue,
-making coroutine programming much safer and easier than using other thread
-models.
+of thread offered by this module also guarantees you that it will not
+switch between threads unless necessary, at easily-identified points in
+your program, so locking and parallel access are rarely an issue, making
+thread programming much safer and easier than using other thread models.
 
 Unlike the so-called "Perl threads" (which are not actually real threads
 but only the windows process emulation ported to unix), Coro provides a
-full shared address space, which makes communication between coroutines
-very easy. And coroutines are fast, too: disabling the Windows process
+full shared address space, which makes communication between threads
+very easy. And threads are fast, too: disabling the Windows process
 emulation code in your perl and using Coro can easily result in a two to
 four times speed increase for your programs.
 
@@ -53,11 +53,10 @@ for event-based programming, such as multiple HTTP-GET requests running
 concurrently. See L<Coro::AnyEvent> to learn more on how to integrate Coro
 into an event-based environment.
 
-In this module, a coroutines is defined as "callchain + lexical variables
-+ @_ + $_ + $@ + $/ + C stack), that is, a coroutine has its own
-callchain, its own set of lexicals and its own set of perls most important
-global variables (see L<Coro::State> for more configuration and background
-info).
+In this module, a thread is defined as "callchain + lexical variables +
+@_ + $_ + $@ + $/ + C stack), that is, a thread has its own callchain,
+its own set of lexicals and its own set of perls most important global
+variables (see L<Coro::State> for more configuration and background info).
 
 See also the C<SEE ALSO> section at the end of this document - the Coro
 module family is quite large.
@@ -117,22 +116,29 @@ sub current() { $current } # [DEPRECATED]
 =item $Coro::idle
 
 This variable is mainly useful to integrate Coro into event loops. It is
-usually better to rely on L<Coro::AnyEvent> or LC<Coro::EV>, as this is
+usually better to rely on L<Coro::AnyEvent> or L<Coro::EV>, as this is
 pretty low-level functionality.
 
-This variable stores a callback that is called whenever the scheduler
-finds no ready coroutines to run. The default implementation prints
-"FATAL: deadlock detected" and exits, because the program has no other way
-to continue.
+This variable stores either a coroutine or a callback.
 
-This hook is overwritten by modules such as C<Coro::Timer> and
+If it is a callback, the it is called whenever the scheduler finds no
+ready coroutines to run. The default implementation prints "FATAL:
+deadlock detected" and exits, because the program has no other way to
+continue.
+
+If it is a coroutine object, then this object will be readied (without
+invoking any ready hooks, however) when the scheduler finds no other ready
+coroutines to run.
+
+This hook is overwritten by modules such as C<Coro::EV> and
 C<Coro::AnyEvent> to wait on an external event that hopefully wake up a
 coroutine so the scheduler can run it.
 
 Note that the callback I<must not>, under any circumstances, block
 the current coroutine. Normally, this is achieved by having an "idle
 coroutine" that calls the event loop and then blocks again, and then
-readying that coroutine in the idle handler.
+readying that coroutine in the idle handler, or by simply placing the idle
+coroutine in this variable.
 
 See L<Coro::Event> or L<Coro::AnyEvent> for examples of using this
 technique.
@@ -575,7 +581,7 @@ coroutine.
 
 The reason this function exists is that many event libraries (such as the
 venerable L<Event|Event> module) are not coroutine-safe (a weaker form
-of thread-safety). This means you must not block within event callbacks,
+of reentrancy). This means you must not block within event callbacks,
 otherwise you might suffer from crashes or worse. The only event library
 currently known that is safe to use without C<unblock_sub> is L<EV>.
 
@@ -631,20 +637,20 @@ sub unblock_sub(&) {
 
 =item $cb = Coro::rouse_cb
 
-Create and return a "rouse callback". That's a code reference that, when
-called, will save its arguments and notify the owner coroutine of the
-callback.
+Create and return a "rouse callback". That's a code reference that,
+when called, will remember a copy of its arguments and notify the owner
+coroutine of the callback.
 
 See the next function.
 
 =item @args = Coro::rouse_wait [$cb]
 
-Wait for the specified rouse callback (or the last one tht was created in
+Wait for the specified rouse callback (or the last one that was created in
 this coroutine).
 
-As soon as the callback is invoked (or when the calback was invoked before
-C<rouse_wait>), it will return a copy of the arguments originally passed
-to the rouse callback.
+As soon as the callback is invoked (or when the callback was invoked
+before C<rouse_wait>), it will return the arguments originally passed to
+the rouse callback.
 
 See the section B<HOW TO WAIT FOR A CALLBACK> for an actual usage example.
 
@@ -734,7 +740,7 @@ fix your libc and use a saner backend.
 =item perl process emulation ("threads")
 
 This module is not perl-pseudo-thread-safe. You should only ever use this
-module from the same thread (this requirement might be removed in the
+module from the first thread (this requirement might be removed in the
 future to allow per-thread schedulers, but Coro::State does not yet allow
 this). I recommend disabling thread support and using processes, as having
 the windows process emulation enabled under unix roughly halves perl
@@ -761,18 +767,18 @@ Debugging: L<Coro::Debug>.
 
 Support/Utility: L<Coro::Specific>, L<Coro::Util>.
 
-Locking/IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>,
+Locking and IPC: L<Coro::Signal>, L<Coro::Channel>, L<Coro::Semaphore>,
 L<Coro::SemaphoreSet>, L<Coro::RWLock>.
 
-IO/Timers: L<Coro::Timer>, L<Coro::Handle>, L<Coro::Socket>, L<Coro::AIO>.
+I/O and Timers: L<Coro::Timer>, L<Coro::Handle>, L<Coro::Socket>, L<Coro::AIO>.
 
-Compatibility: L<Coro::LWP> (but see also L<AnyEvent::HTTP> for
+Compatibility with other modules: L<Coro::LWP> (but see also L<AnyEvent::HTTP> for
 a better-working alternative), L<Coro::BDB>, L<Coro::Storable>,
 L<Coro::Select>.
 
 XS API: L<Coro::MakeMaker>.
 
-Low level Configuration, Coroutine Environment: L<Coro::State>.
+Low level Configuration, Thread Environment, Continuations: L<Coro::State>.
 
 =head1 AUTHOR
 
