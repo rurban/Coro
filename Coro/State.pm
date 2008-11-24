@@ -331,10 +331,10 @@ as the following code does (well, with small differences).
       my ($func, @arg) = @_;
 
       my $state = new Coro::State;
-      my $wrapper; $wrapper = new Coro::State sub {
+      my $wrapper = new Coro::State sub {
          my $escape = sub {
             @arg = @_;
-            $wrapper->transfer ($state->clone);
+            Coro::State->new->transfer ($state->clone);
          };
          $escape->($func->($escape, @arg));
       };
