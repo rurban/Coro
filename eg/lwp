@@ -1,8 +1,9 @@
 #!/usr/bin/perl
 
-use Coro;
-use Coro::Event;
 use Coro::LWP; # should be use'd as early as possible
+
+use Coro;
+use Coro::AnyEvent;
 use LWP::Simple;
 
 $SIG{PIPE} = 'IGNORE';

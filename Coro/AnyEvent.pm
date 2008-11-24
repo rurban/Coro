@@ -23,7 +23,7 @@ This module integrates coroutines into any event loop supported by
 AnyEvent, combining event-based programming with coroutine-based
 programming in a natural way.
 
-All you have to do is C<use Coro::AnyEvent> and then you can run a
+All you have to do is C<use Coro::AnyEvent> and then you can run
 coroutines freely.
 
 =head1 DESCRIPTION
@@ -34,8 +34,8 @@ L<Coro::Event> modules, or will use a generic integration into any event
 loop supported by L<AnyEvent>.
 
 Unfortunately, few event loops (basically only L<EV> and L<Event>) support
-this kind of integration well, and therefore AnyEvent cannot offer the
-required functionality.
+this kind of integration well, and consequently, AnyEvent cannot offer the
+functionality required by this module, so we need to improvise.
 
 Here is what this module does when it has to work with other event loops:
 
@@ -52,10 +52,10 @@ that keeps the event loop from blocking but still polls for new
 events. (Unfortunately, some badly designed event loops (e.g. Event::Lib)
 don't support a timeout of C<0> and will always block for a bit).
 
-The callback for that timer will C<cede> to other coroutines of the same
-or higher priority for as long as such coroutines exists. This has the
-effect of running all coroutines that have work to do will all coroutines
-block to wait for external events.
+The callback for that timer will C<cede> to other coroutines of the
+same or higher priority for as long as such coroutines exists. This has
+the effect of running all coroutines that have work to do untill all
+coroutines block to wait for external events.
 
 If no coroutines of equal or higher priority are ready, it will cede
 to any coroutine, but only once. This has the effect of running
@@ -63,13 +63,15 @@ lower-priority coroutines as well, but it will not keep higher priority
 coroutines from receiving new events.
 
 The priority used is simply the priority of the coroutine that runs the
-event loop, usually the main program, and the priority is usually C<0>.
+event loop, usually the main program, which usually has a priority of
+C<0>.
 
 =item * provide a suitable idle callback.
 
 In addition to hooking into C<ready>, this module will also provide a
-C<$Coro::idle> handler that runs the event loop. It is best not to rely on
-this, as this is rather inefficient.
+C<$Coro::idle> handler that runs the event loop. It is best not to take
+advantage of this too often, as this is rather inefficient, but it should
+work perfectly fine.
 
 =item * provide overrides for AnyEvent's condvars
 
@@ -80,9 +82,9 @@ coroutine.
 
 =item * lead to data corruption or worse
 
-As C<unblock_sub> cannot be by this module (as it is the module that
-implements it, basically), you must not call into the event loop
-recursively from any coroutine. This is not usually a difficult
+As C<unblock_sub> cannot be used by this module (as it is the module
+that implements it, basically), you must not call into the event
+loop recursively from any coroutine. This is not usually a difficult
 restriction to live with, just use condvars, C<unblock_sub> or other means
 of inter-coroutine-communications.
 
@@ -107,7 +109,7 @@ use strict;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 #############################################################################
 # idle handler
@@ -140,17 +142,15 @@ AnyEvent::post_detect {
       Coro::_set_readyhook \&_activity;
 
       $IDLE = new Coro sub {
+         my $one_event = AnyEvent->can ("one_event");
          while () {
-            AnyEvent->one_event;
-            &Coro::schedule;
+            $one_event->();
+            Coro::schedule;
          }
       };
       $IDLE->{desc} = "[AnyEvent idle process]";
 
-      $Coro::idle = sub {
-         local $ACTIVITY = 1; # hack to keep it from being set by the ready call
-         $IDLE->ready;
-      };
+      $Coro::idle = $IDLE;
    }
 };
 

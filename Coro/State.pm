@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::State - create and manage simple coroutines
+Coro::State - first class continuations
 
 =head1 SYNOPSIS
 
@@ -92,7 +92,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = "5.0";
+   our $VERSION = 5.1;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -172,7 +172,8 @@ If it throws an exception the program will terminate unless the exception
 is caught, exactly like in the main program.
 
 Calling C<exit> in a coroutine does the same as calling it in the main
-program.
+program, but due to libc bugs on many BSDs, this doesn't work reliable
+everywhere.
 
 If the coderef is omitted this function will create a new "empty"
 coroutine, i.e. a coroutine that cannot be transfered to but can be used
@@ -200,6 +201,7 @@ and have the stated initial values:
    $SIG{__DIE__}  aliased to $Coro::State::DIEHOOK(*)
    $SIG{__WARN__} aliased to $Coro::State::WARNHOOK(*)
    (default fh)   *STDOUT
+   $^H, %^H       zero/empty.
    $1, $2...      all regex results are initially undefined
 
    (*) reading the value from %SIG is not supported, but local'ising is.
@@ -312,6 +314,59 @@ default being C<4>.
 =item @states = Coro::State::list
 
 Returns a list of all states currently allocated.
+
+=item $clone = $state->clone
+
+This exciting method takes a Coro::State object and clones, i.e., creates
+a copy. This makes it possible to restore a state more than once.
+
+Since its only known purpose is intellectual self-gratification, and
+because it is a difficult piece of code, it is not enabled by default, and
+not supported.
+
+Among the games you can play with this is implement a scheme-like call/cc,
+as the following code does (well, with small differences).
+
+   sub callcc(&@) {
+      my ($func, @arg) = @_;
+
+      my $state = new Coro::State;
+      my $wrapper; $wrapper = new Coro::State sub {
+         my $escape = sub {
+            @arg = @_;
+            $wrapper->transfer ($state->clone);
+         };
+         $escape->($func->($escape, @arg));
+      };
+
+      $state->transfer ($wrapper);
+      @arg
+   }
+
+Here are a few little-known facts: First, coroutines *are* full/true/real
+continuations. Secondly Coro::State objects (without clone) *are* first
+class continuations. Thirdly, nobody has ever found a use for the full
+power of call/cc that isn't better (faster, easier, more efficient)
+implemented differently, and nobody has yet found a useful control
+construct that can't be implemented without it already, just much faster
+and with fewer resources.
+
+Besides, call/cc is much less useful in a Perl-like dynamic language (with
+references, and its scoping rules) then in, say, scheme.
+
+Now, the known limitations of C<clone>:
+
+It probably only works on perl 5.10; it cannot clone a coroutine inside
+the substition operator (but windows perl can't fork from there either)
+and some other contexts, and C<abort ()> is the preferred mechanism to
+signal errors. It cannot clone a state that has a c context attached
+(implementing clone on the C level is too hard for me to even try),
+which rules out calling call/cc from the main coroutine. It cannot
+clone a context that hasn't even been started yet. It doesn't work with
+C<-DDEBUGGING> (but what does). It probably also leaks, and sometimes
+triggers a few assertions inside Coro. Most of these limitations *are*
+fixable with some effort, but that's pointless just to make a point that
+it could be done.
 
 =cut
 

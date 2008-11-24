@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::EV - do events the coro-way
+Coro::EV - do events the coro-way, with EV
 
 =head1 SYNOPSIS
 
@@ -52,7 +52,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = "5.0";
+   our $VERSION = 5.1;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -66,7 +66,7 @@ our $IDLE = new Coro sub {
 };
 $IDLE->{desc} = "[EV idle process]";
 
-$Coro::idle = sub { $IDLE->ready };
+$Coro::idle = $IDLE;
 
 =item $revents = Coro::EV::timed_io_once $fileno_or_fh, $events, $timeout
 

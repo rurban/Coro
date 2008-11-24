@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Semaphore - non-binary semaphores
+Coro::Semaphore - counting semaphores
 
 =head1 SYNOPSIS
 
@@ -37,7 +37,7 @@ no warnings;
 
 use Coro ();
 
-$VERSION = "5.0";
+$VERSION = 5.1;
 
 =item new [inital count]
 

@@ -15,10 +15,11 @@ Coro::Channel - message queues
 
 =head1 DESCRIPTION
 
-A Coro::Channel is the equivalent of a pipe: you can put things into it on
-one end and read things out of it from the other hand. If the capacity of
-the Channel is maxed out writers will block. Both ends of a Channel can be
-read/written from as many coroutines as you want.
+A Coro::Channel is the equivalent of a unix pipe (and similar to amiga
+message ports): you can put things into it on one end and read things out
+of it from the other end. If the capacity of the Channel is maxed out
+writers will block. Both ends of a Channel can be read/written from by as
+many coroutines as you want concurrently.
 
 =over 4
 
@@ -32,7 +33,7 @@ no warnings;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }
@@ -40,11 +41,12 @@ sub SPUT (){ 2 }
 
 =item $q = new Coro:Channel $maxsize
 
-Create a new channel with the given maximum size (unlimited if C<maxsize>
-is omitted). Giving a size of one gives you a traditional channel, i.e.
-a queue that can store only a single element (which means there will be
-no buffering, and C<put> will wait until there is a corresponding C<get>
-call). To buffer one element you have to specify C<2>, and so on.
+Create a new channel with the given maximum size (practically unlimited
+if C<maxsize> is omitted). Giving a size of one gives you a traditional
+channel, i.e. a queue that can store only a single element (which means
+there will be no buffering, and C<put> will wait until there is a
+corresponding C<get> call). To buffer one element you have to specify
+C<2>, and so on.
 
 =cut
 
@@ -89,7 +91,7 @@ Return the number of elements waiting to be consumed. Please note that:
      my $data = $q->get;
   }
 
-is NOT a race condition but works fine.
+is I<not> a race condition but instead works just fine.
 
 =cut
 

@@ -11,6 +11,7 @@ Coro/Makefile.PL
 Coro/typemap
 Coro/State.pm
 Coro/State.xs
+Coro/clone.c
 Coro/state.h
 Coro/Signal.pm
 Coro/Semaphore.pm
@@ -31,6 +32,8 @@ Coro/Socket.pm
 Coro/Timer.pm
 Coro/Storable.pm
 Coro/AnyEvent.pm
+
+Coro/Intro.pod
 
 Coro/libcoro/LICENSE
 Coro/libcoro/README

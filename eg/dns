@@ -1,14 +1,12 @@
 #!/usr/bin/perl
 
 use Coro;
-use Coro::Event;
 use Coro::Util;
+use Coro::AnyEvent;
 
 use Socket;
 
 # do some asynchronous hostname resolution
-
-async { loop }; # run the Event loop as a separate coroutine
 
 my @pid;
 

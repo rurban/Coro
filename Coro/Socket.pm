@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Socket - non-blocking socket-io
+Coro::Socket - non-blocking socket-I/O
 
 =head1 SYNOPSIS
 
@@ -46,7 +46,7 @@ use Coro::Util ();
 
 use base qw(Coro::Handle IO::Socket::INET);
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 our (%_proto, %_port);
 

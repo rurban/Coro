@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Timer - simple timer package, independent of used event loops
+Coro::Timer - timers and timeouts, independent of any event loop
 
 =head1 SYNOPSIS
 
@@ -30,7 +30,7 @@ use AnyEvent ();
 use Coro ();
 use Coro::AnyEvent ();
 
-$VERSION = "5.0";
+$VERSION = 5.1;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
@@ -82,14 +82,8 @@ and, most important, without blocking other coroutines.
 =cut
 
 sub sleep {
-   my $current = $Coro::current;
-
-   my $timer = AnyEvent->timer (after => $_[0], cb => sub {
-      $current->ready;
-      undef $current;
-   });
-
-   do { &Coro::schedule } while $current;
+   my $timer = AnyEvent->timer (after => $_[0], cb => Coro::rouse_cb);
+   Coro::rouse_wait;
 }
 
 1;

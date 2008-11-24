@@ -55,6 +55,9 @@ VAR(sortcxix,      I32)            /* from pp_ctl.c */
 #endif
 
 VAR(comppad,       AV *)           /* storage for lexically scoped temporaries */
+VAR(comppad_name,  AV *)           /* variable names for "my" variables */
+VAR(comppad_name_fill,     I32)    /* last "introduced" variable offset */
+VAR(comppad_name_floor,    I32)    /* start of vars in innermost block */
 
 /* compcv is intrpvar, but seems to be thread-specific to me */
 /* but, well, I thoroughly misunderstand what thrdvar and intrpvar is. still. */
@@ -67,4 +70,6 @@ VAR(runops,        runops_proc_t)  /* for tracing support */
 #if PERL_VERSION_ATLEAST (5,10,0)
 VAR(parser,        yy_parser *)
 #endif
+
+VAR(hints,         U32)            /* pragma-tic compile-time flags */
 

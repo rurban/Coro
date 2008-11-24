@@ -5,7 +5,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 use Config;
 use base 'Exporter';
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 @EXPORT_OK = qw(&coro_args $installsitearch);
 
@@ -39,24 +39,24 @@ __END__
 
 =head1 NAME
 
-Coro::MakeMaker - MakeMaker glue for the C-level Coro API
+Coro::MakeMaker - MakeMaker glue for the XS-level Coro API
 
 =head1 SYNOPSIS
 
-This allows you to control coroutines from C level.
+This allows you to control coroutines from C/XS.
 
 =head1 DESCRIPTION
 
-For optimal performance, hook into Coro at the C-level.  You'll need
-to make changes to your C<Makefile.PL> and add code to your C<xs> /
-C<c> file(s).
+For optimal performance, hook into Coro at the C-level. You'll need to
+make changes to your C<Makefile.PL> and add code to your C<xs> / C<c>
+file(s).
 
 =head1 WARNING
 
-When you hook in at the C-level you get a I<huge> performance gain,
-but you also reduce the chances that your code will work unmodified
-with newer versions of C<perl> or C<Coro>.  This may or may not be a
-problem.  Just be aware, and set your expectations accordingly.
+When you hook in at the C-level you can get a I<huge> performance gain,
+but you also reduce the chances that your code will work unmodified with
+newer versions of C<perl> or C<Coro>. This may or may not be a problem.
+Just be aware, and set your expectations accordingly.
 
 =head1 HOW TO
 

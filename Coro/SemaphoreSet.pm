@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::SemaphoreSet - hash of semaphores.
+Coro::SemaphoreSet - efficient set of counting semaphores
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ package Coro::SemaphoreSet;
 use strict qw(vars subs);
 no warnings;
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 use Coro::Semaphore ();
 

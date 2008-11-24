@@ -38,7 +38,7 @@ use base 'Exporter';
 our @EXPORT = qw(gethostbyname gethostbyaddr);
 our @EXPORT_OK = qw(inet_aton fork_eval);
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 our $MAXPARALLEL = 16; # max. number of parallel jobs
 
@@ -59,17 +59,16 @@ sub _do_asy(&;@) {
    }
 
    my $buf;
-   my $current = $Coro::current;
+   my $wakeup = Coro::rouse_cb;
    my $w; $w = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
       sysread $fh, $buf, 16384, length $buf
          and return;
 
       undef $w;
-      $current->ready;
+      $wakeup->();
    });
 
-   &Coro::schedule;
-   &Coro::schedule while $w;
+   Coro::rouse_wait;
 
    $jobs->up;
    my @r = map { pack "H*", $_ } split /\0/, $buf;
@@ -78,23 +77,14 @@ sub _do_asy(&;@) {
 
 =item $ipn = Coro::Util::inet_aton $hostname || $ip
 
-Works almost exactly like its AnyEvent::Socket counterpart, except that it does not
-block.
+Works almost exactly like its AnyEvent::Socket counterpart, except that it
+does not block other coroutines and returns the results.
 
 =cut
 
 sub inet_aton {
-   my $current = $Coro::current;
-   my @res;
-
-   AnyEvent::Socket::inet_aton $_[0], sub {
-      @res = shift;
-      $current->ready;
-      undef $current;
-   };
-
-   Coro::schedule while $current;
-
+   AnyEvent::Socket::inet_aton $_[0], Coro::rouse_cb;
+   my @res = Coro::rouse_wait;
    wantarray ? @res : $res[0]
 }
 
@@ -106,7 +96,6 @@ C<Anyevent::Util::inet_aton> internally.
 =cut
 
 sub gethostbyname($) {
-   my $current = $Coro::current;
    my @res = inet_aton $_[0];
 
    ($_[0], $_[0], &Socket::AF_INET, 4, map +(format_ip $_), grep length == 4, @res)

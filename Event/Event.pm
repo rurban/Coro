@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::Event - do events the coro-way
+Coro::Event - do events the coro-way, with Event
 
 =head1 SYNOPSIS
 
@@ -94,7 +94,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = "5.0";
+   our $VERSION = 5.1;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -106,7 +106,7 @@ Create and return a watcher of the given type.
 
 Examples:
 
-  my $reader = Coro::Event->io(fd => $filehandle, poll => 'r');
+  my $reader = Coro::Event->io (fd => $filehandle, poll => 'r');
   $reader->next;
 
 =cut
@@ -204,15 +204,15 @@ Same as Event::unloop (provided here for your convinience only).
 =cut
 
 # very inefficient
-our $event_idle = new Coro sub {
+our $IDLE = new Coro sub {
    while () {
       &Event::one_event;
       &Coro::schedule;
    }
 };
-$event_idle->{desc} = "[Event idle process]";
+$IDLE->{desc} = "[Event idle process]";
 
-$Coro::idle = sub { $event_idle->ready };
+$Coro::idle = $IDLE;
 
 1;
 

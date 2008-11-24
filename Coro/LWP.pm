@@ -18,6 +18,9 @@ LWP really tries very hard to be blocking (and relies on a lot of
 undocumented functionality in IO::Socket), so this module had to be very
 invasive and must be loaded very early to take the proper effect.
 
+Note that the module L<AnyEvent::HTTP> might offer an alternative to the
+full L<LWP> that is designed to be non-blocking.
+
 Here is what it currently does (future versions of LWP might require
 different tricks):
 
@@ -73,11 +76,13 @@ BEGIN {
    require Net::Config;
 }
 
-# import these so they cna grab Socket::inet_aton
+# do it as early as possible
+use Coro::Select;
+
+# import these so they can grab Socket::inet_aton
 use AnyEvent::Util ();
 use AnyEvent::DNS ();
 
-use Coro::Select ();
 use Coro::Util ();
 use Coro::Socket ();
 
@@ -89,7 +94,7 @@ use Net::HTTP ();
 use Net::FTP ();
 use Net::NNTP ();
 
-our $VERSION = "5.0";
+our $VERSION = 5.1;
 
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 

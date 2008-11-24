@@ -5,6 +5,32 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+5.1  Mon Nov 24 08:54:59 CET 2008
+	- wrote a small introductory tutorial - Coro::Intro.
+	- convert Coro::Timer, Coro::Select and Coro::Util to rouse API.
+        - Coro::Select did errornously dup the file descriptors
+          and didn't work with all AnyEvent backends.
+        - Coro::Select wasn't imported correctly form Coro::LWP, causing blocking
+          LWP data transfers.
+        - disassociate c contexts from coro objects - this is agruably more
+          correct, but mostly allows sharing of cctxs between coro and state
+          objects, for added memory savings and speed increases.
+        - bumped $Coro::POOL_RSS up to 32kb by default.
+        - no longer set the optype to OP_CUSTOM, as B::* understandably
+          doesn't like this very much (and we *are* a type of entersub).
+        - implement state cloning, just to prove that call/cc can be done.
+        - automatically load Coro::AnyEvent in Coro::Handle.
+        - wrap ->cancel calls in eval inside Coro::Handle as EV watchers
+          do not have this method (and don't need it either).
+        - speed up generic anyevent methods in Coro::Handle by using rouse
+          callbacks.
+        - allow coroutines in $Coro::IDLE, speeding up Coro::AnyEvent and
+          others. It also makes the debugger happier, as you can trace
+          through the idle threads now.
+        - add comppad_name* and hints ($^H, %^H) to per-thread variables.
+        - eg/event was pretty broken.
+        - better 5.8.6 compatibility.
+
 5.0  Thu Nov 20 10:35:05 CET 2008
 	- NEW ARCHITECTURE: use the latest 4.x version if you experience
           stability issues.
