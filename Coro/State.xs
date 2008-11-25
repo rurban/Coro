@@ -1180,7 +1180,9 @@ cctx_run (void *arg)
      * fell off the end, which seems to be the only valid (non-bug)
      * reason for perl_run to return. We try to exit by jumping to the
      * bootstrap-time "top" top_env, as we cannot restore the "main"
-     * coroutine as Coro has no such concept
+     * coroutine as Coro has no such concept.
+     * This actually isn't valid with the pthread backend, but OSes requiring
+     * that backend are too broken to do it in a standards-compliant way.
      */
     PL_top_env = main_top_env;
     JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
