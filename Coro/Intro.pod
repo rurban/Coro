@@ -37,7 +37,7 @@ Perl itself uses rather confusing terminilogy - what perl calls a "thread"
 is actually called a "process" everywhere else: The so-called "perl
 threads" are actually artifacts of the unix process emulation code used
 on Windows, which is consequently why they are actually processes and not
-threads. The biggest difference is that the variables (nor code) are not
+threads. The biggest difference is that neither variables (nor code) are
 shared between processes.
 
 
