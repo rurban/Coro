@@ -111,7 +111,7 @@ GLOBAL VARIABLES
 
 SIMPLE COROUTINE CREATION
     async { ... } [@args...]
-        Create a new coroutine and return it's coroutine object (usually
+        Create a new coroutine and return its coroutine object (usually
         unused). The coroutine will be put into the ready queue, so it will
         start running automatically on the next scheduler run.
 
@@ -446,7 +446,7 @@ HOW TO WAIT FOR A CALLBACK
     "Coro::rouse_cb" and "Coro::rouse_wait".
 
     The first function, "rouse_cb", generates and returns a callback that,
-    when invoked, will save it's arguments and notify the coroutine that
+    when invoked, will save its arguments and notify the coroutine that
     created the callback.
 
     The second function, "rouse_wait", waits for the callback to be called

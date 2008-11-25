@@ -2372,8 +2372,13 @@ coro_waitarray_new (pTHX_ int count)
   /* unfortunately, building manually saves memory */
   Newx (ary, 2, SV *);
   AvALLOC (av) = ary;
-  /*AvARRAY (av) = ary;*/
-  SvPVX ((SV *)av) = (char *)ary; /* 5.8.8 needs this syntax instead of AvARRAY = ary */
+#if PERL_VERSION_ATLEAST (5,10,0)
+  AvARRAY (av) = ary;
+#else
+  /* 5.8.8 needs this syntax instead of AvARRAY = ary, yet */
+  /* -DDEBUGGING flags this as a bug, despite it perfectly working */
+  SvPVX ((SV *)av) = (char *)ary;
+#endif
   AvMAX   (av) = 1;
   AvFILLp (av) = 0;
   ary [0] = newSViv (count);
