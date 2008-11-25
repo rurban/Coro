@@ -5,6 +5,11 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+5.11
+	- DEBUGGING in 5.10.0 is a mess: it constantly flags perfectly
+          working code with failed assertions, introducing more bugs than
+          it fixes, requiring elaborate workarounds :(
+
 5.1  Mon Nov 24 08:54:59 CET 2008
 	- wrote a small introductory tutorial - Coro::Intro.
 	- convert Coro::Timer, Coro::Select and Coro::Util to rouse API.

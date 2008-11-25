@@ -20,7 +20,7 @@ much of the documentation and custom refers to these threads as
 "coroutines" or often just "coros".
 
 A thread is very much like a stripped-down perl interpreter, or a
-process: Unlike a full interpreter process, a thread doesn't have it's own
+process: Unlike a full interpreter process, a thread doesn't have its own
 variable or code namespaces - everything is shared. That means that when
 one thread modifies a variable (or any value, e.g. through a reference),
 then other threads immediately see this change when they look at the same
@@ -37,7 +37,7 @@ Perl itself uses rather confusing terminilogy - what perl calls a "thread"
 is actually called a "process" everywhere else: The so-called "perl
 threads" are actually artifacts of the unix process emulation code used
 on Windows, which is consequently why they are actually processes and not
-threads. The biggest difference is that the variables (nor code) are not
+threads. The biggest difference is that neither variables (nor code) are
 shared between processes.
 
 
@@ -329,7 +329,7 @@ calculate channel will it block (because nothing is there yet) and the
 main thread will continue running. And so on.
 
 In general, Coro will I<only ever block> a thread when it has to: Neither
-the Coro module itself nor any of it's submodules will ever give up the
+the Coro module itself nor any of its submodules will ever give up the
 CPU unless they have to, because they wait for some event to happen.
 
 Be careful, however: when multiple threads put numbers into C<$calculate>
@@ -338,7 +338,7 @@ solution for this is to ither use a semaphore, or send not just the
 number, but also your own private result channel.
 
 L<Coro::Channel> can buffer some amount of items. It is also very
-instructive to read it's source code, as it is very simple and uses two
+instructive to read its source code, as it is very simple and uses two
 counting semaphores internally for synchronisation.
 
 
@@ -365,11 +365,11 @@ variables. To see why this is necessary, consider this program:
    cede; cede; # do it
 
 The above prints C<Hello, World!\n>. If C<printit> wouldn't have
-it's own per-thread C<$string> variable, it would probably print
+its own per-thread C<$string> variable, it would probably print
 C<World!\nWorld\n>, which is rather unexpected, and would make it very
 difficult to make good use of threads.
 
-There are quite a numbe rof other things that are per-thread:
+There are quite a number of other things that are per-thread:
 
 =over 4
 

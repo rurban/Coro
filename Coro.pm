@@ -76,7 +76,7 @@ our $idle;    # idle handler
 our $main;    # main coroutine
 our $current; # current coroutine
 
-our $VERSION = 5.1;
+our $VERSION = 5.11;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -177,7 +177,7 @@ $manager->prio (PRIO_MAX);
 
 =item async { ... } [@args...]
 
-Create a new coroutine and return it's coroutine object (usually
+Create a new coroutine and return its coroutine object (usually
 unused). The coroutine will be put into the ready queue, so
 it will start running automatically on the next scheduler run.
 
@@ -683,7 +683,7 @@ Coro offers two functions specifically designed to make this easy,
 C<Coro::rouse_cb> and C<Coro::rouse_wait>.
 
 The first function, C<rouse_cb>, generates and returns a callback that,
-when invoked, will save it's arguments and notify the coroutine that
+when invoked, will save its arguments and notify the coroutine that
 created the callback.
 
 The second function, C<rouse_wait>, waits for the callback to be called
