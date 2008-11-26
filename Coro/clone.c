@@ -94,7 +94,7 @@ coro_clone (struct coro *coro)
           {
             SvREFCNT_dec (AvARRAY (av)[i]);
             AvARRAY (av)[i] = (SV *)clone_av ((AV *)AvARRAY (av)[i]);
-            AvREIFY_on (AvARRAY (av)[i]);
+            AvREIFY_only (AvARRAY (av)[i]);
           }
 
         TOPs = (SV *)av;

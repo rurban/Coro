@@ -388,13 +388,11 @@ free_padlist (pTHX_ AV *padlist)
       I32 i = AvFILLp (padlist);
       while (i >= 0)
         {
-          SV **svp = av_fetch (padlist, i--, FALSE);
+          SV **svp = AvARRAY (padlist)[i--];
           if (svp)
             {
-              SV *sv;
-              while (&PL_sv_undef != (sv = av_pop ((AV *)*svp)))
-                SvREFCNT_dec (sv);
-
+              AvREAL_on (*svp);
+              av_undef (*svp);
               SvREFCNT_dec (*svp);
             }
         }
@@ -505,7 +503,7 @@ put_padlist (pTHX_ CV *cv)
   av = (AV *)mg->mg_obj;
 
   if (expect_false (AvFILLp (av) >= AvMAX (av)))
-    av_extend (av, AvMAX (av) + 1);
+    av_extend (av, AvFILLp (av) + 1);
 
   AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
 }
