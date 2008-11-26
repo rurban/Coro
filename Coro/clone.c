@@ -94,6 +94,7 @@ coro_clone (struct coro *coro)
           {
             SvREFCNT_dec (AvARRAY (av)[i]);
             AvARRAY (av)[i] = (SV *)clone_av ((AV *)AvARRAY (av)[i]);
+            AvREIFY_on (AvARRAY (av)[i]);
           }
 
         TOPs = (SV *)av;
@@ -127,6 +128,7 @@ coro_clone (struct coro *coro)
             case CXt_SUB:
               if (cx->blk_sub.olddepth == 0)
                 SvREFCNT_inc ((SV *)cx->blk_sub.cv);
+
               if (cx->blk_sub.hasargs)
                 {
                   SvREFCNT_inc ((SV *)cx->blk_sub.argarray);
