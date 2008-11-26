@@ -70,6 +70,11 @@ if (exists $ENV{CORO_INTERFACE}) {
    # asm seems to work, setjmp might, ucontext is missing, threads lets not talk about
    $iface = $iface_asm || "s";
 
+} elsif ($^O =~ /mirbsd/) {
+   # seems to be bug-to-bug compatible openbsd fork,
+   # with the name change being the biggets difference.
+   $iface = $iface_asm || "s";
+
 } elsif ($^O =~ /solaris/) {
    # setjmp, ucontext seem to work, as well as asm
    $iface = $iface_asm || "s";
