@@ -8,6 +8,8 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - add default config for MirOS, which seems to be a bug-to-bug
           compatible fork of openbsd ("world domination by releasing
           openbsd cvs before the openbsd folks do it" or so :).
+        - free_padlist did destroy the names pad, not good, but didn't
+          seem to bother perl.
         - use a different method to detect destruction time.
         - be more careful when freeing padlists just before global
           destruction.

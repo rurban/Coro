@@ -357,77 +357,11 @@ coro_sv_2cv (pTHX_ SV *sv)
   return sv_2cv (sv, &st, &gvp, 0);
 }
 
-static AV *
-coro_derive_padlist (pTHX_ CV *cv)
-{
-  AV *padlist = CvPADLIST (cv);
-  AV *newpadlist, *newpad;
-
-  newpadlist = newAV ();
-  AvREAL_off (newpadlist);
-#if PERL_VERSION_ATLEAST (5,10,0)
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
-#else
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
-#endif
-  newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
-  --AvFILLp (padlist);
-
-  av_store (newpadlist, 0, SvREFCNT_inc_NN (*av_fetch (padlist, 0, FALSE)));
-  av_store (newpadlist, 1, (SV *)newpad);
-
-  return newpadlist;
-}
-
-static void
-free_padlist (pTHX_ AV *padlist)
-{
-  /* may be during global destruction */
-  if (!IN_DESTRUCT)
-    {
-      I32 i = AvFILLp (padlist);
-
-      while (i >= 0)
-        {
-          /* we try to be extra-careful here */
-          AV *av = (AV *)AvARRAY (padlist)[i--];
-
-          I32 i = AvFILLp (av);
-
-          while (i >= 0)
-            SvREFCNT_dec (AvARRAY (av)[i--]);
-
-          AvFILLp (av) = -1;
-          SvREFCNT_dec (av);
-        }
-
-      AvFILLp (padlist) = -1;
-      SvREFCNT_dec ((SV*)padlist);
-    }
-}
-
-static int
-coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
-{
-  AV *padlist;
-  AV *av = (AV *)mg->mg_obj;
-
-  /* casting is fun. */
-  while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-    free_padlist (aTHX_ padlist);
-
-  SvREFCNT_dec (av); /* sv_magicext increased the refcount */
-
-  return 0;
-}
+/*****************************************************************************/
+/* magic glue */
 
 #define CORO_MAGIC_type_cv    26
 #define CORO_MAGIC_type_state PERL_MAGIC_ext
-
-static MGVTBL coro_cv_vtbl = {
-  0, 0, 0, 0,
-  coro_cv_free
-};
 
 #define CORO_MAGIC_NN(sv, type)			\
   (expect_true (SvMAGIC (sv)->mg_type == type)	\
@@ -471,6 +405,79 @@ SvSTATE_ (pTHX_ SV *coro)
 /* faster than SvSTATE, but expects a coroutine hv */
 #define SvSTATE_hv(hv)  ((struct coro *)CORO_MAGIC_NN ((SV *)hv, CORO_MAGIC_type_state)->mg_ptr)
 #define SvSTATE_current SvSTATE_hv (SvRV (coro_current))
+
+/*****************************************************************************/
+/* padlist management and caching */
+
+static AV *
+coro_derive_padlist (pTHX_ CV *cv)
+{
+  AV *padlist = CvPADLIST (cv);
+  AV *newpadlist, *newpad;
+
+  newpadlist = newAV ();
+  AvREAL_off (newpadlist);
+#if PERL_VERSION_ATLEAST (5,10,0)
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
+#else
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
+#endif
+  newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
+  --AvFILLp (padlist);
+
+  av_store (newpadlist, 0, SvREFCNT_inc_NN (AvARRAY (padlist)[0]));
+  av_store (newpadlist, 1, (SV *)newpad);
+
+  return newpadlist;
+}
+
+static void
+free_padlist (pTHX_ AV *padlist)
+{
+  /* may be during global destruction */
+  if (!IN_DESTRUCT)
+    {
+      I32 i = AvFILLp (padlist);
+
+      while (i > 0) /* special-case index 0 */
+        {
+          /* we try to be extra-careful here */
+          AV *av = (AV *)AvARRAY (padlist)[i--];
+          I32 j = AvFILLp (av);
+
+          while (j >= 0)
+            SvREFCNT_dec (AvARRAY (av)[j--]);
+
+          AvFILLp (av) = -1;
+          SvREFCNT_dec (av);
+        }
+
+      SvREFCNT_dec (AvARRAY (padlist)[0]);
+
+      AvFILLp (padlist) = -1;
+      SvREFCNT_dec ((SV*)padlist);
+    }
+}
+
+static int
+coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
+{
+  AV *padlist;
+  AV *av = (AV *)mg->mg_obj;
+
+  /* casting is fun. */
+  while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
+    free_padlist (aTHX_ padlist);
+
+  SvREFCNT_dec (av); /* sv_magicext increased the refcount */
+
+  return 0;
+}
+
+static MGVTBL coro_cv_vtbl = {
+  0, 0, 0, 0,
+  coro_cv_free
+};
 
 /* the next two functions merely cache the padlists */
 static void
