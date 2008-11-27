@@ -135,7 +135,7 @@ static int cctx_max_idle = 4;
 # define STACKLEVEL ((void *)&stacklevel)
 #endif
 
-#define IN_DESTRUCT (PL_main_cv == Nullcv)
+#define IN_DESTRUCT PL_dirty
 
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
@@ -383,20 +383,25 @@ static void
 free_padlist (pTHX_ AV *padlist)
 {
   /* may be during global destruction */
-  if (SvREFCNT (padlist))
+  if (!IN_DESTRUCT)
     {
       I32 i = AvFILLp (padlist);
+
       while (i >= 0)
         {
-          SV **svp = AvARRAY (padlist)[i--];
-          if (svp)
-            {
-              AvREAL_on (*svp);
-              av_undef (*svp);
-              SvREFCNT_dec (*svp);
-            }
+          /* we try to be extra-careful here */
+          AV *av = (AV *)AvARRAY (padlist)[i--];
+
+          I32 i = AvFILLp (av);
+
+          while (i >= 0)
+            SvREFCNT_dec (AvARRAY (av)[i--]);
+
+          AvFILLp (av) = -1;
+          SvREFCNT_dec (av);
         }
 
+      AvFILLp (padlist) = -1;
       SvREFCNT_dec ((SV*)padlist);
     }
 }
