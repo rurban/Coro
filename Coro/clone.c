@@ -1,7 +1,7 @@
 /* clone implementation, big, slow, useless, but not pointless */
 
 static AV *
-clone_av (AV *av)
+clone_av (pTHX_ AV *av)
 {
   int i;
   AV *nav = newAV ();
@@ -15,7 +15,7 @@ clone_av (AV *av)
 }
 
 static struct coro *
-coro_clone (struct coro *coro)
+coro_clone (pTHX_ struct coro *coro)
 {
   perl_slots *slot, *nslot;
   struct coro *ncoro;
@@ -71,7 +71,7 @@ coro_clone (struct coro *coro)
   Copy (slot->savestack, nslot->savestack, slot->savestack_ix + 1, ANY);
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
-  New (54, nslot->retstack, nslot->retstack_mac, OP *);
+  New (54, nslot->retstack, nslot->retstack_max, OP *);
   Copy (slot->retstack, nslot->retstack, slot->retstack_max, OP *);
 #endif
 
@@ -87,13 +87,13 @@ coro_clone (struct coro *coro)
       {
         POPs;
 
-        av = clone_av ((AV *)TOPs);
+        av = clone_av (aTHX_ (AV *)TOPs);
         AvREAL_off (av);
 
         for (i = 1; i <= AvFILLp (av); ++i)
           {
             SvREFCNT_dec (AvARRAY (av)[i]);
-            AvARRAY (av)[i] = (SV *)clone_av ((AV *)AvARRAY (av)[i]);
+            AvARRAY (av)[i] = (SV *)clone_av (aTHX_ (AV *)AvARRAY (av)[i]);
             AvREIFY_only (AvARRAY (av)[i]);
           }
 

@@ -2927,7 +2927,7 @@ clone (Coro::State coro)
 	CODE:
 {
 #if CORO_CLONE
-        struct coro *ncoro = coro_clone (coro);
+        struct coro *ncoro = coro_clone (aTHX_ coro);
         MAGIC *mg;
         /* TODO: too much duplication */
         ncoro->hv = newHV ();
