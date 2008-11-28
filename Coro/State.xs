@@ -940,7 +940,7 @@ coro_setup (pTHX_ struct coro *coro)
 }
 
 static void
-coro_destruct (pTHX_ struct coro *coro)
+coro_destruct_perl (pTHX_ struct coro *coro)
 {
   if (!IN_DESTRUCT)
     {
@@ -1473,7 +1473,9 @@ coro_state_destroy (pTHX_ struct coro *coro)
   else
     coro->flags |= CF_READY; /* make sure it is NOT put into the readyqueue */
 
-  if (coro->mainstack && coro->mainstack != main_mainstack)
+  if (coro->mainstack
+      && coro->mainstack != main_mainstack
+      && !PL_dirty)
     {
       struct coro temp;
 
@@ -1482,7 +1484,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
 
-      coro_destruct (aTHX_ coro);
+      coro_destruct_perl (aTHX_ coro);
 
       load_perl (aTHX_ &temp);
 

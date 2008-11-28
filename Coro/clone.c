@@ -26,6 +26,8 @@ coro_clone (pTHX_ struct coro *coro)
   if (coro->cctx)
     croak ("Coro::State::clone cannot clone a state running on a custom C context, caught");
 
+  /* TODO: maybe check slf_frame for prpeare_rransfer/check_nop? */
+
   slot = coro->slot;
 
   if (slot->curstackinfo->si_type != PERLSI_MAIN)
@@ -85,8 +87,11 @@ coro_clone (pTHX_ struct coro *coro)
     /* now do the ugly restore mess */
     while (expect_true (cv = (CV *)POPs))
       {
+        /* cv will be refcnt_inc'ed twice by the following two loops */
         POPs;
 
+        /* need to clone the padlist */
+        /* this simplistic hakc is most likely wrong */
         av = clone_av (aTHX_ (AV *)TOPs);
         AvREAL_off (av);
 
