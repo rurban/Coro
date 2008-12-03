@@ -10,7 +10,8 @@ TODO: CF_RUNNING makes sense only for Coros, not States
           compatible fork of openbsd ("world domination by releasing
           openbsd cvs before the openbsd folks do it" or so :).
         - free_padlist did destroy the names pad, not good, but didn't
-          seem to bother perl.
+          seem to bother perl - this could fix issues such as eval ""
+          inside a function called form multiple coroutines.
         - use a different method to detect destruction time.
         - be more careful when freeing padlists just before global
           destruction.
