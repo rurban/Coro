@@ -66,14 +66,14 @@ if (exists $ENV{CORO_INTERFACE}) {
    # hey, it might actually work, with some hacks
    $iface = "p";
 
-} elsif ($^O =~ /openbsd/) {
+} elsif ($^O =~ /(openbsd|mirbsd)/) {
+   # openbsd:
    # asm seems to work, setjmp might, ucontext is missing, threads lets not talk about
-   $iface = $iface_asm || "s";
-
-} elsif ($^O =~ /mirbsd/) {
+   # try setjmp/longjmp on 4.4, but pthread on earlier
+   # mirbsd:
    # seems to be bug-to-bug compatible openbsd fork,
-   # with the name change being the biggets difference.
-   $iface = $iface_asm || "s";
+   # with the name change being the biggest difference.
+   $iface = $iface_asm || ($Config{osvers} >= 4.4 ? "s" : "p");
 
 } elsif ($^O =~ /solaris/) {
    # setjmp, ucontext seem to work, as well as asm

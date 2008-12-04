@@ -1279,7 +1279,7 @@ cctx_destroy (coro_cctx *cctx)
   if (!cctx)
     return;
 
-  assert (cctx != cctx_current);//D temporary
+  assert (("FATAL: tried to destroy current cctx", cctx != cctx_current));//D temporary?
 
   --cctx_count;
   coro_destroy (&cctx->cctx);
@@ -1407,8 +1407,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       else
         load_perl (aTHX_ next);
 
-      assert (!prev->cctx);//D temporary
-
       /* possibly untie and reuse the cctx */
       if (expect_true (
             cctx_current->idle_sp == STACKLEVEL
@@ -1475,11 +1473,12 @@ coro_state_destroy (pTHX_ struct coro *coro)
 
   if (coro->mainstack
       && coro->mainstack != main_mainstack
+      && coro->slot
       && !PL_dirty)
     {
       struct coro temp;
 
-      assert (("FATAL: tried to destroy currently running coroutine (please report)", !(coro->flags & CF_RUNNING)));
+      assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
 
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
