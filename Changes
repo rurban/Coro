@@ -16,6 +16,7 @@ TODO: CF_RUNNING makes sense only for Coros, not States
         - be more careful when freeing padlists just before global
           destruction.
         - fixed and expanded the call/cc example.
+        - renamed _terminate to _coro_run.
 
 5.11 Tue Nov 25 21:49:05 CET 2008
 	- DEBUGGING in 5.10.0 is a mess: it constantly flags perfectly

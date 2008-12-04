@@ -3130,7 +3130,7 @@ BOOT:
 
         sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-        cv_coro_run        =      get_cv (      "Coro::_terminate", GV_ADD);
+        cv_coro_run        =      get_cv (      "Coro::_coro_run" , GV_ADD);
         cv_coro_terminate  =      get_cv (      "Coro::terminate" , GV_ADD);
         coro_current       = coro_get_sv (aTHX_ "Coro::current"   , FALSE); SvREADONLY_on (coro_current);
         av_async_pool      = coro_get_av (aTHX_ "Coro::async_pool", TRUE);

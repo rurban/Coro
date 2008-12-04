@@ -354,7 +354,7 @@ coroutine environment.
 
 =cut
 
-sub _terminate {
+sub _coro_run {
    terminate &{+shift};
 }
 
