@@ -6,6 +6,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 
 TODO: CF_RUNNING makes sense only for Coros, not States
+TODO: Coro::AnyEvent should only force detect in the idle hook.
         - add default config for MirOS, which seems to be a bug-to-bug
           compatible fork of openbsd ("world domination by releasing
           openbsd cvs before the openbsd folks do it" or so :).
