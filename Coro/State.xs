@@ -940,7 +940,7 @@ coro_setup (pTHX_ struct coro *coro)
 }
 
 static void
-coro_destruct_perl (pTHX_ struct coro *coro)
+coro_unwind_stacks (pTHX)
 {
   if (!IN_DESTRUCT)
     {
@@ -958,6 +958,12 @@ coro_destruct_perl (pTHX_ struct coro *coro)
       /* unwind main stack */
       dounwind (-1);
     }
+}
+
+static void
+coro_destruct_perl (pTHX_ struct coro *coro)
+{
+  coro_unwind_stacks (aTHX);
 
   SvREFCNT_dec (GvSV (PL_defgv));
   SvREFCNT_dec (GvAV (PL_defgv));
@@ -1865,6 +1871,10 @@ slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
   frame->prepare = prepare_schedule;
   frame->check   = slf_check_repeat;
+
+  /* as a minor optimisation, we could unwind all stacks here */
+  /* but that puts extra pressure on pp_slf, and is not worth much */
+  /*coro_unwind_stacks (aTHX);*/
 }
 
 /*****************************************************************************/
