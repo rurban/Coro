@@ -331,7 +331,8 @@ class continuations. Thirdly, nobody has ever found a use for the full
 power of call/cc that isn't better (faster, easier, more efficiently)
 implemented differently, and nobody has yet found a useful control
 construct that can't be implemented without it already, just much faster
-and with fewer resources.
+and with fewer resources. And lastly, Scheme's call/cc doesn't support
+using call/cc to implement threads.
 
 Among the games you can play with this is implementing a scheme-like
 call-with-current-continuation, as the following code does (well, with
