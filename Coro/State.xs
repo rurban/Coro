@@ -771,11 +771,8 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
 /*
  * This overrides the default magic get method of %SIG elements.
  * The original one doesn't provide for reading back of PL_diehook/PL_warnhook
- * and instead of tryign to save and restore the hash elements, we just provide
+ * and instead of trying to save and restore the hash elements, we just provide
  * readback here.
- * We only do this when the hook is != 0, as they are often set to 0 temporarily,
- * not expecting this to actually change the hook. This is a potential problem
- * when a schedule happens then, but we ignore this.
  */
 static int
 coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
@@ -838,7 +835,7 @@ coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
       if (svp)
         {
           SV *old = *svp;
-          *svp = newSVsv (sv);
+          *svp = SvOK (sv) ? newSVsv (sv) : 0;
           SvREFCNT_dec (old);
           return 0;
         }
