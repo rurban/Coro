@@ -1,7 +1,7 @@
 /* clone implementation, big, slow, useless, but not pointless */
 
 static AV *
-clone_av (AV *av)
+clone_av (pTHX_ AV *av)
 {
   int i;
   AV *nav = newAV ();
@@ -15,7 +15,7 @@ clone_av (AV *av)
 }
 
 static struct coro *
-coro_clone (struct coro *coro)
+coro_clone (pTHX_ struct coro *coro)
 {
   perl_slots *slot, *nslot;
   struct coro *ncoro;
@@ -25,6 +25,8 @@ coro_clone (struct coro *coro)
 
   if (coro->cctx)
     croak ("Coro::State::clone cannot clone a state running on a custom C context, caught");
+
+  /* TODO: maybe check slf_frame for prpeare_rransfer/check_nop? */
 
   slot = coro->slot;
 
@@ -71,7 +73,7 @@ coro_clone (struct coro *coro)
   Copy (slot->savestack, nslot->savestack, slot->savestack_ix + 1, ANY);
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
-  New (54, nslot->retstack, nslot->retstack_mac, OP *);
+  New (54, nslot->retstack, nslot->retstack_max, OP *);
   Copy (slot->retstack, nslot->retstack, slot->retstack_max, OP *);
 #endif
 
@@ -85,15 +87,19 @@ coro_clone (struct coro *coro)
     /* now do the ugly restore mess */
     while (expect_true (cv = (CV *)POPs))
       {
+        /* cv will be refcnt_inc'ed twice by the following two loops */
         POPs;
 
-        av = clone_av ((AV *)TOPs);
+        /* need to clone the padlist */
+        /* this simplistic hakc is most likely wrong */
+        av = clone_av (aTHX_ (AV *)TOPs);
         AvREAL_off (av);
 
         for (i = 1; i <= AvFILLp (av); ++i)
           {
             SvREFCNT_dec (AvARRAY (av)[i]);
-            AvARRAY (av)[i] = (SV *)clone_av ((AV *)AvARRAY (av)[i]);
+            AvARRAY (av)[i] = (SV *)clone_av (aTHX_ (AV *)AvARRAY (av)[i]);
+            AvREIFY_only (AvARRAY (av)[i]);
           }
 
         TOPs = (SV *)av;
@@ -127,6 +133,7 @@ coro_clone (struct coro *coro)
             case CXt_SUB:
               if (cx->blk_sub.olddepth == 0)
                 SvREFCNT_inc ((SV *)cx->blk_sub.cv);
+
               if (cx->blk_sub.hasargs)
                 {
                   SvREFCNT_inc ((SV *)cx->blk_sub.argarray);

@@ -36,7 +36,7 @@ no warnings;
 
 use Coro::Semaphore ();
 
-our $VERSION = 5.1;
+our $VERSION = 5.12;
 
 =item $sig = new Coro::Signal;
 
@@ -89,11 +89,6 @@ Return true when the signal is being awaited by some process.
 1;
 
 =back
-
-=head1 BUGS
-
-This implementation is not currently very robust when the process is woken
-up by other sources, i.e. C<wait> might return early.
 
 =head1 AUTHOR
 

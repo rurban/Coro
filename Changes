@@ -5,7 +5,24 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-5.11
+5.12 Sun Dec  7 13:30:38 CET 2008
+        - add default config for MirOS, which seems to be a bug-to-bug
+          compatible fork of openbsd ("world domination by releasing
+          openbsd cvs before the openbsd folks do it" or so :).
+        - free_padlist did destroy the names pad, not good, but didn't
+          seem to bother perl - this could fix issues such as eval ""
+          inside a function called form multiple coroutines.
+        - use a different method to detect destruction time.
+        - be more careful when freeing padlists just before global
+          destruction.
+        - fixed and expanded the call/cc example.
+        - renamed _terminate to _coro_run.
+        - new method Coro::Channel->shutdown.
+        - try pthreads on openbsd <4.4 (broken sigaltstack, will
+          pthreads fare better?).
+        - be less picky about destroying "a" running coroutine.
+
+5.11 Tue Nov 25 21:49:05 CET 2008
 	- DEBUGGING in 5.10.0 is a mess: it constantly flags perfectly
           working code with failed assertions, introducing more bugs than
           it fixes, requiring elaborate workarounds :(

@@ -66,9 +66,14 @@ if (exists $ENV{CORO_INTERFACE}) {
    # hey, it might actually work, with some hacks
    $iface = "p";
 
-} elsif ($^O =~ /openbsd/) {
+} elsif ($^O =~ /(openbsd|mirbsd)/) {
+   # openbsd:
    # asm seems to work, setjmp might, ucontext is missing, threads lets not talk about
-   $iface = $iface_asm || "s";
+   # try setjmp/longjmp on 4.4, but pthread on earlier
+   # mirbsd:
+   # seems to be bug-to-bug compatible openbsd fork,
+   # with the name change being the biggest difference.
+   $iface = $iface_asm || ($Config{osvers} >= 4.4 ? "s" : "p");
 
 } elsif ($^O =~ /solaris/) {
    # setjmp, ucontext seem to work, as well as asm
@@ -301,7 +306,7 @@ Coro has experimental support for cloning states. This can be used
 to implement a scheme-like call/cc. However, this doesn't add to the
 expressiveness in general, and is likely perl-version specific. As such,
 it is disabled by default.  Enable it when you want to play around with
-it, but note that it isn't supported, and unlikely ever will be. IT
+it, but note that it isn't supported, and unlikely ever will be. It
 exists mainly to prove that it could be done - if only it were useful for
 something.
 

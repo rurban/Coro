@@ -27,21 +27,25 @@ integrate in your program:
 
 It lets you list running coroutines:
 
-            state
+            state (rUnning, Ready, New or neither)
             |cctx allocated
-            ||   resident set size (kb)
-   > ps     ||   |
-        PID SC  RSS Description          Where
-   11014896 UC  835 [main::]             [/opt/cf/ext/dm-support.ext:45]
-   11015088 --    2 [coro manager]       [/opt/perl/lib/perl5/Coro.pm:170]
-   11015408 --    2 [unblock_sub schedul [/opt/perl/lib/perl5/Coro.pm:548]
-   15607952 --    2 timeslot manager     [/opt/cf/cf.pm:382]
-   18492336 --    5 player scheduler     [/opt/cf/ext/login.ext:501]
-   20170640 --    6 map scheduler        [/opt/cf/ext/map-scheduler.ext:62]
-   24559856 --   14 [async_pool idle]    [/opt/perl/lib/perl5/Coro.pm:256]
-   18334288 --    4 music scheduler      [/opt/cf/ext/player-env.ext:77]
-   46127008 --    5 worldmap updater     [/opt/cf/ext/item-worldmap.ext:116]
-   43383424 --   10 [async_pool idle]    [/opt/perl/lib/perl5/Coro.pm:256]
+            ||  resident set size (octets)
+            ||  |   scheduled this many times
+   > ps     ||  |   |
+        PID SC  RSS USES Description              Where
+   14572344 UC  62k 128k [main::]                 [dm-support.ext:47]
+   14620056 -- 2260   13 [coro manager]           [Coro.pm:358]
+   14620128 -- 2260  166 [unblock_sub scheduler]  [Coro.pm:358]
+   17764008 N-  152    0 [EV idle process]        -
+   13990784 -- 2596  10k timeslot manager         [cf.pm:454]
+   81424176 --  18k 4758 [async pool idle]        [Coro.pm:257]
+   23513336 -- 2624    1 follow handler           [follow.ext:52]
+   40548312 --  15k 5597 player scheduler         [player-scheduler.ext:13]
+   29138032 -- 2548  431 music scheduler          [player-env.ext:77]
+   43449808 -- 2260 3493 worldmap updater         [item-worldmap.ext:115]
+   33352488 --  19k 2845 [async pool idle]        [Coro.pm:257]
+   81530072 --  13k  43k map scheduler            [map-scheduler.ext:65]
+   30751144 --  15k 2204 [async pool idle]        [Coro.pm:257]
 
 Lets you do backtraces on about any coroutine:
 
@@ -62,7 +66,7 @@ Or lets you eval perl code within other coroutines:
    1
 
 It can also trace subroutine entry/exits for most coroutines (those not
-recursing into a C function), resulting in output similar to:
+having recursed into a C function), resulting in output similar to:
 
    > loglevel 5
    > trace 94652688
@@ -115,7 +119,7 @@ use Coro::Handle ();
 use Coro::State ();
 use Coro::AnyEvent ();
 
-our $VERSION = 5.1;
+our $VERSION = 5.12;
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;

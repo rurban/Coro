@@ -345,7 +345,7 @@ counting semaphores internally for synchronisation.
 =head2 What is mine, what is ours?
 
 What, exactly, constitutes a thread? Obviously it contains the current
-point of execution.  Not os obviously, it also has to include all
+point of execution.  Not so obviously, it also has to include all
 lexical variables, that means, every thread has its own set of lexical
 variables. To see why this is necessary, consider this program:
 

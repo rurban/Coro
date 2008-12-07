@@ -33,11 +33,12 @@ no warnings;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = 5.1;
+our $VERSION = 5.12;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }
 sub SPUT (){ 2 }
+sub CEOS (){ 3 }
 
 =item $q = new Coro:Channel $maxsize
 
@@ -55,7 +56,7 @@ sub new {
    bless [
       [],
       (Coro::Semaphore::_alloc 0),
-      (Coro::Semaphore::_alloc +($_[1] || 1_000_000_000) - 1),
+      (Coro::Semaphore::_alloc +($_[1] || 2_000_000_000) - 1),
    ]
 }
 
@@ -83,12 +84,41 @@ sub get {
    shift @{$_[0][DATA]}
 }
 
+=item $q->shutdown
+
+Shuts down the Channel by pushing a virtual end marker onto it: This
+changes the behaviour of the Channel when it becomes or is empty to return
+C<undef>, almost as if infinitely many C<undef> elements have been put
+into the queue.
+
+Specifically, this function wakes up any pending C<get> calls and lets
+them return C<undef>, the same on future C<get> calls. C<size> will return
+the real number of stored elements, though.
+
+Another way to describe the behaviour is that C<get> calls will not block
+when the queue becomes empty but immediately return C<undef>. This means
+that calls to C<put> will work normally and the data will be returned on
+subsequent C<get> calls.
+
+This method is useful to signal the end of data to any consumers, quite
+similar to an end of stream on e.g. a tcp socket: You have one or more
+producers that C<put> data into the Channel and one or more consumers who
+C<get> them. When all producers have finished producing data, a call to
+C<shutdown> signals this fact to any consumers.
+
+=cut
+
+sub shutdown {
+   Coro::Semaphore::adjust $_[0][SGET], 2_000_000_000;
+}
+
 =item $q->size
 
 Return the number of elements waiting to be consumed. Please note that:
 
   if ($q->size) {
      my $data = $q->get;
+     ...
   }
 
 is I<not> a race condition but instead works just fine.

@@ -92,7 +92,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.1;
+   our $VERSION = 5.12;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -317,39 +317,61 @@ Returns a list of all states currently allocated.
 
 =item $clone = $state->clone
 
-This exciting method takes a Coro::State object and clones, i.e., creates
-a copy. This makes it possible to restore a state more than once.
+This exciting method takes a Coro::State object and clones it, i.e., it
+creates a copy. This makes it possible to restore a state more than once,
+and even return to states that have returned or have been terminated.
 
-Since its only known purpose is intellectual self-gratification, and
+Since its only known purpose is for intellectual self-gratification, and
 because it is a difficult piece of code, it is not enabled by default, and
 not supported.
-
-Among the games you can play with this is implement a scheme-like call/cc,
-as the following code does (well, with small differences).
-
-   sub callcc(&@) {
-      my ($func, @arg) = @_;
-
-      my $state = new Coro::State;
-      my $wrapper = new Coro::State sub {
-         my $escape = sub {
-            @arg = @_;
-            Coro::State->new->transfer ($state->clone);
-         };
-         $escape->($func->($escape, @arg));
-      };
-
-      $state->transfer ($wrapper);
-      @arg
-   }
 
 Here are a few little-known facts: First, coroutines *are* full/true/real
 continuations. Secondly Coro::State objects (without clone) *are* first
 class continuations. Thirdly, nobody has ever found a use for the full
-power of call/cc that isn't better (faster, easier, more efficient)
+power of call/cc that isn't better (faster, easier, more efficiently)
 implemented differently, and nobody has yet found a useful control
 construct that can't be implemented without it already, just much faster
-and with fewer resources.
+and with fewer resources. And lastly, Scheme's call/cc doesn't support
+using call/cc to implement threads.
+
+Among the games you can play with this is implementing a scheme-like
+call-with-current-continuation, as the following code does (well, with
+small differences).
+
+   # perl disassociates from local lexicals on frame exit,
+   # so use a global variable for return values.
+   my @ret;
+
+   sub callcc($@) {
+      my ($func, @arg) = @_;
+
+      my $continuation = new Coro::State;
+      $continuation->transfer (new Coro::State sub {
+         my $escape = sub {
+            @ret = @_;
+            Coro::State->new->transfer ($continuation->clone);
+         };
+         $escape->($func->($escape, @arg));
+      });
+
+      my @ret_ = @ret; @ret = ();
+      wantarray ? @ret_ : pop @ret_
+   }
+
+Which could be used to implement a loop like this:
+
+   async {
+      my $n; 
+      my $l = callcc sub { $_[0] };
+     
+      $n++; 
+      print "iteration $n\n";
+
+      $l->($l) unless $n == 10;
+   };  
+
+If you find this confusing, then you already understand the coolness of
+call/cc: It can turn anything into spaghetti code real fast.
 
 Besides, call/cc is much less useful in a Perl-like dynamic language (with
 references, and its scoping rules) then in, say, scheme.
@@ -367,6 +389,10 @@ C<-DDEBUGGING> (but what does). It probably also leaks, and sometimes
 triggers a few assertions inside Coro. Most of these limitations *are*
 fixable with some effort, but that's pointless just to make a point that
 it could be done.
+
+The current implementation could without doubt be optimised to be a
+constant-time operation by doing lazy stack copying, if somebody were
+insane enough to invest the time.
 
 =cut
 

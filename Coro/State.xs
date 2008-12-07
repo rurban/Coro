@@ -135,7 +135,7 @@ static int cctx_max_idle = 4;
 # define STACKLEVEL ((void *)&stacklevel)
 #endif
 
-#define IN_DESTRUCT (PL_main_cv == Nullcv)
+#define IN_DESTRUCT PL_dirty
 
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
@@ -357,74 +357,11 @@ coro_sv_2cv (pTHX_ SV *sv)
   return sv_2cv (sv, &st, &gvp, 0);
 }
 
-static AV *
-coro_derive_padlist (pTHX_ CV *cv)
-{
-  AV *padlist = CvPADLIST (cv);
-  AV *newpadlist, *newpad;
-
-  newpadlist = newAV ();
-  AvREAL_off (newpadlist);
-#if PERL_VERSION_ATLEAST (5,10,0)
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
-#else
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
-#endif
-  newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
-  --AvFILLp (padlist);
-
-  av_store (newpadlist, 0, SvREFCNT_inc_NN (*av_fetch (padlist, 0, FALSE)));
-  av_store (newpadlist, 1, (SV *)newpad);
-
-  return newpadlist;
-}
-
-static void
-free_padlist (pTHX_ AV *padlist)
-{
-  /* may be during global destruction */
-  if (SvREFCNT (padlist))
-    {
-      I32 i = AvFILLp (padlist);
-      while (i >= 0)
-        {
-          SV **svp = av_fetch (padlist, i--, FALSE);
-          if (svp)
-            {
-              SV *sv;
-              while (&PL_sv_undef != (sv = av_pop ((AV *)*svp)))
-                SvREFCNT_dec (sv);
-
-              SvREFCNT_dec (*svp);
-            }
-        }
-
-      SvREFCNT_dec ((SV*)padlist);
-    }
-}
-
-static int
-coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
-{
-  AV *padlist;
-  AV *av = (AV *)mg->mg_obj;
-
-  /* casting is fun. */
-  while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-    free_padlist (aTHX_ padlist);
-
-  SvREFCNT_dec (av); /* sv_magicext increased the refcount */
-
-  return 0;
-}
+/*****************************************************************************/
+/* magic glue */
 
 #define CORO_MAGIC_type_cv    26
 #define CORO_MAGIC_type_state PERL_MAGIC_ext
-
-static MGVTBL coro_cv_vtbl = {
-  0, 0, 0, 0,
-  coro_cv_free
-};
 
 #define CORO_MAGIC_NN(sv, type)			\
   (expect_true (SvMAGIC (sv)->mg_type == type)	\
@@ -469,6 +406,79 @@ SvSTATE_ (pTHX_ SV *coro)
 #define SvSTATE_hv(hv)  ((struct coro *)CORO_MAGIC_NN ((SV *)hv, CORO_MAGIC_type_state)->mg_ptr)
 #define SvSTATE_current SvSTATE_hv (SvRV (coro_current))
 
+/*****************************************************************************/
+/* padlist management and caching */
+
+static AV *
+coro_derive_padlist (pTHX_ CV *cv)
+{
+  AV *padlist = CvPADLIST (cv);
+  AV *newpadlist, *newpad;
+
+  newpadlist = newAV ();
+  AvREAL_off (newpadlist);
+#if PERL_VERSION_ATLEAST (5,10,0)
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
+#else
+  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
+#endif
+  newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
+  --AvFILLp (padlist);
+
+  av_store (newpadlist, 0, SvREFCNT_inc_NN (AvARRAY (padlist)[0]));
+  av_store (newpadlist, 1, (SV *)newpad);
+
+  return newpadlist;
+}
+
+static void
+free_padlist (pTHX_ AV *padlist)
+{
+  /* may be during global destruction */
+  if (!IN_DESTRUCT)
+    {
+      I32 i = AvFILLp (padlist);
+
+      while (i > 0) /* special-case index 0 */
+        {
+          /* we try to be extra-careful here */
+          AV *av = (AV *)AvARRAY (padlist)[i--];
+          I32 j = AvFILLp (av);
+
+          while (j >= 0)
+            SvREFCNT_dec (AvARRAY (av)[j--]);
+
+          AvFILLp (av) = -1;
+          SvREFCNT_dec (av);
+        }
+
+      SvREFCNT_dec (AvARRAY (padlist)[0]);
+
+      AvFILLp (padlist) = -1;
+      SvREFCNT_dec ((SV*)padlist);
+    }
+}
+
+static int
+coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
+{
+  AV *padlist;
+  AV *av = (AV *)mg->mg_obj;
+
+  /* casting is fun. */
+  while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
+    free_padlist (aTHX_ padlist);
+
+  SvREFCNT_dec (av); /* sv_magicext increased the refcount */
+
+  return 0;
+}
+
+static MGVTBL coro_cv_vtbl = {
+  0, 0, 0, 0,
+  coro_cv_free
+};
+
 /* the next two functions merely cache the padlists */
 static void
 get_padlist (pTHX_ CV *cv)
@@ -505,7 +515,7 @@ put_padlist (pTHX_ CV *cv)
   av = (AV *)mg->mg_obj;
 
   if (expect_false (AvFILLp (av) >= AvMAX (av)))
-    av_extend (av, AvMAX (av) + 1);
+    av_extend (av, AvFILLp (av) + 1);
 
   AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
 }
@@ -930,7 +940,7 @@ coro_setup (pTHX_ struct coro *coro)
 }
 
 static void
-coro_destruct (pTHX_ struct coro *coro)
+coro_unwind_stacks (pTHX)
 {
   if (!IN_DESTRUCT)
     {
@@ -948,6 +958,12 @@ coro_destruct (pTHX_ struct coro *coro)
       /* unwind main stack */
       dounwind (-1);
     }
+}
+
+static void
+coro_destruct_perl (pTHX_ struct coro *coro)
+{
+  coro_unwind_stacks (aTHX);
 
   SvREFCNT_dec (GvSV (PL_defgv));
   SvREFCNT_dec (GvAV (PL_defgv));
@@ -1269,7 +1285,7 @@ cctx_destroy (coro_cctx *cctx)
   if (!cctx)
     return;
 
-  assert (cctx != cctx_current);//D temporary
+  assert (("FATAL: tried to destroy current cctx", cctx != cctx_current));//D temporary?
 
   --cctx_count;
   coro_destroy (&cctx->cctx);
@@ -1397,8 +1413,6 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       else
         load_perl (aTHX_ next);
 
-      assert (!prev->cctx);//D temporary
-
       /* possibly untie and reuse the cctx */
       if (expect_true (
             cctx_current->idle_sp == STACKLEVEL
@@ -1463,16 +1477,19 @@ coro_state_destroy (pTHX_ struct coro *coro)
   else
     coro->flags |= CF_READY; /* make sure it is NOT put into the readyqueue */
 
-  if (coro->mainstack && coro->mainstack != main_mainstack)
+  if (coro->mainstack
+      && coro->mainstack != main_mainstack
+      && coro->slot
+      && !PL_dirty)
     {
       struct coro temp;
 
-      assert (("FATAL: tried to destroy currently running coroutine (please report)", !(coro->flags & CF_RUNNING)));
+      assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
 
       save_perl (aTHX_ &temp);
       load_perl (aTHX_ coro);
 
-      coro_destruct (aTHX_ coro);
+      coro_destruct_perl (aTHX_ coro);
 
       load_perl (aTHX_ &temp);
 
@@ -1854,6 +1871,10 @@ slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
   frame->prepare = prepare_schedule;
   frame->check   = slf_check_repeat;
+
+  /* as a minor optimisation, we could unwind all stacks here */
+  /* but that puts extra pressure on pp_slf, and is not worth much */
+  /*coro_unwind_stacks (aTHX);*/
 }
 
 /*****************************************************************************/
@@ -2917,7 +2938,7 @@ clone (Coro::State coro)
 	CODE:
 {
 #if CORO_CLONE
-        struct coro *ncoro = coro_clone (coro);
+        struct coro *ncoro = coro_clone (aTHX_ coro);
         MAGIC *mg;
         /* TODO: too much duplication */
         ncoro->hv = newHV ();
@@ -3118,7 +3139,7 @@ BOOT:
 
         sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
-        cv_coro_run        =      get_cv (      "Coro::_terminate", GV_ADD);
+        cv_coro_run        =      get_cv (      "Coro::_coro_run" , GV_ADD);
         cv_coro_terminate  =      get_cv (      "Coro::terminate" , GV_ADD);
         coro_current       = coro_get_sv (aTHX_ "Coro::current"   , FALSE); SvREADONLY_on (coro_current);
         av_async_pool      = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
