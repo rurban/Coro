@@ -15,8 +15,12 @@ running -> canceled
 blocked -> ready
 blocked -> canceled
 
+5.13
 	- don't set diehook to C<undef> but instead to NULL, to avoid
           spurious warnings.
+        - fix a lot of bugs in Coro::SemaphoreSet.
+        - Coro::SemaphoreSet will less often create a semaphore needlessly.
+        - add Coro::SemaphoreSet::count and wait methods.
         - take advantage of the new Guard module.
         - deprecate Coro::guard.
 

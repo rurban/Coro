@@ -8,11 +8,11 @@ Coro::SemaphoreSet - efficient set of counting semaphores
 
  $sig = new Coro::SemaphoreSet [initial value];
 
- $sig->down("semaphoreid"); # wait for signal
+ $sig->down ("semaphoreid"); # wait for signal
 
  # ... some other "thread"
 
- $sig->up("semaphoreid");
+ $sig->up ("semaphoreid");
 
 =head1 DESCRIPTION
 
@@ -33,7 +33,7 @@ package Coro::SemaphoreSet;
 use strict qw(vars subs);
 no warnings;
 
-our $VERSION = 5.12;
+our $VERSION = 5.13;
 
 use Coro::Semaphore ();
 
@@ -107,7 +107,7 @@ sub up {
    delete $self->[1]{$id} if $self->[0] == count $sem and !waiters $sem;
 }
 
-=item $semset->try
+=item $semset->try ($id)
 
 Try to C<down> the semaphore. Returns true when this was possible,
 otherwise return false and leave the semaphore unchanged.
@@ -116,7 +116,28 @@ otherwise return false and leave the semaphore unchanged.
 
 sub try {
    package Coro::Semaphore;
-   try ($_[0][1]{$_[1]} ||= new undef, $_[0][0]);
+   try ($_[0][1]{$_[1]} || return $_[0][0] > 0)
+}
+
+=item $semset->count ($id)
+
+Return the current semaphore count for the specified semaphore.
+
+=cut
+
+sub count {
+   package Coro::Semaphore;
+   count ($_[0][1]{$_[1]} || return $_[0][0]);
+}
+
+=item $semset->wait ($id)
+
+Same as Coro::Semaphore::wait on the specified semaphore.
+
+=cut
+
+sub wait {
+   Coro::Semaphore::wait ($_[0][1]{$_[1]} || return $_[0][0] > 0);
 }
 
 =item $guard = $semset->guard ($id)
