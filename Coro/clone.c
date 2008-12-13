@@ -91,7 +91,7 @@ coro_clone (pTHX_ struct coro *coro)
         POPs;
 
         /* need to clone the padlist */
-        /* this simplistic hakc is most likely wrong */
+        /* this simplistic hack is most likely wrong */
         av = clone_av (aTHX_ (AV *)TOPs);
         AvREAL_off (av);
 

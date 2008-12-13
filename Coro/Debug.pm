@@ -110,6 +110,8 @@ use Carp ();
 use Time::HiRes ();
 use Scalar::Util ();
 
+use Guard;
+
 use AnyEvent ();
 use AnyEvent::Util ();
 use AnyEvent::Socket ();
@@ -403,7 +405,7 @@ sub session($) {
 
    $fh = Coro::Handle::unblock $fh;
    my $old_fh = select $fh;
-   my $guard = Coro::guard { select $old_fh };
+   my $guard = guard { select $old_fh };
 
    my $loglevel = $SESLOGLEVEL;
    local $log{$Coro::current} = sub {
@@ -459,7 +461,7 @@ sub new_unix_server {
    my ($class, $path) = @_;
 
    unlink $path;
-   my $unlink_guard = AnyEvent::Util::guard { unlink $path };
+   my $unlink_guard = guard { unlink $path };
 
    AnyEvent::Socket::tcp_server "unix/", $path, sub {
       my ($fh) = @_;

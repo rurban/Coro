@@ -138,7 +138,7 @@ object is destroyed it automatically calls C<up>.
 sub guard {
    &down;
    # double indirection because bless works on the referenced
-   # object, not (only) on the reference itself.
+   # object, not (just) on the reference itself.
    bless \\$_[0], Coro::Semaphore::guard::;
 }
 

@@ -17,6 +17,8 @@ blocked -> canceled
 
 	- don't set diehook to C<undef> but instead to NULL, to avoid
           spurious warnings.
+        - take advantage of the new Guard module.
+        - deprecate Coro::guard.
 
 5.12 Sun Dec  7 13:30:38 CET 2008
         - add default config for MirOS, which seems to be a bug-to-bug
@@ -24,7 +26,7 @@ blocked -> canceled
           openbsd cvs before the openbsd folks do it" or so :).
         - free_padlist did destroy the names pad, not good, but didn't
           seem to bother perl - this could fix issues such as eval ""
-          inside a function called form multiple coroutines.
+          inside a function called from multiple coroutines.
         - use a different method to detect destruction time.
         - be more careful when freeing padlists just before global
           destruction.

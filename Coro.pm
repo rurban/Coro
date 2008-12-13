@@ -539,37 +539,12 @@ coroutines.
 
 =item my $guard = Coro::guard { ... }
 
-This creates and returns a guard object. Nothing happens until the object
-gets destroyed, in which case the codeblock given as argument will be
-executed. This is useful to free locks or other resources in case of a
-runtime error or when the coroutine gets canceled, as in both cases the
-guard block will be executed. The guard object supports only one method,
-C<< ->cancel >>, which will keep the codeblock from being executed.
-
-Example: set some flag and clear it again when the coroutine gets canceled
-or the function returns:
-
-   sub do_something {
-      my $guard = Coro::guard { $busy = 0 };
-      $busy = 1;
-
-      # do something that requires $busy to be true
-   }
+This function still exists, but is deprecated. Please use the
+C<Guard::guard> function instead.
 
 =cut
 
-sub guard(&) {
-   bless \(my $cb = $_[0]), "Coro::guard"
-}
-
-sub Coro::guard::cancel {
-   ${$_[0]} = sub { };
-}
-
-sub Coro::guard::DESTROY {
-   ${$_[0]}->();
-}
-
+BEGIN { *guard = \&Guard::guard }
 
 =item unblock_sub { ... }
 
