@@ -317,8 +317,12 @@ Terminates the current coroutine with the given status values (see L<cancel>).
 =item killall
 
 Kills/terminates/cancels all coroutines except the currently running
-one. This is useful after a fork, either in the child or the parent, as
-usually only one of them should inherit the running coroutines.
+one. This can be useful after a fork, either in the child or the parent,
+as usually only one of them should inherit the running coroutines.
+
+Note that in the implementation, destructors run as normal, making this
+function not so useful after a fork. Future versions of this function
+might try to free resources without running any code.
 
 Note that while this will try to free some of the main programs resources,
 you cannot free all of them, so if a coroutine that is not the main
