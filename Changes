@@ -23,6 +23,8 @@ blocked -> canceled
         - add Coro::SemaphoreSet::count and wait methods.
         - take advantage of the new Guard module.
         - deprecate Coro::guard.
+        - try to fix the dreaded 01_unblock tests once more. I hate it when
+          testsuites need more fixing than the code they are supposed to test.
 
 5.12 Sun Dec  7 13:30:38 CET 2008
         - add default config for MirOS, which seems to be a bug-to-bug
