@@ -5,13 +5,31 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+5.13 Mon Dec 15 21:51:42 CET 2008
+	- EXPERIMENTAL: implement dynamic winds (on_enter/on_leave).
+	- don't set diehook to C<undef> but instead to NULL, to avoid
+          spurious warnings.
+        - fix a lot of bugs in Coro::SemaphoreSet.
+        - Coro::SemaphoreSet will less often create a semaphore needlessly.
+        - add Coro::SemaphoreSet::count and wait methods.
+        - take advantage of the new Guard module.
+        - deprecate Coro::guard.
+        - try to fix the dreaded 01_unblock tests once more. I hate it when
+          testsuites need more fixing than the code they are supposed to test.
+        - croak in more cases when a required callback isn't resolvable.
+        - fix some minor issues in Coro::State->call/eval.
+        - use current coroutine context instead of a temporary one
+          when temporarily switching to another coroutine.
+        - do not call C-level on_destroy handlers during global destruction,
+          to avoid needless segfaults.
+
 5.12 Sun Dec  7 13:30:38 CET 2008
         - add default config for MirOS, which seems to be a bug-to-bug
           compatible fork of openbsd ("world domination by releasing
           openbsd cvs before the openbsd folks do it" or so :).
         - free_padlist did destroy the names pad, not good, but didn't
           seem to bother perl - this could fix issues such as eval ""
-          inside a function called form multiple coroutines.
+          inside a function called from multiple coroutines.
         - use a different method to detect destruction time.
         - be more careful when freeing padlists just before global
           destruction.

@@ -240,6 +240,7 @@ enum {
   CF_READY     = 0x0002, /* coroutine is ready */
   CF_NEW       = 0x0004, /* has never been switched to */
   CF_DESTROYED = 0x0008, /* coroutine data has been freed */
+  CF_SUSPENDED = 0x0010, /* coroutine can't be scheduled */
 };
 
 /* the structure where most of the perl state is stored, overlaid on the cxstack */
@@ -286,6 +287,10 @@ struct coro {
   SV *saved_deffh;
   SV *invoke_cb;
   AV *invoke_av;
+
+  /* on_enter/on_leave */
+  AV *on_enter;
+  AV *on_leave;
 
   /* linked list */
   struct coro *next, *prev;
@@ -354,7 +359,12 @@ coro_sv_2cv (pTHX_ SV *sv)
 {
   HV *st;
   GV *gvp;
-  return sv_2cv (sv, &st, &gvp, 0);
+  CV *cv = sv_2cv (sv, &st, &gvp, 0);
+
+  if (!cv)
+    croak ("code reference expected");
+
+  return cv;
 }
 
 /*****************************************************************************/
@@ -523,6 +533,9 @@ put_padlist (pTHX_ CV *cv)
 /** load & save, init *******************************************************/
 
 static void
+on_enterleave_call (pTHX_ SV *cb);
+
+static void
 load_perl (pTHX_ Coro__State c)
 {
   perl_slots *slot = c->slot;
@@ -558,11 +571,27 @@ load_perl (pTHX_ Coro__State c)
 
   slf_frame  = c->slf_frame;
   CORO_THROW = c->except;
+
+  if (expect_false (c->on_enter))
+    {
+      int i;
+
+      for (i = 0; i <= AvFILLp (c->on_enter); ++i)
+        on_enterleave_call (aTHX_ AvARRAY (c->on_enter)[i]);
+    }
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
+  if (expect_false (c->on_leave))
+    {
+      int i;
+
+      for (i = AvFILLp (c->on_leave); i >= 0; --i)
+        on_enterleave_call (aTHX_ AvARRAY (c->on_leave)[i]);
+    }
+
   c->except    = CORO_THROW;
   c->slf_frame = slf_frame;
 
@@ -771,11 +800,8 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
 /*
  * This overrides the default magic get method of %SIG elements.
  * The original one doesn't provide for reading back of PL_diehook/PL_warnhook
- * and instead of tryign to save and restore the hash elements, we just provide
+ * and instead of trying to save and restore the hash elements, we just provide
  * readback here.
- * We only do this when the hook is != 0, as they are often set to 0 temporarily,
- * not expecting this to actually change the hook. This is a potential problem
- * when a schedule happens then, but we ignore this.
  */
 static int
 coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
@@ -838,7 +864,7 @@ coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
       if (svp)
         {
           SV *old = *svp;
-          *svp = newSVsv (sv);
+          *svp = SvOK (sv) ? newSVsv (sv) : 0;
           SvREFCNT_dec (old);
           return 0;
         }
@@ -1359,13 +1385,10 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
   if (expect_true (prev != next))
     {
       if (expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
-        croak ("Coro::State::transfer called with a suspended prev Coro::State, but can only transfer from running or new states,");
+        croak ("Coro::State::transfer called with a blocked prev Coro::State, but can only transfer from running or new states,");
 
-      if (expect_false (next->flags & CF_RUNNING))
-        croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states,");
-
-      if (expect_false (next->flags & CF_DESTROYED))
-        croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states,");
+      if (expect_false (next->flags & (CF_RUNNING | CF_DESTROYED | CF_SUSPENDED)))
+        croak ("Coro::State::transfer called with running, destroyed or suspended next Coro::State, but can only transfer to inactive states,");
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
       if (expect_false (PL_lex_state != LEX_NOTPARSING))
@@ -1463,7 +1486,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
   if (coro->flags & CF_DESTROYED)
     return 0;
 
-  if (coro->on_destroy)
+  if (coro->on_destroy && !PL_dirty)
     coro->on_destroy (aTHX_ coro);
 
   coro->flags |= CF_DESTROYED;
@@ -1482,16 +1505,16 @@ coro_state_destroy (pTHX_ struct coro *coro)
       && coro->slot
       && !PL_dirty)
     {
-      struct coro temp;
+      struct coro *current = SvSTATE_current;
 
       assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
 
-      save_perl (aTHX_ &temp);
+      save_perl (aTHX_ current);
       load_perl (aTHX_ coro);
 
       coro_destruct_perl (aTHX_ coro);
 
-      load_perl (aTHX_ &temp);
+      load_perl (aTHX_ current);
 
       coro->slot = 0;
     }
@@ -1682,7 +1705,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
           struct coro *next = SvSTATE_hv (next_sv);
 
           /* cannot transfer to destroyed coros, skip and look for next */
-          if (expect_false (next->flags & CF_DESTROYED))
+          if (expect_false (next->flags & (CF_DESTROYED | CF_SUSPENDED)))
             SvREFCNT_dec (next_sv); /* coro_nready has already been taken care of by destroy */
           else
             {
@@ -2303,6 +2326,53 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
   /*PL_op->op_type    = OP_CUSTOM; /* we do behave like entersub still */
 
   PL_op = (OP *)&slf_restore;
+}
+
+/*****************************************************************************/
+/* dynamic wind */
+
+static void
+on_enterleave_call (pTHX_ SV *cb)
+{
+  dSP;
+
+  PUSHSTACK;
+
+  PUSHMARK (SP);
+  PUTBACK;
+  call_sv (cb, G_VOID | G_DISCARD);
+  SPAGAIN;
+
+  POPSTACK;
+}
+
+static SV *
+coro_avp_pop_and_free (pTHX_ AV **avp)
+{
+  AV *av = *avp;
+  SV *res = av_pop (av);
+
+  if (AvFILLp (av) < 0)
+    {
+      *avp = 0;
+      SvREFCNT_dec (av);
+    }
+
+  return res;
+}
+
+static void
+coro_pop_on_enter (pTHX_ void *coro)
+{
+  SV *cb = coro_avp_pop_and_free (aTHX_ &((struct coro *)coro)->on_enter);
+  SvREFCNT_dec (cb);
+}
+
+static void
+coro_pop_on_leave (pTHX_ void *coro)
+{
+  SV *cb = coro_avp_pop_and_free (aTHX_ &((struct coro *)coro)->on_leave);
+  on_enterleave_call (aTHX_ sv_2mortal (cb));
 }
 
 /*****************************************************************************/
@@ -3010,39 +3080,34 @@ call (Coro::State coro, SV *coderef)
 {
         if (coro->mainstack && ((coro->flags & CF_RUNNING) || coro->slot))
           {
-            struct coro temp;
+            struct coro *current = SvSTATE_current;
 
-            if (!(coro->flags & CF_RUNNING))
+            if (current != coro)
               {
                 PUTBACK;
-                save_perl (aTHX_ &temp);
+                save_perl (aTHX_ current);
                 load_perl (aTHX_ coro);
+                SPAGAIN;
               }
 
-            {
-              dSP;
-              ENTER;
-              SAVETMPS;
-              PUTBACK;
-              PUSHSTACK;
-              PUSHMARK (SP);
+            PUSHSTACK;
 
-              if (ix)
-                eval_sv (coderef, 0);
-              else
-                call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+            PUSHMARK (SP);
+            PUTBACK;
 
-              POPSTACK;
-              SPAGAIN;
-              FREETMPS;
-              LEAVE;
-              PUTBACK;
-            }
+            if (ix)
+              eval_sv (coderef, 0);
+            else
+              call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
 
-            if (!(coro->flags & CF_RUNNING))
+            POPSTACK;
+            SPAGAIN;
+
+            if (current != coro)
               {
+                PUTBACK;
                 save_perl (aTHX_ coro);
-                load_perl (aTHX_ &temp);
+                load_perl (aTHX_ current);
                 SPAGAIN;
               }
           }
@@ -3056,6 +3121,7 @@ is_ready (Coro::State coro)
         is_running   = CF_RUNNING
         is_new       = CF_NEW
         is_destroyed = CF_DESTROYED
+        is_suspended = CF_SUSPENDED
 	CODE:
         RETVAL = boolSV (coro->flags & ix);
 	OUTPUT:
@@ -3129,6 +3195,12 @@ swap_defsv (Coro::State self)
 
             SV *tmp = *src; *src = *dst; *dst = tmp;
           }
+
+void
+cancel (Coro::State self)
+	CODE:
+	coro_state_destroy (aTHX_ self);
+        coro_call_on_destroy (aTHX_ self); /* actually only for Coro objects */
 
 
 MODULE = Coro::State                PACKAGE = Coro
@@ -3211,12 +3283,6 @@ void
 cede_notself (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_cede_notself);
-
-void
-_cancel (Coro::State self)
-	CODE:
-	coro_state_destroy (aTHX_ self);
-        coro_call_on_destroy (aTHX_ self);
 
 void
 _set_current (SV *current)
@@ -3334,6 +3400,31 @@ rouse_wait (...)
 	PPCODE:
         CORO_EXECUTE_SLF_XS (slf_init_rouse_wait);
 
+void
+on_enter (SV *block)
+	ALIAS:
+        on_leave = 1
+	PROTOTYPE: &
+	CODE:
+{
+	struct coro *coro = SvSTATE_current;
+  	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
+
+        block = (SV *)coro_sv_2cv (aTHX_ block);
+
+        if (!*avp)
+          *avp = newAV ();
+
+        av_push (*avp, SvREFCNT_inc (block));
+
+        if (!ix)
+          on_enterleave_call (aTHX_ block);
+
+        LEAVE; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+        SAVEDESTRUCTOR_X (ix ? coro_pop_on_leave : coro_pop_on_enter, (void *)coro);
+        ENTER; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+}
+
 
 MODULE = Coro::State                PACKAGE = PerlIO::cede
 
@@ -3353,7 +3444,7 @@ new (SV *klass, SV *count = 0)
 	OUTPUT:
         RETVAL
 
-# helper for Coro::Channel
+# helper for Coro::Channel and others
 SV *
 _alloc (int count)
 	CODE:
@@ -3419,6 +3510,22 @@ waiters (SV *self)
             for (i = 1; i <= wcount; ++i)
               PUSHs (sv_2mortal (newRV_inc (AvARRAY (av)[i])));
           }
+}
+
+MODULE = Coro::State                PACKAGE = Coro::SemaphoreSet
+
+void
+_may_delete (SV *sem, int count, int extra_refs)
+	PPCODE:
+{
+  	AV *av = (AV *)SvRV (sem);
+
+        if (SvREFCNT ((SV *)av) == 1 + extra_refs
+            && AvFILLp (av) == 0 /* no waiters, just count */
+            && SvIV (AvARRAY (av)[0]) == count)
+          XSRETURN_YES;
+
+        XSRETURN_NO;
 }
 
 MODULE = Coro::State                PACKAGE = Coro::Signal
