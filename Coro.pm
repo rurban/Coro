@@ -42,11 +42,14 @@ issue, making thread programming much safer and easier than using other
 thread models.
 
 Unlike the so-called "Perl threads" (which are not actually real threads
-but only the windows process emulation ported to unix), Coro provides a
-full shared address space, which makes communication between threads
-very easy. And threads are fast, too: disabling the Windows process
-emulation code in your perl and using Coro can easily result in a two to
-four times speed increase for your programs.
+but only the windows process emulation ported to unix, and as such act
+as processes), Coro provides a full shared address space, which makes
+communication between threads very easy. And Coro's threads are fast,
+too: disabling the Windows process emulation code in your perl and using
+Coro can easily result in a two to four times speed increase for your
+programs. A parallel matrix multiplication benchmark runs over 300 times
+faster on a single core than perl's pseudo-threads on a quad core using
+all four cores.
 
 Coro achieves that by supporting multiple running interpreters that share
 data, which is especially useful to code pseudo-parallel processes and
@@ -55,7 +58,7 @@ concurrently. See L<Coro::AnyEvent> to learn more on how to integrate Coro
 into an event-based environment.
 
 In this module, a thread is defined as "callchain + lexical variables +
-@_ + $_ + $@ + $/ + C stack), that is, a thread has its own callchain,
+some package variables + C stack), that is, a thread has its own callchain,
 its own set of lexicals and its own set of perls most important global
 variables (see L<Coro::State> for more configuration and background info).
 
