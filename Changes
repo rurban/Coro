@@ -5,16 +5,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-new -> ready
-new -> canceled
-ready -> running
-ready -> canceled
-running -> ready
-running -> blocked
-running -> canceled
-blocked -> ready
-blocked -> canceled
-
+TODO: dynamic wind, test and document
 5.13
 	- don't set diehook to C<undef> but instead to NULL, to avoid
           spurious warnings.
@@ -25,6 +16,10 @@ blocked -> canceled
         - deprecate Coro::guard.
         - try to fix the dreaded 01_unblock tests once more. I hate it when
           testsuites need more fixing than the code they are supposed to test.
+        - croak in more cases when a required callback isn't resolvable.
+        - fix some minor issues in Coro::State->call/eval.
+        - use current coroutine context instead of a temporary one
+          when temporarily switching to another coroutine.
 
 5.12 Sun Dec  7 13:30:38 CET 2008
         - add default config for MirOS, which seems to be a bug-to-bug

@@ -287,6 +287,10 @@ struct coro {
   SV *invoke_cb;
   AV *invoke_av;
 
+  /* on_enter/on_leave */
+  AV *on_enter;
+  AV *on_leave;
+
   /* linked list */
   struct coro *next, *prev;
 };
@@ -354,7 +358,12 @@ coro_sv_2cv (pTHX_ SV *sv)
 {
   HV *st;
   GV *gvp;
-  return sv_2cv (sv, &st, &gvp, 0);
+  CV *cv = sv_2cv (sv, &st, &gvp, 0);
+
+  if (!cv)
+    croak ("code reference expected");
+
+  return cv;
 }
 
 /*****************************************************************************/
@@ -523,6 +532,9 @@ put_padlist (pTHX_ CV *cv)
 /** load & save, init *******************************************************/
 
 static void
+on_enterleave_call (pTHX_ SV *cb);
+
+static void
 load_perl (pTHX_ Coro__State c)
 {
   perl_slots *slot = c->slot;
@@ -558,11 +570,27 @@ load_perl (pTHX_ Coro__State c)
 
   slf_frame  = c->slf_frame;
   CORO_THROW = c->except;
+
+  if (expect_false (c->on_enter))
+    {
+      int i;
+
+      for (i = 0; i <= AvFILLp (c->on_enter); ++i)
+        on_enterleave_call (AvARRAY (c->on_enter)[i]);
+    }
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
+  if (expect_false (c->on_leave))
+    {
+      int i;
+
+      for (i = AvFILLp (c->on_leave); i >= 0; --i)
+        on_enterleave_call (AvARRAY (c->on_leave)[i]);
+    }
+
   c->except    = CORO_THROW;
   c->slf_frame = slf_frame;
 
@@ -1479,16 +1507,16 @@ coro_state_destroy (pTHX_ struct coro *coro)
       && coro->slot
       && !PL_dirty)
     {
-      struct coro temp;
+      struct coro *current = SvSTATE_current;
 
       assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
 
-      save_perl (aTHX_ &temp);
+      save_perl (aTHX_ current);
       load_perl (aTHX_ coro);
 
       coro_destruct_perl (aTHX_ coro);
 
-      load_perl (aTHX_ &temp);
+      load_perl (aTHX_ current);
 
       coro->slot = 0;
     }
@@ -2303,6 +2331,53 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
 }
 
 /*****************************************************************************/
+/* dynamic wind */
+
+static void
+on_enterleave_call (pTHX_ SV *cb)
+{
+  dSP;
+
+  PUSHSTACK;
+
+  PUSHMARK (SP);
+  PUTBACK;
+  call_sv (cb, G_VOID | G_DISCARD);
+  SPAGAIN;
+
+  POPSTACK;
+}
+
+static SV *
+coro_avp_pop_and_free (AV **avp)
+{
+  AV *av = *avp;
+  SV *res = av_pop (av);
+
+  if (AvFILLp (av) < 0)
+    {
+      *avp = 0;
+      SvREFCNT_dec (av);
+    }
+
+  return res;
+}
+
+static void
+coro_pop_on_enter (pTHX_ void *coro)
+{
+  SV *cb = coro_avp_pop_and_free (&((struct coro *)coro)->on_enter);
+  SvREFCNT_dec (cb);
+}
+
+static void
+coro_pop_on_leave (pTHX_ void *coro)
+{
+  SV *cb = coro_avp_pop_and_free (&((struct coro *)coro)->on_leave);
+  on_enterleave_call (sv_2mortal (cb));
+}
+
+/*****************************************************************************/
 /* PerlIO::cede */
 
 typedef struct
@@ -3007,39 +3082,34 @@ call (Coro::State coro, SV *coderef)
 {
         if (coro->mainstack && ((coro->flags & CF_RUNNING) || coro->slot))
           {
-            struct coro temp;
+            struct coro *current = SvSTATE_current;
 
-            if (!(coro->flags & CF_RUNNING))
+            if (current != coro)
               {
                 PUTBACK;
-                save_perl (aTHX_ &temp);
+                save_perl (aTHX_ current);
                 load_perl (aTHX_ coro);
+                SPAGAIN;
               }
 
-            {
-              dSP;
-              ENTER;
-              SAVETMPS;
-              PUTBACK;
-              PUSHSTACK;
-              PUSHMARK (SP);
+            PUSHSTACK;
 
-              if (ix)
-                eval_sv (coderef, 0);
-              else
-                call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
+            PUSHMARK (SP);
+            PUTBACK;
 
-              POPSTACK;
-              SPAGAIN;
-              FREETMPS;
-              LEAVE;
-              PUTBACK;
-            }
+            if (ix)
+              eval_sv (coderef, 0);
+            else
+              call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
 
-            if (!(coro->flags & CF_RUNNING))
+            SPAGAIN;
+            POPSTACK;
+
+            if (current != coro)
               {
+                PUTBACK;
                 save_perl (aTHX_ coro);
-                load_perl (aTHX_ &temp);
+                load_perl (aTHX_ current);
                 SPAGAIN;
               }
           }
@@ -3330,6 +3400,31 @@ rouse_wait (...)
         PROTOTYPE: ;$
 	PPCODE:
         CORO_EXECUTE_SLF_XS (slf_init_rouse_wait);
+
+void
+on_enter (SV *block)
+	ALIAS:
+        on_leave = 1
+	PROTOTYPE: &
+	CODE:
+{
+	struct coro *coro = SvSTATE_current;
+  	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
+
+        block = (SV *)coro_sv_2cv (block);
+
+        if (!*avp)
+          *avp = newAV ();
+
+        av_push (*avp, SvREFCNT_inc (block));
+
+        if (!ix)
+          on_enterleave_call (aTHX_ block);
+
+        LEAVE; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+        SAVEDESTRUCTOR_X (ix ? coro_pop_on_leave : coro_pop_on_enter, (void *)coro);
+        ENTER; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+}
 
 
 MODULE = Coro::State                PACKAGE = PerlIO::cede
