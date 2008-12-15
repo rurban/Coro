@@ -56,6 +56,7 @@ method waits until the semaphore is available if the counter is zero.
 =cut
 
 sub down {
+   # Coro::Semaphore::down increases the refcount, which we check in _may_delete
    Coro::Semaphore::down ($_[0][1]{$_[1]} ||= Coro::Semaphore::_alloc $_[0][0]);
 }
 
@@ -89,9 +90,8 @@ sub down {
 
 =item $semset->up ($id)
 
-Unlock the semaphore again. If the semaphore then reaches the default
-count for this set and has no waiters, the space allocated for it will be
-freed.
+Unlock the semaphore again. If the semaphore reaches the default count for
+this set and has no waiters, the space allocated for it will be freed.
 
 =cut
 
@@ -103,8 +103,7 @@ sub up {
    Coro::Semaphore::up $sem;
 
    delete $self->[1]{$id}
-      if $self->[0] == Coro::Semaphore::count $sem
-         and !Coro::Semaphore::waiters $sem;
+      if _may_delete $sem, $self->[0], 1;
 }
 
 =item $semset->try ($id)

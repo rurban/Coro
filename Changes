@@ -20,6 +20,7 @@ TODO: maybe implement a default message channel, very much like Erlang's
         - fix some minor issues in Coro::State->call/eval.
         - use current coroutine context instead of a temporary one
           when temporarily switching to another coroutine.
+        - do not call C-level on_destroy handlers during global destruction.
 
 5.12 Sun Dec  7 13:30:38 CET 2008
         - add default config for MirOS, which seems to be a bug-to-bug

@@ -1486,7 +1486,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
   if (coro->flags & CF_DESTROYED)
     return 0;
 
-  if (coro->on_destroy)
+  if (coro->on_destroy && !PL_dirty)
     coro->on_destroy (aTHX_ coro);
 
   coro->flags |= CF_DESTROYED;
@@ -3510,6 +3510,22 @@ waiters (SV *self)
             for (i = 1; i <= wcount; ++i)
               PUSHs (sv_2mortal (newRV_inc (AvARRAY (av)[i])));
           }
+}
+
+MODULE = Coro::State                PACKAGE = Coro::SemaphoreSet
+
+void
+_may_delete (SV *sem, int count, int extra_refs)
+	PPCODE:
+{
+  	AV *av = (AV *)SvRV (sem);
+
+        if (SvREFCNT ((SV *)av) == 1 + extra_refs
+            && AvFILLp (av) == 0 /* no waiters, just count */
+            && SvIV (AvARRAY (av)[0]) == count)
+          XSRETURN_YES;
+
+        XSRETURN_NO;
 }
 
 MODULE = Coro::State                PACKAGE = Coro::Signal
