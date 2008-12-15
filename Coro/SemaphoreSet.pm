@@ -56,8 +56,7 @@ method waits until the semaphore is available if the counter is zero.
 =cut
 
 sub down {
-   package Coro::Semaphore;
-   down ($_[0][1]{$_[1]} ||= new undef, $_[0][0]);
+   Coro::Semaphore::down ($_[0][1]{$_[1]} ||= new undef, $_[0][0]);
 }
 
 #ub timed_down {
@@ -99,12 +98,13 @@ freed.
 sub up {
    my ($self, $id) = @_;
 
-   package Coro::Semaphore;
-   my $sem = $self->[1]{$id} ||= new undef, $self->[0];
+   my $sem = $self->[1]{$id} ||= Coro::Semaphore::_alloc $self->[0];
 
-   up $sem;
+   Coro::Semaphore::up $sem;
 
-   delete $self->[1]{$id} if $self->[0] == count $sem and !waiters $sem;
+   delete $self->[1]{$id}
+      if $self->[0] == Coro::Semaphore::count $sem
+         and !Coro::Semaphore::waiters $sem;
 }
 
 =item $semset->try ($id)
@@ -115,8 +115,7 @@ otherwise return false and leave the semaphore unchanged.
 =cut
 
 sub try {
-   package Coro::Semaphore;
-   try ($_[0][1]{$_[1]} || return $_[0][0] > 0)
+   Coro::Semaphore::try ($_[0][1]{$_[1]} || return $_[0][0] > 0)
 }
 
 =item $semset->count ($id)
@@ -126,8 +125,18 @@ Return the current semaphore count for the specified semaphore.
 =cut
 
 sub count {
-   package Coro::Semaphore;
-   count ($_[0][1]{$_[1]} || return $_[0][0]);
+   Coro::Semaphore::count ($_[0][1]{$_[1]} || return $_[0][0]);
+}
+
+=item $semset->waiters ($id)
+
+Returns the number (in scalar context) or list (in list context) of
+waiters waiting on the specified semaphore.
+
+=cut
+
+sub waiters {
+   Coro::Semaphore::waiters ($_[0][1]{$_[1]} || return);
 }
 
 =item $semset->wait ($id)
@@ -172,8 +181,8 @@ calling C<< $semset->up >> can invalidate the returned semaphore.
 =cut
 
 sub sem {
-   package Coro::Semaphore;
-   $_[0][1]{$_[1]} ||= new undef, $_[0][0]
+   bless +($_[0][1]{$_[1]} ||= Coro::Semaphore::_alloc $_[0][0]),
+         Coro::Semaphore::;
 }
 
 1;

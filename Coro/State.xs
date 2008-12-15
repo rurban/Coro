@@ -3444,7 +3444,7 @@ new (SV *klass, SV *count = 0)
 	OUTPUT:
         RETVAL
 
-# helper for Coro::Channel
+# helper for Coro::Channel and others
 SV *
 _alloc (int count)
 	CODE:
