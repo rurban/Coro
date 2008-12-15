@@ -240,6 +240,7 @@ enum {
   CF_READY     = 0x0002, /* coroutine is ready */
   CF_NEW       = 0x0004, /* has never been switched to */
   CF_DESTROYED = 0x0008, /* coroutine data has been freed */
+  CF_SUSPENDED = 0x0010, /* coroutine can't be scheduled */
 };
 
 /* the structure where most of the perl state is stored, overlaid on the cxstack */
@@ -1384,13 +1385,10 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
   if (expect_true (prev != next))
     {
       if (expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
-        croak ("Coro::State::transfer called with a suspended prev Coro::State, but can only transfer from running or new states,");
+        croak ("Coro::State::transfer called with a blocked prev Coro::State, but can only transfer from running or new states,");
 
-      if (expect_false (next->flags & CF_RUNNING))
-        croak ("Coro::State::transfer called with running next Coro::State, but can only transfer to inactive states,");
-
-      if (expect_false (next->flags & CF_DESTROYED))
-        croak ("Coro::State::transfer called with destroyed next Coro::State, but can only transfer to inactive states,");
+      if (expect_false (next->flags & (CF_RUNNING | CF_DESTROYED | CF_SUSPENDED)))
+        croak ("Coro::State::transfer called with running, destroyed or suspended next Coro::State, but can only transfer to inactive states,");
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
       if (expect_false (PL_lex_state != LEX_NOTPARSING))
@@ -1707,7 +1705,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
           struct coro *next = SvSTATE_hv (next_sv);
 
           /* cannot transfer to destroyed coros, skip and look for next */
-          if (expect_false (next->flags & CF_DESTROYED))
+          if (expect_false (next->flags & (CF_DESTROYED | CF_SUSPENDED)))
             SvREFCNT_dec (next_sv); /* coro_nready has already been taken care of by destroy */
           else
             {
@@ -3123,6 +3121,7 @@ is_ready (Coro::State coro)
         is_running   = CF_RUNNING
         is_new       = CF_NEW
         is_destroyed = CF_DESTROYED
+        is_suspended = CF_SUSPENDED
 	CODE:
         RETVAL = boolSV (coro->flags & ix);
 	OUTPUT:
@@ -3196,6 +3195,12 @@ swap_defsv (Coro::State self)
 
             SV *tmp = *src; *src = *dst; *dst = tmp;
           }
+
+void
+cancel (Coro::State self)
+	CODE:
+	coro_state_destroy (aTHX_ self);
+        coro_call_on_destroy (aTHX_ self); /* actually only for Coro objects */
 
 
 MODULE = Coro::State                PACKAGE = Coro
@@ -3278,12 +3283,6 @@ void
 cede_notself (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_cede_notself);
-
-void
-_cancel (Coro::State self)
-	CODE:
-	coro_state_destroy (aTHX_ self);
-        coro_call_on_destroy (aTHX_ self);
 
 void
 _set_current (SV *current)
