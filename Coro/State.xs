@@ -3100,8 +3100,8 @@ call (Coro::State coro, SV *coderef)
             else
               call_sv (coderef, G_KEEPERR | G_EVAL | G_VOID | G_DISCARD);
 
-            SPAGAIN;
             POPSTACK;
+            SPAGAIN;
 
             if (current != coro)
               {

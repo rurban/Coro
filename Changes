@@ -5,8 +5,6 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
-TODO: dynamic wind, test and document
-TODO: killall? unready_all?
 5.13
 	- EXPERIMENTAL: implement dynamic winds (on_enter/on_leave).
 	- don't set diehook to C<undef> but instead to NULL, to avoid

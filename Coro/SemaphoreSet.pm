@@ -45,7 +45,7 @@ individual semaphore. See L<Coro::Semaphore>.
 =cut
 
 sub new {
-   bless [defined $_[1] ? $_[1] : 1], $_[0];
+   bless [defined $_[1] ? $_[1] : 1], $_[0]
 }
 
 =item $semset->down ($id)
