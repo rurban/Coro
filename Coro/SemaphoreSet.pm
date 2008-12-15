@@ -56,7 +56,7 @@ method waits until the semaphore is available if the counter is zero.
 =cut
 
 sub down {
-   Coro::Semaphore::down ($_[0][1]{$_[1]} ||= new undef, $_[0][0]);
+   Coro::Semaphore::down ($_[0][1]{$_[1]} ||= Coro::Semaphore::_alloc $_[0][0]);
 }
 
 #ub timed_down {
