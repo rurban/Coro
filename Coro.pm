@@ -316,19 +316,70 @@ progress is made.
 
 Terminates the current coroutine with the given status values (see L<cancel>).
 
+=item Coro::on_enter BLOCK, Coro::on_leave BLOCK
+
+These function install enter and leave winders in the current scope. The
+enter block will be executed when on_enter is called and whenever the
+current coroutine is re-entered by the scheduler, while the leave block is
+executed whenever the current coroutine is blocked by the scheduler, and
+also when the containing scope is exited (by whatever means, be it exit,
+die, last etc.).
+
+I<Neither invoking the scheduler, nor exceptions, are allowed within those
+BLOCKs>. That means: do not even think about calling C<die> without an
+eval, and do not even think of entering the scheduler in any way.
+
+Since both BLOCKs are tied to the current scope, they will automatically
+be removed when the current scope exits.
+
+These functions implement the same concept as C<dynamic-wind> in scheme
+does, and are useful when you want to localise some resource to a specific
+coroutine.
+
+They slow down coroutine switching considerably for coroutines that use
+them (But coroutine switching is still reasonably fast if the handlers are
+fast).
+
+These functions are best understood by an example: The following function
+will change the current timezone to "Antarctica/South_Pole", which
+requires a call to C<tzset>, but by using C<on_enter> and C<on_leave>,
+which remember/change the current timezone and restore the previous
+value, respectively, the timezone is only changes for the coroutine that
+installed those handlers.
+
+   use POSIX qw(tzset);
+
+   async {
+      my $old_tz; # store outside TZ value here
+
+      Coro::on_enter {
+         $old_tz = $ENV{TZ}; # remember the old value
+
+         $ENV{TZ} = "Antarctica/South_Pole";
+         tzset; # enable new value
+      };
+
+      Coro::on_leave {
+         $ENV{TZ} = $old_tz;
+         tzset; # restore old value
+      };
+
+      # at this place, the timezone is Antarctica/South_Pole,
+      # without disturbing the TZ of any other coroutine.
+   };
+
+This can be used to localise about any resource (locale, uid, current
+working directory etc.) to a block, despite the existance of other
+coroutines.
+
 =item killall
 
-Kills/terminates/cancels all coroutines except the currently running
-one. This can be useful after a fork, either in the child or the parent,
-as usually only one of them should inherit the running coroutines.
+Kills/terminates/cancels all coroutines except the currently running one.
 
-Note that in the implementation, destructors run as normal, making this
-function not so useful after a fork. Future versions of this function
-might try to free resources without running any code.
-
-Note that while this will try to free some of the main programs resources,
-you cannot free all of them, so if a coroutine that is not the main
-program calls this function, there will be some one-time resource leak.
+Note that while this will try to free some of the main interpreter
+resources if the calling coroutine isn't the main coroutine, but one
+cannot free all of them, so if a coroutine that is not the main coroutine
+calls this function, there will be some one-time resource leak.
 
 =cut
 
