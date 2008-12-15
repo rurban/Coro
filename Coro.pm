@@ -68,6 +68,8 @@ package Coro;
 use strict qw(vars subs);
 no warnings "uninitialized";
 
+use Guard ();
+
 use Coro::State;
 
 use base qw(Coro::State Exporter);

@@ -576,7 +576,7 @@ load_perl (pTHX_ Coro__State c)
       int i;
 
       for (i = 0; i <= AvFILLp (c->on_enter); ++i)
-        on_enterleave_call (AvARRAY (c->on_enter)[i]);
+        on_enterleave_call (aTHX_ AvARRAY (c->on_enter)[i]);
     }
 }
 
@@ -588,7 +588,7 @@ save_perl (pTHX_ Coro__State c)
       int i;
 
       for (i = AvFILLp (c->on_leave); i >= 0; --i)
-        on_enterleave_call (AvARRAY (c->on_leave)[i]);
+        on_enterleave_call (aTHX_ AvARRAY (c->on_leave)[i]);
     }
 
   c->except    = CORO_THROW;
@@ -2349,7 +2349,7 @@ on_enterleave_call (pTHX_ SV *cb)
 }
 
 static SV *
-coro_avp_pop_and_free (AV **avp)
+coro_avp_pop_and_free (pTHX_ AV **avp)
 {
   AV *av = *avp;
   SV *res = av_pop (av);
@@ -2366,15 +2366,15 @@ coro_avp_pop_and_free (AV **avp)
 static void
 coro_pop_on_enter (pTHX_ void *coro)
 {
-  SV *cb = coro_avp_pop_and_free (&((struct coro *)coro)->on_enter);
+  SV *cb = coro_avp_pop_and_free (aTHX_ &((struct coro *)coro)->on_enter);
   SvREFCNT_dec (cb);
 }
 
 static void
 coro_pop_on_leave (pTHX_ void *coro)
 {
-  SV *cb = coro_avp_pop_and_free (&((struct coro *)coro)->on_leave);
-  on_enterleave_call (sv_2mortal (cb));
+  SV *cb = coro_avp_pop_and_free (aTHX_ &((struct coro *)coro)->on_leave);
+  on_enterleave_call (aTHX_ sv_2mortal (cb));
 }
 
 /*****************************************************************************/
@@ -3411,7 +3411,7 @@ on_enter (SV *block)
 	struct coro *coro = SvSTATE_current;
   	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
 
-        block = (SV *)coro_sv_2cv (block);
+        block = (SV *)coro_sv_2cv (aTHX_ block);
 
         if (!*avp)
           *avp = newAV ();
