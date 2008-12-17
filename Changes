@@ -5,6 +5,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 
+TODO: suspend/resume, unready_all etc.
+	- implement and document Coro->suspend, Coro->resume.
+
 5.13 Mon Dec 15 21:51:42 CET 2008
 	- EXPERIMENTAL: implement dynamic winds (on_enter/on_leave).
 	- don't set diehook to C<undef> but instead to NULL, to avoid

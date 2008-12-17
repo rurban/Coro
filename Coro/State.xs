@@ -3338,6 +3338,18 @@ nready (...)
         RETVAL
 
 void
+suspend (Coro::State self)
+	PROTOTYPE: $
+	CODE:
+        self->flags |= CF_SUSPENDED;
+
+void
+resume (Coro::State self)
+	PROTOTYPE: $
+	CODE:
+        self->flags &= ~CF_SUSPENDED;
+
+void
 _pool_handler (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_pool_handler);
