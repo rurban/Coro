@@ -7,6 +7,8 @@ TODO: maybe implement a default message channel, very much like Erlang's
 
 TODO: suspend/resume, unready_all etc.
 	- implement and document Coro->suspend, Coro->resume.
+        - fix Coro::Select implementation to not (often) close
+          the passed file descriptors (testcase provided by pippijn).
 
 5.13 Mon Dec 15 21:51:42 CET 2008
 	- EXPERIMENTAL: implement dynamic winds (on_enter/on_leave).

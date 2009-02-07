@@ -23,8 +23,12 @@ C<use>'d in the main program.
 
 You can also invoke it from the commandline as C<perl -MCoro::Select>.
 
-Performance naturally isn't great, but unless you need very high select
-performance you normally won't notice the difference.
+Performance naturally isn't great (every file descriptor must be dup'ed),
+but unless you need very high select performance you normally won't notice
+the difference.
+
+This implementation works fastest when only very few bits are set in the
+fd set(s).
 
 =over 4
 
@@ -33,6 +37,8 @@ performance you normally won't notice the difference.
 package Coro::Select;
 
 use strict;
+
+use Errno;
 
 use Coro ();
 use AnyEvent ();
@@ -67,17 +73,27 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       # AnyEvent does not do 'e', so replace it by 'r'
       for ([0, 'r', '<'], [1, 'w', '>'], [2, 'r', '<']) {
          my ($i, $poll, $mode) = @$_;
-         if (defined (my $vec = $_[$i])) {
+         if (defined $_[$i]) {
             my $rvec = \$_[$i];
-            for my $b (0 .. (8 * length $vec)) {
-               if (vec $vec, $b, 1) {
-                  (vec $$rvec, $b, 1) = 0;
-                  open my $fh, "$mode&=$b"
-                     or die "Coro::Select::fd2fh($b): $!";
+
+            # we parse the bitmask by first expanding it into
+            # a string of bits
+            for (unpack "b*", $$rvec) {
+               # and then repeatedly matching a regex against it
+               while (/1/g) {
+                  my $fd = (pos) - 1;
+
+                  (vec $$rvec, $fd, 1) = 0;
+
+                  # we need to dup(), unfortunately
+                  open my $fh, "$mode&$fd"
+                     or do { $! = Errno::EBADF; return -1 };
+
                   push @w,
+                     $fh,
                      AnyEvent->io (fh => $fh, poll => $poll, cb => sub {
-                        (vec $$rvec, $b, 1) = 1;
-                        $nfound++;
+                        (vec $$rvec, $fd, 1) = 1;
+                        ++$nfound;
                         $wakeup->();
                      });
                }
