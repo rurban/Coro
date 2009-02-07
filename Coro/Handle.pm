@@ -520,7 +520,7 @@ sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
    my ($ofs, $len);
 
-   while() {
+   while () {
       if (defined $irs) {
          my $pos = index $_[0][3], $irs, $ofs < 0 ? 0 : $ofs;
          if ($pos >= 0) {
