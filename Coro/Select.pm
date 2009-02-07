@@ -4,7 +4,7 @@ Coro::Select - a (slow but coro-aware) replacement for CORE::select
 
 =head1 SYNOPSIS
 
- use Coro::Select;          # replace select globally
+ use Coro::Select;          # replace select globally (be careful, see below)
  use Core::Select 'select'; # only in this module
  use Coro::Select ();       # use Coro::Select::select
 
@@ -19,9 +19,21 @@ non-blocking w.r.t. other coroutines.
 
 To be effective globally, this module must be C<use>'d before any other
 module that uses C<select>, so it should generally be the first module
-C<use>'d in the main program.
+C<use>'d in the main program. Note that overriding C<select> globally
+might actually cause problems, as some C<AnyEvent> backends use C<select>
+themselves, and asking AnyEvent to use Coro::Select, which in turn asks
+AnyEvent will not quite work.
 
 You can also invoke it from the commandline as C<perl -MCoro::Select>.
+
+To override select only for a single module (e.g. C<Net::DBus::Reactor>),
+use a code fragment like this to load it:
+
+   {
+      package Net::DBus::Reactor;
+      use Coro::Select qw(select);
+      use Net::DBus::Reactor;
+   }
 
 Performance naturally isn't great (every file descriptor must be dup'ed),
 but unless you need very high select performance you normally won't notice
