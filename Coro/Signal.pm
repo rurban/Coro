@@ -36,7 +36,7 @@ no warnings;
 
 use Coro::Semaphore ();
 
-our $VERSION = 5.13;
+our $VERSION = 5.131;
 
 =item $sig = new Coro::Signal;
 

@@ -46,7 +46,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.13;
+our $VERSION = 5.131;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -520,7 +520,7 @@ sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
    my ($ofs, $len);
 
-   while() {
+   while () {
       if (defined $irs) {
          my $pos = index $_[0][3], $irs, $ofs < 0 ? 0 : $ofs;
          if ($pos >= 0) {

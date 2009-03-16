@@ -82,7 +82,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.13;
+our $VERSION = 5.131;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -428,6 +428,31 @@ the ready queue, do nothing and return false.
 This ensures that the scheduler will resume this coro automatically
 once all the coro of higher priority and all coro of the same
 priority that were put into the ready queue earlier have been resumed.
+
+=item $coro->suspend
+
+Suspends the specified coro. A suspended coro works just like any other
+coro, except that the scheduler will not select a suspended coro for
+execution.
+
+Suspending a coro can be useful when you want to keep the coro from
+running, but you don't want to destroy it, or when you want to temporarily
+freeze a coro (e.g. for debugging) to resume it later.
+
+A scenario for the former would be to suspend all (other) coros after a
+fork and keep them alive, so their destructors aren't called, but new
+coros can be created.
+
+=item $coro->resume
+
+If the specified coro was suspended, it will be resumed. Note that when
+the coro was in the ready queue when it was suspended, it might have been
+unreadied by the scheduler, so an activation might have been lost.
+
+To avoid this, it is best to put a suspended coro into the ready queue
+unconditionally, as every synchronisation mechanism must protect itself
+against spurious wakeups, and the one in the Coro family certainly do
+that.
 
 =item $is_ready = $coro->is_ready
 

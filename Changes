@@ -4,6 +4,12 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
+TODO: unready_all
+
+5.131 Mon Mar 16 23:20:37 CET 2009
+	- implement and document Coro->suspend, Coro->resume.
+        - fix Coro::Select implementation to not (often) close
+          the passed file descriptors (testcase provided by pippijn).
 
 5.13 Mon Dec 15 21:51:42 CET 2008
 	- EXPERIMENTAL: implement dynamic winds (on_enter/on_leave).
