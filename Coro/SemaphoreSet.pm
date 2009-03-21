@@ -157,7 +157,7 @@ object is destroyed it automatically calls C<up>.
 
 sub guard {
    &down;
-   bless [@_], Coro::SemaphoreSet::guard::;
+   bless [@_], Coro::SemaphoreSet::guard::
 }
 
 #ub timed_guard {

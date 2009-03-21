@@ -6,6 +6,10 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 TODO: unready_all
 
+TODO: myhttpd header parsing
+	- do not keep a reference to the argument itself in
+          Coro::Senmaphore::guard, as it could change later.
+
 5.131 Mon Mar 16 23:20:37 CET 2009
 	- implement and document Coro->suspend, Coro->resume.
         - fix Coro::Select implementation to not (often) close
