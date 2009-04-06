@@ -9,6 +9,8 @@ TODO: unready_all
 TODO: myhttpd header parsing
 	- do not keep a reference to the argument itself in
           Coro::Senmaphore::guard, as it could change later.
+        - support SO_RCVBUF/SO_SNDBUF nonstandard Coro::Socket options,
+          should support a prepare callback.
 
 5.131 Mon Mar 16 23:20:37 CET 2009
 	- implement and document Coro->suspend, Coro->resume.
