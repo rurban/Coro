@@ -348,7 +348,7 @@ These functions are best understood by an example: The following function
 will change the current timezone to "Antarctica/South_Pole", which
 requires a call to C<tzset>, but by using C<on_enter> and C<on_leave>,
 which remember/change the current timezone and restore the previous
-value, respectively, the timezone is only changes for the coro that
+value, respectively, the timezone is only changed for the coro that
 installed those handlers.
 
    use POSIX qw(tzset);
