@@ -37,7 +37,7 @@ no warnings;
 
 use Coro ();
 
-$VERSION = 5.131;
+$VERSION = 5.132;
 
 =item new [inital count]
 
@@ -137,9 +137,7 @@ object is destroyed it automatically calls C<up>.
 
 sub guard {
    &down;
-   # double indirection because bless works on the referenced
-   # object, not (just) on the reference itself.
-   bless \\$_[0], Coro::Semaphore::guard::;
+   bless [$_[0]], Coro::Semaphore::guard::
 }
 
 #=item $guard = $sem->timed_guard ($timeout)
@@ -154,7 +152,7 @@ sub guard {
 #}
 
 sub Coro::Semaphore::guard::DESTROY {
-   &up(${${$_[0]}});
+   &up($_[0][0]);
 }
 
 =back

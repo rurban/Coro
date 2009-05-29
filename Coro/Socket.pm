@@ -46,7 +46,7 @@ use Coro::Util ();
 
 use base qw(Coro::Handle IO::Socket::INET);
 
-our $VERSION = 5.131;
+our $VERSION = 5.132;
 
 our (%_proto, %_port);
 
@@ -91,7 +91,8 @@ and port. The parameter names and values are mostly the same as for
 IO::Socket::INET (as ugly as I think they are).
 
 The parameters officially supported currently are: C<ReuseAddr>,
-C<LocalPort>, C<LocalHost>, C<PeerPort>, C<PeerHost>, C<Listen>, C<Timeout>.
+C<LocalPort>, C<LocalHost>, C<PeerPort>, C<PeerHost>, C<Listen>, C<Timeout>,
+C<SO_RCVBUF>, C<SO_SNDBUF>.
 
    $fh = new Coro::Socket PeerHost => "localhost", PeerPort => 'finger';
 
@@ -141,6 +142,16 @@ sub configure {
    if ($arg->{Broadcast}) {
       $self->setsockopt (SOL_SOCKET, SO_BROADCAST, 1)
          or croak "setsockopt(SO_BROADCAST): $!";
+   }
+
+   if ($arg->{SO_RCVBUF}) {
+      $self->setsockopt (SOL_SOCKET, SO_RCVBUF, $arg->{SO_RCVBUF})
+         or croak "setsockopt(SO_RCVBUF): $!";
+   }
+
+   if ($arg->{SO_SNDBUF}) {
+      $self->setsockopt (SOL_SOCKET, SO_SNDBUF, $arg->{SO_SNDBUF})
+         or croak "setsockopt(SO_SNDBUF): $!";
    }
 
    if ($arg->{LocalPort} || $arg->{LocalHost}) {

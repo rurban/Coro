@@ -33,7 +33,7 @@ package Coro::SemaphoreSet;
 use strict qw(vars subs);
 no warnings;
 
-our $VERSION = 5.131;
+our $VERSION = 5.132;
 
 use Coro::Semaphore ();
 
@@ -157,7 +157,7 @@ object is destroyed it automatically calls C<up>.
 
 sub guard {
    &down;
-   bless [@_], Coro::SemaphoreSet::guard::;
+   bless [@_], Coro::SemaphoreSet::guard::
 }
 
 #ub timed_guard {

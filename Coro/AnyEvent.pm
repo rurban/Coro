@@ -52,10 +52,10 @@ that keeps the event loop from blocking but still polls for new
 events. (Unfortunately, some badly designed event loops (e.g. Event::Lib)
 don't support a timeout of C<0> and will always block for a bit).
 
-The callback for that timer will C<cede> to other coroutines of the
-same or higher priority for as long as such coroutines exists. This has
-the effect of running all coroutines that have work to do untill all
-coroutines block to wait for external events.
+The callback for that timer will C<cede> to other coroutines of the same
+or higher priority for as long as such coroutines exists. This has the
+effect of running all coroutines that have work to do until all coroutines
+block to wait for external events.
 
 If no coroutines of equal or higher priority are ready, it will cede
 to any coroutine, but only once. This has the effect of running
@@ -109,7 +109,7 @@ use strict;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.131;
+our $VERSION = 5.132;
 
 #############################################################################
 # idle handler

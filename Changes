@@ -5,6 +5,13 @@ TODO: maybe implement a default message channel, very much like Erlang's
       actor model (which is cool in a lot of important aspects (failures!),
       but very lacking in others (higher level ipc)).
 TODO: unready_all
+TODO: myhttpd header parsing
+
+5.132 Fri May 29 09:00:39 CEST 2009
+	- do not keep a reference to the argument itself in
+          Coro::Senmaphore::guard, as it could change later.
+        - support SO_RCVBUF/SO_SNDBUF nonstandard Coro::Socket options,
+          should support a prepare callback.
 
 5.131 Mon Mar 16 23:20:37 CET 2009
 	- implement and document Coro->suspend, Coro->resume.
