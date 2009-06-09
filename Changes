@@ -9,7 +9,7 @@ TODO: myhttpd header parsing
 
 5.132 Fri May 29 09:00:39 CEST 2009
 	- do not keep a reference to the argument itself in
-          Coro::Senmaphore::guard, as it could change later.
+          Coro::Semaphore::guard, as it could change later.
         - support SO_RCVBUF/SO_SNDBUF nonstandard Coro::Socket options,
           should support a prepare callback.
 

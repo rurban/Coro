@@ -1990,16 +1990,17 @@ coro_rouse_callback (pTHX_ CV *cv)
   if (SvTYPE (SvRV (data)) != SVt_PVAV)
     {
       /* first call, set args */
-      AV *av = newAV ();
       SV *coro = SvRV (data);
+      AV *av = newAV ();
 
       SvRV_set (data, (SV *)av);
-      api_ready (aTHX_ coro);
-      SvREFCNT_dec (coro);
 
       /* better take a full copy of the arguments */
       while (items--)
         av_store (av, items, newSVsv (ST (items)));
+
+      api_ready (aTHX_ coro);
+      SvREFCNT_dec (coro);
     }
 
   XSRETURN_EMPTY;
@@ -2026,7 +2027,7 @@ slf_check_rouse_wait (pTHX_ struct CoroSLF *frame)
     for (i = 0; i <= AvFILLp (av); ++i)
       PUSHs (sv_2mortal (AvARRAY (av)[i]));
 
-    /* we have stolen the elements, so ste length to zero and free */
+    /* we have stolen the elements, so set length to zero and free */
     AvFILLp (av) = -1;
     av_undef (av);
 
@@ -3432,9 +3433,9 @@ on_enter (SV *block)
         if (!ix)
           on_enterleave_call (aTHX_ block);
 
-        LEAVE; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+        LEAVE; /* pp_entersub unfortunately forces an ENTER/LEAVE around XS calls */
         SAVEDESTRUCTOR_X (ix ? coro_pop_on_leave : coro_pop_on_enter, (void *)coro);
-        ENTER; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+        ENTER; /* pp_entersub unfortunately forces an ENTER/LEAVE around XS calls */
 }
 
 
