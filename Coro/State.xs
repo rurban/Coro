@@ -1642,6 +1642,8 @@ coro_deq (pTHX)
           return coro;
         }
     }
+
+  return 0;
 }
 
 static int
