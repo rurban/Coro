@@ -3223,8 +3223,6 @@ MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
 {
-	int i;
-
         sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
         cv_coro_run        =      get_cv (      "Coro::_coro_run" , GV_ADD);
