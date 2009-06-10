@@ -263,6 +263,9 @@ struct coro {
   /* the C coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
 
+  /* ready queue */
+  struct coro *next_ready;
+
   /* state data */
   struct CoroSLF slf_frame; /* saved slf frame */
   AV *mainstack;
@@ -316,7 +319,7 @@ static struct CoroSLF slf_frame; /* the current slf frame */
 /* for Coro.pm */
 static SV *coro_current;
 static SV *coro_readyhook;
-static AV *coro_ready [PRIO_MAX - PRIO_MIN + 1];
+static struct coro *coro_ready [PRIO_MAX - PRIO_MIN + 1][2]; /* head|tail */
 static CV *cv_coro_run, *cv_coro_terminate;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
@@ -1614,19 +1617,31 @@ gensub (pTHX_ void (*xsub)(pTHX_ CV *), void *arg)
 INLINE void
 coro_enq (pTHX_ struct coro *coro)
 {
-  av_push (coro_ready [coro->prio - PRIO_MIN], SvREFCNT_inc_NN (coro->hv));
+  struct coro **ready = coro_ready [coro->prio - PRIO_MIN];
+
+  SvREFCNT_inc_NN (coro->hv);
+
+  coro->next_ready = 0;
+  *(ready [0] ? &ready [1]->next_ready : &ready [0]) = coro;
+  ready [1] = coro;
 }
 
-INLINE SV *
+INLINE struct coro *
 coro_deq (pTHX)
 {
   int prio;
 
   for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= 0; )
-    if (AvFILLp (coro_ready [prio]) >= 0)
-      return av_shift (coro_ready [prio]);
+    {
+      struct coro **ready = coro_ready [prio];
 
-  return 0;
+      if (ready [0])
+        {
+          struct coro *coro = ready [0];
+          ready [0] = coro->next_ready;
+          return coro;
+        }
+    }
 }
 
 static int
@@ -1698,15 +1713,13 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 {
   for (;;)
     {
-      SV *next_sv = coro_deq (aTHX);
+      struct coro *next = coro_deq (aTHX);
 
-      if (expect_true (next_sv))
+      if (expect_true (next))
         {
-          struct coro *next = SvSTATE_hv (next_sv);
-
           /* cannot transfer to destroyed coros, skip and look for next */
           if (expect_false (next->flags & (CF_DESTROYED | CF_SUSPENDED)))
-            SvREFCNT_dec (next_sv); /* coro_nready has already been taken care of by destroy */
+            SvREFCNT_dec (next->hv); /* coro_nready has already been taken care of by destroy */
           else
             {
               next->flags &= ~CF_READY;
@@ -3233,9 +3246,6 @@ BOOT:
         newCONSTSUB (coro_stash, "PRIO_LOW",    newSViv (PRIO_LOW));
         newCONSTSUB (coro_stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
         newCONSTSUB (coro_stash, "PRIO_MIN",    newSViv (PRIO_MIN));
-
-        for (i = PRIO_MAX - PRIO_MIN + 1; i--; )
-          coro_ready[i] = newAV ();
 
         {
           SV *sv = coro_get_sv (aTHX_ "Coro::API", TRUE);
