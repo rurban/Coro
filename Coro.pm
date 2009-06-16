@@ -340,9 +340,9 @@ These functions implement the same concept as C<dynamic-wind> in scheme
 does, and are useful when you want to localise some resource to a specific
 coro.
 
-They slow down coro switching considerably for coros that use
-them (But coro switching is still reasonably fast if the handlers are
-fast).
+They slow down thread switching considerably for coros that use them
+(about 40% for a BLOCK with a single assignment, so thread switching is
+still reasonably fast if the handlers are fast).
 
 These functions are best understood by an example: The following function
 will change the current timezone to "Antarctica/South_Pole", which
