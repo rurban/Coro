@@ -376,6 +376,36 @@ This can be used to localise about any resource (locale, uid, current
 working directory etc.) to a block, despite the existance of other
 coros.
 
+Another interesting example implements time-sliced multitasking using
+interval timers (this could obviously be optimised, but does the job):
+
+   # "timeslice" the given block
+   sub timeslice(&) {
+      use Time::HiRes ();
+
+      Coro::on_enter {
+         # on entering the thread, we set an VTALRM handler to cede
+         $SIG{VTALRM} = sub { cede };
+         # and then start the interval timer
+         Time::HiRes::setitimer &Time::HiRes::ITIMER_VIRTUAL, 0.01, 0.01;
+      }; 
+      Coro::on_leave {
+         # on leaving the thread, we stop the interval timer again
+         Time::HiRes::setitimer &Time::HiRes::ITIMER_VIRTUAL, 0, 0;
+      }; 
+
+      &{+shift};
+   }  
+
+   # use like this:
+   timeslice {
+      # The following is an endless loop that would normally
+      # monopolise the process. Sicne it runs in a timeslice
+      # environment, it will regularly cede to other threads.
+      while () { }
+   }; 
+
+
 =item killall
 
 Kills/terminates/cancels all coros except the currently running one.
