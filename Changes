@@ -6,10 +6,12 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 TODO: unready_all
 TODO: myhttpd header parsing
+TODO: channel->maxsize(newsize)?
 
 	- speed up ready queue management/context switching by using a linked
           list instead of an array (~5-10%).
         - implement "watch" command in Coro::Debug shells.
+        - for fun, implement time-slicing as an example in the manpage.
 
 5.132 Fri May 29 09:00:39 CEST 2009
 	- do not keep a reference to the argument itself in

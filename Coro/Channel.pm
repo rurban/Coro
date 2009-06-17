@@ -52,7 +52,7 @@ C<2>, and so on.
 =cut
 
 sub new {
-   # we cheat and set infinity == 10**9
+   # we cheat and set infinity == 2*10**9
    bless [
       [],
       (Coro::Semaphore::_alloc 0),

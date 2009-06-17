@@ -400,7 +400,7 @@ interval timers (this could obviously be optimised, but does the job):
    # use like this:
    timeslice {
       # The following is an endless loop that would normally
-      # monopolise the process. Sicne it runs in a timeslice
+      # monopolise the process. Since it runs in a timesliced
       # environment, it will regularly cede to other threads.
       while () { }
    }; 
