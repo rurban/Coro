@@ -121,7 +121,13 @@ Return the number of elements waiting to be consumed. Please note that:
      ...
   }
 
-is I<not> a race condition but instead works just fine.
+is I<not> a race condition but instead works just fine. Note that the
+number of elements that wait can be larger than C<$maxsize>, as it
+includes any coroutines waiting to put data into the channel (but not any
+shutdown condition).
+
+This means that the number returned is I<precisely> the number of calls to
+C<get> that will succeed instantly and returning some data.
 
 =cut
 
