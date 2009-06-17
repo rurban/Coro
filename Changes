@@ -7,8 +7,9 @@ TODO: maybe implement a default message channel, very much like Erlang's
 TODO: unready_all
 TODO: myhttpd header parsing
 
-	- speed up ready queue management/contetx switching by using a linked
+	- speed up ready queue management/context switching by using a linked
           list instead of an array (~5-10%).
+        - implement "watch" command in Coro::Debug shells.
 
 5.132 Fri May 29 09:00:39 CEST 2009
 	- do not keep a reference to the argument itself in
