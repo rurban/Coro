@@ -1001,7 +1001,6 @@ coro_destruct_perl (pTHX_ struct coro *coro)
 
     save_perl (aTHX_ current);
     load_perl (aTHX_ coro);
-
     coro_unwind_stacks (aTHX);
     coro_destruct_stacks (aTHX);
 
