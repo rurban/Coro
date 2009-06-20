@@ -1001,20 +1001,20 @@ coro_destruct_perl (pTHX_ struct coro *coro)
 
     save_perl (aTHX_ current);
     load_perl (aTHX_ coro);
+
     coro_unwind_stacks (aTHX);
     coro_destruct_stacks (aTHX);
 
     // now save some sv's to be free'd later
-    svf [0] =       GvSV (PL_defgv);
-    svf [1] = (SV *)GvAV (PL_defgv);
-    svf [2] =       GvSV (PL_errgv);
-    svf [3] = (SV *)PL_defoutgv;
-    svf [4] =       PL_rs;
-    svf [5] =       GvSV (irsgv);
-    svf [6] = (SV *)GvHV (PL_hintgv);
-    svf [7] =       PL_diehook;
-    svf [8] =       PL_warnhook;
-
+    svf    [0] =       GvSV (PL_defgv);
+    svf    [1] = (SV *)GvAV (PL_defgv);
+    svf    [2] =       GvSV (PL_errgv);
+    svf    [3] = (SV *)PL_defoutgv;
+    svf    [4] =       PL_rs;
+    svf    [5] =       GvSV (irsgv);
+    svf    [6] = (SV *)GvHV (PL_hintgv);
+    svf    [7] =       PL_diehook;
+    svf    [8] =       PL_warnhook;
     assert (9 == sizeof (svf) / sizeof (*svf));
 
     load_perl (aTHX_ current);

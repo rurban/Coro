@@ -8,9 +8,13 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+TODO: make Coro::EV/event optional in Coro::AnyEvent
 	- clarify Coro::EV/Event/AnyEvent manpages: you have to actually run
           the event loop somewhere to be able to poll for events
           in the presence of ready threads.
+        - free per-thread global scalars in the thread calling ->cancel, to
+          avoid crashes when $_, $@ etc., are magical but some of those
+          had already been freed.
 	- speed up ready queue management/context switching by using a linked
           list instead of an array (~5-10%).
         - implement "watch" command in Coro::Debug shells.

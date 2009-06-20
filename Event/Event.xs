@@ -80,7 +80,7 @@ BOOT:
 	coro_event_event_stash = gv_stashpv ("Coro::Event::Event", TRUE);
 
         I_EVENT_API ("Coro::Event");
-	I_CORO_API ("Coro::Event");
+	I_CORO_API  ("Coro::Event");
 
         GEventAPI->add_hook ("asynccheck", (void *)asynccheck_hook, 0);
         GEventAPI->add_hook ("prepare",    (void *)prepare_hook,    0);

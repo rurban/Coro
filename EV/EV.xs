@@ -281,8 +281,8 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {
-        I_EV_API ("Coro::EV");
-	I_CORO_API ("Coro::Event");
+        I_EV_API   ("Coro::EV");
+	I_CORO_API ("Coro::EV");
 
         EV_DEFAULT; /* make sure it is initialised */
 
@@ -329,12 +329,12 @@ timer_once (...)
 void
 readable_ev (...)
 	CODE:
-        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
+        items = 1; /* ignore the remaining args for speed inside Coro::Handle */
         CORO_EXECUTE_SLF_XS (slf_init_readable);
 
 void
 writable_ev (...)
 	CODE:
-        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
+        items = 1; /* ignore the remaining args for speed inside Coro::Handle */
         CORO_EXECUTE_SLF_XS (slf_init_writable);
 
