@@ -8,6 +8,9 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+	- clarify Coro::EV/Event/AnyEvent manpages: you have to actually run
+          the event loop somewhere to be able to poll for events
+          in the presence of ready threads.
 	- speed up ready queue management/context switching by using a linked
           list instead of an array (~5-10%).
         - implement "watch" command in Coro::Debug shells.

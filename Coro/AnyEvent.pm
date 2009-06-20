@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro::AnyEvent - integrate coroutines into AnyEvent
+Coro::AnyEvent - integrate threads into AnyEvent
 
 =head1 SYNOPSIS
 
@@ -9,42 +9,70 @@ Coro::AnyEvent - integrate coroutines into AnyEvent
 
  # use coro within an AnyEvent environment
 
-=head1 INTRODUCTION
+=head1 DESCRIPTION
 
-When one naively starts to use coroutines in Perl, one will quickly run
-into the problem that coroutines that block on a syscall (sleeping,
-reading from a socket etc.) will block all coroutines.
+When one naively starts to use threads in Perl, one will quickly run
+into the problem that threads that block on a syscall (sleeping,
+reading from a socket etc.) will block all threads.
 
 If one then uses an event loop, the problem is that the event loop has
-no knowledge of coroutines and will not run them before it polls for new
+no knowledge of threads and will not run them before it polls for new
 events, again blocking the whole process.
 
-This module integrates coroutines into any event loop supported by
+This module integrates threads into any event loop supported by
 AnyEvent, combining event-based programming with coroutine-based
 programming in a natural way.
 
-All you have to do is C<use Coro::AnyEvent> and then you can run
-coroutines freely.
+All you have to do is C<use Coro::AnyEvent>, run the event loop of your
+choice in some thread and then you can run threads freely.
 
-=head1 DESCRIPTION
+=head1 USAGE
 
 This module autodetects the event loop used (by relying on L<AnyEvent>)
 and will either automatically defer to the high-performance L<Coro::EV> or
 L<Coro::Event> modules, or will use a generic integration into any event
 loop supported by L<AnyEvent>.
 
-Unfortunately, few event loops (basically only L<EV> and L<Event>) support
-this kind of integration well, and consequently, AnyEvent cannot offer the
-functionality required by this module, so we need to improvise.
+The effect on your threads (explained in more detail below) will be that
+threads of the same or higher priority than the thread running the event
+loop will get as much CPU time as they want. If none exist, then threads
+of lower priority will also run, but after each of their time slices, the
+event loop will run to check for new events.
+
+That means that threads of equal or higher priority will starve the event
+system unless they explicitly wait for an event, while those of lower
+priority will coexist with the event loop itself.
+
+For this reason, it is often beneficial to run the actual event loop at
+slightly elevated priority:
+
+   $Coro::current->nice (-1);
+   AnyEvent->loop;
+
+Also note that you actually I<have to run> an event loop for this
+priority scheme to work, as neither Coro::AnyEvent nor L<Coro::EV> or
+L<Coro::Event> will do that for you - those modules will check for events
+only when no other thread is runnable.
+
+The most logical place to run the event loop is usually at the end of the
+main program - start some threads, install some event watchers, then run
+the event loop of your choice.
+
+=head1 DETAILED DESCRIPTION
+
+Unfortunately, few event loops (basically only L<EV> and L<Event>)
+support the kind of integration required for smooth operations well, and
+consequently, AnyEvent cannot completely offer the functionality required
+by this module, so we need to improvise.
 
 Here is what this module does when it has to work with other event loops:
 
 =over 4
 
-=item * run ready coroutines before blocking the process
+=item * run ready threads before blocking the process
 
-Each time a coroutine is put into the ready queue (and there are no other
-coroutines in the ready queue), a timer with an C<after> value of C<0> is
+Each time a thread is put into the ready queue (and there are no other
+threads in the ready queue), a timer with an C<after> value of C<0> is
 registered with AnyEvent.
 
 This creates something similar to an I<idle> watcher, i.e. a watcher
@@ -52,19 +80,20 @@ that keeps the event loop from blocking but still polls for new
 events. (Unfortunately, some badly designed event loops (e.g. Event::Lib)
 don't support a timeout of C<0> and will always block for a bit).
 
-The callback for that timer will C<cede> to other coroutines of the same
-or higher priority for as long as such coroutines exists. This has the
-effect of running all coroutines that have work to do until all coroutines
-block to wait for external events.
+The callback for that timer will C<cede> to other threads of the same or
+higher priority for as long as such threads exists. This has the effect of
+running all threads that have work to do until all threads block to wait
+for external events.
 
-If no coroutines of equal or higher priority are ready, it will cede
-to any coroutine, but only once. This has the effect of running
-lower-priority coroutines as well, but it will not keep higher priority
-coroutines from receiving new events.
+If no threads of equal or higher priority are ready, it will cede to any
+thread, but only once. This has the effect of running lower-priority
+threads as well, but it will not keep higher priority threads from
+receiving new events.
 
-The priority used is simply the priority of the coroutine that runs the
-event loop, usually the main program, which usually has a priority of
-C<0>.
+The priority used is simply the priority of the thread that runs the event
+loop, usually the main program, which usually has a priority of C<0>.
+
+See "USAGE", above, for more details.
 
 =item * provide a suitable idle callback.
 
