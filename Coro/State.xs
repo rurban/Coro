@@ -1001,6 +1001,7 @@ coro_destruct_perl (pTHX_ struct coro *coro)
 
     save_perl (aTHX_ current);
     load_perl (aTHX_ coro);
+
     coro_unwind_stacks (aTHX);
     coro_destruct_stacks (aTHX);
 
@@ -2478,7 +2479,7 @@ static PerlIO_funcs PerlIO_cede =
 static SV *
 coro_waitarray_new (pTHX_ int count)
 {
-  /* a semaphore contains a counter IV in $sem->[0] and any waiters after that */
+  /* a waitarray=semaphore contains a counter IV in $sem->[0] and any waiters after that */
   AV *av = newAV ();
   SV **ary;
 

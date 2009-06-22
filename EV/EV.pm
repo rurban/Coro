@@ -26,7 +26,7 @@ lower priority will get the CPU, but cannot completeley inhibit event
 processing. Note that for that to work you actually have to run the EV
 event loop in some thread.
 
-=head2 RUNNING WITH OR WITHOUT A MAINLOOP
+=head1 RUNNING WITH OR WITHOUT A MAINLOOP
 
 In general, you should always run EV::loop, either in your main program,
 or in a separate coroutine. If you don't do that and all coroutines
@@ -74,11 +74,11 @@ $IDLE->{desc} = "[EV idle process]";
 
 $Coro::idle = $IDLE;
 
-=item $revents = Coro::EV::timed_io_once $fileno_or_fh, $events, $timeout
+=item $revents = Coro::EV::timed_io_once $fileno_or_fh, $events[, $timeout]
 
 Blocks the coroutine until either the given event set has occured on the
-fd, or the timeout has been reached (if timeout is zero, there is no
-timeout). Returns the received flags.
+fd, or the timeout has been reached (if timeout is missing or C<undef>
+then there will be no timeout). Returns the received flags.
 
 =item Coro::EV::timer_once $after
 
