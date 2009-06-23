@@ -139,7 +139,7 @@ static int cctx_max_idle = 4;
 
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
-# define expect(expr,value) __builtin_expect ((expr),(value))
+# define expect(expr,value) __builtin_expect ((expr), (value))
 # define INLINE static inline
 #else
 # define attribute(x)
@@ -263,6 +263,9 @@ struct coro {
   /* the C coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
 
+  /* ready queue */
+  struct coro *next_ready;
+
   /* state data */
   struct CoroSLF slf_frame; /* saved slf frame */
   AV *mainstack;
@@ -316,7 +319,7 @@ static struct CoroSLF slf_frame; /* the current slf frame */
 /* for Coro.pm */
 static SV *coro_current;
 static SV *coro_readyhook;
-static AV *coro_ready [PRIO_MAX - PRIO_MIN + 1];
+static struct coro *coro_ready [PRIO_MAX - PRIO_MIN + 1][2]; /* head|tail */
 static CV *cv_coro_run, *cv_coro_terminate;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
@@ -614,7 +617,7 @@ save_perl (pTHX_ Coro__State c)
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
-            if (expect_true (CxTYPE (cx) == CXt_SUB || CxTYPE (cx) == CXt_FORMAT))
+            if (expect_true (CxTYPE (cx) == CXt_SUB) || expect_false (CxTYPE (cx) == CXt_FORMAT))
               {
                 CV *cv = cx->blk_sub.cv;
 
@@ -989,25 +992,45 @@ coro_unwind_stacks (pTHX)
 static void
 coro_destruct_perl (pTHX_ struct coro *coro)
 {
-  coro_unwind_stacks (aTHX);
+  SV *svf [9];
 
-  SvREFCNT_dec (GvSV (PL_defgv));
-  SvREFCNT_dec (GvAV (PL_defgv));
-  SvREFCNT_dec (GvSV (PL_errgv));
-  SvREFCNT_dec (PL_defoutgv);
-  SvREFCNT_dec (PL_rs);
-  SvREFCNT_dec (GvSV (irsgv));
-  SvREFCNT_dec (GvHV (PL_hintgv));
+  {
+    struct coro *current = SvSTATE_current;
 
-  SvREFCNT_dec (PL_diehook);
-  SvREFCNT_dec (PL_warnhook);
-  
-  SvREFCNT_dec (coro->saved_deffh);
-  SvREFCNT_dec (coro->rouse_cb);
-  SvREFCNT_dec (coro->invoke_cb);
-  SvREFCNT_dec (coro->invoke_av);
+    assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
 
-  coro_destruct_stacks (aTHX);
+    save_perl (aTHX_ current);
+    load_perl (aTHX_ coro);
+
+    coro_unwind_stacks (aTHX);
+    coro_destruct_stacks (aTHX);
+
+    // now save some sv's to be free'd later
+    svf    [0] =       GvSV (PL_defgv);
+    svf    [1] = (SV *)GvAV (PL_defgv);
+    svf    [2] =       GvSV (PL_errgv);
+    svf    [3] = (SV *)PL_defoutgv;
+    svf    [4] =       PL_rs;
+    svf    [5] =       GvSV (irsgv);
+    svf    [6] = (SV *)GvHV (PL_hintgv);
+    svf    [7] =       PL_diehook;
+    svf    [8] =       PL_warnhook;
+    assert (9 == sizeof (svf) / sizeof (*svf));
+
+    load_perl (aTHX_ current);
+  }
+
+  {
+    int i;
+
+    for (i = 0; i < sizeof (svf) / sizeof (*svf); ++i)
+      SvREFCNT_dec (svf [i]);
+
+    SvREFCNT_dec (coro->saved_deffh);
+    SvREFCNT_dec (coro->rouse_cb);
+    SvREFCNT_dec (coro->invoke_cb);
+    SvREFCNT_dec (coro->invoke_av);
+  }
 }
 
 INLINE void
@@ -1504,20 +1527,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
       && coro->mainstack != main_mainstack
       && coro->slot
       && !PL_dirty)
-    {
-      struct coro *current = SvSTATE_current;
-
-      assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
-
-      save_perl (aTHX_ current);
-      load_perl (aTHX_ coro);
-
-      coro_destruct_perl (aTHX_ coro);
-
-      load_perl (aTHX_ current);
-
-      coro->slot = 0;
-    }
+    coro_destruct_perl (aTHX_ coro);
 
   cctx_destroy (coro->cctx);
   SvREFCNT_dec (coro->startcv);
@@ -1614,17 +1624,31 @@ gensub (pTHX_ void (*xsub)(pTHX_ CV *), void *arg)
 INLINE void
 coro_enq (pTHX_ struct coro *coro)
 {
-  av_push (coro_ready [coro->prio - PRIO_MIN], SvREFCNT_inc_NN (coro->hv));
+  struct coro **ready = coro_ready [coro->prio - PRIO_MIN];
+
+  SvREFCNT_inc_NN (coro->hv);
+
+  coro->next_ready = 0;
+  *(ready [0] ? &ready [1]->next_ready : &ready [0]) = coro;
+  ready [1] = coro;
 }
 
-INLINE SV *
+INLINE struct coro *
 coro_deq (pTHX)
 {
   int prio;
 
   for (prio = PRIO_MAX - PRIO_MIN + 1; --prio >= 0; )
-    if (AvFILLp (coro_ready [prio]) >= 0)
-      return av_shift (coro_ready [prio]);
+    {
+      struct coro **ready = coro_ready [prio];
+
+      if (ready [0])
+        {
+          struct coro *coro = ready [0];
+          ready [0] = coro->next_ready;
+          return coro;
+        }
+    }
 
   return 0;
 }
@@ -1698,15 +1722,13 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
 {
   for (;;)
     {
-      SV *next_sv = coro_deq (aTHX);
+      struct coro *next = coro_deq (aTHX);
 
-      if (expect_true (next_sv))
+      if (expect_true (next))
         {
-          struct coro *next = SvSTATE_hv (next_sv);
-
           /* cannot transfer to destroyed coros, skip and look for next */
           if (expect_false (next->flags & (CF_DESTROYED | CF_SUSPENDED)))
-            SvREFCNT_dec (next_sv); /* coro_nready has already been taken care of by destroy */
+            SvREFCNT_dec (next->hv); /* coro_nready has already been taken care of by destroy */
           else
             {
               next->flags &= ~CF_READY;
@@ -1990,16 +2012,17 @@ coro_rouse_callback (pTHX_ CV *cv)
   if (SvTYPE (SvRV (data)) != SVt_PVAV)
     {
       /* first call, set args */
-      AV *av = newAV ();
       SV *coro = SvRV (data);
+      AV *av = newAV ();
 
       SvRV_set (data, (SV *)av);
-      api_ready (aTHX_ coro);
-      SvREFCNT_dec (coro);
 
       /* better take a full copy of the arguments */
       while (items--)
         av_store (av, items, newSVsv (ST (items)));
+
+      api_ready (aTHX_ coro);
+      SvREFCNT_dec (coro);
     }
 
   XSRETURN_EMPTY;
@@ -2026,7 +2049,7 @@ slf_check_rouse_wait (pTHX_ struct CoroSLF *frame)
     for (i = 0; i <= AvFILLp (av); ++i)
       PUSHs (sv_2mortal (AvARRAY (av)[i]));
 
-    /* we have stolen the elements, so ste length to zero and free */
+    /* we have stolen the elements, so set length to zero and free */
     AvFILLp (av) = -1;
     av_undef (av);
 
@@ -2456,7 +2479,7 @@ static PerlIO_funcs PerlIO_cede =
 static SV *
 coro_waitarray_new (pTHX_ int count)
 {
-  /* a semaphore contains a counter IV in $sem->[0] and any waiters after that */
+  /* a waitarray=semaphore contains a counter IV in $sem->[0] and any waiters after that */
   AV *av = newAV ();
   SV **ary;
 
@@ -3207,8 +3230,6 @@ MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
 {
-	int i;
-
         sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
         cv_coro_run        =      get_cv (      "Coro::_coro_run" , GV_ADD);
@@ -3232,9 +3253,6 @@ BOOT:
         newCONSTSUB (coro_stash, "PRIO_LOW",    newSViv (PRIO_LOW));
         newCONSTSUB (coro_stash, "PRIO_IDLE",   newSViv (PRIO_IDLE));
         newCONSTSUB (coro_stash, "PRIO_MIN",    newSViv (PRIO_MIN));
-
-        for (i = PRIO_MAX - PRIO_MIN + 1; i--; )
-          coro_ready[i] = newAV ();
 
         {
           SV *sv = coro_get_sv (aTHX_ "Coro::API", TRUE);
@@ -3432,9 +3450,9 @@ on_enter (SV *block)
         if (!ix)
           on_enterleave_call (aTHX_ block);
 
-        LEAVE; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+        LEAVE; /* pp_entersub unfortunately forces an ENTER/LEAVE around XS calls */
         SAVEDESTRUCTOR_X (ix ? coro_pop_on_leave : coro_pop_on_enter, (void *)coro);
-        ENTER; /* pp_entersub unfortunately forces an ENTER/LEAVE around xs calls */
+        ENTER; /* pp_entersub unfortunately forces an ENTER/LEAVE around XS calls */
 }
 
 

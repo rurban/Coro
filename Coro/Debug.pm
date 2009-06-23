@@ -120,8 +120,9 @@ use Coro ();
 use Coro::Handle ();
 use Coro::State ();
 use Coro::AnyEvent ();
+use Coro::Timer ();
 
-our $VERSION = 5.132;
+our $VERSION = 5.14;
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
@@ -423,10 +424,27 @@ sub session($) {
       } elsif ($cmd =~ /^(?:ll|loglevel)\s*(\d+)?\s*/) {
          $loglevel = defined $1 ? $1 : -1;
 
+      } elsif ($cmd =~ /^(?:w|watch)\s*([0-9.]*)\s+(.*)/) {
+         my ($time, $cmd) = ($1*1 || 1, $2);
+         my $cancel;
+
+         Coro::async {
+            $Coro::current->{desc} = "watch $cmd";
+            select $fh;
+            until ($cancel) {
+               command $cmd;
+               Coro::Timer::sleep $time;
+            }
+         };
+
+         $fh->readable;
+         $cancel = 1;
+
       } elsif ($cmd =~ /^help\s*/) {
          command $cmd;
          print <<EOF;
 loglevel <int>		enable logging for messages of level <int> and lower
+watch <time> <command>  repeat the given command until STDIN becomes readable
 exit			end this session
 EOF
       } else {

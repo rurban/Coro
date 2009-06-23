@@ -46,7 +46,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.132;
+our $VERSION = 5.14;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -296,10 +296,7 @@ sub TIEHANDLE {
 }
 
 sub cleanup {
-   eval {
-      $_[0][5]->cancel if $_[0][5];
-      $_[0][6]->cancel if $_[0][6];
-   };
+   # gets overriden for Coro::Event
    @{$_[0]} = ();
 }
 
@@ -366,7 +363,7 @@ sub FETCH {
    "$_[0]<$_[0][1]>"
 }
 
-sub readable_anyevent {
+sub _readable_anyevent {
    my $cb = Coro::rouse_cb;
    my $io = 1;
 
@@ -389,7 +386,7 @@ sub readable_anyevent {
    $io
 }
 
-sub writable_anyevent {
+sub _writable_anyevent {
    my $cb = Coro::rouse_cb;
    my $io = 1;
 
@@ -412,7 +409,7 @@ sub writable_anyevent {
    $io
 }
 
-sub readable_coro {
+sub _readable_coro {
    ($_[0][5] ||= "Coro::Event"->io (
       fd      => $_[0][0],
       desc    => "fh $_[0][1] read watcher",
@@ -421,7 +418,7 @@ sub readable_coro {
    ))->next->[4] & &Event::Watcher::R
 }
 
-sub writable_coro {
+sub _writable_coro {
    ($_[0][6] ||= "Coro::Event"->io (
       fd      => $_[0][0],
       desc    => "fh $_[0][1] write watcher",
@@ -430,11 +427,11 @@ sub writable_coro {
    ))->next->[4] & &Event::Watcher::W
 }
 
-#sub readable_ev {
+#sub _readable_ev {
 #   &EV::READ  == Coro::EV::timed_io_once (fileno $_[0][0], &EV::READ , $_[0][2])
 #}
 #
-#sub writable_ev {
+#sub _writable_ev {
 #   &EV::WRITE == Coro::EV::timed_io_once (fileno $_[0][0], &EV::WRITE, $_[0][2])
 #}
 
@@ -444,15 +441,22 @@ for my $rw (qw(readable writable)) {
 
    *$rw = sub {
       AnyEvent::detect;
-      if ($AnyEvent::MODEL eq "AnyEvent::Impl::Coro" or $AnyEvent::MODEL eq "AnyEvent::Impl::Event") {
-         require Coro::Event;
-         *$rw = \&{"$rw\_coro"};
-      } elsif ($AnyEvent::MODEL eq "AnyEvent::Impl::CoroEV" or $AnyEvent::MODEL eq "AnyEvent::Impl::EV") {
-         require Coro::EV;
-         *$rw = \&{"Coro::EV::$rw\_ev"};
-         return &$rw; # Coro 5.0+ doesn't support goto &SLF
+      if ($AnyEvent::MODEL eq "AnyEvent::Impl::Event" and eval { require Coro::Event }) {
+         *$rw = \&{"_$rw\_coro"};
+         *cleanup = sub {
+            eval {
+               $_[0][5]->cancel if $_[0][5];
+               $_[0][6]->cancel if $_[0][6];
+            };
+            @{$_[0]} = ();
+         };
+
+      } elsif ($AnyEvent::MODEL eq "AnyEvent::Impl::EV" and eval { require Coro::EV }) {
+         *$rw = \&{"Coro::EV::_$rw\_ev"};
+         return &$rw; # Coro 5.0+ doesn't support goto &SLF, and this line is executed once only
+
       } else {
-         *$rw = \&{"$rw\_anyevent"};
+         *$rw = \&{"_$rw\_anyevent"};
       }
       goto &$rw
    };

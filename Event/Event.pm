@@ -21,11 +21,10 @@ Coro::Event - do events the coro-way, with Event
  loop;
 
  # wait for input on stdin for one second
- 
  Coro::Event::do_io (fd => \*STDIN, timeout => 1) & Event::Watcher::R
     or die "no input received";
 
- # use a separate coroutine for event processing, if impossible in main:
+ # use a separate thread for event processing, if impossible in main:
  Coro::async { Event::loop };
 
 =head1 DESCRIPTION
@@ -39,20 +38,19 @@ This module provides a method and a function for every watcher type
 watcher constructors from Event is that you do not specify a callback
 function - it will be managed by this module.
 
-Your application should just create all necessary coroutines and then call
-Coro::Event::loop.
+Your application should just create all necessary threads and then call
+C<Event::loop>.
 
-Please note that even programs or modules (such as
-L<Coro::Handle|Coro::Handle>) that use "traditional"
-event-based/continuation style will run more efficient with this module
-then when using only Event.
+Please note that even programs or modules (such as L<Coro::Handle>) that
+use "traditional" event-based/continuation style will run more efficient
+with this module then when using only Event.
 
 =head1 WARNING
 
-Please note that Event does not support coroutines or threads. That
-means that you B<MUST NOT> block in an event callback. Again: In Event
-callbacks, you I<must never ever> call a Coroutine function that blocks
-the current coroutine.
+Please note that Event does not support multithreading. That means that
+you B<MUST NOT> block in an event callback. Again: In Event callbacks,
+you I<must never ever> call a Coro function that blocks the current
+thread.
 
 While this seems to work superficially, it will eventually cause memory
 corruption and often results in deadlocks.
@@ -62,14 +60,15 @@ Best practise is to always use B<Coro::unblock_sub> for your callbacks.
 =head1 SEMANTICS
 
 Whenever Event blocks (e.g. in a call to C<one_event>, C<loop> etc.),
-this module cede's to all other coroutines with the same or higher
-priority. When any coroutines of lower priority are ready, it will not
+this module cede's to all other threads with the same or higher
+priority. When any threads of lower priority are ready, it will not
 block but run one of them and then check for events.
 
 The effect is that coroutines with the same or higher priority than
 the blocking coroutine will keep Event from checking for events, while
 coroutines with lower priority are being run, but Event checks for new
-events after every cede.
+events after every cede. Note that for this to work you actually need to
+run the event loop in some thread.
 
 =head1 FUNCTIONS
 
@@ -85,7 +84,7 @@ use Carp;
 no warnings;
 
 use Coro;
-use Event qw(loop unloop); # we are re-exporting this, cooool!
+use Event qw(loop unloop); # we are re-exporting this for historical reasons
 
 use XSLoader;
 
@@ -94,7 +93,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = 5.132;
+   our $VERSION = 5.14;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -190,18 +189,6 @@ into the Event dispatcher.
 sub sweep {
    Event::one_event 0; # for now
 }
-
-=item $result = loop([$timeout])
-
-This is the version of C<loop> you should use instead of C<Event::loop>
-when using this module - it will ensure correct scheduling in the presence
-of events.
-
-=item unloop([$result])
-
-Same as Event::unloop (provided here for your convinience only).
-
-=cut
 
 # very inefficient
 our $IDLE = new Coro sub {

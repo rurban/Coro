@@ -121,15 +121,15 @@ slf_init_timer (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   SV *data;
   NV after;
 
-  if (items != 1)
-    croak ("Coro::EV::timer_once requires exactly one parameter, not %d.\n", items);
+  if (items > 1)
+    croak ("Coro::EV::timer_once requires at most one parameter, not %d.\n", items);
 
   data = sv_2mortal (newRV_inc (CORO_CURRENT));
   frame->data    = (void *)data;
   frame->prepare = GCoroAPI->prepare_schedule;
   frame->check   = slf_check_once;
 
-  after = SvNV (arg [0]);
+  after = items ? SvNV (arg [0]) : 0;
 
   ev_once (
     EV_DEFAULT_UC,
@@ -281,8 +281,8 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {
-        I_EV_API ("Coro::EV");
-	I_CORO_API ("Coro::Event");
+        I_EV_API   ("Coro::EV");
+	I_CORO_API ("Coro::EV");
 
         EV_DEFAULT; /* make sure it is initialised */
 
@@ -318,23 +318,25 @@ _loop_oneshot ()
 
 void
 timed_io_once (...)
+	PROTOTYPE: $$;$
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_timed_io);
 
 void
 timer_once (...)
+	PROTOTYPE: $
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_timer);
 
 void
-readable_ev (...)
+_readable_ev (...)
 	CODE:
-        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
+        items = 1; /* ignore the remaining args for speed inside Coro::Handle */
         CORO_EXECUTE_SLF_XS (slf_init_readable);
 
 void
-writable_ev (...)
+_writable_ev (...)
 	CODE:
-        items = 1; /* ignore the remainign args for speed inside Coro::Handle */
+        items = 1; /* ignore the remaining args for speed inside Coro::Handle */
         CORO_EXECUTE_SLF_XS (slf_init_writable);
 

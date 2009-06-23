@@ -6,10 +6,33 @@ TODO: maybe implement a default message channel, very much like Erlang's
       but very lacking in others (higher level ipc)).
 TODO: unready_all
 TODO: myhttpd header parsing
+TODO: channel->maxsize(newsize)?
+
+5.14  Wed Jun 24 01:37:48 CEST 2009
+	- provide explicit functions to "cede" to the event loop in Coro::AnyEvent,
+          as this seems to have been a difficult concept (poll, sleep, idle,
+          idle_upto).
+        - add Coro::AnyEvent::readable/writable functions.
+	- clarify Coro::EV/Event/AnyEvent manpages.
+        - free per-thread global scalars in the thread calling ->cancel, to
+          avoid crashes when $_, $@ etc., are magical but some of those
+          had already been freed.
+        - "unexperimentalise" the callback interface for Coro::Semaphore.
+	- speed up ready queue management/context switching by using a linked
+          list instead of an array (~5-10%).
+        - implement "watch" command in Coro::Debug shells.
+        - for fun, implement time-slicing as an example in the manpage.
+        - if AnyEvent detects EV or Event, but we don't have Coro::EV or
+          Coro::Event, use the normal AnyEvent handling instead of dieing
+          (the same is true for Coro::Handle).
+        - properly document Coro::EV::timed_io_once.
+        - avoid unneccessary ->cancel calls in Coro::Handle.
+        - maybe make it work on mingw32 with win32 backend
+          (based on patch by Yasuhiro Matsumoto).
 
 5.132 Fri May 29 09:00:39 CEST 2009
 	- do not keep a reference to the argument itself in
-          Coro::Senmaphore::guard, as it could change later.
+          Coro::Semaphore::guard, as it could change later.
         - support SO_RCVBUF/SO_SNDBUF nonstandard Coro::Socket options,
           should support a prepare callback.
 

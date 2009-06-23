@@ -46,7 +46,7 @@ use Coro::Util ();
 
 use base qw(Coro::Handle IO::Socket::INET);
 
-our $VERSION = 5.132;
+our $VERSION = 5.14;
 
 our (%_proto, %_port);
 

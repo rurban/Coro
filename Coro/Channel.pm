@@ -33,7 +33,7 @@ no warnings;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = 5.132;
+our $VERSION = 5.14;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }
@@ -52,7 +52,7 @@ C<2>, and so on.
 =cut
 
 sub new {
-   # we cheat and set infinity == 10**9
+   # we cheat and set infinity == 2*10**9
    bless [
       [],
       (Coro::Semaphore::_alloc 0),
@@ -121,7 +121,13 @@ Return the number of elements waiting to be consumed. Please note that:
      ...
   }
 
-is I<not> a race condition but instead works just fine.
+is I<not> a race condition but instead works just fine. Note that the
+number of elements that wait can be larger than C<$maxsize>, as it
+includes any coroutines waiting to put data into the channel (but not any
+shutdown condition).
+
+This means that the number returned is I<precisely> the number of calls to
+C<get> that will succeed instantly and returning some data.
 
 =cut
 
