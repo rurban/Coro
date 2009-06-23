@@ -8,6 +8,7 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+5.14  Wed Jun 24 01:37:48 CEST 2009
 	- provide explicit functions to "cede" to the event loop in Coro::AnyEvent,
           as this seems to have been a difficult concept (poll, sleep, idle,
           idle_upto).
@@ -16,7 +17,7 @@ TODO: channel->maxsize(newsize)?
         - free per-thread global scalars in the thread calling ->cancel, to
           avoid crashes when $_, $@ etc., are magical but some of those
           had already been freed.
-        - "unexperimentalize" the callback interface for Coro::Semaphore.
+        - "unexperimentalise" the callback interface for Coro::Semaphore.
 	- speed up ready queue management/context switching by using a linked
           list instead of an array (~5-10%).
         - implement "watch" command in Coro::Debug shells.
