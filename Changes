@@ -16,6 +16,7 @@ TODO: channel->maxsize(newsize)?
         - free per-thread global scalars in the thread calling ->cancel, to
           avoid crashes when $_, $@ etc., are magical but some of those
           had already been freed.
+        - "unexperimentalize" the callback interface for Coro::Semaphore.
 	- speed up ready queue management/context switching by using a linked
           list instead of an array (~5-10%).
         - implement "watch" command in Coro::Debug shells.
@@ -24,7 +25,9 @@ TODO: channel->maxsize(newsize)?
           Coro::Event, use the normal AnyEvent handling instead of dieing
           (the same is true for Coro::Handle).
         - properly document Coro::EV::timed_io_once.
-        - avoid unneccessary ->cancel alls in Coro::Handle.
+        - avoid unneccessary ->cancel calls in Coro::Handle.
+        - maybe make it work on mingw32 with win32 backend
+          (based on patch by Yasuhiro Matsumoto).
 
 5.132 Fri May 29 09:00:39 CEST 2009
 	- do not keep a reference to the argument itself in

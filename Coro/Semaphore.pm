@@ -81,9 +81,6 @@ semaphore as first argument.
 The callback might C<down> the semaphore exactly once, might wake up other
 coroutines, but is I<NOT> allowed to block (switch to other coroutines).
 
-This is considered a rather experimental interface, and is subject to
-change.
-
 =cut
 
 #=item $status = $sem->timed_down ($timeout)

@@ -139,7 +139,7 @@ static int cctx_max_idle = 4;
 
 #if __GNUC__ >= 3
 # define attribute(x) __attribute__(x)
-# define expect(expr,value) __builtin_expect ((expr),(value))
+# define expect(expr,value) __builtin_expect ((expr), (value))
 # define INLINE static inline
 #else
 # define attribute(x)
@@ -617,7 +617,7 @@ save_perl (pTHX_ Coro__State c)
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
-            if (expect_true (CxTYPE (cx) == CXt_SUB || CxTYPE (cx) == CXt_FORMAT))
+            if (expect_true (CxTYPE (cx) == CXt_SUB) || expect_false (CxTYPE (cx) == CXt_FORMAT))
               {
                 CV *cv = cx->blk_sub.cv;
 
