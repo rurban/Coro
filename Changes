@@ -8,6 +8,8 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+	- implement signal->wait ($cb) interface, similar to semaphores.
+
 5.14  Wed Jun 24 01:37:48 CEST 2009
 	- provide explicit functions to "cede" to the event loop in Coro::AnyEvent,
           as this seems to have been a difficult concept (poll, sleep, idle,

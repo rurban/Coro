@@ -2633,7 +2633,7 @@ slf_init_semaphore_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
       AV *av = (AV *)SvRV (arg [0]);
       CV *cb_cv = coro_sv_2cv (aTHX_ arg [1]);
 
-      av_push (av, (SV *)SvREFCNT_inc_NN (cb_cv));
+      av_push (av, SvREFCNT_inc_NN (cb_cv));
 
       if (SvIVX (AvARRAY (av)[0]) > 0)
         coro_semaphore_adjust (aTHX_ av, 0);
@@ -2667,8 +2667,20 @@ coro_signal_wake (pTHX_ AV *av, int count)
 
       cb = av_shift (av);
 
-      api_ready (aTHX_ cb);
-      sv_setiv (cb, 0); /* signal waiter */
+      if (SvTYPE (cb) == SVt_PVCV)
+        {
+          dSP;
+          PUSHMARK (SP);
+          XPUSHs (sv_2mortal (newRV_inc ((SV *)av)));
+          PUTBACK;
+          call_sv (cb, G_VOID | G_DISCARD | G_EVAL | G_KEEPERR);
+        }
+      else
+        {
+          api_ready (aTHX_ cb);
+          sv_setiv (cb, 0); /* signal waiter */
+        }
+
       SvREFCNT_dec (cb);
 
       --count;
@@ -2687,7 +2699,18 @@ slf_init_signal_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   AV *av = (AV *)SvRV (arg [0]);
 
-  if (SvIVX (AvARRAY (av)[0]))
+  if (items >= 2)
+    {
+      CV *cb_cv = coro_sv_2cv (aTHX_ arg [1]);
+      av_push (av, SvREFCNT_inc_NN (cb_cv));
+
+      if (SvIVX (AvARRAY (av)[0]))
+        coro_signal_wake (aTHX_ av, 1); /* ust be the only waiter */
+
+      frame->prepare = prepare_nop;
+      frame->check   = slf_check_nop;
+    }
+  else if (SvIVX (AvARRAY (av)[0]))
     {
       SvIVX (AvARRAY (av)[0]) = 0;
       frame->prepare = prepare_nop;
@@ -2695,7 +2718,7 @@ slf_init_signal_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     }
   else
     {
-      SV *waiter = newRV_inc (SvRV (coro_current)); /* owned by signal av */
+      SV *waiter = newSVsv (coro_current); /* owned by signal av */
 
       av_push (av, waiter);
 
