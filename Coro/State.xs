@@ -3490,10 +3490,22 @@ MODULE = Coro::State                PACKAGE = Coro::Semaphore
 SV *
 new (SV *klass, SV *count = 0)
 	CODE:
+{
+  	int semcnt = 1;
+
+        if (count)
+          {
+            SvGETMAGIC (count);
+
+            if (SvOK (count))
+              semcnt = SvIV (count);
+          }
+
         RETVAL = sv_bless (
-                   coro_waitarray_new (aTHX_ count && SvOK (count) ? SvIV (count) : 1),
+                   coro_waitarray_new (aTHX_ semcnt),
                    GvSTASH (CvGV (cv))
                  );
+}
 	OUTPUT:
         RETVAL
 
