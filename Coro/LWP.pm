@@ -85,6 +85,7 @@ use AnyEvent::DNS ();
 
 use Coro::Util ();
 use Coro::Socket ();
+use Coro::AnyEvent ();
 
 use Socket ();
 

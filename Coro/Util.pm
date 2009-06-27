@@ -31,6 +31,7 @@ use AnyEvent::Socket ();
 use Coro::State;
 use Coro::Handle;
 use Coro::Storable ();
+use Coro::AnyEvent ();
 use Coro::Semaphore;
 
 use base 'Exporter';
