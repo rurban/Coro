@@ -3181,6 +3181,7 @@ throw (Coro::State self, SV *throw = &PL_sv_undef)
 	struct coro *current = SvSTATE_current;
 	SV **throwp = self == current ? &CORO_THROW : &self->except;
         SvREFCNT_dec (*throwp);
+        SvGETMAGIC (throw);
         *throwp = SvOK (throw) ? newSVsv (throw) : 0;
 }
 
@@ -3337,6 +3338,7 @@ _set_readyhook (SV *hook)
 	PROTOTYPE: $
         CODE:
         SvREFCNT_dec (coro_readyhook);
+        SvGETMAGIC (hook);
         coro_readyhook = SvOK (hook) ? newSVsv (hook) : 0;
 
 int

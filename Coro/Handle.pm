@@ -260,7 +260,6 @@ use strict;
 use Carp 'croak';
 use Errno qw(EAGAIN EINTR);
 
-use AnyEvent ();
 use AnyEvent::Util qw(WSAEWOULDBLOCK);
 
 use Coro::AnyEvent;

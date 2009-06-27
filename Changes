@@ -9,6 +9,8 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
 	- implement signal->wait ($cb) interface, similar to semaphores.
+        - work around SvOK not supporting getmagic, so we have to getmagic
+          to test for undef :/ (reported by Matthias Waldorf).
 
 5.14  Wed Jun 24 01:37:48 CEST 2009
 	- provide explicit functions to "cede" to the event loop in Coro::AnyEvent,
