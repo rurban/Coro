@@ -172,6 +172,7 @@ static void *coro_thx;
 #endif
 
 static double (*nvtime)(); /* so why doesn't it take void? */
+static void   (*u2time)(pTHX_ UV ret[2]);
 
 /* we hijack an hopefully unused CV flag for our purposes */
 #define CVf_SLF 0x4000
@@ -208,8 +209,10 @@ static CV *cv_coro_state_new;
 static SV *sv_activity;
 
 /* enable processtime/realtime profiling */
-static char profile_times;
+static char enable_times;
 typedef U32 coro_ts[2];
+static coro_ts time_real, time_cpu;
+static char times_valid;
 
 static struct coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
@@ -309,6 +312,9 @@ struct coro {
   AV *on_enter;
   AV *on_leave;
 
+  /* times */
+  coro_ts t_cpu, t_real;
+
   /* linked list */
   struct coro *next, *prev;
 };
@@ -382,6 +388,52 @@ coro_sv_2cv (pTHX_ SV *sv)
     croak ("code reference expected");
 
   return cv;
+}
+
+INLINE void
+coro_times_update ()
+{
+#ifdef coro_clock_gettime
+  struct timespec ts;
+
+  ts.tv_sec  = ts.tv_nsec = 0;
+  coro_clock_gettime (CORO_CLOCK_THREAD_CPUTIME_ID, &ts);
+  time_cpu  [0] = ts.tv_sec; time_cpu  [1] = ts.tv_nsec;
+
+  ts.tv_sec  = ts.tv_nsec = 0;
+  coro_clock_gettime (CORO_CLOCK_MONOTONIC, &ts);
+  time_real [0] = ts.tv_sec; time_real [1] = ts.tv_nsec;
+#else
+  UV tv[2];
+
+  u2time (aTHX_ &tv);
+  time_real [0] = tv [0];
+  time_real [1] = tv [1] * 1000;
+#endif
+}
+
+INLINE void
+coro_times_add (struct coro *c)
+{
+  c->t_real [1] += time_real [1];
+  if (c->t_real [1] > 1000000000) { c->t_real [1] -= 1000000000; ++c->t_real [0]; }
+  c->t_real [0] += time_real [0];
+
+  c->t_cpu  [1] += time_cpu  [1];
+  if (c->t_cpu  [1] > 1000000000) { c->t_cpu  [1] -= 1000000000; ++c->t_cpu  [0]; }
+  c->t_cpu  [0] += time_cpu  [0];
+}
+
+INLINE void
+coro_times_sub (struct coro *c)
+{
+  if (c->t_real [1] < time_real [1]) { c->t_real [1] += 1000000000; --c->t_real [0]; }
+  c->t_real [1] -= time_real [1];
+  c->t_real [0] -= time_real [0];
+
+  if (c->t_cpu  [1] < time_cpu  [1]) { c->t_cpu  [1] += 1000000000; --c->t_cpu  [0]; }
+  c->t_cpu  [1] -= time_cpu  [1];
+  c->t_cpu  [0] -= time_cpu  [0];
 }
 
 /*****************************************************************************/
@@ -593,6 +645,14 @@ load_perl (pTHX_ Coro__State c)
   slf_frame  = c->slf_frame;
   CORO_THROW = c->except;
 
+  if (expect_false (enable_times))
+    {
+      if (expect_false (!times_valid))
+        coro_times_update ();
+
+      coro_times_sub (c);
+    }
+
   if (expect_false (c->on_enter))
     {
       int i;
@@ -611,6 +671,14 @@ save_perl (pTHX_ Coro__State c)
 
       for (i = AvFILLp (c->on_leave); i >= 0; --i)
         on_enterleave_call (aTHX_ AvARRAY (c->on_leave)[i]);
+    }
+
+  times_valid = 0;
+
+  if (expect_false (enable_times))
+    {
+      coro_times_update (); times_valid = 1;
+      coro_times_add (c);
     }
 
   c->except    = CORO_THROW;
@@ -984,6 +1052,12 @@ coro_setup (pTHX_ struct coro *coro)
 
   /* copy throw, in case it was set before coro_setup */
   CORO_THROW = coro->except;
+
+  if (expect_false (enable_times))
+    {
+      coro_times_update ();
+      coro_times_sub (coro);
+    }
 }
 
 static void
@@ -2985,6 +3059,9 @@ BOOT:
           if (!SvIOK (*svp)) croak ("Time::NVtime isn't a function pointer");
 
           nvtime = INT2PTR (double (*)(), SvIV (*svp));
+
+          svp = hv_fetch (PL_modglobal, "Time::U2time", 12, 0);
+          u2time = INT2PTR (double (*)(), SvIV (*svp));
         }
 
         assert (("PRIO_NORMAL must be 0", !CORO_PRIO_NORMAL));
@@ -3267,6 +3344,43 @@ cancel (Coro::State self)
 	coro_state_destroy (aTHX_ self);
         coro_call_on_destroy (aTHX_ self); /* actually only for Coro objects */
 
+
+SV *
+enable_times (int enabled = enable_times)
+	CODE:
+{
+        RETVAL = boolSV (enable_times);
+
+        if (enabled != enable_times)
+          {
+            enable_times = enabled;
+
+            coro_times_update ();
+            (enabled ? coro_times_sub : coro_times_add)(SvSTATE (coro_current));
+          }
+}
+        OUTPUT:
+        RETVAL
+
+void
+times (Coro::State self)
+	PPCODE:
+{
+  	struct coro *current = SvSTATE (coro_current);
+
+        if (expect_false (current == self))
+          {
+            coro_times_update ();
+            coro_times_add (SvSTATE (coro_current));
+          }
+
+        EXTEND (SP, 2);
+        PUSHs (sv_2mortal (newSVnv (self->t_real [0] + self->t_real [1] * 1e-9)));
+        PUSHs (sv_2mortal (newSVnv (self->t_cpu  [0] + self->t_cpu  [1] * 1e-9)));
+
+        if (expect_false (current == self))
+          coro_times_sub (SvSTATE (coro_current));
+}
 
 MODULE = Coro::State                PACKAGE = Coro
 
