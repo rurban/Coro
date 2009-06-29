@@ -282,8 +282,8 @@ sub command($) {
       my $flags = $1;
       my $verbose = $flags =~ /v/;
       my $desc_format = $flags =~ /w/ ? "%-24s" : "%-24.24s";
-      my $tim0_format = $times ? " %7s %7s " : " ";
-      my $tim1_format = $times ? " %7.3f %7.3f " : " ";
+      my $tim0_format = $times ? " %9s %8s " : " ";
+      my $tim1_format = $times ? " %9.3f %8.3f " : " ";
       my $buf = sprintf "%20s %s%s %4s %4s$tim0_format$desc_format %s\n",
                         "PID", "S", "C", "RSS", "USES",
                         $times ? ("t_real", "t_cpu") : (),
