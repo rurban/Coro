@@ -207,6 +207,10 @@ static CV *cv_coro_state_new;
 /* Coro::AnyEvent */
 static SV *sv_activity;
 
+/* enable processtime/realtime profiling */
+static char profile_times;
+typedef U32 coro_ts[2];
+
 static struct coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
 
@@ -3369,8 +3373,8 @@ prio (Coro::State coro, int newprio = 0)
             if (ix)
               newprio = coro->prio - newprio;
 
-            if (newprio < PRIO_MIN) newprio = PRIO_MIN;
-            if (newprio > PRIO_MAX) newprio = PRIO_MAX;
+            if (newprio < CORO_PRIO_MIN) newprio = CORO_PRIO_MIN;
+            if (newprio > CORO_PRIO_MAX) newprio = CORO_PRIO_MAX;
 
             coro->prio = newprio;
           }
