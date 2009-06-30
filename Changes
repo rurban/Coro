@@ -8,6 +8,7 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+5.15  Tue Jun 30 10:28:06 CEST 2009
 	- deprecate Coro::Socket, document how to get ipv6 support via
           AnyEvent::Socket instead.
 	- implement signal->wait ($cb) interface, similar to semaphores.
