@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Coro
-version:            5.14
+version:            5.15
 abstract:           ~
 author:  []
 license:            unknown
