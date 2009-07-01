@@ -10,6 +10,7 @@ TODO: channel->maxsize(newsize)?
 
 	- backport to windows process emulation code again (patch by
           Yasuhiro MATSUMOTO).
+        - slightly update Coro::MakeMaker.
 
 5.15  Tue Jun 30 10:28:06 CEST 2009
 	- deprecate Coro::Socket, document how to get ipv6 support via
