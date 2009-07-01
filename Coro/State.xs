@@ -404,6 +404,7 @@ coro_times_update ()
   coro_clock_gettime (CORO_CLOCK_MONOTONIC, &ts);
   time_real [0] = ts.tv_sec; time_real [1] = ts.tv_nsec;
 #else
+  dTHX;
   UV tv[2];
 
   u2time (aTHX_ &tv);
