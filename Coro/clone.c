@@ -184,6 +184,7 @@ coro_clone (pTHX_ struct coro *coro)
     ANY * const ss	= nslot->savestack;
     const I32 max	= nslot->savestack_max;
     I32 ix		= nslot->savestack_ix;
+    void *any_ptr;
 
     while (ix > 0)
       {
@@ -266,7 +267,8 @@ coro_clone (pTHX_ struct coro *coro)
             case SAVEt_GENERIC_PVREF:      /* generic char* */
             case SAVEt_PPTR:       /* char* reference */
               POPPTR (ss, ix);
-              TOPPTR (ss, ix) = savepv ((char *) POPPTR (ss, ix));
+              any_ptr = POPPTR (ss, ix);
+              TOPPTR (ss, ix) = savepv ((char *) any_ptr);
               break;
 
             case SAVEt_GP:         /* scalar reference */
@@ -308,12 +310,14 @@ coro_clone (pTHX_ struct coro *coro)
               break;
 
             case SAVEt_FREEPV:
-              TOPPTR (ss, ix) = savepv ((char *) POPPTR (ss, ix));
+              any_ptr = POPPTR (ss, ix);
+              TOPPTR (ss, ix) = savepv ((char *) any_ptr);
               break;
 
             case SAVEt_DELETE:
               SvREFCNT_inc ((SV *) POPPTR (ss, ix));
-              TOPPTR (ss, ix) = savepv ((char *) POPPTR (ss, ix));
+              any_ptr = POPPTR (ss, ix);
+              TOPPTR (ss, ix) = savepv ((char *) any_ptr);
               /* fall through */
             case SAVEt_STACK_POS:  /* Position on Perl stack */
               POPINT (ss, ix);
@@ -331,7 +335,10 @@ coro_clone (pTHX_ struct coro *coro)
 
             case SAVEt_REGCONTEXT:
             case SAVEt_ALLOC:
-              ix = POPINT (ss, ix);
+              {
+                I32 ni = POPINT (ss, ix);
+                ix = ni;
+              }
               break;
 
             case SAVEt_AELEM:      /* array element */

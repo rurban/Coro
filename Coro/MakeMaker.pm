@@ -5,7 +5,7 @@ BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
 use Config;
 use base 'Exporter';
 
-our $VERSION = 5.15;
+our $VERSION = 5.151;
 
 @EXPORT_OK = qw(&coro_args $installsitearch);
 
@@ -66,16 +66,21 @@ Just be aware, and set your expectations accordingly.
 
   # ... set up %args ...
 
-  WriteMakefile(coro_args(%args));
+  WriteMakefile (coro_args (%args));
 
 =head2 XS
 
   #include "CoroAPI.h"
 
   BOOT:
-    I_CORO_API("YourModule");
+    I_CORO_API ("YourModule");
 
 =head2 API
+
+This is just a small overview - read the Coro/CoroAPI.h header file in
+the distribution, and check the examples in F<EV/> and F<Event/*>, or
+as a more real-world example, the Deliantra game server (which uses
+Coro::MakeMaker).
 
  #define CORO_TRANSFER(prev,next) /* transfer from prev to next */
  #define CORO_SCHEDULE            /* like Coro::schedule */
@@ -85,5 +90,11 @@ Just be aware, and set your expectations accordingly.
  #define CORO_IS_READY(coro)      /* like $coro->is_ready */
  #define CORO_NREADY              /* # of procs in ready queue */
  #define CORO_CURRENT             /* returns $Coro::current */
+ #define CORO_THROW               /* exception pending? */
+ #define CORO_READYHOOK           /* hook for event libs, see Coro::EV */
+
+ #define CORO_SV_STATE(coro)      /* returns the internal struct coro * */
+ #define CORO_EXECUTE_SLF(cv,init,ax) /* execute a schedule-like function */
+ #define CORO_EXECUTE_SLF_XS(init) /* SLF in XS, see e.g. Coro::EV */
 
 =cut

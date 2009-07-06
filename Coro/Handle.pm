@@ -46,7 +46,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.15;
+our $VERSION = 5.151;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -92,9 +92,10 @@ sub writable	{ Coro::Handle::FH::writable (tied ${$_[0]}) }
 
 =item $fh->readline ([$terminator])
 
-Like the builtin of the same name, but allows you to specify the input
-record separator in a coroutine-safe manner (i.e. not using a global
-variable).
+Similar to the builtin of the same name, but allows you to specify the
+input record separator in a coroutine-safe manner (i.e. not using a global
+variable). Paragraph mode is not supported, use "\n\n" to achieve the same
+effect.
 
 =cut
 

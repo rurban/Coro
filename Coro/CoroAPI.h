@@ -37,6 +37,7 @@ typedef void (*coro_slf_cb) (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int 
 /* private structure, always use the provided macros below */
 struct CoroAPI
 {
+  /* private */
   I32 ver;
   I32 rev;
 #define CORO_API_VERSION 7
@@ -61,6 +62,8 @@ struct CoroAPI
   /* SLF */
   struct coro *(*sv_state) (pTHX_ SV *coro);
   void (*execute_slf) (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax);
+
+  /* public */
   /* for use as CoroSLF.prepare */
   void (*prepare_nop)          (pTHX_ struct coro_transfer_args *ta);
   void (*prepare_schedule)     (pTHX_ struct coro_transfer_args *ta);

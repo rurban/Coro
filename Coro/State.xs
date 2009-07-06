@@ -404,9 +404,10 @@ coro_times_update ()
   coro_clock_gettime (CORO_CLOCK_MONOTONIC, &ts);
   time_real [0] = ts.tv_sec; time_real [1] = ts.tv_nsec;
 #else
+  dTHX;
   UV tv[2];
 
-  u2time (aTHX_ &tv);
+  u2time (aTHX_ tv);
   time_real [0] = tv [0];
   time_real [1] = tv [1] * 1000;
 #endif
@@ -546,7 +547,7 @@ coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 
   /* perl manages to free our internal AV and _then_ call us */
   if (IN_DESTRUCT)
-    return;
+    return 0;
 
   /* casting is fun. */
   while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
@@ -737,7 +738,7 @@ save_perl (pTHX_ Coro__State c)
   if (SLOT_COUNT >= 2) CXINC;
   if (SLOT_COUNT >= 3) CXINC;
   {
-    int i;
+    unsigned int i;
     for (i = 3; i < SLOT_COUNT; ++i)
       CXINC;
   }
@@ -1113,7 +1114,7 @@ coro_destruct_perl (pTHX_ struct coro *coro)
   }
 
   {
-    int i;
+    unsigned int i;
 
     for (i = 0; i < sizeof (svf) / sizeof (*svf); ++i)
       SvREFCNT_dec (svf [i]);
@@ -3061,7 +3062,7 @@ BOOT:
           nvtime = INT2PTR (double (*)(), SvIV (*svp));
 
           svp = hv_fetch (PL_modglobal, "Time::U2time", 12, 0);
-          u2time = INT2PTR (double (*)(), SvIV (*svp));
+          u2time = INT2PTR (void (*)(pTHX_ UV ret[2]), SvIV (*svp));
         }
 
         assert (("PRIO_NORMAL must be 0", !CORO_PRIO_NORMAL));
