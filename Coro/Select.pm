@@ -35,10 +35,6 @@ use a code fragment like this to load it:
       use Net::DBus::Reactor;
    }
 
-Performance naturally isn't great (every file descriptor must be dup'ed),
-but unless you need very high select performance you normally won't notice
-the difference.
-
 This implementation works fastest when only very few bits are set in the
 fd set(s).
 
@@ -53,7 +49,7 @@ use strict;
 use Errno;
 
 use Coro ();
-use AnyEvent ();
+use AnyEvent 4.800001 ();
 use Coro::AnyEvent ();
 
 use base Exporter::;
@@ -83,8 +79,8 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       my $wakeup = Coro::rouse_cb;
 
       # AnyEvent does not do 'e', so replace it by 'r'
-      for ([0, 'r', '<'], [1, 'w', '>'], [2, 'r', '<']) {
-         my ($i, $poll, $mode) = @$_;
+      for ([0, 'r'], [1, 'w'], [2, 'r']) {
+         my ($i, $poll) = @$_;
          if (defined $_[$i]) {
             my $rvec = \$_[$i];
 
@@ -95,21 +91,16 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
                while (/1/g) {
                   my $fd = (pos) - 1;
 
-                  (vec $$rvec, $fd, 1) = 0;
-
-                  # we need to dup(), unfortunately
-                  open my $fh, "$mode&$fd"
-                     or do { $! = Errno::EBADF; return -1 };
-
                   push @w,
-                     $fh,
-                     AnyEvent->io (fh => $fh, poll => $poll, cb => sub {
+                     AnyEvent->io (fh => $fd, poll => $poll, cb => sub {
                         (vec $$rvec, $fd, 1) = 1;
                         ++$nfound;
                         $wakeup->();
                      });
                }
             }
+
+            $$rvec ^= $$rvec; # clear all bits
          }
       }
 
@@ -126,6 +117,12 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
 1;
 
 =back
+
+=head1 BUGS
+
+For performance reasons, Coro::Select's select function might not
+properly detect bad file descriptors (but relying on EBADF is inherently
+non-portable).
 
 =head1 SEE ALSO
 
