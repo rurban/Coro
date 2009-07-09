@@ -106,14 +106,15 @@ WriteMakefile(
     # for optional dependencies. whoever decided that a module needs
     # to build properly without its dependencies installed
     # needs his brain rearranged dramatically.
-    EXTRA_META => q{
-recommends:
-  Event: 1.08
-  EV: 3.0
-  IO::AIO: 3.1
-  AnyEvent::AIO: 1.0
-  BDB: 0
-  AnyEvent::BDB: 1.0
+    META_MERGE => {
+        recommends => {
+           Event         => 1.08,
+           EV            => 3.0,
+           IO::AIO       => 3.1,
+           AnyEvent::AIO => 1.0,
+           BDB           => 0,
+           AnyEvent::BDB => 1.0,
+        }
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',

@@ -10,6 +10,7 @@ TODO: channel->maxsize(newsize)?
 
 	- considerably speed up Coro::Select by taking avdantage
           of AnyEvent > 4.8 and some other optimisations.
+        - someone stole my EXTRA_META!!!
 
 5.151 Mon Jul  6 05:41:57 CEST 2009
 	- backport to windows process emulation code again (patch by
