@@ -82,6 +82,7 @@ WriteMakefile(
     VERSION_FROM => "Coro.pm",
     DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
+       common::sense    => 0,
        Scalar::Util	=> 0.00,
        AnyEvent         => 4.800001,
        Storable		=> 2.15,

@@ -9,6 +9,7 @@ Makefile.PL
 Coro.pm
 Coro/Makefile.PL
 Coro/typemap
+Coro/schmorp.h
 Coro/State.pm
 Coro/State.xs
 Coro/clone.c
