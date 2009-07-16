@@ -285,6 +285,26 @@ static CV *cv_coro_run, *cv_coro_terminate;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
 
+/** Coro::Select ************************************************************/
+
+static OP *(*coro_old_pp_sselect) (pTHX);
+static SV *coro_select_select;
+
+/* horrible hack, but if it works... */
+static OP *
+coro_pp_sselect (aTHX)
+{
+  dSP;
+  PUSHMARK (SP - 4); /* fake argument list */
+  XPUSHs (coro_select_select);
+  PUTBACK;
+
+  /* entersub is an UNOP, select a LISTOP... keep your fingers crossed */
+  PL_op->op_flags |= OPf_STACKED;
+  PL_op->op_private = 0;
+  return PL_ppaddr [OP_ENTERSUB](aTHX);
+}
+
 /** lowlevel stuff **********************************************************/
 
 static SV *
@@ -3718,4 +3738,26 @@ _register (char *target, char *proto, SV *req)
         sv_setpv ((SV *)slf_cv, proto);
         sv_magicext ((SV *)slf_cv, (SV *)req_cv, CORO_MAGIC_type_aio, 0, 0, 0);
 }
+
+MODULE = Coro::State                PACKAGE = Coro::Select
+
+void
+patch_pp_sselect ()
+	CODE:
+        if (!coro_old_pp_sselect)
+          {
+            coro_select_select = (SV *)get_cv ("Coro::Select::select", 0);
+            coro_old_pp_sselect = PL_ppaddr [OP_SSELECT];
+            PL_ppaddr [OP_SSELECT] = coro_pp_sselect;
+          }
+
+void
+unpatch_pp_sselect ()
+	CODE:
+        if (coro_old_pp_sselect)
+          {
+            PL_ppaddr [OP_SSELECT] = coro_old_pp_sselect;
+            coro_old_pp_sselect = 0;
+          }
+
 

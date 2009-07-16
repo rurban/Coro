@@ -17,6 +17,9 @@ only have a blocking API do not use global variables and often use select
 (or IO::Select), this effectively makes most such libraries "somewhat"
 non-blocking w.r.t. other threads.
 
+This implementation works fastest when only very few bits are set in the
+fd set(s).
+
 To be effective globally, this module must be C<use>'d before any other
 module that uses C<select>, so it should generally be the first module
 C<use>'d in the main program. Note that overriding C<select> globally
@@ -35,8 +38,17 @@ use a code fragment like this to load it:
       use Net::DBus::Reactor;
    }
 
-This implementation works fastest when only very few bits are set in the
-fd set(s).
+Some modules (notably L<POE::Loop::Select>) directly call
+C<CORE::select>. For these modules, we need to patch the opcode table by
+sandwiching it between calls to C<Coro::Select::patch_pp_sselect> and
+C<Coro::Select::unpatch_pp_sselect>:
+
+ BEGIN {
+    use Coro::Select ();
+    Coro::Select::patch_pp_sselect;
+    require evil_poe_module_using_CORE::SELECT;
+    Coro::Select::unpatch_pp_sselect;
+ }
 
 =over 4
 
@@ -49,6 +61,7 @@ use strict;
 use Errno;
 
 use Coro ();
+use Coro::State ();
 use AnyEvent 4.800001 ();
 use Coro::AnyEvent ();
 

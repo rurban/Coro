@@ -8,10 +8,15 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+	- Coro::AnyEvent failed to hook into the event loop
+          when no threads had been readied between detecting
+          the event loop and actually running it.
 	- considerably speed up Coro::Select by taking avdantage
           of AnyEvent > 4.8 and some other optimisations.
         - clarified libcoro license and copyright.
         - someone stole my EXTRA_META!!!
+        - implement Coro::Select::patch_pp_sselect and it's brother,
+          for hardcode select overriding.
 
 5.151 Mon Jul  6 05:41:57 CEST 2009
 	- backport to windows process emulation code again (patch by
