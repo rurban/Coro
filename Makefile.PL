@@ -84,7 +84,7 @@ WriteMakefile(
     PREREQ_PM    => {
        common::sense    => 0,
        Scalar::Util	=> 0.00,
-       AnyEvent         => 4.800001,
+       AnyEvent         => 4.81,
        Storable		=> 2.15,
        Time::HiRes      => 0,
        Guard            => 0.5,
