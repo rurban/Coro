@@ -143,7 +143,7 @@ true on EINPROGRESS). Remember that these must be method calls.
 
 =cut
 
-sub connect	{ connect     tied(${$_[0]})->[0], $_[1] or $! == EINPROGRESS or $! == WSAEINPROGRESS }
+sub connect	{ connect     tied(${$_[0]})->[0], $_[1] or $! == EINPROGRESS or $! == EAGAIN or $! == WSAEWOULDBLOCK }
 sub bind	{ bind        tied(${$_[0]})->[0], $_[1] }
 sub listen	{ listen      tied(${$_[0]})->[0], $_[1] }
 sub getsockopt	{ getsockopt  tied(${$_[0]})->[0], $_[1], $_[2] }

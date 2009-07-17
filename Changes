@@ -13,6 +13,8 @@ TODO: channel->maxsize(newsize)?
           the event loop and actually running it.
 	- considerably speed up Coro::Select by taking avdantage
           of AnyEvent > 4.8 and some other optimisations.
+        - replace WSAEINPROGRESS by WSAEWOULDBLOCK (reported
+          and analyzed by Yasuhiro MATSUMOTO).
         - clarified libcoro license and copyright.
         - someone stole my EXTRA_META!!!
         - implement Coro::Select::patch_pp_sselect and it's brother,

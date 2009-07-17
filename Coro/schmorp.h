@@ -6,6 +6,7 @@
  */
 
 #include <signal.h>
+#include <errno.h>
 
 #ifndef _WIN32
 # include <poll.h>
@@ -403,7 +404,11 @@ s_epipe_signal (s_epipe *epp)
     WriteFile (S_TO_HANDLE (epp->fd [1]), (LPCVOID)&dummy, 1, &dummy, 0);
 #else
     static uint64_t counter = 1;
-    write (epp->fd [1], &counter, epp->len);
+    /* some modules accept fd's from outside, support eventfd here */
+    if (write (epp->fd [1], &counter, epp->len) < 0
+        && errno == EINVAL
+        && epp->len != 8)
+      write (epp->fd [1], &counter, (epp->len = 8));
 #endif
   }
 }
