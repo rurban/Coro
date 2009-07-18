@@ -211,6 +211,8 @@ s_gensub (pTHX_ void (*xsub)(pTHX_ CV *), void *arg)
 static int
 s_pipe (int filedes [2])
 {
+  dTHX;
+
   struct sockaddr_in addr = { 0 };
   int addr_size = sizeof (addr);
   struct sockaddr_in adr2;
@@ -339,7 +341,6 @@ extern "C" {
 typedef struct {
   int fd[2]; /* read, write fd, might be equal */
   int len; /* write length (1 pipe/socket, 8 eventfd) */
-  volatile sig_atomic_t sent;
 } s_epipe;
 
 static int
@@ -362,6 +363,8 @@ s_epipe_new (s_epipe *epp)
       if (s_fd_prepare (ep.fd [0])
           || s_fd_prepare (ep.fd [1]))
         {
+           dTHX;
+
            close (ep.fd [0]);
            close (ep.fd [1]);
            return -1;
@@ -370,7 +373,6 @@ s_epipe_new (s_epipe *epp)
       ep.len = 1;
     }
 
-  ep.sent = 0;
   *epp = ep;
   return 0;
 }
@@ -378,6 +380,8 @@ s_epipe_new (s_epipe *epp)
 static void
 s_epipe_destroy (s_epipe *epp)
 {
+  dTHX;
+
   close (epp->fd [0]);
 
   if (epp->fd [1] != epp->fd [0])
@@ -389,33 +393,28 @@ s_epipe_destroy (s_epipe *epp)
 static void
 s_epipe_signal (s_epipe *epp)
 {
-  if (epp->sent)
-    return;
-
-  epp->sent = 1;
-  {
 #ifdef _WIN32
-    /* perl overrides send with a function that crashes in other threads.
-     * unfortunately, it overrides it with an argument-less macro, so
-     * there is no way to force usage of the real send function.
-     * incompetent windows programmers - is this redundant?
-     */
-    DWORD dummy;
-    WriteFile (S_TO_HANDLE (epp->fd [1]), (LPCVOID)&dummy, 1, &dummy, 0);
+  /* perl overrides send with a function that crashes in other threads.
+   * unfortunately, it overrides it with an argument-less macro, so
+   * there is no way to force usage of the real send function.
+   * incompetent windows programmers - is this redundant?
+   */
+  DWORD dummy;
+  WriteFile (S_TO_HANDLE (epp->fd [1]), (LPCVOID)&dummy, 1, &dummy, 0);
 #else
-    static uint64_t counter = 1;
-    /* some modules accept fd's from outside, support eventfd here */
-    if (write (epp->fd [1], &counter, epp->len) < 0
-        && errno == EINVAL
-        && epp->len != 8)
-      write (epp->fd [1], &counter, (epp->len = 8));
+  static uint64_t counter = 1;
+  /* some modules accept fd's from outside, support eventfd here */
+  if (write (epp->fd [1], &counter, epp->len) < 0
+      && errno == EINVAL
+      && epp->len != 8)
+    write (epp->fd [1], &counter, (epp->len = 8));
 #endif
-  }
 }
 
 static void
 s_epipe_drain (s_epipe *epp)
 {
+  dTHX;
   char buf [9];
 
 #ifdef _WIN32
@@ -423,14 +422,13 @@ s_epipe_drain (s_epipe *epp)
 #else
   read (epp->fd [0], buf, sizeof (buf));
 #endif
-
-  epp->sent = 0;
 }
 
 /* like new, but dups over old */
 static int
 s_epipe_renew (s_epipe *epp)
 {
+  dTHX;
   s_epipe epn;
 
   if (epp->fd [1] != epp->fd [0])
@@ -460,6 +458,7 @@ s_epipe_renew (s_epipe *epp)
 static int
 s_epipe_wait (s_epipe *epp)
 {
+  dTHX;
 #ifdef _WIN32
   fd_set rfd;
   int fd = s_epipe_fd (epp);
