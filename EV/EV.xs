@@ -298,6 +298,7 @@ BOOT:
         ev_set_priority (&idler, EV_MINPRI);
 
         CORO_READYHOOK = readyhook;
+        CORO_READYHOOK (); /* make sure we don't miss previous ready's */
 }
 
 void

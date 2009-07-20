@@ -127,8 +127,6 @@ AnyEvent::post_detect {
 
       $Coro::idle = $IDLE;
    }
-
-   _activity;
 };
 
 =item Coro::AnyEvent::poll

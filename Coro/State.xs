@@ -1670,43 +1670,38 @@ coro_deq (pTHX)
   return 0;
 }
 
+static void
+invoke_sv_ready_hook_helper (void)
+{
+  dTHX;
+  dSP;
+
+  ENTER;
+  SAVETMPS;
+
+  PUSHMARK (SP);
+  PUTBACK;
+  call_sv (coro_readyhook, G_VOID | G_DISCARD);
+
+  FREETMPS;
+  LEAVE;
+}
+
 static int
 api_ready (pTHX_ SV *coro_sv)
 {
-  struct coro *coro;
-  SV *sv_hook;
-  void (*xs_hook)(void);
-
-  coro = SvSTATE (coro_sv);
+  struct coro *coro = SvSTATE (coro_sv);
 
   if (coro->flags & CF_READY)
     return 0;
 
   coro->flags |= CF_READY;
 
-  sv_hook = coro_nready ? 0 : coro_readyhook;
-  xs_hook = coro_nready ? 0 : coroapi.readyhook;
-
   coro_enq (aTHX_ coro);
-  ++coro_nready;
 
-  if (sv_hook)
-    {
-      dSP;
-
-      ENTER;
-      SAVETMPS;
-
-      PUSHMARK (SP);
-      PUTBACK;
-      call_sv (sv_hook, G_VOID | G_DISCARD);
-
-      FREETMPS;
-      LEAVE;
-    }
-
-  if (xs_hook)
-    xs_hook ();
+  if (!coro_nready++)
+    if (coroapi.readyhook)
+      coroapi.readyhook ();
 
   return 1;
 }
@@ -3396,7 +3391,17 @@ _set_readyhook (SV *hook)
         CODE:
         SvREFCNT_dec (coro_readyhook);
         SvGETMAGIC (hook);
-        coro_readyhook = SvOK (hook) ? newSVsv (hook) : 0;
+        if (SvOK (hook))
+	  {
+            coro_readyhook = newSVsv (hook);
+            CORO_READYHOOK = invoke_sv_ready_hook_helper;
+            CORO_READYHOOK ();
+          }
+	else
+          {
+            coro_readyhook = 0;
+            CORO_READYHOOK = 0;
+          }
 
 int
 prio (Coro::State coro, int newprio = 0)
