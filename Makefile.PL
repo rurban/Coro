@@ -82,8 +82,9 @@ WriteMakefile(
     VERSION_FROM => "Coro.pm",
     DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
+       common::sense    => 0,
        Scalar::Util	=> 0.00,
-       AnyEvent         => 4.110001,
+       AnyEvent         => 4.81,
        Storable		=> 2.15,
        Time::HiRes      => 0,
        Guard            => 0.5,
@@ -106,14 +107,15 @@ WriteMakefile(
     # for optional dependencies. whoever decided that a module needs
     # to build properly without its dependencies installed
     # needs his brain rearranged dramatically.
-    EXTRA_META => q{
-recommends:
-  Event: 1.08
-  EV: 3.0
-  IO::AIO: 3.1
-  AnyEvent::AIO: 1.0
-  BDB: 0
-  AnyEvent::BDB: 1.0
+    META_MERGE => {
+        recommends => {
+           Event         => 1.08,
+           EV            => 3.0,
+           IO::AIO       => 3.1,
+           AnyEvent::AIO => 1.0,
+           BDB           => 0,
+           AnyEvent::BDB => 1.0,
+        }
     },
     PM           => {
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',

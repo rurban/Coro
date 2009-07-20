@@ -9,6 +9,7 @@ Makefile.PL
 Coro.pm
 Coro/Makefile.PL
 Coro/typemap
+Coro/schmorp.h
 Coro/State.pm
 Coro/State.xs
 Coro/clone.c
@@ -59,6 +60,7 @@ t/15_semaphore.t
 t/16_signal.t
 t/17_rouse.t
 t/18_winder.t
+t/19_handle.t
 
 EV/Makefile.PL
 EV/EV.pm
@@ -87,4 +89,4 @@ eg/readline
 
 doc/cede-vs-schedule
 
-META.yml                                Module meta-data in YAML
+META.yml                                 Module meta-data (added by MakeMaker)

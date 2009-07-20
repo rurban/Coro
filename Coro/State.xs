@@ -8,7 +8,7 @@
 #include "XSUB.h"
 #include "perliol.h"
 
-#include "patchlevel.h"
+#include "schmorp.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -52,65 +52,6 @@ static long pagesize;
 
 /* the maximum number of idle cctx that will be pooled */
 static int cctx_max_idle = 4;
-
-#define PERL_VERSION_ATLEAST(a,b,c)				\
-  (PERL_REVISION > (a)						\
-   || (PERL_REVISION == (a)					\
-       && (PERL_VERSION > (b)					\
-           || (PERL_VERSION == (b) && PERL_SUBVERSION >= (c)))))
-
-#if !PERL_VERSION_ATLEAST (5,6,0)
-# ifndef PL_ppaddr
-#  define PL_ppaddr ppaddr
-# endif
-# ifndef call_sv
-#  define call_sv perl_call_sv
-# endif
-# ifndef get_sv
-#  define get_sv perl_get_sv
-# endif
-# ifndef get_cv
-#  define get_cv perl_get_cv
-# endif
-# ifndef IS_PADGV
-#  define IS_PADGV(v) 0
-# endif
-# ifndef IS_PADCONST
-#  define IS_PADCONST(v) 0
-# endif
-#endif
-
-/* 5.11 */
-#ifndef CxHASARGS
-# define CxHASARGS(cx) (cx)->blk_sub.hasargs
-#endif
-
-/* 5.10.0 */
-#ifndef SvREFCNT_inc_NN
-# define SvREFCNT_inc_NN(sv) SvREFCNT_inc (sv)
-#endif
-
-/* 5.8.8 */
-#ifndef GV_NOTQUAL
-# define GV_NOTQUAL 0
-#endif
-#ifndef newSV
-# define newSV(l) NEWSV(0,l)
-#endif
-#ifndef CvISXSUB_on
-# define CvISXSUB_on(cv) (void)cv
-#endif
-#ifndef CvISXSUB
-# define CvISXSUB(cv) (CvXSUB (cv) ? TRUE : FALSE)
-#endif
-#ifndef Newx
-# define Newx(ptr,nitems,type) New (0,ptr,nitems,type)
-#endif
-
-/* 5.8.7 */
-#ifndef SvRV_set
-# define SvRV_set(s,v) SvRV(s) = (v)
-#endif
 
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef CORO_STACKGUARD
@@ -344,6 +285,26 @@ static CV *cv_coro_run, *cv_coro_terminate;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
 
+/** Coro::Select ************************************************************/
+
+static OP *(*coro_old_pp_sselect) (pTHX);
+static SV *coro_select_select;
+
+/* horrible hack, but if it works... */
+static OP *
+coro_pp_sselect (aTHX)
+{
+  dSP;
+  PUSHMARK (SP - 4); /* fake argument list */
+  XPUSHs (coro_select_select);
+  PUTBACK;
+
+  /* entersub is an UNOP, select a LISTOP... keep your fingers crossed */
+  PL_op->op_flags |= OPf_STACKED;
+  PL_op->op_private = 0;
+  return PL_ppaddr [OP_ENTERSUB](aTHX);
+}
+
 /** lowlevel stuff **********************************************************/
 
 static SV *
@@ -374,20 +335,6 @@ coro_get_hv (pTHX_ const char *name, int create)
          get_hv (name, create);
 #endif
   return get_hv (name, create);
-}
-
-/* may croak */
-INLINE CV *
-coro_sv_2cv (pTHX_ SV *sv)
-{
-  HV *st;
-  GV *gvp;
-  CV *cv = sv_2cv (sv, &st, &gvp, 0);
-
-  if (!cv)
-    croak ("code reference expected");
-
-  return cv;
 }
 
 INLINE void
@@ -1689,29 +1636,6 @@ api_transfer (pTHX_ SV *prev_sv, SV *next_sv)
   TRANSFER (ta, 1);
 }
 
-/*****************************************************************************/
-/* gensub: simple closure generation utility */
-
-#define GENSUB_ARG CvXSUBANY (cv).any_ptr
-
-/* create a closure from XS, returns a code reference */
-/* the arg can be accessed via GENSUB_ARG from the callback */
-/* the callback must use dXSARGS/XSRETURN */
-static SV *
-gensub (pTHX_ void (*xsub)(pTHX_ CV *), void *arg)
-{
-  CV *cv = (CV *)newSV (0);
-
-  sv_upgrade ((SV *)cv, SVt_PVCV);
-
-  CvANON_on (cv);
-  CvISXSUB_on (cv);
-  CvXSUB (cv) = xsub;
-  GENSUB_ARG = arg;
-
-  return newRV_noinc ((SV *)cv);
-}
-
 /** Coro ********************************************************************/
 
 INLINE void
@@ -1746,43 +1670,38 @@ coro_deq (pTHX)
   return 0;
 }
 
+static void
+invoke_sv_ready_hook_helper (void)
+{
+  dTHX;
+  dSP;
+
+  ENTER;
+  SAVETMPS;
+
+  PUSHMARK (SP);
+  PUTBACK;
+  call_sv (coro_readyhook, G_VOID | G_DISCARD);
+
+  FREETMPS;
+  LEAVE;
+}
+
 static int
 api_ready (pTHX_ SV *coro_sv)
 {
-  struct coro *coro;
-  SV *sv_hook;
-  void (*xs_hook)(void);
-
-  coro = SvSTATE (coro_sv);
+  struct coro *coro = SvSTATE (coro_sv);
 
   if (coro->flags & CF_READY)
     return 0;
 
   coro->flags |= CF_READY;
 
-  sv_hook = coro_nready ? 0 : coro_readyhook;
-  xs_hook = coro_nready ? 0 : coroapi.readyhook;
-
   coro_enq (aTHX_ coro);
-  ++coro_nready;
 
-  if (sv_hook)
-    {
-      dSP;
-
-      ENTER;
-      SAVETMPS;
-
-      PUSHMARK (SP);
-      PUTBACK;
-      call_sv (sv_hook, G_VOID | G_DISCARD);
-
-      FREETMPS;
-      LEAVE;
-    }
-
-  if (xs_hook)
-    xs_hook ();
+  if (!coro_nready++)
+    if (coroapi.readyhook)
+      coroapi.readyhook ();
 
   return 1;
 }
@@ -2100,7 +2019,7 @@ static void
 coro_rouse_callback (pTHX_ CV *cv)
 {
   dXSARGS;
-  SV *data = (SV *)GENSUB_ARG;
+  SV *data = (SV *)S_GENSUB_ARG;
 
   if (SvTYPE (SvRV (data)) != SVt_PVAV)
     {
@@ -2176,8 +2095,8 @@ slf_init_rouse_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     croak ("Coro::rouse_wait called with illegal callback argument,");
 
   {
-    CV *cv = (CV *)SvRV (cb); /* for GENSUB_ARG */
-    SV *data = (SV *)GENSUB_ARG;
+    CV *cv = (CV *)SvRV (cb); /* for S_GENSUB_ARG */
+    SV *data = (SV *)S_GENSUB_ARG;
 
     frame->data    = (void *)data;
     frame->prepare = SvTYPE (SvRV (data)) == SVt_PVAV ? prepare_nop : prepare_schedule;
@@ -2191,7 +2110,7 @@ coro_new_rouse_cb (pTHX)
   HV *hv = (HV *)SvRV (coro_current);
   struct coro *coro = SvSTATE_hv (hv);
   SV *data = newRV_inc ((SV *)hv);
-  SV *cb = gensub (aTHX_ coro_rouse_callback, (void *)data);
+  SV *cb = s_gensub (aTHX_ coro_rouse_callback, (void *)data);
 
   sv_magicext (SvRV (cb), data, CORO_MAGIC_type_rouse, 0, 0, 0);
   SvREFCNT_dec (data); /* magicext increases the refcount */
@@ -2724,7 +2643,7 @@ slf_init_semaphore_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int item
     {
       /* callback form */
       AV *av = (AV *)SvRV (arg [0]);
-      CV *cb_cv = coro_sv_2cv (aTHX_ arg [1]);
+      SV *cb_cv = s_get_cv_croak (arg [1]);
 
       av_push (av, SvREFCNT_inc_NN (cb_cv));
 
@@ -2794,7 +2713,7 @@ slf_init_signal_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
   if (items >= 2)
     {
-      CV *cb_cv = coro_sv_2cv (aTHX_ arg [1]);
+      SV *cb_cv = s_get_cv_croak (arg [1]);
       av_push (av, SvREFCNT_inc_NN (cb_cv));
 
       if (SvIVX (AvARRAY (av)[0]))
@@ -2839,7 +2758,7 @@ static void
 coro_aio_callback (pTHX_ CV *cv)
 {
   dXSARGS;
-  AV *state = (AV *)GENSUB_ARG;
+  AV *state = (AV *)S_GENSUB_ARG;
   SV *coro = av_pop (state);
   SV *data_sv = newSV (sizeof (struct io_state));
 
@@ -2963,7 +2882,7 @@ slf_init_aio_req (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
       PUSHs (arg [i]);
 
     /* now push the callback closure */
-    PUSHs (sv_2mortal (gensub (aTHX_ coro_aio_callback, (void *)SvREFCNT_inc_NN ((SV *)state))));
+    PUSHs (sv_2mortal (s_gensub (aTHX_ coro_aio_callback, (void *)SvREFCNT_inc_NN ((SV *)state))));
 
     /* now call the AIO function - we assume our request is uncancelable */
     PUTBACK;
@@ -3077,12 +2996,12 @@ new (char *klass, ...)
         struct coro *coro;
         MAGIC *mg;
         HV *hv;
-        CV *cb;
+        SV *cb;
         int i;
 
         if (items > 1)
           {
-            cb = coro_sv_2cv (aTHX_ ST (1));
+            cb = s_get_cv_croak (ST (1));
 
             if (!ix)
               {
@@ -3114,7 +3033,7 @@ new (char *klass, ...)
             if (ix)
               {
                 av_push (coro->args, SvREFCNT_inc_NN ((SV *)cb));
-                cb = cv_coro_run;
+                cb = (SV *)cv_coro_run;
               }
 
             coro->startcv = (CV *)SvREFCNT_inc_NN ((SV *)cb);
@@ -3472,7 +3391,17 @@ _set_readyhook (SV *hook)
         CODE:
         SvREFCNT_dec (coro_readyhook);
         SvGETMAGIC (hook);
-        coro_readyhook = SvOK (hook) ? newSVsv (hook) : 0;
+        if (SvOK (hook))
+	  {
+            coro_readyhook = newSVsv (hook);
+            CORO_READYHOOK = invoke_sv_ready_hook_helper;
+            CORO_READYHOOK ();
+          }
+	else
+          {
+            coro_readyhook = 0;
+            CORO_READYHOOK = 0;
+          }
 
 int
 prio (Coro::State coro, int newprio = 0)
@@ -3598,7 +3527,7 @@ on_enter (SV *block)
 	struct coro *coro = SvSTATE_current;
   	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
 
-        block = (SV *)coro_sv_2cv (aTHX_ block);
+        block = s_get_cv_croak (block);
 
         if (!*avp)
           *avp = newAV ();
@@ -3808,10 +3737,32 @@ void
 _register (char *target, char *proto, SV *req)
 	CODE:
 {
-        CV *req_cv = coro_sv_2cv (aTHX_ req);
+        SV *req_cv = s_get_cv_croak (req);
         /* newXSproto doesn't return the CV on 5.8 */
         CV *slf_cv = newXS (target, coro_aio_req_xs, __FILE__);
         sv_setpv ((SV *)slf_cv, proto);
         sv_magicext ((SV *)slf_cv, (SV *)req_cv, CORO_MAGIC_type_aio, 0, 0, 0);
 }
+
+MODULE = Coro::State                PACKAGE = Coro::Select
+
+void
+patch_pp_sselect ()
+	CODE:
+        if (!coro_old_pp_sselect)
+          {
+            coro_select_select = (SV *)get_cv ("Coro::Select::select", 0);
+            coro_old_pp_sselect = PL_ppaddr [OP_SSELECT];
+            PL_ppaddr [OP_SSELECT] = coro_pp_sselect;
+          }
+
+void
+unpatch_pp_sselect ()
+	CODE:
+        if (coro_old_pp_sselect)
+          {
+            PL_ppaddr [OP_SSELECT] = coro_old_pp_sselect;
+            coro_old_pp_sselect = 0;
+          }
+
 

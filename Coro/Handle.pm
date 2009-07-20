@@ -46,7 +46,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.151;
+our $VERSION = 5.16;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -143,7 +143,7 @@ true on EINPROGRESS). Remember that these must be method calls.
 
 =cut
 
-sub connect	{ connect     tied(${$_[0]})->[0], $_[1] or $! == EINPROGRESS or $! == WSAEINPROGRESS }
+sub connect	{ connect     tied(${$_[0]})->[0], $_[1] or $! == EINPROGRESS or $! == EAGAIN or $! == WSAEWOULDBLOCK }
 sub bind	{ bind        tied(${$_[0]})->[0], $_[1] }
 sub listen	{ listen      tied(${$_[0]})->[0], $_[1] }
 sub getsockopt	{ getsockopt  tied(${$_[0]})->[0], $_[1], $_[2] }
@@ -522,27 +522,42 @@ sub READ {
 
 sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
-   my ($ofs, $len);
+   my ($ofs, $len, $pos);
 
    while () {
-      if (defined $irs) {
-         my $pos = index $_[0][3], $irs, $ofs < 0 ? 0 : $ofs;
+      if (length $irs) {
+         $pos = index $_[0][3], $irs, $ofs < 0 ? 0 : $ofs;
+
+         return substr $_[0][3], 0, $pos + length $irs, ""
+            if $pos >= 0;
+
+         $ofs = (length $_[0][3]) - (length $irs);
+      } elsif (defined $irs) {
+         $pos = index $_[0][3], "\n\n", $ofs < 1 ? 1 : $ofs;
+
          if ($pos >= 0) {
-            $pos += length $irs;
-            my $res = substr $_[0][3], 0, $pos;
-            substr ($_[0][3], 0, $pos) = "";
+            my $res = substr $_[0][3], 0, $pos + 2, "";
+            $res =~ s/\A\n+//;
             return $res;
          }
 
-         $ofs = (length $_[0][3]) - (length $irs);
+         $ofs = (length $_[0][3]) - 1;
       }
 
       $len = sysread $_[0][0], $_[0][3], $len + 4096, length $_[0][3];
-      if (defined $len) {
-         return length $_[0][3] ? delete $_[0][3] : undef
-            unless $len;
-      } elsif (($! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK) || !&readable) {
-         return length $_[0][3] ? delete $_[0][3] : undef;
+
+      unless ($len) {
+         if (defined $len) {
+            # EOF
+            return undef unless length $_[0][3];
+
+            $_[0][3] =~ s/\A\n+//
+               if ! length $irs && defined $irs;
+
+            return delete $_[0][3];
+         } elsif (($! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK) || !&readable) {
+            return length $_[0][3] ? delete $_[0][3] : undef;
+         }
       }
    }
 }

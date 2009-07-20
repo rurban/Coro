@@ -59,7 +59,7 @@ use strict;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.151;
+our $VERSION = 5.16;
 
 #############################################################################
 # idle handler
@@ -170,13 +170,13 @@ your thread will never be resumed. To avoid this, you can use C<idle_upto>
 and specify a timeout, after which your thread will be resumed even if the
 process is completely busy.
 
-=item Coro::AnyEvent::readable $fh[, $timeout]
+=item Coro::AnyEvent::readable $fh_or_fileno[, $timeout]
 
-=item Coro::AnyEvent::writable $fh[, $timeout]
+=item Coro::AnyEvent::writable $fh_or_fileno[, $timeout]
 
-Blocks the current thread until the given file handle (not file
-descriptor) becomes readable (or writable), or the given timeout has
-elapsed, whichever happens first. No timeout counts as infinite timeout.
+Blocks the current thread until the given file handle (or file descriptor)
+becomes readable (or writable), or the given timeout has elapsed,
+whichever happens first. No timeout counts as infinite timeout.
 
 Returns true when the file handle became ready, false when a timeout
 occured.
