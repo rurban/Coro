@@ -39,7 +39,7 @@ use base 'Exporter';
 our @EXPORT = qw(gethostbyname gethostbyaddr);
 our @EXPORT_OK = qw(inet_aton fork_eval);
 
-our $VERSION = 5.151;
+our $VERSION = 5.16;
 
 our $MAXPARALLEL = 16; # max. number of parallel jobs
 
