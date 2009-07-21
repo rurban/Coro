@@ -8,6 +8,9 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+	- Coro::AnyEvent errornously initialised the event loop when loaded,
+          not on demand.
+
 5.16  Tue Jul 21 01:44:37 CEST 2009
 	- Coro::AnyEvent failed to hook into the event loop
           when no threads had been readied between detecting

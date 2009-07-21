@@ -3395,7 +3395,6 @@ _set_readyhook (SV *hook)
 	  {
             coro_readyhook = newSVsv (hook);
             CORO_READYHOOK = invoke_sv_ready_hook_helper;
-            CORO_READYHOOK ();
           }
 	else
           {

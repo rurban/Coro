@@ -126,6 +126,9 @@ AnyEvent::post_detect {
       $IDLE->{desc} = "[AnyEvent idle process]";
 
       $Coro::idle = $IDLE;
+
+      # call the readyhook, in case coroutines were already readied
+      _activity;
    }
 };
 
