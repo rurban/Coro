@@ -333,6 +333,12 @@ timer_once (...)
         CORO_EXECUTE_SLF_XS (slf_init_timer);
 
 void
+_poll (...)
+	PROTOTYPE:
+	CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_timer);
+
+void
 _readable_ev (...)
 	CODE:
         items = 1; /* ignore the remaining args for speed inside Coro::Handle */

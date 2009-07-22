@@ -38,6 +38,8 @@ async {
 
    print "ok 8\n";
 
+   Coro::Event::do_timer (after => 0.1); # see EV/t/01*
+
    $w->print ("x" x (1024*1024*8));
    print "ok 10\n";
    $w->print ("x" x (1024*1024*8));

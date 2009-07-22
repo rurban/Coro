@@ -8,6 +8,13 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+5.161 Wed Jul 22 04:47:38 CEST 2009
+	- Coro::AnyEvent::poll could have a different prototype when EV was
+          used as backend (analyzed by Tatsuhiko Miyagawa).
+	- Coro::AnyEvent errornously initialised the event loop when loaded,
+          not on demand.
+        - try to workaround rare */t/01_unblock.t failures.
+
 5.16  Tue Jul 21 01:44:37 CEST 2009
 	- Coro::AnyEvent failed to hook into the event loop
           when no threads had been readied between detecting

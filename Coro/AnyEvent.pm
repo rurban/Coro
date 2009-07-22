@@ -59,7 +59,7 @@ use strict;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.16;
+our $VERSION = 5.161;
 
 #############################################################################
 # idle handler
@@ -89,7 +89,7 @@ AnyEvent::post_detect {
 
       eval '
          *sleep = \&Coro::EV::timer_once;
-         *poll  = \&Coro::EV::timer_once;
+         *poll  = \&Coro::EV::_poll;
          *idle  = sub {
             my $w = EV::idle Coro::rouse_cb;
             Coro::rouse_wait;
@@ -126,6 +126,9 @@ AnyEvent::post_detect {
       $IDLE->{desc} = "[AnyEvent idle process]";
 
       $Coro::idle = $IDLE;
+
+      # call the readyhook, in case coroutines were already readied
+      _activity;
    }
 };
 

@@ -11,7 +11,7 @@
    },
    "generated_by" : "ExtUtils::MakeMaker version 6.50",
    "distribution_type" : "module",
-   "version" : "5.16",
+   "version" : "5.161",
    "name" : "Coro",
    "author" : [],
    "license" : "unknown",
