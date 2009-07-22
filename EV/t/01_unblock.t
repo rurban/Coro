@@ -38,6 +38,8 @@ async {
 
    print "ok 8\n";
 
+   Coro::EV::timer_once 0.1; # maybe this fixes the rare test failures on cygwin
+
    $w->print ("x" x (1024*1024*8));
    print "ok 10\n";
    $w->print ("x" x (1024*1024*8));
