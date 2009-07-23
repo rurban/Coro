@@ -1,5 +1,7 @@
 use ExtUtils::MakeMaker;
 
+use 5.008002;
+
 unless (-e "Coro/libcoro/coro.c") {
    print <<EOF;
 
