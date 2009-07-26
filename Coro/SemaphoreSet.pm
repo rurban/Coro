@@ -145,7 +145,7 @@ Same as Coro::Semaphore::wait on the specified semaphore.
 =cut
 
 sub wait {
-   Coro::Semaphore::wait ($_[0][1]{$_[1]} || return $_[0][0] > 0);
+   Coro::Semaphore::wait ($_[0][1]{$_[1]} || return);
 }
 
 =item $guard = $semset->guard ($id)
