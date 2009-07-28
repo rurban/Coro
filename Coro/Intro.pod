@@ -207,8 +207,8 @@ This program creates a I<locked> semaphore (a semaphore with count C<0>)
 and tries to lock it.  Since the semaphore is already locked, this will
 block the main thread until the semaphore becomes available.
 
-This yields the CPU to the C<async> thread, which unlocks the
-semaphore (and instantly gets terminated).
+This yields the CPU to the C<async> thread, which unlocks the semaphore
+(and instantly terminates itself by returning).
 
 Since the semaphore is now available, the main program locks it and
 continues.

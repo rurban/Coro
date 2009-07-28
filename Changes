@@ -8,6 +8,10 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+5.162 Tue Jul 28 04:04:03 CEST 2009
+	- perl 5.8.2 is now minimum requirement.
+        - skip t/19_handle.t on broken windows perls.
+
 5.161 Wed Jul 22 04:47:38 CEST 2009
 	- Coro::AnyEvent::poll could have a different prototype when EV was
           used as backend (analyzed by Tatsuhiko Miyagawa).

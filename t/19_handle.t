@@ -1,3 +1,12 @@
+BEGIN {
+   unless (exists $SIG{USR1}) {
+      print <<EOF;
+1..0 # SKIP Broken perl detected, skipping tests.
+EOF
+      exit 0;
+   }
+}
+
 $|=1;
 print "1..4\n";
 

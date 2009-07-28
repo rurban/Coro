@@ -22,6 +22,10 @@
        && (PERL_VERSION > (b)					\
            || (PERL_VERSION == (b) && PERL_SUBVERSION >= (c)))))
 
+#ifndef PERL_MAGIC_ext
+# define PERL_MAGIC_ext '~'
+#endif
+
 #if !PERL_VERSION_ATLEAST (5,6,0)
 # ifndef PL_ppaddr
 #  define PL_ppaddr ppaddr

@@ -33,7 +33,7 @@ package Coro::SemaphoreSet;
 use strict qw(vars subs);
 no warnings;
 
-our $VERSION = 5.161;
+our $VERSION = 5.162;
 
 use Coro::Semaphore ();
 
@@ -145,7 +145,7 @@ Same as Coro::Semaphore::wait on the specified semaphore.
 =cut
 
 sub wait {
-   Coro::Semaphore::wait ($_[0][1]{$_[1]} || return $_[0][0] > 0);
+   Coro::Semaphore::wait ($_[0][1]{$_[1]} || return);
 }
 
 =item $guard = $semset->guard ($id)
