@@ -1277,7 +1277,8 @@ cctx_run (void *arg)
     perl_run (PL_curinterp);
     /*
      * Unfortunately, there is no way to get at the return values of the
-     * coro body here, as perl_run destroys these
+     * coro body here, as perl_run destroys these. Likewise, we cannot catch
+     * runtime errors here, as this is just a random interpreter, not a thread.
      */
 
     /*
