@@ -478,7 +478,7 @@ s_epipe_wait (s_epipe *epp)
   pfd.fd = s_epipe_fd (epp);
   pfd.events = POLLIN;
 
-  return poll (&pfd, 1, 0);
+  return poll (&pfd, 1, -1);
 #endif
 }
 

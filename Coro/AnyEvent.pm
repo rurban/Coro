@@ -44,8 +44,7 @@ come in handy (see the Coro manpage for details):
 
 =head1 FUNCTIONS
 
-Coro::AnyEvent offers a few functions that might be useful for
-"background" threads:
+Coro::AnyEvent offers a few functions that might be useful.
 
 =over 4
 
