@@ -454,7 +454,7 @@ sub debug_desc {
    our $main;    # main coro
    our $current; # current coro
 
-   $main = Coro::State::new Coro::;
+   $main = Coro::new Coro::;
 
    $main->{desc} = "[main::]";
 

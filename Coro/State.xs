@@ -1918,9 +1918,14 @@ slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   HV *hv = (HV *)SvRV (coro_current);
   AV *av = newAV ();
 
-  av_extend (av, items - 1);
-  for (i = 0; i < items; ++i)
-    av_push (av, SvREFCNT_inc_NN (arg [i]));
+  /* items are actually not so common, so optimise for this case */
+  if (items)
+    {
+      av_extend (av, items - 1);
+
+      for (i = 0; i < items; ++i)
+        av_push (av, SvREFCNT_inc_NN (arg [i]));
+    }
 
   hv_store (hv, "_status", sizeof ("_status") - 1, newRV_noinc ((SV *)av), 0);
 
@@ -2912,6 +2917,64 @@ coro_aio_req_xs (pTHX_ CV *cv)
 # include "clone.c"
 #endif
 
+/*****************************************************************************/
+
+static SV *
+coro_new (HV *stash, SV **argv, int argc, int is_coro)
+{
+  SV *coro_sv;
+  struct coro *coro;
+  MAGIC *mg;
+  HV *hv;
+  SV *cb;
+  int i;
+
+  if (argc > 0)
+    {
+      cb = s_get_cv_croak (argv [0]);
+
+      if (!is_coro)
+        {
+          if (CvISXSUB (cb))
+            croak ("Coro::State doesn't support XS functions as coroutine start, caught");
+
+          if (!CvROOT (cb))
+            croak ("Coro::State doesn't support autoloaded or undefined functions as coroutine start, caught");
+        }
+    }
+
+  Newz (0, coro, 1, struct coro);
+  coro->args  = newAV ();
+  coro->flags = CF_NEW;
+
+  if (coro_first) coro_first->prev = coro;
+  coro->next = coro_first;
+  coro_first = coro;
+
+  coro->hv = hv = newHV ();
+  mg = sv_magicext ((SV *)hv, 0, CORO_MAGIC_type_state, &coro_state_vtbl, (char *)coro, 0);
+  mg->mg_flags |= MGf_DUP;
+  coro_sv = sv_bless (newRV_noinc ((SV *)hv), stash);
+
+  if (argc > 0)
+    {
+      av_extend (coro->args, argc + is_coro - 1);
+
+      if (is_coro)
+        {
+          av_push (coro->args, SvREFCNT_inc_NN ((SV *)cb));
+          cb = (SV *)cv_coro_run;
+        }
+
+      coro->startcv = (CV *)SvREFCNT_inc_NN ((SV *)cb);
+
+      for (i = 1; i < argc; i++)
+        av_push (coro->args, newSVsv (argv [i]));
+    }
+
+  return coro_sv;
+}
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
@@ -2989,61 +3052,12 @@ BOOT:
 }
 
 SV *
-new (char *klass, ...)
+new (SV *klass, ...)
 	ALIAS:
         Coro::new = 1
         CODE:
-{
-        struct coro *coro;
-        MAGIC *mg;
-        HV *hv;
-        SV *cb;
-        int i;
-
-        if (items > 1)
-          {
-            cb = s_get_cv_croak (ST (1));
-
-            if (!ix)
-              {
-                if (CvISXSUB (cb))
-                  croak ("Coro::State doesn't support XS functions as coroutine start, caught");
-
-                if (!CvROOT (cb))
-                  croak ("Coro::State doesn't support autoloaded or undefined functions as coroutine start, caught");
-              }
-          }
-
-        Newz (0, coro, 1, struct coro);
-        coro->args  = newAV ();
-        coro->flags = CF_NEW;
-
-        if (coro_first) coro_first->prev = coro;
-        coro->next = coro_first;
-        coro_first = coro;
-
-        coro->hv = hv = newHV ();
-        mg = sv_magicext ((SV *)hv, 0, CORO_MAGIC_type_state, &coro_state_vtbl, (char *)coro, 0);
-        mg->mg_flags |= MGf_DUP;
-        RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
-
-        if (items > 1)
-          {
-            av_extend (coro->args, items - 1 + ix - 1);
-
-            if (ix)
-              {
-                av_push (coro->args, SvREFCNT_inc_NN ((SV *)cb));
-                cb = (SV *)cv_coro_run;
-              }
-
-            coro->startcv = (CV *)SvREFCNT_inc_NN ((SV *)cb);
-
-            for (i = 2; i < items; i++)
-              av_push (coro->args, newSVsv (ST (i)));
-          }
-}
-        OUTPUT:
+        RETVAL = coro_new (ix ? coro_stash : coro_state_stash, &ST (1), items - 1, ix);
+	OUTPUT:
         RETVAL
 
 void
@@ -3348,6 +3362,15 @@ BOOT:
           SvREADONLY_on (sv);
         }
 }
+
+SV *
+async (...)
+	PROTOTYPE: &@
+        CODE:
+        RETVAL = coro_new (coro_stash, &ST (0), items, 1);
+        api_ready (RETVAL);
+	OUTPUT:
+        RETVAL
 
 void
 terminate (...)

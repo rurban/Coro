@@ -8,6 +8,8 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+	- speed up Coro::async considerably.
+
 5.162 Tue Jul 28 04:04:03 CEST 2009
 	- perl 5.8.2 is now minimum requirement.
         - skip t/19_handle.t on broken windows perls.

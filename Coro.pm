@@ -209,14 +209,6 @@ Example: Create a new coro that just prints its arguments.
       print "@_\n";
    } 1,2,3,4;
 
-=cut
-
-sub async(&@) {
-   my $coro = new Coro @_;
-   $coro->ready;
-   $coro
-}
-
 =item async_pool { ... } [@args...]
 
 Similar to C<async>, but uses a coro pool, so you should not call
