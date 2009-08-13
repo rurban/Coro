@@ -144,7 +144,6 @@ static SV *sv_async_pool_idle; /* description string */
 static AV *av_async_pool; /* idle pool */
 static SV *sv_Coro; /* class string */
 static CV *cv_pool_handler;
-static CV *cv_coro_state_new;
 
 /* Coro::AnyEvent */
 static SV *sv_activity;
@@ -2920,7 +2919,7 @@ coro_aio_req_xs (pTHX_ CV *cv)
 /*****************************************************************************/
 
 static SV *
-coro_new (HV *stash, SV **argv, int argc, int is_coro)
+coro_new (pTHX_ HV *stash, SV **argv, int argc, int is_coro)
 {
   SV *coro_sv;
   struct coro *coro;
@@ -3056,7 +3055,7 @@ new (SV *klass, ...)
 	ALIAS:
         Coro::new = 1
         CODE:
-        RETVAL = coro_new (ix ? coro_stash : coro_state_stash, &ST (1), items - 1, ix);
+        RETVAL = coro_new (aTHX_ ix ? coro_stash : coro_state_stash, &ST (1), items - 1, ix);
 	OUTPUT:
         RETVAL
 
@@ -3334,7 +3333,6 @@ BOOT:
         sv_async_pool_idle = newSVpv ("[async pool idle]", 0); SvREADONLY_on (sv_async_pool_idle);
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
         cv_pool_handler    = get_cv ("Coro::pool_handler", GV_ADD); SvREADONLY_on (cv_pool_handler);
-        cv_coro_state_new  = get_cv ("Coro::State::new", 0); SvREADONLY_on (cv_coro_state_new);
 
 	coro_stash = gv_stashpv ("Coro", TRUE);
 
@@ -3367,7 +3365,7 @@ SV *
 async (...)
 	PROTOTYPE: &@
         CODE:
-        RETVAL = coro_new (coro_stash, &ST (0), items, 1);
+        RETVAL = coro_new (aTHX_ coro_stash, &ST (0), items, 1);
         api_ready (RETVAL);
 	OUTPUT:
         RETVAL
@@ -3498,15 +3496,9 @@ async_pool (SV *cv, ...)
 
         if ((SV *)hv == &PL_sv_undef)
           {
-            PUSHMARK (SP);
-            EXTEND (SP, 2);
-            PUSHs (sv_Coro);
-            PUSHs ((SV *)cv_pool_handler);
-            PUTBACK;
-            call_sv ((SV *)cv_coro_state_new, G_SCALAR);
-            SPAGAIN;
-
-            hv = (HV *)SvREFCNT_inc_NN (SvRV (POPs));
+            SV *sv = coro_new (aTHX_ coro_stash, (SV **)&cv_pool_handler, 1, 1);
+            hv = (HV *)SvREFCNT_inc_NN (SvRV (sv));
+            SvREFCNT_dec (sv);
           }
 
         {
