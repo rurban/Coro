@@ -197,7 +197,7 @@ our $IDLE = new Coro sub {
       &Coro::schedule;
    }
 };
-$IDLE->{desc} = "[Event idle process]";
+$IDLE->{desc} = "[Event idle thread]";
 
 $Coro::idle = $IDLE;
 
