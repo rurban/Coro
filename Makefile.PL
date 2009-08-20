@@ -99,7 +99,7 @@ WriteMakefile(
 
        # for Coro::AIO
        #IO::AIO          => 2.3,
-       #AnyEvent::AIO    => 1.0,
+       #AnyEvent::AIO    => 1.1,
 
        # for Coro::BDB
        #BDB              => 1.5,
