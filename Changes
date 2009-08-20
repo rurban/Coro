@@ -8,6 +8,8 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+	- work around a bug in the perl debugger causing crashes
+          when running under the debugger by marking _pool_handler as nodebug.
 	- speed up Coro::async considerably.
 
 5.162 Tue Jul 28 04:04:03 CEST 2009

@@ -3333,7 +3333,8 @@ BOOT:
         sv_async_pool_idle = newSVpv ("[async pool idle]", 0); SvREADONLY_on (sv_async_pool_idle);
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
         cv_pool_handler    = get_cv ("Coro::pool_handler", GV_ADD); SvREADONLY_on (cv_pool_handler);
-
+        CvNODEBUG_on (get_cv ("Coro::_pool_handler", 0)); /* work around a debugger bug */
+ 
 	coro_stash = gv_stashpv ("Coro", TRUE);
 
         newCONSTSUB (coro_stash, "PRIO_MAX",    newSViv (CORO_PRIO_MAX));
