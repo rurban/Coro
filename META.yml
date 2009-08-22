@@ -11,7 +11,7 @@
    },
    "generated_by" : "ExtUtils::MakeMaker version 6.50",
    "distribution_type" : "module",
-   "version" : "5.162",
+   "version" : "5.17",
    "name" : "Coro",
    "author" : [],
    "license" : "unknown",
@@ -20,7 +20,7 @@
    },
    "requires" : {
       "Scalar::Util" : 0,
-      "AnyEvent" : 4.81,
+      "AnyEvent" : 5,
       "Guard" : 0.5,
       "Storable" : 2.15,
       "Time::HiRes" : 0,

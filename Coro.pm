@@ -82,7 +82,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
 our %EXPORT_TAGS = (
@@ -208,14 +208,6 @@ Example: Create a new coro that just prints its arguments.
    async {
       print "@_\n";
    } 1,2,3,4;
-
-=cut
-
-sub async(&@) {
-   my $coro = new Coro @_;
-   $coro->ready;
-   $coro
-}
 
 =item async_pool { ... } [@args...]
 

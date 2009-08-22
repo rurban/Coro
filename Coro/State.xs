@@ -144,7 +144,6 @@ static SV *sv_async_pool_idle; /* description string */
 static AV *av_async_pool; /* idle pool */
 static SV *sv_Coro; /* class string */
 static CV *cv_pool_handler;
-static CV *cv_coro_state_new;
 
 /* Coro::AnyEvent */
 static SV *sv_activity;
@@ -292,7 +291,7 @@ static SV *coro_select_select;
 
 /* horrible hack, but if it works... */
 static OP *
-coro_pp_sselect (aTHX)
+coro_pp_sselect (pTHX)
 {
   dSP;
   PUSHMARK (SP - 4); /* fake argument list */
@@ -1277,7 +1276,8 @@ cctx_run (void *arg)
     perl_run (PL_curinterp);
     /*
      * Unfortunately, there is no way to get at the return values of the
-     * coro body here, as perl_run destroys these
+     * coro body here, as perl_run destroys these. Likewise, we cannot catch
+     * runtime errors here, as this is just a random interpreter, not a thread.
      */
 
     /*
@@ -1917,9 +1917,14 @@ slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   HV *hv = (HV *)SvRV (coro_current);
   AV *av = newAV ();
 
-  av_extend (av, items - 1);
-  for (i = 0; i < items; ++i)
-    av_push (av, SvREFCNT_inc_NN (arg [i]));
+  /* items are actually not so common, so optimise for this case */
+  if (items)
+    {
+      av_extend (av, items - 1);
+
+      for (i = 0; i < items; ++i)
+        av_push (av, SvREFCNT_inc_NN (arg [i]));
+    }
 
   hv_store (hv, "_status", sizeof ("_status") - 1, newRV_noinc ((SV *)av), 0);
 
@@ -2911,6 +2916,64 @@ coro_aio_req_xs (pTHX_ CV *cv)
 # include "clone.c"
 #endif
 
+/*****************************************************************************/
+
+static SV *
+coro_new (pTHX_ HV *stash, SV **argv, int argc, int is_coro)
+{
+  SV *coro_sv;
+  struct coro *coro;
+  MAGIC *mg;
+  HV *hv;
+  SV *cb;
+  int i;
+
+  if (argc > 0)
+    {
+      cb = s_get_cv_croak (argv [0]);
+
+      if (!is_coro)
+        {
+          if (CvISXSUB (cb))
+            croak ("Coro::State doesn't support XS functions as coroutine start, caught");
+
+          if (!CvROOT (cb))
+            croak ("Coro::State doesn't support autoloaded or undefined functions as coroutine start, caught");
+        }
+    }
+
+  Newz (0, coro, 1, struct coro);
+  coro->args  = newAV ();
+  coro->flags = CF_NEW;
+
+  if (coro_first) coro_first->prev = coro;
+  coro->next = coro_first;
+  coro_first = coro;
+
+  coro->hv = hv = newHV ();
+  mg = sv_magicext ((SV *)hv, 0, CORO_MAGIC_type_state, &coro_state_vtbl, (char *)coro, 0);
+  mg->mg_flags |= MGf_DUP;
+  coro_sv = sv_bless (newRV_noinc ((SV *)hv), stash);
+
+  if (argc > 0)
+    {
+      av_extend (coro->args, argc + is_coro - 1);
+
+      if (is_coro)
+        {
+          av_push (coro->args, SvREFCNT_inc_NN ((SV *)cb));
+          cb = (SV *)cv_coro_run;
+        }
+
+      coro->startcv = (CV *)SvREFCNT_inc_NN ((SV *)cb);
+
+      for (i = 1; i < argc; i++)
+        av_push (coro->args, newSVsv (argv [i]));
+    }
+
+  return coro_sv;
+}
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
@@ -2988,61 +3051,12 @@ BOOT:
 }
 
 SV *
-new (char *klass, ...)
+new (SV *klass, ...)
 	ALIAS:
         Coro::new = 1
         CODE:
-{
-        struct coro *coro;
-        MAGIC *mg;
-        HV *hv;
-        SV *cb;
-        int i;
-
-        if (items > 1)
-          {
-            cb = s_get_cv_croak (ST (1));
-
-            if (!ix)
-              {
-                if (CvISXSUB (cb))
-                  croak ("Coro::State doesn't support XS functions as coroutine start, caught");
-
-                if (!CvROOT (cb))
-                  croak ("Coro::State doesn't support autoloaded or undefined functions as coroutine start, caught");
-              }
-          }
-
-        Newz (0, coro, 1, struct coro);
-        coro->args  = newAV ();
-        coro->flags = CF_NEW;
-
-        if (coro_first) coro_first->prev = coro;
-        coro->next = coro_first;
-        coro_first = coro;
-
-        coro->hv = hv = newHV ();
-        mg = sv_magicext ((SV *)hv, 0, CORO_MAGIC_type_state, &coro_state_vtbl, (char *)coro, 0);
-        mg->mg_flags |= MGf_DUP;
-        RETVAL = sv_bless (newRV_noinc ((SV *)hv), gv_stashpv (klass, 1));
-
-        if (items > 1)
-          {
-            av_extend (coro->args, items - 1 + ix - 1);
-
-            if (ix)
-              {
-                av_push (coro->args, SvREFCNT_inc_NN ((SV *)cb));
-                cb = (SV *)cv_coro_run;
-              }
-
-            coro->startcv = (CV *)SvREFCNT_inc_NN ((SV *)cb);
-
-            for (i = 2; i < items; i++)
-              av_push (coro->args, newSVsv (ST (i)));
-          }
-}
-        OUTPUT:
+        RETVAL = coro_new (aTHX_ ix ? coro_stash : coro_state_stash, &ST (1), items - 1, ix);
+	OUTPUT:
         RETVAL
 
 void
@@ -3319,8 +3333,8 @@ BOOT:
         sv_async_pool_idle = newSVpv ("[async pool idle]", 0); SvREADONLY_on (sv_async_pool_idle);
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
         cv_pool_handler    = get_cv ("Coro::pool_handler", GV_ADD); SvREADONLY_on (cv_pool_handler);
-        cv_coro_state_new  = get_cv ("Coro::State::new", 0); SvREADONLY_on (cv_coro_state_new);
-
+        CvNODEBUG_on (get_cv ("Coro::_pool_handler", 0)); /* work around a debugger bug */
+ 
 	coro_stash = gv_stashpv ("Coro", TRUE);
 
         newCONSTSUB (coro_stash, "PRIO_MAX",    newSViv (CORO_PRIO_MAX));
@@ -3347,6 +3361,15 @@ BOOT:
           SvREADONLY_on (sv);
         }
 }
+
+SV *
+async (...)
+	PROTOTYPE: &@
+        CODE:
+        RETVAL = coro_new (aTHX_ coro_stash, &ST (0), items, 1);
+        api_ready (aTHX_ RETVAL);
+	OUTPUT:
+        RETVAL
 
 void
 terminate (...)
@@ -3474,15 +3497,9 @@ async_pool (SV *cv, ...)
 
         if ((SV *)hv == &PL_sv_undef)
           {
-            PUSHMARK (SP);
-            EXTEND (SP, 2);
-            PUSHs (sv_Coro);
-            PUSHs ((SV *)cv_pool_handler);
-            PUTBACK;
-            call_sv ((SV *)cv_coro_state_new, G_SCALAR);
-            SPAGAIN;
-
-            hv = (HV *)SvREFCNT_inc_NN (SvRV (POPs));
+            SV *sv = coro_new (aTHX_ coro_stash, (SV **)&cv_pool_handler, 1, 1);
+            hv = (HV *)SvREFCNT_inc_NN (SvRV (sv));
+            SvREFCNT_dec (sv);
           }
 
         {

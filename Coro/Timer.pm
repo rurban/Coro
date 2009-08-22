@@ -30,7 +30,7 @@ use AnyEvent ();
 use Coro ();
 use Coro::AnyEvent ();
 
-$VERSION = 5.162;
+$VERSION = 5.17;
 @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
@@ -53,12 +53,11 @@ C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
 
 =cut
 
-# deep magic, expecially the double indirection :(:(
 sub timeout($) {
    my $current = $Coro::current;
    my $timeout;
    bless {
-      timer => AnyEvent->timer (after => $_[0], cb => sub {
+      timer => (AE::timer $_[0], 0, sub {
                   $timeout = 1;
                   $current->ready;
                }),
@@ -82,7 +81,7 @@ and, most important, without blocking other coroutines.
 =cut
 
 sub sleep {
-   my $timer = AnyEvent->timer (after => $_[0], cb => Coro::rouse_cb);
+   my $timer = AE::timer $_[0], 0, Coro::rouse_cb;
    Coro::rouse_wait;
 }
 

@@ -8,6 +8,14 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+5.17  Sat Aug 22 23:09:31 CEST 2009
+	- work around a bug in the perl debugger causing crashes
+          when running under the debugger by marking _pool_handler as nodebug.
+	- speed up Coro::async considerably.
+        - try some hacks to get netbsd to work "more often" - their broken
+          setjmp/longjmp, ucontext *and* phtreads are really hard on Coro.
+        - convert Coro to AE 5.0 API.
+
 5.162 Tue Jul 28 04:04:03 CEST 2009
 	- perl 5.8.2 is now minimum requirement.
         - skip t/19_handle.t on broken windows perls.

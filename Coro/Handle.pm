@@ -46,7 +46,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -365,48 +365,20 @@ sub FETCH {
 
 sub _readable_anyevent {
    my $cb = Coro::rouse_cb;
-   my $io = 1;
 
-   my $w = AnyEvent->io (
-      fh    => $_[0][0],
-      poll  => 'r',
-      cb    => $cb,
-   );
+   my $w = AE::io $_[0][0], 0, sub { $cb->(1) };
+   my $t = (defined $_[0][2]) && AE::timer $_[0][2], 0, sub { $cb->(0) };
 
-   my $t = (defined $_[0][2]) && AnyEvent->timer (
-      after => $_[0][2],
-      cb    => sub {
-         $io = 0;
-         $cb->();
-      },
-   );
-
-   Coro::rouse_wait;
-
-   $io
+   Coro::rouse_wait
 }
 
 sub _writable_anyevent {
    my $cb = Coro::rouse_cb;
-   my $io = 1;
 
-   my $w = AnyEvent->io (
-      fh    => $_[0][0],
-      poll  => 'w',
-      cb    => $cb,
-   );
+   my $w = AE::io $_[0][0], 1, sub { $cb->(1) };
+   my $t = (defined $_[0][2]) && AE::timer $_[0][2], 0, sub { $cb->(0) };
 
-   my $t = (defined $_[0][2]) && AnyEvent->timer (
-      after => $_[0][2],
-      cb    => sub {
-         $io = 0;
-         $cb->();
-      },
-   );
-
-   Coro::rouse_wait;
-
-   $io
+   Coro::rouse_wait
 }
 
 sub _readable_coro {

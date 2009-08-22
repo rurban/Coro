@@ -44,8 +44,7 @@ come in handy (see the Coro manpage for details):
 
 =head1 FUNCTIONS
 
-Coro::AnyEvent offers a few functions that might be useful for
-"background" threads:
+Coro::AnyEvent offers a few functions that might be useful.
 
 =over 4
 
@@ -59,7 +58,7 @@ use strict;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 
 #############################################################################
 # idle handler
@@ -72,7 +71,7 @@ our $IDLE;
 our $ACTIVITY;
 
 sub _activity {
-   $ACTIVITY ||= AnyEvent->timer (after => 0, cb => \&_schedule);
+   $ACTIVITY ||= AE::timer 0, 0, \&_schedule;
 }
 
 Coro::_set_readyhook (\&AnyEvent::detect);
@@ -201,38 +200,38 @@ Example: wait until STDIN becomes readable, then quit the program.
 =cut
 
 sub poll() {
-   my $w = AnyEvent->timer (after => 0, cb => Coro::rouse_cb);
+   my $w = AE::timer 0, 0, Coro::rouse_cb;
    Coro::rouse_wait;
 }
 
 sub sleep($) {
-   my $w = AnyEvent->timer (after => $_[0], cb => Coro::rouse_cb);
+   my $w = AE::timer $_[0], 0, Coro::rouse_cb;
    Coro::rouse_wait;
 }
 
 sub idle() {
-   my $w = AnyEvent->idle (cb => Coro::rouse_cb);
+   my $w = AE::idle Coro::rouse_cb;
    Coro::rouse_wait;
 }
 
 sub idle_upto($) {
    my $cb = Coro::rouse_cb;
-   my $t = AnyEvent->timer (after => shift, cb => $cb);
-   my $w = AnyEvent->idle (cb => $cb);
+   my $t = AE::timer shift, 0, $cb;
+   my $w = AE::idle $cb;
    Coro::rouse_wait;
 }
 
 sub readable($;$) {
    my $cb = Coro::rouse_cb;
-   my $w = AnyEvent->io (fh => $_[0], poll => "r", cb => sub { $cb->(1) });
-   my $t = defined $_[1] && AnyEvent->timer (after => $_[1], cb => sub { $cb->(0) });
+   my $w = AE::io $_[0], 0, sub { $cb->(1) };
+   my $t = defined $_[1] && AE::timer $_[1], 0, sub { $cb->(0) };
    Coro::rouse_wait
 }
 
 sub writable($;$) {
    my $cb = Coro::rouse_cb;
-   my $w = AnyEvent->io (fh => $_[0], poll => "w", cb => sub { $cb->(1) });
-   my $t = defined $_[1] && AnyEvent->timer (after => $_[1], cb => sub { $cb->(0) });
+   my $w = AE::io $_[0], 1, sub { $cb->(1) };
+   my $t = defined $_[1] && AE::timer $_[1], 0, sub { $cb->(0) };
    Coro::rouse_wait
 }
 

@@ -17,21 +17,6 @@ EOF
 
 print "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***\n\n";
 
-if ($] < 5.006) {
-   print <<EOF;
-
-***
-*** WARNING: This module is quite low-level and uses undocumented perl
-*** internals to do it's job. While it seems to work fine with perl-5.[6-10]
-*** it has not been tested with older versions. If it compiles and passes the
-*** testsuite, it should work. Otherwise you should either upgrade or fix it ;)
-***
-*** Marc Lehmann <schmorp\@schmorp.de>
-***
-
-EOF
-}
-
 if (eval { require Event }) {
    if ($Event::VERSION < 0.86 or $Event::VERSION == 0.88) {
       print <<EOF
@@ -86,7 +71,7 @@ WriteMakefile(
     PREREQ_PM    => {
        common::sense    => 0,
        Scalar::Util	=> 0.00,
-       AnyEvent         => 4.81,
+       AnyEvent         => 5.0,
        Storable		=> 2.15,
        Time::HiRes      => 0,
        Guard            => 0.5,
@@ -99,7 +84,7 @@ WriteMakefile(
 
        # for Coro::AIO
        #IO::AIO          => 2.3,
-       #AnyEvent::AIO    => 1.0,
+       #AnyEvent::AIO    => 1.1,
 
        # for Coro::BDB
        #BDB              => 1.5,

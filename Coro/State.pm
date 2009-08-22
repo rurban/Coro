@@ -93,7 +93,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.162;
+   our $VERSION = 5.17;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -132,8 +132,8 @@ main program, too, unless they have been overwritten already.
 The default handlers provided will behave like the built-in ones (as if
 they weren't there).
 
-If you don't want to exit your program on uncaught exceptions, you can
-must not return from your die hook - terminate instead.
+If you don't want to exit your program on uncaught exceptions, you must
+not return from your die hook - call C<Coro::terminate> instead.
 
 Note 1: You I<must> store a valid code reference in these variables,
 C<undef> will I<not> do.
@@ -454,7 +454,7 @@ sub debug_desc {
    our $main;    # main coro
    our $current; # current coro
 
-   $main = Coro::State::new Coro::;
+   $main = Coro::new Coro::;
 
    $main->{desc} = "[main::]";
 
