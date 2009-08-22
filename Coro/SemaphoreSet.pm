@@ -33,7 +33,7 @@ package Coro::SemaphoreSet;
 use strict qw(vars subs);
 no warnings;
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 
 use Coro::Semaphore ();
 

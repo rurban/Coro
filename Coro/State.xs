@@ -291,7 +291,7 @@ static SV *coro_select_select;
 
 /* horrible hack, but if it works... */
 static OP *
-coro_pp_sselect (aTHX)
+coro_pp_sselect (pTHX)
 {
   dSP;
   PUSHMARK (SP - 4); /* fake argument list */
@@ -3367,7 +3367,7 @@ async (...)
 	PROTOTYPE: &@
         CODE:
         RETVAL = coro_new (aTHX_ coro_stash, &ST (0), items, 1);
-        api_ready (RETVAL);
+        api_ready (aTHX_ RETVAL);
 	OUTPUT:
         RETVAL
 

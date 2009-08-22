@@ -67,7 +67,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 our @EXPORT_OK = "select";
 
 sub import {
@@ -92,7 +92,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       my $wakeup = Coro::rouse_cb;
 
       # AnyEvent does not do 'e', so replace it by 'r'
-      for ([0, 'r'], [1, 'w'], [2, 'r']) {
+      for ([0, 0], [1, 1], [2, 0]) {
          my ($i, $poll) = @$_;
          if (defined $_[$i]) {
             my $rvec = \$_[$i];
@@ -105,11 +105,11 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
                   my $fd = (pos) - 1;
 
                   push @w,
-                     AnyEvent->io (fh => $fd, poll => $poll, cb => sub {
+                     AE::io $fd, $poll, sub {
                         (vec $$rvec, $fd, 1) = 1;
                         ++$nfound;
                         $wakeup->();
-                     });
+                     };
                }
             }
 
@@ -118,7 +118,7 @@ sub select(;*$$$) { # not the correct prototype, but well... :()
       }
 
       push @w,
-         AnyEvent->timer (after => $_[3], cb => $wakeup)
+         AE::timer $_[3], 0, $wakeup
             if defined $_[3];
 
       Coro::rouse_wait;

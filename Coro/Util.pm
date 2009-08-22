@@ -39,7 +39,7 @@ use base 'Exporter';
 our @EXPORT = qw(gethostbyname gethostbyaddr);
 our @EXPORT_OK = qw(inet_aton fork_eval);
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 
 our $MAXPARALLEL = 16; # max. number of parallel jobs
 
@@ -61,13 +61,13 @@ sub _do_asy(&;@) {
 
    my $buf;
    my $wakeup = Coro::rouse_cb;
-   my $w; $w = AnyEvent->io (fh => $fh, poll => 'r', cb => sub {
+   my $w; $w = AE::io $fh, 0, sub {
       sysread $fh, $buf, 16384, length $buf
          and return;
 
       undef $w;
       $wakeup->();
-   });
+   };
 
    Coro::rouse_wait;
 

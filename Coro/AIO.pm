@@ -68,7 +68,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 
 our @EXPORT    = (@IO::AIO::EXPORT, qw(aio_wait));
 our @EXPORT_OK = @IO::AIO::EXPORT_OK;

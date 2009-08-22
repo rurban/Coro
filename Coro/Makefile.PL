@@ -9,6 +9,8 @@ my @LIBS = [];
 
 my $threads = $Config{usethreads};
 
+use Config;
+
 print <<EOF;
 
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
@@ -59,10 +61,30 @@ if (exists $ENV{CORO_INTERFACE}) {
    $iface = $iface_asm || "s";
 
 } elsif ($^O =~ /netbsd/) {
-   # netbsd is totally broken (pthreads are incomaptible with ucontext or
+   # netbsd is totally broken (pthreads are incompatible with ucontext or
    # other stack switching mechanisms) therefore, default to pthread -
-   # hey, it might actually work, with some hacks
+   # hey, it might actually work, with some hacks.
    $iface = "p";
+
+   if ($Config{libs} =~ "-lpthread") {
+      # uh-oh
+      print <<EOF;
+
+***
+*** WARNING: Your platform is known to have broken pthreads, which are
+*** required for Coro because your platform is known to have broken
+*** ucontext and setjmp/longjmp functions as well, which are broken
+*** because your pthread library is broken. D'oh.
+***
+*** Coro will try to fight this vicious circle of breakage, but YMMV. If
+*** Coro fails, try to recompile your perl with -lpthread, which will work
+*** around some of the pthread bugs. (You do not have to enable ithreads).
+***
+
+EOF
+      # ugh, pthreads need to be linked into the main program :/
+      $iface = $iface_asm || "s";
+   }
 
 } elsif ($^O =~ /(openbsd|mirbsd)/) {
    # openbsd:
@@ -163,7 +185,7 @@ EOF
 retry:
 
 my $r = prompt "Use which implementation,\n" .
-               "<s>et/longjump, <u>context, <a>ssembly, <i>rix, <l>inux or <w>indows?",
+               "<s>etjmp, <u>ctx, <a>sm, <i>rix, <l>inux, <w>indows or <p>threads?",
                $iface;
 $iface = lc $1 if $r =~ /(\S)/;
 
@@ -186,7 +208,7 @@ if ($iface eq "u") {
    print "\nUsing windows-specific implementation\n\n";
 } elsif ($iface eq "a") {
    $DEFINE .= " -DCORO_ASM";
-   print "\nUsing handcoded assembly implementation\n\n";
+   print "\nUsing handcoded assembler implementation\n\n";
 } elsif ($iface eq "p") {
    $DEFINE .= " -DCORO_PTHREAD";
    @LIBS = ["-lpthread"];

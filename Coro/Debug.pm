@@ -122,7 +122,7 @@ use Coro::State ();
 use Coro::AnyEvent ();
 use Coro::Timer ();
 
-our $VERSION = 5.162;
+our $VERSION = 5.17;
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
