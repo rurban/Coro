@@ -12,8 +12,7 @@ TODO: channel->maxsize(newsize)?
           after a not-so-fruitful (nor-friendly) "discussion" with chip
           salzenberg (discussion implies arguments, but his only arguments
           were ad-hominems, one wonders why he started it in the first
-          place). I hope this explains it well enough for him to understand,
-          and maybe well enough for others to understand.
+          place).
 
 5.17  Sat Aug 22 23:09:31 CEST 2009
 	- work around a bug in the perl debugger causing crashes
