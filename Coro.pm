@@ -859,7 +859,7 @@ works.
 =head1 WINDOWS PROCESS EMULATION
 
 A great many people seem to be confused about ithreads (for example, Chip
-Salzenberg called me unintelligent, incapable, stupid and ingullible,
+Salzenberg called me unintelligent, incapable, stupid and gullible,
 while in the same mail making rather confused statements about perl
 ithreads (for example, that memory or files would be shared), showing his
 lack of understanding of this area - if it is hard to understand for Chip,
