@@ -42,14 +42,14 @@ issue, making thread programming much safer and easier than using other
 thread models.
 
 Unlike the so-called "Perl threads" (which are not actually real threads
-but only the windows process emulation ported to unix, and as such act
-as processes), Coro provides a full shared address space, which makes
-communication between threads very easy. And Coro's threads are fast,
-too: disabling the Windows process emulation code in your perl and using
-Coro can easily result in a two to four times speed increase for your
-programs. A parallel matrix multiplication benchmark runs over 300 times
-faster on a single core than perl's pseudo-threads on a quad core using
-all four cores.
+but only the windows process emulation (see section of same name for more
+details) ported to unix, and as such act as processes), Coro provides
+a full shared address space, which makes communication between threads
+very easy. And Coro's threads are fast, too: disabling the Windows
+process emulation code in your perl and using Coro can easily result in
+a two to four times speed increase for your programs. A parallel matrix
+multiplication benchmark runs over 300 times faster on a single core than
+perl's pseudo-threads on a quad core using all four cores.
 
 Coro achieves that by supporting multiple running interpreters that share
 data, which is especially useful to code pseudo-parallel processes and
@@ -855,6 +855,67 @@ works.
 
 =back
 
+
+=head1 WINDOWS PROCESS EMULATION
+
+A great many people seem to be confused about ithreads (for example, Chip
+Salzenberg called me unintelligent, incapable, stupid and ingullible,
+while in the same mail making rather confused statements about perl
+ithreads (for example, that memory or files would be shared), showing his
+lack of understanding of this area - if it is hard to understand for Chip,
+it is probably not obvious to everybody).
+
+What follows is an ultra-condensed version of my talk about threads in
+scripting languages given onthe perl workshop 2009:
+
+The so-called "ithreads" were originally implemented for two reasons:
+first, to (badly) emulate unix processes on native win32 perls, and
+secondly, to replace the older, real thread model ("5.005-threads").
+
+It does that by using threads instead of OS processes. The difference
+between processes and threads is that threads share memory (and other
+state, such as files) between threads within a single process, while
+processes do not share anything (at least not semantically). That
+means that modifications done by one thread are seen by others, while
+modifications by one process are not seen by other processes.
+
+The "ithreads" work exactly like that: when creating a new ithreads
+process, all state is copied (memory is copied physically, files and code
+is copied logically). Afterwards, it isolates all modifications. On UNIX,
+the same behaviour can be achieved by using operating system processes,
+except that UNIX typically uses hardware built into the system to do this
+efficiently, while the windows process emulation emulates this hardware in
+software (rather efficiently, but of course it is still much slower than
+dedicated hardware).
+
+As mentioned before, loading code, modifying code, modifying data
+structures and so on is only visible in the ithreads process doing the
+modification, not in other ithread processes within the same OS process.
+
+This is why "ithreads" do not implement threads for perl at all, only
+processes. What makes it so bad is that on non-windows platforms, you can
+actually take advantage of custom hardware for this purpose (as evidenced
+by the forks module, which gives you the (i-) threads API, just much
+faster).
+
+Sharing data is in the i-threads model is done by transfering data
+structures between threads using copying semantics, which is very slow -
+shared data simply does not exist. Benchmarks using i-threads which are
+communication-intensive show extremely bad behaviour with i-threads (in
+fact, so bad that Coro, which cannot take direct advantage of multiple
+CPUs, is often orders of magnitude faster because it shares data using
+real threads, refer to my talk for details).
+
+As summary, i-threads *use* threads to implement processes, while
+the compatible forks module *uses* processes to emulate, uhm,
+processes. I-threads slow down every perl program when enabled, and
+outside of windows, serve no (or little) practical purpose, but
+disadvantages every single-threaded Perl program.
+
+This is the reason that I try to avoid the name "ithreads", as it is
+misleading as it implies that it implements some kind of thread model for
+perl, and prefer the name "windows process emulation", which describes the
+actual use and behaviour of it much better.
 
 =head1 SEE ALSO
 
