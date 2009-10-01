@@ -17,7 +17,6 @@ TODO: channel->maxsize(newsize)?
           place). I hope this explains it well enough for him to understand,
           and maybe well enough for others to understand.
         - use common::sense everywhere now.
-        - mark all SLF functions as nodebug, to avoid more debugger bugs.
         - idle callbacks are no longer supported, use idle coros instead.
         - print a thread listing when a deadlock is detected.
 

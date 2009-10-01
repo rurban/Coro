@@ -126,37 +126,24 @@ This variable is mainly useful to integrate Coro into event loops. It is
 usually better to rely on L<Coro::AnyEvent> or L<Coro::EV>, as this is
 pretty low-level functionality.
 
-This variable stores either a Coro object or a callback.
+This variable stores a Coro object that is put into the ready queue when
+there are no other ready threads (without invoking any ready hooks).
 
-If it is a callback, the it is called whenever the scheduler finds no
-ready coros to run. The default implementation prints "FATAL:
-deadlock detected" and exits, because the program has no other way to
-continue.
-
-If it is a coro object, then this object will be readied (without
-invoking any ready hooks, however) when the scheduler finds no other ready
-coros to run.
+The default implementation dies with "FATAL: deadlock detected.", followed
+by a thread listing, because the program has no other way to continue.
 
 This hook is overwritten by modules such as C<Coro::EV> and
 C<Coro::AnyEvent> to wait on an external event that hopefully wake up a
 coro so the scheduler can run it.
 
-Note that the callback I<must not>, under any circumstances, block
-the current coro. Normally, this is achieved by having an "idle
-coro" that calls the event loop and then blocks again, and then
-readying that coro in the idle handler, or by simply placing the idle
-coro in this variable.
-
-See L<Coro::Event> or L<Coro::AnyEvent> for examples of using this
-technique.
-
-Please note that if your callback recursively invokes perl (e.g. for event
-handlers), then it must be prepared to be called recursively itself.
+See L<Coro::EV> or L<Coro::AnyEvent> for examples of using this technique.
 
 =cut
 
-$idle = sub {
-   Carp::confess ("FATAL: deadlock detected");
+$idle = new Coro sub {
+   require Coro::Debug;
+   die "FATAL: deadlock detected.\n"
+       . Coro::Debug::ps_listing ();
 };
 
 # this coro is necessary because a coro
@@ -274,7 +261,7 @@ current coro.
 Calls the scheduler. The scheduler will find the next coro that is
 to be run from the ready queue and switches to it. The next coro
 to be run is simply the one with the highest priority that is longest
-in its ready queue. If there is no coro ready, it will clal the
+in its ready queue. If there is no coro ready, it will call the
 C<$Coro::idle> hook.
 
 Please note that the current coro will I<not> be put into the ready
