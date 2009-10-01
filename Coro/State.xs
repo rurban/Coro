@@ -1762,6 +1762,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
             }
           else
             {
+              /* TODO: deprecated, remove, cannot work reliably *//*D*/
               dSP;
 
               ENTER;
@@ -2332,6 +2333,7 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
     croak ("FATAL: Coro SLF calls can only be made normally, not via goto or any other means, caught");
 
   CvFLAGS (cv) |= CVf_SLF;
+  CvNODEBUG_on (cv);
   CvXSUBANY (cv).any_ptr = (void *)init_cb;
   slf_cv = cv;
 
