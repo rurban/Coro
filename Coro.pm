@@ -156,7 +156,6 @@ handlers), then it must be prepared to be called recursively itself.
 =cut
 
 $idle = sub {
-   warn "oi\n";#d#
    Carp::confess ("FATAL: deadlock detected");
 };
 
