@@ -62,9 +62,7 @@ For listening sockets, use C<AnyEvent::Socket::tcp_server>.
 
 package Coro::Socket;
 
-no warnings "uninitialized";
-
-use strict;
+use common::sense;
 
 use Errno ();
 use Carp qw(croak);

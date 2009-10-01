@@ -30,8 +30,7 @@ identifier.
 
 package Coro::SemaphoreSet;
 
-use strict qw(vars subs);
-no warnings;
+use common::sense;
 
 our $VERSION = 5.17;
 

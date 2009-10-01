@@ -31,8 +31,7 @@ you :->
 
 package Coro::Signal;
 
-use strict qw(vars subs);
-no warnings;
+use common::sense;
 
 use Coro::Semaphore ();
 

@@ -338,6 +338,8 @@ _poll (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_timer);
 
+PROTOTYPES: DISABLE
+
 void
 _readable_ev (...)
 	CODE:

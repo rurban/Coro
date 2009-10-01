@@ -67,8 +67,7 @@ data globally.
 
 package Coro::LWP;
 
-use strict;
-no warnings;
+use common::sense;
 
 BEGIN {
    # suppress warnings

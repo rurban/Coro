@@ -70,8 +70,7 @@ rarely the need to do this yourself.
 
 package Coro::Storable;
 
-use strict qw(subs vars);
-no warnings;
+use common::sense;
 
 use Coro ();
 use Coro::Semaphore ();
@@ -99,10 +98,10 @@ sub guard {
 # wrap xs functions
 for (qw(net_pstore pstore net_mstore mstore pretrieve mretrieve dclone)) {
    my $orig = \&{"Storable::$_"};
-   *{"Storable::$_"} = sub {
+   *{"Storable::$_"} = eval 'sub (' . (prototype $orig) . ') {
       my $guard = $lock->guard;
       &$orig
-   };
+   }';
    die if $@;
 }
 

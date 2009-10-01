@@ -101,8 +101,7 @@ None of the functions are being exported.
 
 package Coro::Debug;
 
-use strict qw(subs vars);
-no warnings;
+use common::sense;
 
 use overload ();
 

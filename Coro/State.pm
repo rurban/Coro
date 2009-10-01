@@ -72,8 +72,7 @@ per nesting level.
 
 package Coro::State;
 
-use strict;
-no warnings "uninitialized";
+use common::sense;
 
 use Carp;
 

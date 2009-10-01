@@ -37,8 +37,7 @@ export more efficient wrappers).
 
 package Coro::BDB;
 
-no warnings;
-use strict;
+use common::sense;
 
 use BDB ();
 use AnyEvent::BDB ();

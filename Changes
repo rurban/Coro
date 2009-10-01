@@ -8,11 +8,15 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+        - Coro::Storable destroyed the prototypes of the functions it wrapped.
+        - fix various prototype mismatches in Coro::AnyEvent and Coro::Handle.
         - added section on "windows process emulation" to the manpage,
           after a not-so-fruitful (nor-friendly) "discussion" with chip
           salzenberg (discussion implies arguments, but his only arguments
           were ad-hominems, one wonders why he started it in the first
-          place).
+          place). I hope this explains it well enough for him to understand,
+          and maybe well enough for others to understand.
+        - use common::sense everywhere now.
 
 5.17  Sat Aug 22 23:09:31 CEST 2009
 	- work around a bug in the perl debugger causing crashes

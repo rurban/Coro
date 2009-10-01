@@ -20,8 +20,7 @@ documentation to see how to integrate it into your own programs.
 
 package Coro::Util;
 
-no warnings;
-use strict;
+use common::sense;
 
 use Socket ();
 

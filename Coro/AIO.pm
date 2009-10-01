@@ -58,7 +58,7 @@ versions of L<IO::AIO> will be automatically wrapped as well.
 
 package Coro::AIO;
 
-use strict qw(subs vars);
+use common::sense;
 
 use IO::AIO 3.1 ();
 use AnyEvent::AIO ();

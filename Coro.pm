@@ -69,8 +69,9 @@ module family is quite large.
 
 package Coro;
 
-use strict qw(vars subs);
-no warnings "uninitialized";
+use common::sense;
+
+use Carp ();
 
 use Guard ();
 
@@ -155,8 +156,8 @@ handlers), then it must be prepared to be called recursively itself.
 =cut
 
 $idle = sub {
-   require Carp;
-   Carp::croak ("FATAL: deadlock detected");
+   warn "oi\n";#d#
+   Carp::confess ("FATAL: deadlock detected");
 };
 
 # this coro is necessary because a coro

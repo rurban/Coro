@@ -78,10 +78,9 @@ run the event loop in some thread.
 
 package Coro::Event;
 
-no warnings;
+use common::sense;
 
 use Carp;
-no warnings;
 
 use Coro;
 use Event qw(loop unloop); # we are re-exporting this for historical reasons

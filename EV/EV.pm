@@ -46,11 +46,9 @@ To run the EV event loop in a separate thread, you can simply do this:
 
 package Coro::EV;
 
-no warnings;
-use strict;
+use common::sense;
 
 use Carp;
-no warnings;
 
 use Coro;
 

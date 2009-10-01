@@ -56,7 +56,7 @@ C<Coro::Select::unpatch_pp_sselect>:
 
 package Coro::Select;
 
-use strict;
+use common::sense;
 
 use Errno;
 
