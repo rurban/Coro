@@ -3398,8 +3398,8 @@ swap_sv (Coro::State coro, SV *sv, SV *swapsv)
         if (!coro->swap_sv)
           coro->swap_sv = newAV ();
 
-        av_push (coro->swap_sv, SvREFCNT_inc_NN (sv));
-        av_push (coro->swap_sv, SvREFCNT_inc_NN (swapsv));
+        av_push (coro->swap_sv, SvREFCNT_inc_NN (SvRV (sv    )));
+        av_push (coro->swap_sv, SvREFCNT_inc_NN (SvRV (swapsv)));
 
         if (current == coro)
           SWAP_SVS (current);

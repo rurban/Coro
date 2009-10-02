@@ -83,9 +83,9 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 
-our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub);
+our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
       prio => [qw(PRIO_MAX PRIO_HIGH PRIO_NORMAL PRIO_LOW PRIO_IDLE PRIO_MIN)],
 );
@@ -717,7 +717,7 @@ sub unblock_sub(&) {
    }
 }
 
-=item $cb = Coro::rouse_cb
+=item $cb = rouse_cb
 
 Create and return a "rouse callback". That's a code reference that,
 when called, will remember a copy of its arguments and notify the owner
@@ -725,7 +725,7 @@ coro of the callback.
 
 See the next function.
 
-=item @args = Coro::rouse_wait [$cb]
+=item @args = rouse_wait [$cb]
 
 Wait for the specified rouse callback (or the last one that was created in
 this coro).
