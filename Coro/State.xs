@@ -1137,7 +1137,6 @@ destroy_perl (pTHX_ struct coro *coro)
     SvREFCNT_dec (coro->rouse_cb);
     SvREFCNT_dec (coro->invoke_cb);
     SvREFCNT_dec (coro->invoke_av);
-    SvREFCNT_dec (coro->swap_sv);
   }
 }
 
@@ -1638,14 +1637,15 @@ coro_state_destroy (pTHX_ struct coro *coro)
       && !PL_dirty)
     destroy_perl (aTHX_ coro);
 
-  cctx_destroy (coro->cctx);
-  SvREFCNT_dec (coro->startcv);
-  SvREFCNT_dec (coro->args);
-  SvREFCNT_dec (CORO_THROW);
-
   if (coro->next) coro->next->prev = coro->prev;
   if (coro->prev) coro->prev->next = coro->next;
   if (coro == coro_first) coro_first = coro->next;
+
+  cctx_destroy (coro->cctx);
+  SvREFCNT_dec (coro->startcv);
+  SvREFCNT_dec (coro->args);
+  SvREFCNT_dec (coro->swap_sv);
+  SvREFCNT_dec (CORO_THROW);
 
   return 1;
 }
