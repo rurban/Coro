@@ -720,6 +720,7 @@ save_perl (pTHX_ Coro__State c)
 
                 if (expect_true (CvDEPTH (cv)))
                   {
+                    EXTEND (SP, 3);
                     PUSHs ((SV *)CvPADLIST (cv));
                     PUSHs (INT2PTR (SV *, (IV)CvDEPTH (cv)));
                     PUSHs ((SV *)cv);
