@@ -72,8 +72,7 @@ per nesting level.
 
 package Coro::State;
 
-use strict;
-no warnings "uninitialized";
+use common::sense;
 
 use Carp;
 
@@ -93,7 +92,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.17;
+   our $VERSION = 5.2;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -275,6 +274,46 @@ Like C<call>, but eval's the string. Dangerous.
 Swap the current C<$_> (swap_defsv) or C<@_> (swap_defav) with the
 equivalent in the saved state of C<$state>. This can be used to give the
 coro a defined content for C<@_> and C<$_> before transfer'ing to it.
+
+=item $state->swap_sv (\$sv, \$swap_sv)
+
+This (very advanced) function can be used to make I<any> variable local to
+a thread.
+
+It works by swapping the contents of C<$sv> and C<$swap_sv> each time the
+thread is entered and left again, i.e. it is similarly to:
+
+   $tmp = $sv; $sv = $swap_sv; $swap_sv = $tmp;
+
+Except that it doesn't make an copies and works on hashes and even more
+exotic values (code references!).
+
+Needless to say, this function can be very very dangerous: you can easily
+swap a hash with a reference (i.e. C<%hash> I<becomes> a reference), and perl
+will not like this at all.
+
+It will also swap "magicalness" - so when swapping a builtin perl variable
+(such as C<$.>), it will lose it's magicalness, which, again, perl will
+not like, so don't do it.
+
+Lastly, the C<$swap_sv> itself will be used, not a copy, so make sure you
+give each thread it's own C<$swap_sv> instance.
+
+It is, however, quite safe to swap some normal variable with
+another. For example, L<PApp::SQL> stores the default database handle in
+C<$PApp::SQL::DBH>. To make this a per-thread variable, use this:
+
+   my $private_dbh = ...;
+   $coro->swap_sv (\$PApp::SQL::DBH, \$private_dbh);
+
+This results in C<$PApp::SQL::DBH> having the value of C<$private_dbh>
+while it executes, and whatever other value it had when it doesn't
+execute.
+
+You can also swap hashes and other values:
+
+   my %private_hash;
+   $coro->swap_sv (\%some_hash, \%private_hash);
 
 =item $state->trace ($flags)
 

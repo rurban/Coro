@@ -101,8 +101,7 @@ None of the functions are being exported.
 
 package Coro::Debug;
 
-use strict qw(subs vars);
-no warnings;
+use common::sense;
 
 use overload ();
 
@@ -122,7 +121,7 @@ use Coro::State ();
 use Coro::AnyEvent ();
 use Coro::Timer ();
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
@@ -265,6 +264,43 @@ sub untrace {
    Coro::cede;
 }
 
+sub ps_listing {
+   my $times = Coro::State::enable_times;
+   my $flags = $1;
+   my $verbose = $flags =~ /v/;
+   my $desc_format = $flags =~ /w/ ? "%-24s" : "%-24.24s";
+   my $tim0_format = $times ? " %9s %8s " : " ";
+   my $tim1_format = $times ? " %9.3f %8.3f " : " ";
+   my $buf = sprintf "%20s %s%s %4s %4s$tim0_format$desc_format %s\n",
+                     "PID", "S", "C", "RSS", "USES",
+                     $times ? ("t_real", "t_cpu") : (),
+                     "Description", "Where";
+   for my $coro (reverse Coro::State::list) {
+      my @bt;
+      Coro::State::call ($coro, sub {
+         # we try to find *the* definite frame that gives msot useful info
+         # by skipping Coro frames and pseudo-frames.
+         for my $frame (1..10) {
+            my @frame = caller $frame;
+            @bt = @frame if $frame[2];
+            last unless $bt[0] =~ /^Coro/;
+         }
+      });
+      $bt[1] =~ s/^.*[\/\\]// if @bt && !$verbose;
+      $buf .= sprintf "%20s %s%s %4s %4s$tim1_format$desc_format %s\n",
+                      $coro+0,
+                      $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
+                      $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
+                      format_num4 $coro->rss,
+                      format_num4 $coro->usecount,
+                      $times ? $coro->times : (),
+                      $coro->debug_desc,
+                      (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
+   }
+
+   $buf
+}
+
 =item command $string
 
 Execute a debugger command, sending any output to STDOUT. Used by
@@ -278,39 +314,7 @@ sub command($) {
    $cmd =~ s/\s+$//;
 
    if ($cmd =~ /^ps (?:\s* (\S+))? $/x) {
-      my $times = Coro::State::enable_times;
-      my $flags = $1;
-      my $verbose = $flags =~ /v/;
-      my $desc_format = $flags =~ /w/ ? "%-24s" : "%-24.24s";
-      my $tim0_format = $times ? " %9s %8s " : " ";
-      my $tim1_format = $times ? " %9.3f %8.3f " : " ";
-      my $buf = sprintf "%20s %s%s %4s %4s$tim0_format$desc_format %s\n",
-                        "PID", "S", "C", "RSS", "USES",
-                        $times ? ("t_real", "t_cpu") : (),
-                        "Description", "Where";
-      for my $coro (reverse Coro::State::list) {
-         my @bt;
-         Coro::State::call ($coro, sub {
-            # we try to find *the* definite frame that gives msot useful info
-            # by skipping Coro frames and pseudo-frames.
-            for my $frame (1..10) {
-               my @frame = caller $frame;
-               @bt = @frame if $frame[2];
-               last unless $bt[0] =~ /^Coro/;
-            }
-         });
-         $bt[1] =~ s/^.*[\/\\]// if @bt && !$verbose;
-         $buf .= sprintf "%20s %s%s %4s %4s$tim1_format$desc_format %s\n",
-                         $coro+0,
-                         $coro->is_new ? "N" : $coro->is_running ? "U" : $coro->is_ready ? "R" : "-",
-                         $coro->is_traced ? "T" : $coro->has_cctx ? "C" : "-",
-                         format_num4 $coro->rss,
-                         format_num4 $coro->usecount,
-                         $times ? $coro->times : (),
-                         $coro->debug_desc,
-                         (@bt ? sprintf "[%s:%d]", $bt[1], $bt[2] : "-");
-      }
-      print $buf;
+      print ps_listing;
 
    } elsif ($cmd =~ /^bt\s+(\d+)$/) {
       if (my $coro = find_coro $1) {

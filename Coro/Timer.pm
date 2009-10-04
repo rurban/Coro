@@ -20,7 +20,7 @@ independent of the event loop mechanism used.
 
 package Coro::Timer;
 
-no warnings;
+use common::sense;
 
 use Carp ();
 use Exporter;
@@ -30,8 +30,8 @@ use AnyEvent ();
 use Coro ();
 use Coro::AnyEvent ();
 
-$VERSION = 5.17;
-@EXPORT_OK = qw(timeout sleep);
+our $VERSION = 5.2;
+our @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
 

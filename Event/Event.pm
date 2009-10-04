@@ -78,10 +78,9 @@ run the event loop in some thread.
 
 package Coro::Event;
 
-no warnings;
+use common::sense;
 
 use Carp;
-no warnings;
 
 use Coro;
 use Event qw(loop unloop); # we are re-exporting this for historical reasons
@@ -93,7 +92,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = 5.17;
+   our $VERSION = 5.2;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;

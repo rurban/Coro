@@ -20,8 +20,7 @@ documentation to see how to integrate it into your own programs.
 
 package Coro::Util;
 
-no warnings;
-use strict;
+use common::sense;
 
 use Socket ();
 
@@ -39,7 +38,7 @@ use base 'Exporter';
 our @EXPORT = qw(gethostbyname gethostbyaddr);
 our @EXPORT_OK = qw(inet_aton fork_eval);
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 
 our $MAXPARALLEL = 16; # max. number of parallel jobs
 

@@ -67,8 +67,7 @@ data globally.
 
 package Coro::LWP;
 
-use strict;
-no warnings;
+use common::sense;
 
 BEGIN {
    # suppress warnings
@@ -95,7 +94,7 @@ use Net::HTTP ();
 use Net::FTP ();
 use Net::NNTP ();
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 

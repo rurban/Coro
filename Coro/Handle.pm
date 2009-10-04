@@ -36,8 +36,7 @@ they would all have a costly C coroutine associated with them.
 
 package Coro::Handle;
 
-no warnings;
-use strict;
+use common::sense;
 
 use Carp ();
 use Errno qw(EAGAIN EINTR EINPROGRESS);
@@ -46,7 +45,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -255,8 +254,7 @@ sub AUTOLOAD {
 
 package Coro::Handle::FH;
 
-no warnings;
-use strict;
+use common::sense;
 
 use Carp 'croak';
 use Errno qw(EAGAIN EINTR);
@@ -409,8 +407,6 @@ sub _writable_coro {
 
 # decide on event model at runtime
 for my $rw (qw(readable writable)) {
-   no strict 'refs';
-
    *$rw = sub {
       AnyEvent::detect;
       if ($AnyEvent::MODEL eq "AnyEvent::Impl::Event" and eval { require Coro::Event }) {

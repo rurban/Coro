@@ -24,9 +24,9 @@ when no coroutines are used).
 
 package Coro::Specific;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+use common::sense;
 
-$VERSION = 5.17;
+our $VERSION = 5.2;
 
 =item new
 

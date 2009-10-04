@@ -56,7 +56,7 @@ C<Coro::Select::unpatch_pp_sselect>:
 
 package Coro::Select;
 
-use strict;
+use common::sense;
 
 use Errno;
 
@@ -67,7 +67,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 our @EXPORT_OK = "select";
 
 sub import {

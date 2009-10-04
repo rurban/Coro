@@ -46,11 +46,9 @@ To run the EV event loop in a separate thread, you can simply do this:
 
 package Coro::EV;
 
-no warnings;
-use strict;
+use common::sense;
 
 use Carp;
-no warnings;
 
 use Coro;
 
@@ -58,7 +56,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.17;
+   our $VERSION = 5.2;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;

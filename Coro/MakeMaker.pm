@@ -1,13 +1,14 @@
 package Coro::MakeMaker;
 
-BEGIN { eval { require warnings } && warnings->unimport ("uninitialized") }
+use common::sense;
 
 use Config;
 use base 'Exporter';
 
-our $VERSION = 5.17;
+our $installsitearch;
 
-@EXPORT_OK = qw(&coro_args $installsitearch);
+our $VERSION = 5.2;
+our @EXPORT_OK = qw(&coro_args $installsitearch);
 
 my %opt;
 

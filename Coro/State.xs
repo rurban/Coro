@@ -1,3 +1,5 @@
+#define NDEBUG 1
+
 #include "libcoro/coro.c"
 
 #define PERL_NO_GET_CONTEXT
@@ -13,6 +15,10 @@
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
+
+#ifndef SVs_PADSTALE
+# define SVs_PADSTALE 0
+#endif
 
 #ifdef WIN32
 # undef setjmp
@@ -251,6 +257,9 @@ struct coro {
   /* on_enter/on_leave */
   AV *on_enter;
   AV *on_leave;
+
+  /* swap_sv */
+  AV *swap_sv;
 
   /* times */
   coro_ts t_cpu, t_real;
@@ -552,6 +561,57 @@ put_padlist (pTHX_ CV *cv)
 
 /** load & save, init *******************************************************/
 
+/* swap sv heads, at least logically */
+static void
+swap_svs (pTHX_ Coro__State c)
+{
+  int i;
+
+  for (i = 0; i <= AvFILLp (c->swap_sv); )
+    {
+      SV *a = AvARRAY (c->swap_sv)[i++];
+      SV *b = AvARRAY (c->swap_sv)[i++];
+
+      const U32 keep = SVs_PADSTALE | SVs_PADTMP | SVs_PADMY; /* keep these flags */
+      SV tmp;
+
+      /* swap sv_any */
+      SvANY (&tmp) = SvANY (a); SvANY (a) = SvANY (b); SvANY (b) = SvANY (&tmp);
+
+      /* swap sv_flags */
+      SvFLAGS (&tmp) = SvFLAGS (a);
+      SvFLAGS (a)    = (SvFLAGS (a) & keep) | (SvFLAGS (b   ) & ~keep);
+      SvFLAGS (b)    = (SvFLAGS (b) & keep) | (SvFLAGS (&tmp) & ~keep);
+
+#if PERL_VERSION_ATLEAST (5,10,0)
+      /* perl 5.10 complicates this _quite_ a bit, but it also is
+       * is much faster, so no quarrels here. alternatively, we could
+       * sv_upgrade to avoid this.
+       */
+      {
+        /* swap sv_u */
+        tmp.sv_u = a->sv_u; a->sv_u = b->sv_u; b->sv_u = tmp.sv_u;
+
+        /* if SvANY points to the head, we need to adjust the pointers,
+         * as the pointer for a still points to b, and maybe vice versa.
+         */
+        #define svany_in_head(type) \
+           (((1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV)) & (1 << (type)))
+
+        if (svany_in_head (SvTYPE (a)))
+          SvANY (a) = (void *)((PTRV)SvANY (a) - (PTRV)b + (PTRV)a);
+
+        if (svany_in_head (SvTYPE (b)))
+          SvANY (b) = (void *)((PTRV)SvANY (b) - (PTRV)a + (PTRV)b);
+      }
+#endif
+    }
+}
+
+#define SWAP_SVS(coro)		\
+  if (expect_false ((coro)->swap_sv))	\
+    swap_svs (aTHX_ (coro))
+
 static void
 on_enterleave_call (pTHX_ SV *cb);
 
@@ -607,11 +667,15 @@ load_perl (pTHX_ Coro__State c)
       for (i = 0; i <= AvFILLp (c->on_enter); ++i)
         on_enterleave_call (aTHX_ AvARRAY (c->on_enter)[i]);
     }
+
+  SWAP_SVS (c);
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
+  SWAP_SVS (c);
+
   if (expect_false (c->on_leave))
     {
       int i;
@@ -928,10 +992,10 @@ slf_check_repeat (pTHX_ struct CoroSLF *frame)
   return 1;
 }
 
-static UNOP coro_setup_op;
+static UNOP init_perl_op;
 
 static void NOINLINE /* noinline to keep it out of the transfer fast path */
-coro_setup (pTHX_ struct coro *coro)
+init_perl (pTHX_ struct coro *coro)
 {
   /*
    * emulate part of the perl startup here.
@@ -990,15 +1054,17 @@ coro_setup (pTHX_ struct coro *coro)
   slf_frame.check   = slf_check_nop; /* signal pp_slf to not repeat */
 
   /* and we have to provide the pp_slf op in any case, so pp_slf can skip it */
-  coro_setup_op.op_next   = PL_op;
-  coro_setup_op.op_type   = OP_ENTERSUB;
-  coro_setup_op.op_ppaddr = pp_slf;
+  init_perl_op.op_next   = PL_op;
+  init_perl_op.op_type   = OP_ENTERSUB;
+  init_perl_op.op_ppaddr = pp_slf;
   /* no flags etc. required, as an init function won't be called */
 
-  PL_op = (OP *)&coro_setup_op;
+  PL_op = (OP *)&init_perl_op;
 
-  /* copy throw, in case it was set before coro_setup */
+  /* copy throw, in case it was set before init_perl */
   CORO_THROW = coro->except;
+
+  SWAP_SVS (coro);
 
   if (expect_false (enable_times))
     {
@@ -1029,7 +1095,7 @@ coro_unwind_stacks (pTHX)
 }
 
 static void
-coro_destruct_perl (pTHX_ struct coro *coro)
+destroy_perl (pTHX_ struct coro *coro)
 {
   SV *svf [9];
 
@@ -1043,6 +1109,9 @@ coro_destruct_perl (pTHX_ struct coro *coro)
 
     coro_unwind_stacks (aTHX);
     coro_destruct_stacks (aTHX);
+
+    /* restore swapped sv's */
+    SWAP_SVS (coro);
 
     // now save some sv's to be free'd later
     svf    [0] =       GvSV (PL_defgv);
@@ -1494,7 +1563,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
           /* need to start coroutine */
           next->flags &= ~CF_NEW;
           /* setup coroutine call */
-          coro_setup (aTHX_ next);
+          init_perl (aTHX_ next);
         }
       else
         load_perl (aTHX_ next);
@@ -1567,16 +1636,17 @@ coro_state_destroy (pTHX_ struct coro *coro)
       && coro->mainstack != main_mainstack
       && coro->slot
       && !PL_dirty)
-    coro_destruct_perl (aTHX_ coro);
-
-  cctx_destroy (coro->cctx);
-  SvREFCNT_dec (coro->startcv);
-  SvREFCNT_dec (coro->args);
-  SvREFCNT_dec (CORO_THROW);
+    destroy_perl (aTHX_ coro);
 
   if (coro->next) coro->next->prev = coro->prev;
   if (coro->prev) coro->prev->next = coro->next;
   if (coro == coro_first) coro_first = coro->next;
+
+  cctx_destroy (coro->cctx);
+  SvREFCNT_dec (coro->startcv);
+  SvREFCNT_dec (coro->args);
+  SvREFCNT_dec (coro->swap_sv);
+  SvREFCNT_dec (CORO_THROW);
 
   return 1;
 }
@@ -1762,6 +1832,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
             }
           else
             {
+              /* TODO: deprecated, remove, cannot work reliably *//*D*/
               dSP;
 
               ENTER;
@@ -3315,6 +3386,26 @@ times (Coro::State self)
         if (expect_false (current == self))
           coro_times_sub (SvSTATE (coro_current));
 }
+
+void
+swap_sv (Coro::State coro, SV *sv, SV *swapsv)
+	CODE:
+{
+        struct coro *current = SvSTATE_current;
+
+        if (current == coro)
+          SWAP_SVS (current);
+
+        if (!coro->swap_sv)
+          coro->swap_sv = newAV ();
+
+        av_push (coro->swap_sv, SvREFCNT_inc_NN (SvRV (sv    )));
+        av_push (coro->swap_sv, SvREFCNT_inc_NN (SvRV (swapsv)));
+
+        if (current == coro)
+          SWAP_SVS (current);
+}
+
 
 MODULE = Coro::State                PACKAGE = Coro
 

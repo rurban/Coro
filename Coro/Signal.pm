@@ -31,12 +31,11 @@ you :->
 
 package Coro::Signal;
 
-use strict qw(vars subs);
-no warnings;
+use common::sense;
 
 use Coro::Semaphore ();
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 
 =item $sig = new Coro::Signal;
 

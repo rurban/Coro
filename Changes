@@ -8,6 +8,21 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+5.2   Sun Oct  4 14:54:24 CEST 2009
+        - Coro::Storable destroyed the prototypes of the functions it wrapped.
+        - export rouse_cb and rouse_wait by default now.
+        - fix various prototype mismatches in Coro::AnyEvent and Coro::Handle.
+        - new method $state->swap_sv.
+        - added section on "windows process emulation" to the manpage,
+          after a not-so-fruitful (nor-friendly) "discussion" with chip
+          salzenberg (discussion implies arguments, but his only arguments
+          were ad-hominems, one wonders why he started it in the first
+          place). I hope this explains it well enough for him to understand,
+          and maybe well enough for others to understand.
+        - use common::sense everywhere now.
+        - idle callbacks are no longer supported, use idle coros instead.
+        - print a thread listing when a deadlock is detected.
+
 5.17  Sat Aug 22 23:09:31 CEST 2009
 	- work around a bug in the perl debugger causing crashes
           when running under the debugger by marking _pool_handler as nodebug.

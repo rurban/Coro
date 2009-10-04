@@ -52,13 +52,12 @@ Coro::AnyEvent offers a few functions that might be useful.
 
 package Coro::AnyEvent;
 
-no warnings;
-use strict;
+use common::sense;
 
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 
 #############################################################################
 # idle handler
@@ -89,20 +88,20 @@ AnyEvent::post_detect {
       eval '
          *sleep = \&Coro::EV::timer_once;
          *poll  = \&Coro::EV::_poll;
-         *idle  = sub {
+         *idle  = sub() {
             my $w = EV::idle Coro::rouse_cb;
             Coro::rouse_wait;
          };
-         *idle_upto = sub {
+         *idle_upto = sub($) {
             my $cb = Coro::rouse_cb;
             my $t = EV::timer $_[0], 0, $cb;
             my $w = EV::idle $cb;
             Coro::rouse_wait;
          };
-         *readable = sub {
+         *readable = sub($;$) {
             EV::READ  & Coro::EV::timed_io_once $_[0], EV::READ , $_[1]
          };
-         *writable = sub {
+         *writable = sub($;$) {
             EV::WRITE & Coro::EV::timed_io_once $_[0], EV::WRITE, $_[1]
          };
       ';

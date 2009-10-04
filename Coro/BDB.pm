@@ -37,8 +37,7 @@ export more efficient wrappers).
 
 package Coro::BDB;
 
-no warnings;
-use strict;
+use common::sense;
 
 use BDB ();
 use AnyEvent::BDB ();
@@ -48,7 +47,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 5.17;
+our $VERSION = 5.2;
 our $WATCHER;
 
 BDB::set_sync_prepare {
