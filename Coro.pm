@@ -832,8 +832,9 @@ performance, even when not used.
 
 =item coro switching is not signal safe
 
-You must not switch to another coro from within a signal handler
-(only relevant with %SIG - most event libraries provide safe signals).
+You must not switch to another coro from within a signal handler (only
+relevant with %SIG - most event libraries provide safe signals), I<unless>
+you are sure you are not interrupting a Coro function.
 
 That means you I<MUST NOT> call any function that might "block" the
 current coro - C<cede>, C<schedule> C<< Coro::Semaphore->down >> or

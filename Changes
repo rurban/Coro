@@ -8,6 +8,8 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+	- clarify the "not from signal handlers" section.
+
 5.2   Sun Oct  4 14:54:24 CEST 2009
         - Coro::Storable destroyed the prototypes of the functions it wrapped.
         - export rouse_cb and rouse_wait by default now.
