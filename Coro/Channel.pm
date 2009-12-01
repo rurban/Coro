@@ -126,7 +126,7 @@ includes any coroutines waiting to put data into the channel (but not any
 shutdown condition).
 
 This means that the number returned is I<precisely> the number of calls to
-C<get> that will succeed instantly and returning some data.
+C<get> that will succeed instantly and return some data.
 
 =cut
 
