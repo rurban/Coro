@@ -8,6 +8,12 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+TODO: better error reporting when blocking inside the event idle loop? idleblock
+5.21
+        - automatically load Coro::AnyEvent when AnyEvent and Coro are used
+          together.
+        - add some examples on how to combine other event loops with Coro in
+          Coro::AnyEvent.
 	- clarify the "not from signal handlers" section.
 
 5.2   Sun Oct  4 14:54:24 CEST 2009

@@ -5,9 +5,10 @@ Coro::AnyEvent - integrate threads into AnyEvent
 =head1 SYNOPSIS
 
  use Coro;
- use Coro::AnyEvent;
+ use AnyEvent;
+ # using both Coro and AnyEvent will automatically load Coro::AnyEvent
 
- # use coro within an AnyEvent environment
+ # use Coro within an AnyEvent environment
 
 =head1 DESCRIPTION
 
@@ -23,15 +24,20 @@ This module integrates threads into any event loop supported by
 AnyEvent, combining event-based programming with coroutine-based
 programming in a natural way.
 
-All you have to do is C<use Coro::AnyEvent>, run the event loop of your
-choice in some thread and then you can run threads freely.
+As of Coro 5.21 and newer, this module gets loaded automatically when
+AnyEvent initialises itself and Coro is used in the same process, thus
+there is no need to load it manually if you just want your threads to
+coexist with AnyEvent.
+
+If you want to use any functions from this module, you of course still
+need to C<use Coro::AnyEvent>, just as with other perl modules.
 
 =head1 USAGE
 
 This module autodetects the event loop used (by relying on L<AnyEvent>)
 and will either automatically defer to the high-performance L<Coro::EV> or
-L<Coro::Event> modules, or will use a generic integration into any event
-loop supported by L<AnyEvent>.
+L<Coro::Event> modules, or will use a generic integration method into any
+event loop supported by L<AnyEvent>.
 
 Note that if you need to wait for a single event, the rouse functions will
 come in handy (see the Coro manpage for details):
@@ -41,6 +47,50 @@ come in handy (see the Coro manpage for details):
       my $int_w = AnyEvent->signal (signal => "INT", cb => Coro::rouse_cb);
       Coro::rouse_wait;
    }
+
+=head2 EVENT MODULES OTHER THEN ANYEVENT
+
+Keep in mind that, as shipped, Coro and Coro::AnyEvent only work with
+AnyEvent, and only when AnyEvent is actually used (i.e. initialised), so
+this will not work:
+
+   # does not work: only AnyEvent is supported
+   use EV;
+   use Coro;
+
+   EV::loop;
+
+And neither does this, unless you actually I<use> AnyEvent for something:
+
+   # does not work: AnyEvent must be initialised
+   use EV;
+   use AnyEvent;
+   use Coro;
+
+   EV::loop;
+
+This does work, however, because you create a watcher (condvars work,
+too), thus forcing AnyEvent to initialise itself:
+
+   # does work: AnyEvent is actually used
+   use EV;
+   use AnyEvent;
+   use Coro;
+
+   my $timer = AE::timer 1, 1, sub { };
+
+   EV::loop;
+
+And if you want to use AnyEvent just to bridge between Coro and your event
+model of choice, you can simply force it to initialise itself, like this:
+
+   # does work: AnyEvent is initialised manually
+   use POE;
+   use AnyEvent;
+   use Coro;
+
+   AnyEvent::detect;
+   POE::Kernel->run;
 
 =head1 FUNCTIONS
 
@@ -57,7 +107,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.2;
+our $VERSION = 5.21;
 
 #############################################################################
 # idle handler
