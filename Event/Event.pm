@@ -192,8 +192,8 @@ sub sweep {
 # very inefficient
 our $IDLE = new Coro sub {
    while () {
-      &Event::one_event;
-      &Coro::schedule;
+      Event::one_event;
+      Coro::schedule if Coro::nready;
    }
 };
 $IDLE->{desc} = "[Event idle thread]";

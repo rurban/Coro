@@ -65,7 +65,7 @@ BEGIN {
 our $IDLE = new Coro sub {
    while () {
       &_loop_oneshot;
-      &Coro::schedule;
+      Coro::schedule if Coro::nready;
    }
 };
 $IDLE->{desc} = "[EV idle thread]";

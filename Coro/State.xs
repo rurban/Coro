@@ -1826,6 +1826,9 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
           if (SvROK (sv_idle)
               && SvOBJECT (SvRV (sv_idle)))
             {
+              if (SvRV (sv_idle) == SvRV (coro_current))
+                croak ("FATAL: $Coro::IDLE blocked itself - did you try to block inside an event loop callback? Caught");
+
               ++coro_nready; /* hack so that api_ready doesn't invoke ready hook */
               api_ready (aTHX_ SvRV (sv_idle));
               --coro_nready;

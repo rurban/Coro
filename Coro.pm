@@ -667,6 +667,10 @@ of reentrancy). This means you must not block within event callbacks,
 otherwise you might suffer from crashes or worse. The only event library
 currently known that is safe to use without C<unblock_sub> is L<EV>.
 
+Coro will try to catch you when you block in the event loop
+("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
+only works when you do not run your own event loop.
+
 This function allows your callbacks to block by executing them in another
 coro where it is safe to block. One example where blocking is handy
 is when you use the L<Coro::AIO|Coro::AIO> functions to save results to

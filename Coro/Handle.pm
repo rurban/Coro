@@ -343,8 +343,9 @@ sub EOF {
 }
 
 sub CLOSE {
+   my $fh = $_[0][0];
    &cleanup;
-   close $_[0][0]
+   close $fh
 }
 
 sub DESTROY {
