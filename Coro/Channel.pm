@@ -32,12 +32,11 @@ use common::sense;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = 5.2;
+our $VERSION = 5.21;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }
 sub SPUT (){ 2 }
-sub CEOS (){ 3 }
 
 =item $q = new Coro:Channel $maxsize
 
@@ -53,9 +52,9 @@ C<2>, and so on.
 sub new {
    # we cheat and set infinity == 2*10**9
    bless [
-      [],
-      (Coro::Semaphore::_alloc 0),
-      (Coro::Semaphore::_alloc +($_[1] || 2_000_000_000) - 1),
+      [], # initially empty
+      (Coro::Semaphore::_alloc 0), # counts data
+      (Coro::Semaphore::_alloc +($_[1] || 2_000_000_000) - 1), # counts remaining space
    ]
 }
 
@@ -125,13 +124,20 @@ number of elements that wait can be larger than C<$maxsize>, as it
 includes any coroutines waiting to put data into the channel (but not any
 shutdown condition).
 
-This means that the number returned is I<precisely> the number of calls to
-C<get> that will succeed instantly and returning some data.
+This means that the number returned is I<precisely> the number of calls
+to C<get> that will succeed instantly and return some data. Calling
+C<shutdown> has no effect on this number.
 
 =cut
 
 sub size {
    scalar @{$_[0][DATA]}
+}
+
+# this is not undocumented by accident - if it breaks, you
+# get to keep the pieces
+sub adjust {
+   Coro::Semaphore::adjust $_[0][SPUT], $_[1];
 }
 
 1;

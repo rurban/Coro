@@ -476,6 +476,10 @@ GLOBAL FUNCTIONS
         library currently known that is safe to use without "unblock_sub" is
         EV.
 
+        Coro will try to catch you when you block in the event loop
+        ("FATAL:$Coro::IDLE blocked itself"), but this is just best effort
+        and only works when you do not run your own event loop.
+
         This function allows your callbacks to block by executing them in
         another coro where it is safe to block. One example where blocking
         is handy is when you use the Coro::AIO functions to save results to
@@ -597,7 +601,8 @@ BUGS/LIMITATIONS
     coro switching is not signal safe
         You must not switch to another coro from within a signal handler
         (only relevant with %SIG - most event libraries provide safe
-        signals).
+        signals), *unless* you are sure you are not interrupting a Coro
+        function.
 
         That means you *MUST NOT* call any function that might "block" the
         current coro - "cede", "schedule" "Coro::Semaphore->down" or

@@ -83,7 +83,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.2;
+our $VERSION = 5.21;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -667,6 +667,10 @@ of reentrancy). This means you must not block within event callbacks,
 otherwise you might suffer from crashes or worse. The only event library
 currently known that is safe to use without C<unblock_sub> is L<EV>.
 
+Coro will try to catch you when you block in the event loop
+("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
+only works when you do not run your own event loop.
+
 This function allows your callbacks to block by executing them in another
 coro where it is safe to block. One example where blocking is handy
 is when you use the L<Coro::AIO|Coro::AIO> functions to save results to
@@ -832,8 +836,9 @@ performance, even when not used.
 
 =item coro switching is not signal safe
 
-You must not switch to another coro from within a signal handler
-(only relevant with %SIG - most event libraries provide safe signals).
+You must not switch to another coro from within a signal handler (only
+relevant with %SIG - most event libraries provide safe signals), I<unless>
+you are sure you are not interrupting a Coro function.
 
 That means you I<MUST NOT> call any function that might "block" the
 current coro - C<cede>, C<schedule> C<< Coro::Semaphore->down >> or

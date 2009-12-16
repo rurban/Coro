@@ -56,7 +56,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.2;
+   our $VERSION = 5.21;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -65,7 +65,7 @@ BEGIN {
 our $IDLE = new Coro sub {
    while () {
       &_loop_oneshot;
-      &Coro::schedule;
+      Coro::schedule if Coro::nready;
    }
 };
 $IDLE->{desc} = "[EV idle thread]";

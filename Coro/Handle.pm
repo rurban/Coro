@@ -45,7 +45,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.2;
+our $VERSION = 5.21;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -343,8 +343,9 @@ sub EOF {
 }
 
 sub CLOSE {
+   my $fh = $_[0][0];
    &cleanup;
-   close $_[0][0]
+   close $fh
 }
 
 sub DESTROY {

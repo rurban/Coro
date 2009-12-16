@@ -5,9 +5,10 @@ Coro::AnyEvent - integrate threads into AnyEvent
 =head1 SYNOPSIS
 
  use Coro;
- use Coro::AnyEvent;
+ use AnyEvent;
+ # using both Coro and AnyEvent will automatically load Coro::AnyEvent
 
- # use coro within an AnyEvent environment
+ # use Coro within an AnyEvent environment
 
 =head1 DESCRIPTION
 
@@ -23,18 +24,71 @@ This module integrates threads into any event loop supported by
 AnyEvent, combining event-based programming with coroutine-based
 programming in a natural way.
 
-All you have to do is C<use Coro::AnyEvent>, run the event loop of your
-choice in some thread and then you can run threads freely.
+As of Coro 5.21 and newer, this module gets loaded automatically when
+AnyEvent initialises itself and Coro is used in the same process, thus
+there is no need to load it manually if you just want your threads to
+coexist with AnyEvent.
+
+If you want to use any functions from this module, you of course still
+need to C<use Coro::AnyEvent>, just as with other perl modules.
+
+Also, this module autodetects the event loop used (by relying on
+L<AnyEvent>) and will either automatically defer to the high-performance
+L<Coro::EV> or L<Coro::Event> modules, or will use a generic integration
+method that should work with any event loop supported by L<AnyEvent>.
 
 =head1 USAGE
 
-This module autodetects the event loop used (by relying on L<AnyEvent>)
-and will either automatically defer to the high-performance L<Coro::EV> or
-L<Coro::Event> modules, or will use a generic integration into any event
-loop supported by L<AnyEvent>.
+=head2 RUN AN EVENT LOOP - OR NOT?
 
-Note that if you need to wait for a single event, the rouse functions will
-come in handy (see the Coro manpage for details):
+For performance reasons, it is recommended that the main program or
+something else runs the event loop of the event model you use, i.e.
+
+   use Gtk2; # <- the event model
+   use AnyEvent;
+   use Coro:
+
+   # initialise stuff
+   async { ... };
+
+   # now run mainloop of Gtk2
+   main Gtk2;
+
+You can move the event loop into a thread as well, although this tends to
+get confusing:
+
+   use Gtk2;
+   use AnyEvent;
+   use Coro:
+
+   async { main Gtk2 };
+
+   # do other things...
+   while () {
+      use Coro::AnyEvent;
+      Coro::AnyEvent::sleep 1;
+      print "ping...\n";
+   }
+
+You can also do nothing, in which case Coro:AnyEvent will invoke the event
+loop as needed, which is less efficient, but sometimes very convenient.
+
+What you I<MUST NOT DO EVER> is to block inside an event loop
+callback. The reason is that most event loops are not reentrant and this
+can cause a deadlock at best and corrupt memory at worst.
+
+Coro will try to catch you when you block in the event loop
+("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
+only works when you do not run your own event loop.
+
+To avoid this problem, simply do not block inside an event callback
+- start a new thread (e.g. with C<Coro:async_pool>) or use
+C<Coro::unblock_sub>.
+
+=head2 INVERSION OF CONTROL
+
+If you need to wait for a single event, the rouse functions will come in
+handy (see the Coro manpage for details):
 
    # wait for single SIGINT
    {
@@ -42,9 +96,53 @@ come in handy (see the Coro manpage for details):
       Coro::rouse_wait;
    }
 
+=head2 EVENT MODULES OTHER THEN ANYEVENT
+
+Keep in mind that, as shipped, Coro and Coro::AnyEvent only work with
+AnyEvent, and only when AnyEvent is actually used (i.e. initialised), so
+this will not work:
+
+   # does not work: EV without AnyEvent is not recognised
+   use EV;
+   use Coro;
+
+   EV::loop;
+
+And neither does this, unless you actually I<use> AnyEvent for something:
+
+   # does not work: AnyEvent must be initialised (e.g. by creating watchers)
+   use EV;
+   use AnyEvent;
+   use Coro;
+
+   EV::loop;
+
+This does work, however, because you create a watcher (condvars work,
+too), thus forcing AnyEvent to initialise itself:
+
+   # does work: AnyEvent is actually used
+   use EV;
+   use AnyEvent;
+   use Coro;
+
+   my $timer = AE::timer 1, 1, sub { };
+
+   EV::loop;
+
+And if you want to use AnyEvent just to bridge between Coro and your event
+model of choice, you can simply force it to initialise itself, like this:
+
+   # does work: AnyEvent is initialised manually
+   use POE;
+   use AnyEvent;
+   use Coro;
+
+   AnyEvent::detect; # force AnyEvent to integrate Coro into POE
+   POE::Kernel->run;
+
 =head1 FUNCTIONS
 
-Coro::AnyEvent offers a few functions that might be useful.
+Coro::AnyEvent also offers a few functions that might be useful.
 
 =over 4
 
@@ -57,7 +155,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.2;
+our $VERSION = 5.21;
 
 #############################################################################
 # idle handler
@@ -118,7 +216,7 @@ AnyEvent::post_detect {
 
          while () {
             $one_event->();
-            Coro::schedule;
+            Coro::schedule if Coro::nready;
          }
       };
       $IDLE->{desc} = "[AnyEvent idle process]";

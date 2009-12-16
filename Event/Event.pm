@@ -92,7 +92,7 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = 5.2;
+   our $VERSION = 5.21;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -192,8 +192,8 @@ sub sweep {
 # very inefficient
 our $IDLE = new Coro sub {
    while () {
-      &Event::one_event;
-      &Coro::schedule;
+      Event::one_event;
+      Coro::schedule if Coro::nready;
    }
 };
 $IDLE->{desc} = "[Event idle thread]";

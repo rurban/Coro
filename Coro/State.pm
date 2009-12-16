@@ -92,7 +92,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.2;
+   our $VERSION = 5.21;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -502,6 +502,14 @@ sub debug_desc {
       if $current;
 
    _set_current $main;
+}
+
+# we also make sure we have Coro::AnyEvent when AnyEvent is used,
+# without loading or initialising AnyEvent
+if (defined $AnyEvent::MODEL) {
+   require Coro::AnyEvent;
+} else {
+   push @AnyEvent::post_detect, sub { require Coro::AnyEvent };
 }
 
 1;

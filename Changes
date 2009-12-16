@@ -8,6 +8,17 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+5.21  Wed Dec 16 07:19:51 CET 2009
+        - automatically load Coro::AnyEvent when AnyEvent and Coro are used
+          together.
+        - add some examples on how to combine other event loops with Coro in
+          Coro::AnyEvent, and how to run it (and not to block). Seems to be
+          the most common source of confusion.
+        - try to catch people naively blocking in an event callback.
+        - work around the perl filehandle bug issue in conjunction with
+          older common::sense (as indirectly pointed out by ZSystem).
+	- clarify the "not from signal handlers" section.
+
 5.2   Sun Oct  4 14:54:24 CEST 2009
         - Coro::Storable destroyed the prototypes of the functions it wrapped.
         - export rouse_cb and rouse_wait by default now.
