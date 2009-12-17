@@ -34,7 +34,8 @@ sub conn::gen_statdata {
 
    sub read_file {
       local $/;
-      (open my $fh, "<$_[0]\x00") ? <$fh> : ()
+      my $fh;
+      (open $fh, "<$_[0]\x00") ? <$fh> : ()
    }
 
    {
