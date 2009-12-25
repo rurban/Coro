@@ -8,7 +8,14 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
-5.21
+	- convert Coro::Util into a "perl compatibility wrapper" - the functions
+          are less useful now, but are drop-in replacements for existing
+          functions, listing better alternatives in the documentation. This also
+          fixes a bug in Coro::LWP which naively substituted Socket::inet_aton
+          with Coro::Util::inet_aton.
+	- fix Coro::Util::gethost* functions.
+
+5.21  Wed Dec 16 07:19:51 CET 2009
         - automatically load Coro::AnyEvent when AnyEvent and Coro are used
           together.
         - add some examples on how to combine other event loops with Coro in
