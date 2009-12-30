@@ -260,6 +260,9 @@ This call is similar to C<poll> in that it will also poll for
 events. Unlike C<poll>, it will only resume the thread once there are no
 events to handle anymore, i.e. when the process is otherwise idle.
 
+This is good for background threads that shouldn't use CPU time when
+foreground jobs are ready to run.
+
 =item Coro::AnyEvent::idle_upto $seconds
 
 Like C<idle>, but with a maximum waiting time.
