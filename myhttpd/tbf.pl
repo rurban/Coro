@@ -2,7 +2,7 @@ package tbf;
 
 # kind of token-bucket-filter
 
-my $max_per_client = $::TBF_MAX_PER_CLIENT || 118000;
+our $max_per_client = $::TBF_MAX_PER_CLIENT || 118000;
 
 sub new {
    my $class = shift;
