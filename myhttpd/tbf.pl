@@ -9,7 +9,7 @@ sub new {
    my %arg = @_;
    my $self = bless \%arg, $class;
 
-   $self->{maxbucket} ||= $self->{rate} * 60; # max bucket
+   $self->{maxbucket} ||= $::TBF_MAX_BUCKET || $self->{rate} * 5; # max bucket
    $self->{minbucket} ||= $self->{rate}; # minimum bucket to share
    $self->{interval}  ||= $::BUFSIZE / $max_per_client; # good default interval
 
