@@ -1,5 +1,7 @@
 package tbf;
 
+use List::Util ();
+
 # kind of token-bucket-filter
 
 our $max_per_client = $::TBF_MAX_PER_CLIENT || 118000;
@@ -11,7 +13,7 @@ sub new {
 
    $self->{maxbucket} ||= $::TBF_MAX_BUCKET || $self->{rate} * 5; # max bucket
    $self->{minbucket} ||= $self->{rate}; # minimum bucket to share
-   $self->{interval}  ||= $::BUFSIZE / $max_per_client; # good default interval
+   $self->{interval}  ||= List::Util::min 0.1, $::BUFSIZE / $max_per_client; # good default interval
 
    if ($self->{rate}) {
       $self->{w} = EV::periodic 0, $self->{interval}, undef, sub {
