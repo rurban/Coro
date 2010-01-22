@@ -1,7 +1,7 @@
 GROUP usa US CA
 GROUP far JP CN TW HK KR
 GROUP eur DE AT FR GB IT ES CH
-GROUP de DE AT CH
+GROUP de DE AT CH NL
 GROUP fra FR LU
 
 !.					far
@@ -33,6 +33,7 @@ GROUP fra FR LU
 !/eps/Infinite Ryvius			usa
 !/eps/Initial D				usa
 !/eps/Iria				usa
+!/eps/Blame				usa de
 !/eps/K O Century Beast			usa
 !/eps/Kodomo no Omocha			usa de
 !/eps/Love Hina				usa
@@ -165,6 +166,9 @@ GROUP fra FR LU
 !/manga/slayers				de
 !/manga/vampire princess miyu		de
 !/manga/video girl ai			de usa
+!/manga/eden				EUR usa
+!/manga/blame				EUR usa
+!/manga/Oh! My Goddess			EUR usa
 !/movies/adolescence of utena		usa
 !/movies/akira				eur usa
 !/movies/angel's egg			usa
