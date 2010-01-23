@@ -12,7 +12,7 @@ use Text::Abbrev;
 my $last_ts = time;
 
 my %complete;
-my @commands = qw(quit squit refresh country restart block info print clrdiridx);
+my @commands = qw(quit squit refresh country clrwhois restart block info print clrdiridx);
 
 abbrev \%complete, @commands;
 
@@ -67,6 +67,8 @@ sub shell {
             last;
          } elsif ($cmd eq "country") {
             print $fh netgeo::ip_request($_), "\n";
+         } elsif ($cmd eq "clrwhois") {
+            netgeo::clear_cache;
          }
       } else {
          print $fh "try one of @commands\n";

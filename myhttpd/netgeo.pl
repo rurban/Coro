@@ -25,6 +25,11 @@ $netgeo::iprange = new BerkeleyDB::Btree
     -Flags => DB_CREATE,
        or die "unable to create/open iprange table";
 
+sub clear_cache() {
+   %netgeo::whois = ();
+   $netgeo::iprange->truncate (my $dummy);
+}
+
 package Whois;
 
 use Coro::EV;
@@ -230,6 +235,9 @@ sub ip_request {
    $whois =~ /^\*de: This network range is not allocated to /m # APINIC e.g. 24.0.0.0
       and return;
 
+   $whois =~ /^\*de: Not allocated by APNIC/m # APINIC e.g. 189.47.24.97
+      and return;
+
    $whois =~ /^\*ac: XXX0/m # 192.0.0.0
       and return;
 
@@ -343,7 +351,7 @@ sub ip_request {
    $whois = $WHOIS{RIPE}->ip_request($ip)
          || $WHOIS{APNIC} ->ip_request($ip)
          || $WHOIS{ARIN} ->ip_request($ip)
-#         || $WHOIS{LACNIC}->ip_request($ip)
+         || $WHOIS{LACNIC}->ip_request($ip)
          ;
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
