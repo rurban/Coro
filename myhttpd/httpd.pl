@@ -468,8 +468,8 @@ sub respond {
       }
    } else {
 
-      stat $path
-         or $self->err (404, "not found");
+      Coro::AIO::aio_stat $path
+         and $self->err (404, "not found");
 
       $self->{stat} = [stat _];
 
