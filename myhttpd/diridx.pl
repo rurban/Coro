@@ -38,7 +38,7 @@ sub conn::gen_statdata {
       do {
          Coro::AIO::aio_load "$path.dols/top", $data->{top}
             unless Coro::AIO::aio_stat "$path.dols/top";
-         Coro::AIO::aio_load "$path.dols/top", $data->{bot}
+         Coro::AIO::aio_load "$path.dols/bot", $data->{bot}
             unless Coro::AIO::aio_stat "$path.dols/bot";
          $path =~ s/[^\/]*\/+$//
             or die "malformed path: $path";
