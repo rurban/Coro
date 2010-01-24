@@ -1,5 +1,6 @@
 use List::Util qw(sum);
 
+use Coro::AIO ();
 use Storable ();
 
 my $SD_VERSION = 1;
@@ -32,29 +33,29 @@ sub conn::gen_statdata {
       $data->{path} = $path;
    }
 
-   sub read_file {
-      local $/;
-      my $fh;
-      (open $fh, "<$_[0]\x00") ? <$fh> : ()
-   }
-
    {
       my $path = $self->{path};
       do {
-         $data->{top} ||= read_file "$path.dols/top";
-         $data->{bot} ||= read_file "$path.dols/bot";
+         Coro::AIO::aio_load "$path.dols/top", $data->{top}
+            unless Coro::AIO::aio_stat "$path.dols/top";
+         Coro::AIO::aio_load "$path.dols/top", $data->{bot}
+            unless Coro::AIO::aio_stat "$path.dols/bot";
          $path =~ s/[^\/]*\/+$//
             or die "malformed path: $path";
       } while $path ne "";
    }
 
-   if (opendir my $dir, $self->{path}) {
+   my $entries = Coro::AIO::aio_readdir $self->{path};
+
+   {
       my $dlen = 0;
       my $flen = 0;
       my $slen = 0;
-      for (sort readdir $dir) {
+
+      for (sort @$entries) {
          next if /$ignore/;
-         stat "$self->{path}$_";
+
+         Coro::AIO::aio_stat "$self->{path}$_";
          if (-d _) {
             next unless 0555 == ((stat _)[2] & 0555);
             $dlen = length $_ if length $_ > $dlen;
@@ -72,33 +73,34 @@ sub conn::gen_statdata {
       $data->{slen} = $slen;
    }
 
-   $data;
+   $data
 }
 
 sub conn::get_statdata {
    my $self = shift;
 
    my $mtime = $self->{stat}[9];
+   my $statdata;
 
-   $statdata = $diridx{$self->{path}};
+#   $statdata = $diridx{$self->{path}};
+#
+#   if (defined $statdata) {
+#      $$statdata = Storable::thaw $statdata;
+#      return $$statdata
+#         if $$statdata->{version} == $SD_VERSION
+#            && $$statdata->{mtime} == $mtime;
+#   }
 
-   if (defined $statdata) {
-      $$statdata = Storable::thaw $statdata;
-      return $$statdata
-         if $$statdata->{version} == $SD_VERSION
-            && $$statdata->{mtime} == $mtime;
-   }
-
-   $self->slog(8, "creating index cache for $self->{path}");
+#   $self->slog(8, "creating index cache for $self->{path}");
 
    $$statdata = $self->gen_statdata;
    $$statdata->{version} = $SD_VERSION;
    $$statdata->{mtime}   = $mtime;
 
-   $diridx{$self->{path}} = Storable::freeze $$statdata;
-   (tied %diridx)->db_sync;
+#   $diridx{$self->{path}} = Storable::freeze $$statdata;
+#   (tied %diridx)->db_sync;
 
-   $$statdata;
+   $$statdata
 }
 
 sub handle_redirect { # unused
