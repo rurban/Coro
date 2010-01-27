@@ -1,17 +1,18 @@
 use Coro;
 use Coro::Semaphore;
+use Coro::SemaphoreSet;
 use Coro::EV;
 use Coro::Socket;
 use Coro::Signal;
 use Coro::AIO ();
 
+use Fcntl;
 use HTTP::Date;
 use POSIX ();
 
 use Compress::Zlib ();
 
-no utf8;
-use bytes;
+use common::sense;
 
 # at least on my machine, this thingy serves files
 # quite a bit faster than apache, ;)
@@ -21,12 +22,14 @@ $SIG{PIPE} = 'IGNORE';
 
 our $accesslog;
 our $errorlog;
+our @listen_sockets;
 
 our $NOW;
 our $HTTP_NOW;
 
 our $ERROR_LOG;
 our $ACCESS_LOG;
+our $TRANSFER_LOCK = new Coro::SemaphoreSet; # lock to be acquired per ip
 
 our $update_time = EV::periodic 0, 1, undef, sub {
    $NOW = time;
@@ -56,13 +59,13 @@ sub slog {
    printf $errorlog "$NOW: $format\n", @_ if $errorlog;
 }
 
-our $connections = new Coro::Semaphore $MAX_CONNECTS || 250;
+our $connections = new Coro::Semaphore $::MAX_CONNECTS || 250;
 our $httpevent   = new Coro::Signal;
 
-our $queue_file  = new transferqueue $MAX_TRANSFERS;
+our $queue_file  = new transferqueue $::MAX_TRANSFERS;
 our $queue_index = new transferqueue 10;
 
-our $tbf_top     = new tbf rate => $TBF_RATE || 100000;
+our $tbf_top     = new tbf rate => $::TBF_RATE || 100000;
 
 my $unused_bytes = 0;
 my $unused_last  = time;
@@ -105,18 +108,18 @@ sub listen_on {
 }
 
 my $http_port = new Coro::Socket
-        LocalAddr => $SERVER_HOST,
-        LocalPort => $SERVER_PORT,
+        LocalAddr => $::SERVER_HOST,
+        LocalPort => $::SERVER_PORT,
         ReuseAddr => 1,
         Listen    => 50,
    or die "unable to start server";
 
 listen_on $http_port;
 
-if ($SERVER_PORT2) {
+if ($::SERVER_PORT2) {
    my $http_port = new Coro::Socket
-           LocalAddr => $SERVER_HOST,
-           LocalPort => $SERVER_PORT2,
+           LocalAddr => $::SERVER_HOST,
+           LocalPort => $::SERVER_PORT2,
            ReuseAddr => 1,
            Listen    => 50,
       or die "unable to start server";
@@ -126,8 +129,7 @@ if ($SERVER_PORT2) {
 
 package conn;
 
-use strict;
-use bytes;
+use common::sense;
 
 use Socket;
 use HTTP::Date;
@@ -589,7 +591,7 @@ ignore:
       $self->{time} = $::NOW;
       $self->{written} = 0;
 
-      open my $fh, "<", $self->{path}
+      my $fh = Coro::AIO::aio_open $self->{path}, Fcntl::O_RDONLY, 0
          or die "$self->{path}: late open failure ($!)";
 
       $h -= $l - 1;
@@ -599,6 +601,9 @@ ignore:
       my $bufsize = $::WAIT_BUFSIZE; # initial buffer size
 
       while ($h > 0) {
+         Coro::cede;
+         my $transfer_lock = $TRANSFER_LOCK->guard ($self->{remote_id});
+
          unless ($locked) {
             if ($locked ||= $transfer->try ($::WAIT_INTERVAL)) {
                $bufsize = $::BUFSIZE;
