@@ -25,11 +25,6 @@ $netgeo::iprange = new BerkeleyDB::Btree
     -Flags => DB_CREATE,
        or die "unable to create/open iprange table";
 
-sub clear_cache() {
-   %netgeo::whois = ();
-   $netgeo::iprange->truncate (my $dummy);
-}
-
 package Whois;
 
 use Coro::EV;
@@ -232,10 +227,13 @@ sub ip_request {
    $whois =~ /^\*in: 0\.0\.0\.0 - 255\.255\.255\.255/
       and return;
 
-   $whois =~ /^\*de: This network range is not allocated to /m # APINIC e.g. 24.0.0.0
+   $whois =~ /^\*na: ERX-NETBLOCK/m # ripe(?) 146.230.128.210
       and return;
 
-   $whois =~ /^\*de: Not allocated by APNIC/m # APINIC e.g. 189.47.24.97
+   $whois =~ /^\*de: This network range is not allocated to /m # APNIC e.g. 24.0.0.0
+      and return;
+
+   $whois =~ /^\*de: Not allocated by APNIC/m # APNIC e.g. 189.47.24.97
       and return;
 
    $whois =~ /^\*ac: XXX0/m # 192.0.0.0
@@ -322,11 +320,12 @@ sub int2ip($) {
 
 our %WHOIS;
 
-#$WHOIS{ARIN}   = new Whois::ARIN ARIN  => "whois.arin.net",    port =>   43, maxjobs => 12;
-$WHOIS{ARIN}   = new Whois::RWHOIS ARIN  => "rwhois.arin.net", port => 4321, maxjobs => 12;
-$WHOIS{RIPE}   = new Whois::RIPE RIPE  => "whois.ripe.net",    port =>   43, rflags => "-FTin ", maxjobs => 20;
-$WHOIS{APNIC}  = new Whois::RIPE APNIC => "whois.apnic.net",   port =>   43, rflags => "-FTin ", maxjobs => 20;
-$WHOIS{LACNIC} = new Whois::RIPE LACNIC => "whois.lacnic.net",   port =>   43, maxjobs => 20;
+#$WHOIS{ARIN}    = new Whois::ARIN ARIN  => "whois.arin.net",    port =>   43, maxjobs => 12;
+$WHOIS{ARIN}    = new Whois::RWHOIS ARIN   => "rwhois.arin.net",   port => 4321, maxjobs => 1;
+$WHOIS{RIPE}    = new Whois::RIPE RIPE     => "whois.ripe.net",    port =>   43, rflags => "-FTin ", maxjobs => 1;
+$WHOIS{AFRINIC} = new Whois::RIPE AFRINIC  => "whois.afrinic.net", port =>   43, rflags => "-FTin ", maxjobs => 1;
+$WHOIS{APNIC}   = new Whois::RIPE APNIC    => "whois.apnic.net",   port =>   43, rflags => "-FTin ", maxjobs => 1;
+$WHOIS{LACNIC}  = new Whois::RIPE LACNIC   => "whois.lacnic.net",  port =>   43, maxjobs => 1;
 
 $whoislock = new Coro::SemaphoreSet;
 
@@ -350,8 +349,9 @@ sub ip_request {
 
    $whois = $WHOIS{RIPE}->ip_request($ip)
          || $WHOIS{APNIC} ->ip_request($ip)
-         || $WHOIS{ARIN} ->ip_request($ip)
+         || $WHOIS{AFRINIC} ->ip_request($ip)
          || $WHOIS{LACNIC}->ip_request($ip)
+         || $WHOIS{ARIN} ->ip_request($ip)
          ;
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
@@ -374,6 +374,11 @@ sub ip_request {
    $iprange->db_sync;
 
    $whois;
+}
+
+sub clear_cache() {
+   %netgeo::whois = ();
+   $netgeo::iprange->truncate (my $dummy);
 }
 
 if (0) {
