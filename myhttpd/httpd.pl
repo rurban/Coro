@@ -75,8 +75,8 @@ sub unused_bandwidth {
    if ($unused_last < $NOW - 30 && $unused_bytes / ($NOW - $unused_last) > 50000) {
       $unused_last = $NOW;
       $unused_bytes = 0;
-      $queue_file->force_wake_next;
-      slog 1, "forced filetransfer due to unused bandwidth";
+      $queue_file->force_wake_next
+         and slog 1, "forced filetransfer due to unused bandwidth";
    }
 }
 

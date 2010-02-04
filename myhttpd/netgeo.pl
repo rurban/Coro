@@ -129,42 +129,39 @@ sub ip_request {
       $whois = $self->whois_request("!$handle");
    }
 
-   my ($address, $info, $coordinator, undef) = split /\n\n/, $whois;
+   return
+     if $whois =~ /^OrgName:\s*RIPE Network Coordination Centre/mi;
 
-   $info =~ /^\s+Netname: (\S+)$/mi
+   $whois =~ /^network:Network-Name:\s*(\S+)$/mi
+      or $whois =~ /^NetName:\s*(\S+)$/mi
       or die "$whois($ip): no netname\n";
    my $netname = $1;
 
-   $info =~ /^\s+Netblock: ([0-9.]+\s+-\s+[0-9.]+)\s*$/mi
-      or die "$whois($ip): no netblock\n";
+   $whois =~ /^network:IP-Network-Block:\s*([0-9.]+\s*-\s*[0-9.]+)\s*$/mi
+      or $whois =~ /^NetRange:\s*([0-9.]+\s*-\s*[0-9.]+)\s*$/mi
+      or die "$whois($ip): no netrange\n";
    my $netblock = $1;
 
    my $maintainer;
 
-   if ($info =~ /^\s+Maintainer: (\S+)\s*$/mi) {
+   if ($whois =~ /^Maintainer:\s*(\S+)\s*$/mi) {
       $maintainer = "*ma: $1\n";
       return if $1 =~ /^(?:AP|RIPE)$/;
    }
 
-   $coordinator =~ s/^\s+Coordinator:\s*//si
-      or $coordinator = "";
-
-   $address =~ s/\n\s*(\S+)$//
-      or die "$whois($ip): no parseable country ($address)\n";
+   $whois =~ /^Country:\s*(\S+)/mi
+      or die "$whois($ip): no parseable country ($whois)\n";
    my $country = $1;
-
-   $address     =~ s/^\s*/*de: /mg;
-   $coordinator =~ s/^\s*/*ad: /mg;
 
    $whois = <<EOF;
 *in: $netblock
 *na: $netname
 *cy: $country
-$maintainer$address
-$coordinator
+
+$whois
 EOF
-   $whois =~ s/\n+$//;
-   $whois;
+
+   $whois
 }
 
 package Whois::RIPE;
@@ -347,15 +344,22 @@ sub ip_request {
 
    my ($arin, $ripe, $apnic);
 
-   $whois = $WHOIS{RIPE}->ip_request($ip)
-         || $WHOIS{APNIC} ->ip_request($ip)
-         || $WHOIS{AFRINIC} ->ip_request($ip)
-         || $WHOIS{LACNIC}->ip_request($ip)
-         || $WHOIS{ARIN} ->ip_request($ip)
+   $whois = $WHOIS{RIPE}    ->ip_request ($ip)
+         || $WHOIS{APNIC}   ->ip_request ($ip)
+         || $WHOIS{AFRINIC} ->ip_request ($ip)
+         || $WHOIS{LACNIC}  ->ip_request ($ip)
+         || $WHOIS{ARIN}    ->ip_request ($ip)
          ;
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
-      or do { warn "$whois($ip): no addresses found\n", last };
+      or do {
+         warn "$whois($ip): no addresses found\n";
+         return <<EOF;
+*in: $ip-$ip
+*na: whois failure
+*cy: XX
+EOF
+      };
 
    my ($ip0, $ip1) = ($1, $2);
 
@@ -373,7 +377,7 @@ sub ip_request {
    (tied %whois)->db_sync;
    $iprange->db_sync;
 
-   $whois;
+   $whois
 }
 
 sub clear_cache() {
@@ -381,17 +385,17 @@ sub clear_cache() {
    $netgeo::iprange->truncate (my $dummy);
 }
 
-if (0) {
+if (1) {
    #print ip_request "68.52.164.8"; # goof
    #print "\n\n";
-   #print ip_request "200.202.220.222"; # lacnic
-   #print "\n\n";
+   print ip_request "200.202.220.222"; # lacnic
+   print "\n\n";
    #print ip_request "62.116.167.250";
    #print "\n\n";
    #print ip_request "133.11.128.254"; # jp
    #print "\n\n";
-   print ip_request "80.131.153.93";
-   print "\n\n";
+#   print ip_request "76.6.7.8";
+#   print "\n\n";
 }
 
 1;
