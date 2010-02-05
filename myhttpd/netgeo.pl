@@ -5,8 +5,8 @@
 use Socket;
 use Fcntl;
 
+use AnyEvent;
 use Coro;
-use Coro::EV;
 use Coro::Semaphore;
 use Coro::SemaphoreSet;
 use Coro::Socket;
@@ -27,29 +27,34 @@ $netgeo::iprange = new BerkeleyDB::Btree
 
 package Whois;
 
-use Coro::EV;
+use Socket;
+use Coro::AnyEvent ();
+use Date::Parse;
 
 sub new {
    my $class = shift;
    my $name = shift;
    my $ip = shift;
    my $self = bless { name => $name, ip => $ip, @_ }, $class;
-   $self->{maxjobs} = new Coro::Semaphore $self->{maxjobs} || 1;
-   $self;
-}
 
-sub ip {
-   $_[0]{ip};
+   $self->{maxjobs} = new Coro::Semaphore $self->{maxjobs} || 1;
+
+   $self
 }
 
 sub sanitize {
-   $_[1];
+   local $_ = $_[0];
+
+   s/\015?\012/\n/g;
+   s/\n[\t ]{6,}([0-9.]+ - [0-9.]+)/ $1/g;
+
+   $_
 }
 
 sub whois_request {
    my ($self, $query) = @_;
 
-   my $id = "$self->{name}\x0$query";
+   my $id = "$self->{name}\x00$query";
    my $whois = $netgeo::whois{$id};
 
    unless (defined $whois) {
@@ -60,145 +65,125 @@ sub whois_request {
 
       while () {
          my $fh = new Coro::Socket
-                         PeerAddr => $self->ip,
+                         PeerAddr => $self->{ip},
                          PeerPort => $self->{port} || "whois",
                          Timeout  => 30;
+
          if ($fh) {
             print $fh "$query\n";
-            $fh->read($whois, 16*1024); # max 16k. whois stored
-            close $fh;
-            $whois =~ s/\015?\012/\n/g;
-            $whois = $self->sanitize($whois);
+            $fh->read ($whois, 16*1024); # max 16k. whois stored
+            undef $fh;
+
+            sanitize $whois;
+
             if ($whois eq ""
                 or ($whois =~ /query limit/i && $whois =~ /exceeded/i) # ARIN
                 or ($whois =~ /wait a while and try again/i) # ARIN
                 or ($whois =~ /^%ERROR:202:/) # RIPE/APNIC
             ) {
                print "retrying in $timeout seconds\n";#d#
-               do_timer(desc => "timer2", after => $timeout);
-               $timeout *= 2;
-               $timeout = 1 if $timeout > 600;
+
+               Coro::AnyEvent::sleep $timeout;
+
+               $timeout *= 3;
             } else {
                last;
             }
          } else {
-            # only retry once a minute
             print STDERR "unable to connect to $self->{ip} ($self->{name}), retrying...\n";
-            Coro::Timer::sleep 300;
+            Coro::AnyEvent::sleep 60;
          }
       }
 
       $netgeo::whois{$id} = $whois;
    }
 
-   $whois;
-}
-
-package Whois::ARIN;
-
-use Date::Parse;
-
-use base Whois;
-
-sub sanitize {
-   local $_ = $_[1];
-   s/\n[\t ]{6,}([0-9.]+ - [0-9.]+)/ $1/g;
-   $_;
-}
-
-# there are only two problems with arin's whois database:
-# a) the data cannot be trusted and often is old or even wrong
-# b) the database format is nonparsable
-#    (no spaces between netname/ip and netnames can end in digits ;)
-# of course, the only source to find out about global
-# address distribution is... arin.
-sub ip_request {
-   my ($self, $ip) = @_;
-
-   my $whois = $self->whois_request($ip);
-   
-   return if $whois =~ /^No match/;
-
-   if ($whois =~ /^To single out one record/m) {
-      my $handle;
-      while ($whois =~ /\G\S.*\(([A-Z0-9\-]+)\).*\n/mg) {
-         $handle = $1;
-         #return if $handle =~ /-(RIPE|APNIC)/; # heuristic, but bad because ripe might not have better info
-      }
-      $handle or die "$whois ($ip): unparseable multimatch\n";
-      $whois = $self->whois_request("!$handle");
-   }
-
-   return
-     if $whois =~ /^OrgName:\s*RIPE Network Coordination Centre/mi;
-
-   $whois =~ /^network:Network-Name:\s*(\S+)$/mi
-      or $whois =~ /^NetName:\s*(\S+)$/mi
-      or die "$whois($ip): no netname\n";
-   my $netname = $1;
-
-   $whois =~ /^network:IP-Network-Block:\s*([0-9.]+\s*-\s*[0-9.]+)\s*$/mi
-      or $whois =~ /^NetRange:\s*([0-9.]+\s*-\s*[0-9.]+)\s*$/mi
-      or die "$whois($ip): no netrange\n";
-   my $netblock = $1;
-
-   my $maintainer;
-
-   if ($whois =~ /^Maintainer:\s*(\S+)\s*$/mi) {
-      $maintainer = "*ma: $1\n";
-      return if $1 =~ /^(?:AP|RIPE)$/;
-   }
-
-   $whois =~ /^Country:\s*(\S+)/mi
-      or die "$whois($ip): no parseable country ($whois)\n";
-   my $country = $1;
-
-   $whois = <<EOF;
-*in: $netblock
-*na: $netname
-*cy: $country
-
-$whois
-EOF
-
    $whois
 }
 
-package Whois::RIPE;
+sub mangle_rwhois {
+   die "rwhois: RIPE delegation"
+     if /^OrgName:\s*RIPE Network Coordination Centre/m;
 
-use Socket;
-use base Whois;
+   /^network:ID:\s*(.*)$/m
+      or die "rwhois($_): no network ID";
+   my $na = $1;
 
-sub sanitize {
-   local $_ = $_[1];
+   /^network:IP-Network-Block:\s*([0-9.]+\s*-\s*[0-9.]+)\s*$/m
+      or die "rwhois($_): no network block\n";
+   my $in = $1;
 
+   /^network:Country-Code:\s*(.*)/m
+      or die "rwhois($_): no country code\n";
+   my $cy = $1;
+
+   $_ = <<EOF;
+*in: $in
+*na: $na
+*cy: $cy
+
+$_
+EOF
+}
+
+sub mangle_arin {
+   die "arin: RIPE delegation"
+     if /^OrgName:\s*RIPE Network Coordination Centre/mi;
+
+   /^NetName:\s*(.*)$/m
+      or die "arin($_): no network name";
+   my $na = $1;
+
+   /^NetRange:\s*([0-9.]+\s*-\s*[0-9.]+)\s*$/m
+      or die "arin($_): no network block\n";
+   my $in = $1;
+
+   /^Country:\s*(.*)/mi
+      or die "arin($_): no country code\n";
+   my $cy = $1;
+
+   $_ = <<EOF;
+*in: $in
+*na: $na
+*cy: $cy
+
+$_
+EOF
+}
+
+sub mangle_ripe {
    s/^%.*\n//gm;
    s/^\n+//;
    s/\n*$/\n/;
 
-   s/^inetnum:\s+/*in: /gm;
-   s/^admin-c:\s+/*ac: /gm;
-   s/^tech-c:\s+/*tc: /gm;
-   s/^owner-c:\s+/*oc: /gm;
-   s/^country:\s+/*cy: /gm;
-   s/^phone:\s+/*ph: /gm;
-   s/^remarks:\s+/*rm: /gm;
-   s/^changed:\s+/*ch: /gm;
-   s/^created:\s+/*cr: /gm;
-   s/^address:\s+/*ad: /gm;
-   s/^status:\s+/*st: /gm;
-   s/^inetrev:\s+/*ir: /gm;
-   s/^nserver:\s+/*ns: /gm;
+   s/^inetnum:\s+/*in: /gmx;
+   s/^admin-c:\s+/*ac: /gmx;
+   s/^tech-c: \s+/*tc: /gmx;
+   s/^owner-c:\s+/*oc: /gmx;
+   s/^country:\s+/*cy: /gmx;
+   s/^phone:  \s+/*ph: /gmx;
+   s/^remarks:\s+/*rm: /gmx;
+   s/^changed:\s+/*ch: /gmx;
+   s/^created:\s+/*cr: /gmx;
+   s/^address:\s+/*ad: /gmx;
+   s/^status: \s+/*st: /gmx;
+   s/^inetrev:\s+/*ir: /gmx;
+   s/^nserver:\s+/*ns: /gmx;
 
-   $_;
-}
+   s/^descr:  \s+/*de: /gmx;
+   s/^person: \s+/*pe: /gmx;
+   s/^e-mail: \s+/*em: /gmx;
+   s/^owner:  \s+/*ow: /gmx;
+   s/^source: \s+/*so: /gmx;
+   s/^role:   \s+/*ro: /gmx;
+   s/^nic-hdl:\s+/*hd: /gmx;
+   s/^mnt-by: \s+/*mb: /gmx;
+   s/^route:  \s+/*ru: /gmx;
+   s/^origin: \s+/*og: /gmx;
+   s/^netname:\s+/*nn: /gmx;
+   s/^mnt-lower:\s+/*ml: /gmx;
 
-sub ip_request {
-   my ($self, $ip) = @_;
-
-   my $whois = $self->whois_request("$self->{rflags}$ip");
-
-   $whois =~ s{
+   s{
       (2[0-5][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])
       (?:\.
          (2[0-5][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])
@@ -221,36 +206,63 @@ sub ip_request {
       (inet_ntoa $ip1) . " - " . (inet_ntoa $ip2);
    }gex;
 
-   $whois =~ /^\*in: 0\.0\.0\.0 - 255\.255\.255\.255/
-      and return;
+   /^\*in: 0\.0\.0\.0 - 255\.255\.255\.255/
+      and die "whole internet";
 
-   $whois =~ /^\*na: ERX-NETBLOCK/m # ripe(?) 146.230.128.210
-      and return;
+   /^\*de: Various Registries/m # ripe 146.0.0.0
+      and die;
 
-   $whois =~ /^\*de: This network range is not allocated to /m # APNIC e.g. 24.0.0.0
-      and return;
+   /^\*cy: .*is really world wide/m # ripe 146.0.0.0
+      and die;
 
-   $whois =~ /^\*de: Not allocated by APNIC/m # APNIC e.g. 189.47.24.97
-      and return;
+   /^\*de: This network range is not allocated to /m # APNIC e.g. 24.0.0.0
+      and die;
 
-   $whois =~ /^\*ac: XXX0/m # 192.0.0.0
-      and return;
+   /^\*de: Not allocated by APNIC/m # APNIC e.g. 189.47.24.97
+      and die;
 
-   $whois =~ /^\*st: (?:ALLOCATED )?UNSPECIFIED/m
-      and return;
+   /^\*ac: XXX0/m # 192.0.0.0
+      and die;
 
-   $whois =~ /^%ERROR:/m
-      and return;
+   /^\*st: (?:ALLOCATED )?UNSPECIFIED/m
+      and die;
 
-   #while ($whois =~ s/^\*(?:ac|tc):\s+(\S+)\n//m) {
-   #   $whois .= $self->whois_request("-FSTpn $1");
-   #}
+   /^%ERROR:/m
+      and die;
+}
 
-   #$whois =~ s/^\*(?:pn|nh|mb|ch|so|rz|ny|st|rm):.*\n//mg;
+sub ip_request {
+   my ($self, $ip) = @_;
 
-   $whois =~ s/\n+$//;
+   my $whois = $self->whois_request ($ip);
+   
+   return if $whois =~ /^No match/;
 
-   $whois;
+   if ($whois =~ /^To single out one record/m) {
+      my $handle;
+      while ($whois =~ /\G\S.*\(([A-Z0-9\-]+)\).*\n/mg) {
+         $handle = $1;
+         #return if $handle =~ /-(RIPE|APNIC)/; # heuristic, but bad because ripe might not have better info
+      }
+      $handle or die "$whois ($ip): unparseable multimatch\n";
+      $whois = $self->whois_request ("!$handle");
+   }
+
+   # detect format
+
+   for ($whois) {
+      if (/^inetnum:/m && /^country:/m) {
+         mangle_ripe;
+      } elsif (/^network:ID:/m && /^network:Country-Code:/m) {
+         mangle_rwhois;
+      } elsif (/^NetName:/m && /^Country:/m) {
+         mangle_arin;
+      } else {
+         die "short arin format, error, garbage";
+      }
+   }
+
+   $whois
 }
 
 package Whois::RWHOIS;
@@ -317,12 +329,11 @@ sub int2ip($) {
 
 our %WHOIS;
 
-#$WHOIS{ARIN}    = new Whois::ARIN ARIN  => "whois.arin.net",    port =>   43, maxjobs => 12;
-$WHOIS{ARIN}    = new Whois::RWHOIS ARIN   => "rwhois.arin.net",   port => 4321, maxjobs => 1;
-$WHOIS{RIPE}    = new Whois::RIPE RIPE     => "whois.ripe.net",    port =>   43, rflags => "-FTin ", maxjobs => 1;
-$WHOIS{AFRINIC} = new Whois::RIPE AFRINIC  => "whois.afrinic.net", port =>   43, rflags => "-FTin ", maxjobs => 1;
-$WHOIS{APNIC}   = new Whois::RIPE APNIC    => "whois.apnic.net",   port =>   43, rflags => "-FTin ", maxjobs => 1;
-$WHOIS{LACNIC}  = new Whois::RIPE LACNIC   => "whois.lacnic.net",  port =>   43, maxjobs => 1;
+$WHOIS{ARIN}    = new Whois ARIN    => "rwhois.arin.net",   port => 4321, maxjobs => 1;
+$WHOIS{RIPE}    = new Whois RIPE    => "whois.ripe.net",    port =>   43, maxjobs => 1, rflags => "-FTin ";
+$WHOIS{AFRINIC} = new Whois AFRINIC => "whois.afrinic.net", port =>   43, maxjobs => 1, rflags => "-FTin ";
+$WHOIS{APNIC}   = new Whois APNIC   => "whois.apnic.net",   port =>   43, maxjobs => 1, rflags => "-FTin ";
+$WHOIS{LACNIC}  = new Whois LACNIC  => "whois.lacnic.net",  port =>   43, maxjobs => 1;
 
 $whoislock = new Coro::SemaphoreSet;
 
@@ -344,11 +355,11 @@ sub ip_request {
 
    my ($arin, $ripe, $apnic);
 
-   $whois = $WHOIS{RIPE}    ->ip_request ($ip)
-         || $WHOIS{APNIC}   ->ip_request ($ip)
-         || $WHOIS{AFRINIC} ->ip_request ($ip)
-         || $WHOIS{LACNIC}  ->ip_request ($ip)
-         || $WHOIS{ARIN}    ->ip_request ($ip)
+   $whois = eval { $WHOIS{RIPE}    ->ip_request ($ip) }
+         || eval { $WHOIS{APNIC}   ->ip_request ($ip) }
+         || eval { $WHOIS{AFRINIC} ->ip_request ($ip) }
+         || eval { $WHOIS{LACNIC}  ->ip_request ($ip) }
+         || eval { $WHOIS{ARIN}    ->ip_request ($ip) }
          ;
 
    $whois =~ /^\*in: ([0-9.]+)\s+-\s+([0-9.]+)\s*$/mi
@@ -385,17 +396,12 @@ sub clear_cache() {
    $netgeo::iprange->truncate (my $dummy);
 }
 
-if (1) {
-   #print ip_request "68.52.164.8"; # goof
-   #print "\n\n";
-   print ip_request "200.202.220.222"; # lacnic
-   print "\n\n";
+if (0) {
+   print ip_request "68.52.164.8"; # goof
+   #print ip_request "200.202.220.222"; # lacnic
    #print ip_request "62.116.167.250";
-   #print "\n\n";
    #print ip_request "133.11.128.254"; # jp
-   #print "\n\n";
 #   print ip_request "76.6.7.8";
-#   print "\n\n";
 }
 
 1;
