@@ -1,3 +1,5 @@
+package main;
+
 use List::Util qw(sum);
 
 use Coro::AIO ();
@@ -22,13 +24,13 @@ sub conn::gen_statdata {
    my $data;
    
    {
-      my $path = "";
-      my $prefix = "";
+      my $prefix = "http://" . $self->server_hostport;
+      my $path = "<a href='$prefix/'>$prefix</a> / ";
 
-      for ("http://".$self->server_hostport, split /\//, substr $self->{name}, 1) {
+      for (split /\//, substr $self->{name}, 1) {
          next if $_ eq ".";
-         $path .= "<a href='".escape_uri("$prefix$_")."/'>$_</a> / ";
-         $prefix .= "$_/";
+         $prefix .= "/" . escape_uri $_;
+         $path .= "<a href='$prefix/'>$_</a> / ";
       }
       $data->{path} = $path;
    }
@@ -173,7 +175,7 @@ sub conn::diridx {
          if ("$self->{path}$_" =~ $conn::blockuri{$self->{country}}) {
             $stat .= "<td>$_ ";
          } else {
-            $stat .= "<td><a href='".escape_uri("$_/")."'>$_</a> ";
+            $stat .= "<td><a href='".escape_uri($_)."/'>$_</a> ";
          }
       }
       $stat .= "</table>";
