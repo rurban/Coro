@@ -54,8 +54,11 @@ if ($ACCESS_LOG) {
 sub slog {
    my $level = shift;
    my $format = shift;
+
+   $format = sprintf $format, @_ if @_;
+
    my $NOW = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $::NOW);
-   printf "$NOW: $format\n", @_;
+   print "$NOW: $format\n";
    printf $errorlog "$NOW: $format\n", @_ if $errorlog;
 }
 
