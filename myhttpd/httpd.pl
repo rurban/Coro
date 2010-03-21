@@ -59,7 +59,7 @@ sub slog {
 
    my $NOW = (POSIX::strftime "%Y-%m-%d %H:%M:%S", gmtime $::NOW);
    print "$NOW: $format\n";
-   printf $errorlog "$NOW: $format\n", @_ if $errorlog;
+   print $errorlog "$NOW: $format\n", @_ if $errorlog;
 }
 
 our $connections = new Coro::Semaphore $::MAX_CONNECTS || 250;
