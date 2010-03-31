@@ -140,7 +140,8 @@ See L<Coro::EV> or L<Coro::AnyEvent> for examples of using this technique.
 
 =cut
 
-$idle = new Coro sub {
+# ||= because other modules could have provided their own by now
+$idle ||= new Coro sub {
    require Coro::Debug;
    die "FATAL: deadlock detected.\n"
        . Coro::Debug::ps_listing ();

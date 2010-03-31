@@ -1,9 +1,6 @@
 Revision history for Perl extension Coro.
 
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
-TODO: maybe implement a default message channel, very much like Erlang's
-      actor model (which is cool in a lot of important aspects (failures!),
-      but very lacking in others (higher level ipc)).
 TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
@@ -13,6 +10,9 @@ TODO: channel->maxsize(newsize)?
           functions, listing better alternatives in the documentation. This also
           fixes a bug in Coro::LWP which naively substituted Socket::inet_aton
           with Coro::Util::inet_aton.
+        - do not override $Coro::idle unconditionally in Coro.pm, as other
+          modules could have provided their own idle coro already
+          (for exmaple, Coro::AnyEvent).
 	- fix Coro::Util::gethost* functions.
 
 5.21  Wed Dec 16 07:19:51 CET 2009
