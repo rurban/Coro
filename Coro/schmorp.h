@@ -446,8 +446,10 @@ s_epipe_renew (s_epipe *epp)
       if (dup2 (epn.fd [0], epp->fd [0]) < 0)
         croak ("unable to dup over old event pipe"); /* should not croak */
 
-      if (epp->fd [1] != epp->fd [0])
-        close (epn.fd [0]);
+      close (epn.fd [0]);
+
+      if (epn.fd [0] == epn.fd [1])
+        epn.fd [1] = epp->fd [0];
 
       epn.fd [0] = epp->fd [0];
     }
