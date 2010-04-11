@@ -5,6 +5,8 @@ TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 
+TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
+
 	- convert Coro::Util into a "perl compatibility wrapper" - the functions
           are less useful now, but are drop-in replacements for existing
           functions, listing better alternatives in the documentation. This also
@@ -14,6 +16,7 @@ TODO: channel->maxsize(newsize)?
           modules could have provided their own idle coro already
           (for exmaple, Coro::AnyEvent).
 	- fix Coro::Util::gethost* functions.
+        - Coro::Timer corretcly exports it's symbols (reported by Hideki Yamamura).
 
 5.21  Wed Dec 16 07:19:51 CET 2009
         - automatically load Coro::AnyEvent when AnyEvent and Coro are used

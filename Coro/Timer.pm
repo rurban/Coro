@@ -23,7 +23,7 @@ package Coro::Timer;
 use common::sense;
 
 use Carp ();
-use Exporter;
+use base Exporter::;
 
 use AnyEvent ();
 
