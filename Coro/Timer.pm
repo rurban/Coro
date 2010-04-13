@@ -23,14 +23,14 @@ package Coro::Timer;
 use common::sense;
 
 use Carp ();
-use Exporter;
+use base Exporter::;
 
 use AnyEvent ();
 
 use Coro ();
 use Coro::AnyEvent ();
 
-our $VERSION = 5.21;
+our $VERSION = 5.22;
 our @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;

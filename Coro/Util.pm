@@ -11,6 +11,9 @@ Coro::Util - various utility functions.
 This module implements various utility functions, mostly replacing perl
 functions by non-blocking counterparts.
 
+Many of these functions exist for the sole purpose of emulating existing
+interfaces, no matter how bad or limited they are (e.g. no IPv6 support).
+
 This module is an AnyEvent user. Refer to the L<AnyEvent>
 documentation to see how to integrate it into your own programs.
 
@@ -38,7 +41,7 @@ use base 'Exporter';
 our @EXPORT = qw(gethostbyname gethostbyaddr);
 our @EXPORT_OK = qw(inet_aton fork_eval);
 
-our $VERSION = 5.21;
+our $VERSION = 5.22;
 
 our $MAXPARALLEL = 16; # max. number of parallel jobs
 
@@ -77,28 +80,35 @@ sub _do_asy(&;@) {
 
 =item $ipn = Coro::Util::inet_aton $hostname || $ip
 
-Works almost exactly like its AnyEvent::Socket counterpart, except that it
-does not block other coroutines and returns the results.
+Works almost exactly like its C<Socket::inet_aton> counterpart, except
+that it does not block other coroutines.
+
+Does not handle multihomed hosts or IPv6 - consider using
+C<AnyEvent::Socket::resolve_sockaddr> with the L<Coro> rouse functions
+instead.
 
 =cut
 
 sub inet_aton {
    AnyEvent::Socket::inet_aton $_[0], Coro::rouse_cb;
-   my @res = Coro::rouse_wait;
-   wantarray ? @res : $res[0]
+   (grep length == 4, Coro::rouse_wait)[0]
 }
 
 =item gethostbyname, gethostbyaddr
 
-Work similarly to their perl counterparts, but do not block. Uses
-C<Anyevent::Util::inet_aton> internally.
+Work similarly to their Perl counterparts, but do not block. Uses
+C<AnyEvent::Util::inet_aton> internally.
+
+Does not handle multihomed hosts or IPv6 - consider using
+C<AnyEvent::Socket::resolve_sockaddr> or C<AnyEvent::DNS::reverse_lookup>
+with the L<Coro> rouse functions instead.
 
 =cut
 
 sub gethostbyname($) {
-   my @res = inet_aton $_[0];
+   AnyEvent::Socket::inet_aton $_[0], Coro::rouse_cb;
 
-   ($_[0], $_[0], &Socket::AF_INET, 4, map +(format_ip $_), grep length == 4, @res)
+   ($_[0], $_[0], &Socket::AF_INET, 4, map +(AnyEvent::Socket::format_address $_), grep length == 4, Coro::rouse_wait)
 }
 
 sub gethostbyaddr($$) {
@@ -124,6 +134,10 @@ pid watcher etc.
 
 This function might keep a pool of processes in some future version, as
 fork can be rather slow in large processes.
+
+You should also look at C<AnyEvent::Util::fork_eval>, which is newer and
+more compatible to totally broken Perl implementations such as the one
+from ActiveState.
 
 Example: execute some external program (convert image to rgba raw form)
 and add a long computation (extract the alpha channel) in a separate

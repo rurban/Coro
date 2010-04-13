@@ -117,6 +117,8 @@ trampoline (int sig)
        ".globl coro_transfer\n"
        ".type coro_transfer, @function\n"
        "coro_transfer:\n"
+       /* windows, of course, gives a shit on the amd64 ABI and uses different registers */
+       /* http://blogs.msdn.com/freik/archive/2005/03/17/398200.aspx */
        #if __amd64
          #define NUM_SAVED 6
          "\tpush %rbp\n"
@@ -125,8 +127,18 @@ trampoline (int sig)
          "\tpush %r13\n"
          "\tpush %r14\n"
          "\tpush %r15\n"
+         #if CORO_WIN_TIB
+           "\tpush %gs:0x0\n"
+           "\tpush %gs:0x8\n"
+           "\tpush %gs:0xc\n"
+         #endif
          "\tmov  %rsp, (%rdi)\n"
          "\tmov  (%rsi), %rsp\n"
+         #if CORO_WIN_TIB
+           "\tpop  %gs:0xc\n"
+           "\tpop  %gs:0x8\n"
+           "\tpop  %gs:0x0\n"
+         #endif
          "\tpop  %r15\n"
          "\tpop  %r14\n"
          "\tpop  %r13\n"
@@ -139,8 +151,18 @@ trampoline (int sig)
          "\tpush %ebx\n"
          "\tpush %esi\n"
          "\tpush %edi\n"
+         #if CORO_WIN_TIB
+           "\tpush %fs:0\n"
+           "\tpush %fs:4\n"
+           "\tpush %fs:8\n"
+         #endif
          "\tmov  %esp, (%eax)\n"
          "\tmov  (%edx), %esp\n"
+         #if CORO_WIN_TIB
+           "\tpop  %fs:8\n"
+           "\tpop  %fs:4\n"
+           "\tpop  %fs:0\n"
+         #endif
          "\tpop  %edi\n"
          "\tpop  %esi\n"
          "\tpop  %ebx\n"
@@ -225,9 +247,12 @@ coro_create (coro_context *ctx, coro_func coro, void *arg, void *sptr, long ssiz
 # elif CORO_LOSER
 
   coro_setjmp (ctx->env);
-  #if __CYGWIN__
+  #if __CYGWIN__ && __i386
     ctx->env[8]                        = (long)    coro_init;
     ctx->env[7]                        = (long)    ((char *)sptr + ssize)         - sizeof (long);
+  #elif __CYGWIN__ && __x86_64
+    ctx->env[7]                        = (long)    coro_init;
+    ctx->env[6]                        = (long)    ((char *)sptr + ssize)         - sizeof (long);
   #elif defined(__MINGW32__)
     ctx->env[5]                        = (long)    coro_init;
     ctx->env[4]                        = (long)    ((char *)sptr + ssize)         - sizeof (long);
@@ -236,10 +261,10 @@ coro_create (coro_context *ctx, coro_func coro, void *arg, void *sptr, long ssiz
     ((_JUMP_BUFFER *)&ctx->env)->Esp   = (long)    STACK_ADJUST_PTR (sptr, ssize) - sizeof (long);
   #elif defined(_M_AMD64)
     ((_JUMP_BUFFER *)&ctx->env)->Rip   = (__int64) coro_init;
-    ((_JUMP_BUFFER *)&ctx->env)->Rsp   = (__int64) STACK_ADJUST_PTR (sptr, ssize) - sizeof (long);
+    ((_JUMP_BUFFER *)&ctx->env)->Rsp   = (__int64) STACK_ADJUST_PTR (sptr, ssize) - sizeof (__int64);
   #elif defined(_M_IA64)
     ((_JUMP_BUFFER *)&ctx->env)->StIIP = (__int64) coro_init;
-    ((_JUMP_BUFFER *)&ctx->env)->IntSp = (__int64) STACK_ADJUST_PTR (sptr, ssize) - sizeof (long);
+    ((_JUMP_BUFFER *)&ctx->env)->IntSp = (__int64) STACK_ADJUST_PTR (sptr, ssize) - sizeof (__int64);
   #else
     #error "microsoft libc or architecture not supported"
   #endif
@@ -274,6 +299,13 @@ coro_create (coro_context *ctx, coro_func coro, void *arg, void *sptr, long ssiz
   ctx->sp = (void **)(ssize + (char *)sptr);
   *--ctx->sp = (void *)abort; /* needed for alignment only */
   *--ctx->sp = (void *)coro_init;
+
+  #if CORO_WIN_TIB
+  *--ctx->sp = 0;                    /* ExceptionList */
+  *--ctx->sp = (char *)sptr + ssize; /* StackBase */
+  *--ctx->sp = sptr;                 /* StackLimit */
+  #endif
+
   ctx->sp -= NUM_SAVED;
 
 # elif CORO_UCONTEXT

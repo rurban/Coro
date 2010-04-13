@@ -1,12 +1,24 @@
 Revision history for Perl extension Coro.
 
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
-TODO: maybe implement a default message channel, very much like Erlang's
-      actor model (which is cool in a lot of important aspects (failures!),
-      but very lacking in others (higher level ipc)).
 TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
+TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
+
+5.22  Wed Apr 14 03:55:35 CEST 2010
+	- correctly return udnef on errors in Coro::Handle::read/write
+          (testcase by Marc Wims).
+	- convert Coro::Util into a "perl compatibility wrapper" - the functions
+          are less useful now, but are drop-in replacements for existing
+          functions, listing better alternatives in the documentation. This also
+          fixes a bug in Coro::LWP which naively substituted Socket::inet_aton
+          with Coro::Util::inet_aton.
+        - do not override $Coro::idle unconditionally in Coro.pm, as other
+          modules could have provided their own idle coro already
+          (for exmaple, Coro::AnyEvent).
+	- fix Coro::Util::gethost* functions.
+        - Coro::Timer corretcly exports it's symbols (reported by Hideki Yamamura).
 
 5.21  Wed Dec 16 07:19:51 CET 2009
         - automatically load Coro::AnyEvent when AnyEvent and Coro are used

@@ -83,7 +83,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.21;
+our $VERSION = 5.22;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -140,7 +140,8 @@ See L<Coro::EV> or L<Coro::AnyEvent> for examples of using this technique.
 
 =cut
 
-$idle = new Coro sub {
+# ||= because other modules could have provided their own by now
+$idle ||= new Coro sub {
    require Coro::Debug;
    die "FATAL: deadlock detected.\n"
        . Coro::Debug::ps_listing ();
