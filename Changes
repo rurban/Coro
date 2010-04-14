@@ -6,6 +6,8 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+	- document that perl 5.12 deliberately removed support for cloning.
+
 5.22  Wed Apr 14 03:55:35 CEST 2010
 	- correctly return udnef on errors in Coro::Handle::read/write
           (testcase by Marc Wims).
