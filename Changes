@@ -4,9 +4,11 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: unready_all
 TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
-
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+5.22  Wed Apr 14 03:55:35 CEST 2010
+	- correctly return udnef on errors in Coro::Handle::read/write
+          (testcase by Marc Wims).
 	- convert Coro::Util into a "perl compatibility wrapper" - the functions
           are less useful now, but are drop-in replacements for existing
           functions, listing better alternatives in the documentation. This also
