@@ -324,11 +324,11 @@ print <<EOF;
 
 Coro has experimental support for cloning states. This can be used
 to implement a scheme-like call/cc. However, this doesn't add to the
-expressiveness in general, and is likely perl-version specific. As such,
-it is disabled by default.  Enable it when you want to play around with
-it, but note that it isn't supported, and unlikely ever will be. It
-exists mainly to prove that it could be done - if only it were useful for
-something.
+expressiveness in general, and is likely perl-version specific (and perl
+5.12 deliberately removed support for it). As such, it is disabled by
+default.  Enable it when you want to play around with it, but note that it
+isn't supported, and unlikely ever will be. It exists mainly to prove that
+it could be done - if only it were useful for something.
 
 EOF
 

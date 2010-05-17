@@ -297,9 +297,18 @@ BOOT:
         ev_idle_init (&idler, idle_cb);
         ev_set_priority (&idler, EV_MINPRI);
 
-        CORO_READYHOOK = readyhook;
-        CORO_READYHOOK (); /* make sure we don't miss previous ready's */
+        if (!CORO_READYHOOK) /* do not override if Coro::AnyEvent already did */
+          {
+            CORO_READYHOOK = readyhook;
+            CORO_READYHOOK (); /* make sure we don't miss previous ready's */
+          }
 }
+
+void
+_set_readyhook ()
+	CODE:
+        CORO_READYHOOK = readyhook;
+        CORO_READYHOOK ();
 
 void
 _loop_oneshot ()

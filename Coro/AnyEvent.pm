@@ -155,7 +155,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.22;
+our $VERSION = 5.23;
 
 #############################################################################
 # idle handler
@@ -176,12 +176,11 @@ Coro::_set_readyhook (\&AnyEvent::detect);
 AnyEvent::post_detect {
    unshift @AnyEvent::CondVar::ISA, "Coro::AnyEvent::CondVar";
 
-   Coro::_set_readyhook undef;
-
    my $model = $AnyEvent::MODEL;
 
    if ($model eq "AnyEvent::Impl::EV" and eval { require Coro::EV }) {
-      # provider faster versions of some functions
+      # provide faster versions of some functions
+      Coro::EV::_set_readyhook ();
 
       eval '
          *sleep = \&Coro::EV::timer_once;
@@ -206,6 +205,7 @@ AnyEvent::post_detect {
       die if $@;
 
    } elsif ($model eq "AnyEvent::Impl::Event" and eval { require Coro::Event }) {
+      Coro::_set_readyhook undef;
       # let Coro::Event do its thing
    } else {
       # do the inefficient thing ourselves

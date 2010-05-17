@@ -6,9 +6,15 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+5.23  Mon May 17 18:50:42 CEST 2010
+	- be more resistant to ordering changes when initialising
+          Coro::AnyEvent, Coro::EV and Coro::Event (reported by Matthias
+          Waldorf).
+	- document that perl 5.12 deliberately removed support for cloning.
+
 5.22  Wed Apr 14 03:55:35 CEST 2010
 	- correctly return udnef on errors in Coro::Handle::read/write
-          (testcase by Marc Wims).
+          (testcase by Marc Mims).
 	- convert Coro::Util into a "perl compatibility wrapper" - the functions
           are less useful now, but are drop-in replacements for existing
           functions, listing better alternatives in the documentation. This also
