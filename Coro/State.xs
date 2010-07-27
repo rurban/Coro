@@ -2424,8 +2424,8 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
       if (items > slf_arga)
         {
           slf_arga = items;
-          free (slf_argv);
-          slf_argv = malloc (slf_arga * sizeof (SV *));
+          Safefree (slf_argv);
+          New (0, slf_argv, slf_arga, SV *);
         }
 
       slf_argc = items;
@@ -3277,15 +3277,15 @@ is_ready (Coro::State coro)
         RETVAL
 
 void
-throw (Coro::State self, SV *throw = &PL_sv_undef)
+throw (Coro::State self, SV *exception = &PL_sv_undef)
 	PROTOTYPE: $;$
         CODE:
 {
 	struct coro *current = SvSTATE_current;
-	SV **throwp = self == current ? &CORO_THROW : &self->except;
-        SvREFCNT_dec (*throwp);
-        SvGETMAGIC (throw);
-        *throwp = SvOK (throw) ? newSVsv (throw) : 0;
+	SV **exceptionp = self == current ? &CORO_THROW : &self->except;
+        SvREFCNT_dec (*exceptionp);
+        SvGETMAGIC (exception);
+        *exceptionp = SvOK (exception) ? newSVsv (exception) : 0;
 }
 
 void
