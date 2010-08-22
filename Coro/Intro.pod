@@ -107,7 +107,7 @@ Running this program prints:
 
 This nicely illustrates the non-local jump ability: the main program
 prints the first line, and then yields the CPU to whatever other
-threads there are. And there there is one other, which runs and prints
+threads there are. And there is one other, which runs and prints
 "async 1", and itself yields the CPU. Since the only other thread
 available is the main program, it continues running and so on.
 
@@ -257,7 +257,7 @@ This method C<down>s the semaphore and returns a so-called guard
 object. Nothing happens as long as there are references to it, but when
 all references are gone, for example, when C<costly_function> returns or
 throws an exception, it will automatically call C<up> on the semaphore,
-no way to forget it. even when the thread gets C<cancel>ed by another
+no way to forget it. Even when the thread gets C<cancel>ed by another
 thread will the guard object ensure that the lock is freed.
 
 Apart from L<Coro::Semaphore> and L<Coro::Signal>, there is
@@ -309,11 +309,11 @@ Both C<get> and C<put> methods can block the current thread: C<get>
 first checks whether there I<is> some data available, and if not, it block
 the current thread until some data arrives. C<put> can also block, as
 each Channel has a "maximum buffering capacity", i.e. you cannot store
-more than a specific number of items, which cna be confgiured when the
+more than a specific number of items, which can be configured when the
 Channel gets created.
 
-In the above example, C<put> never blocks, as the default capacity is
-of a Channel is very high.  So the foor loop first puts data into the
+In the above example, C<put> never blocks, as the default capacity
+of a Channel is very high.  So the for loop first puts data into the
 channel, then tries to C<get> the result. Since the async thread hasn't
 put anything in there yet (on the firts iteration it hasn't even run
 yet), the result Channel is still empty, so the main thread blocks.
@@ -334,7 +334,7 @@ CPU unless they have to, because they wait for some event to happen.
 
 Be careful, however: when multiple threads put numbers into C<$calculate>
 and read from C<$result>, they won't know which result is theirs. The
-solution for this is to ither use a semaphore, or send not just the
+solution for this is to either use a semaphore, or send not just the
 number, but also your own private result channel.
 
 L<Coro::Channel> can buffer some amount of items. It is also very
@@ -468,7 +468,7 @@ interactive debug shell of L<Coro::Debug>.
 
 Coro really wants to run in a program using some event loop. In fact, most
 real-world programs using Coro's threads are written in a combination of
-event-based and thread-based techniques, as it is easy to gett he best of
+event-based and thread-based techniques, as it is easy to get the best of
 both worlds with Coro.
 
 Coro integrates well into any event loop supported by L<AnyEvent>, simply
