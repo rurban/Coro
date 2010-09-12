@@ -91,8 +91,8 @@ our $AUTOLOAD;
       my $iosub = "IO::AIO::$sub";
       my $proto = prototype $iosub;
 
-      $proto =~ s/;//g; # we do not support optional arguments
-      $proto =~ s/^(\$*)\$$/$1/ or die "$iosub($proto): unable to remove callback slot from prototype";
+      $proto =~ s/;?\$$// or die "$iosub: unable to remove callback slot from prototype";
+      $proto =~ s/;//g; # we do not support default arguments
 
       _register "Coro::AIO::$sub", $proto, \&{$iosub};
    }
