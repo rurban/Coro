@@ -2968,7 +2968,7 @@ slf_init_aio_req (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     call_sv ((SV *)req, G_VOID | G_DISCARD);
   }
 
-  /* now that the requets is going, we loop toll we have a result */
+  /* now that the request is going, we loop till we have a result */
   frame->data    = (void *)state;
   frame->prepare = prepare_schedule;
   frame->check   = slf_check_aio_req;

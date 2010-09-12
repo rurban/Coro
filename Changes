@@ -6,6 +6,8 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+	- correctly modify Coro::AIO function prototypes
+          so that they reflect the "no optional parameters" rule.
 	- "ported" libcoro to C++.
 
 5.23  Mon May 17 18:50:42 CEST 2010
