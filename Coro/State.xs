@@ -1,3 +1,6 @@
+/* this works around a bug in mingw32 providing a non-working setjmp */
+#define USE_NO_MINGW_SETJMP_TWO_ARGS
+
 #define NDEBUG 1
 
 #include "libcoro/coro.c"
@@ -2424,8 +2427,8 @@ api_execute_slf (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax)
       if (items > slf_arga)
         {
           slf_arga = items;
-          free (slf_argv);
-          slf_argv = malloc (slf_arga * sizeof (SV *));
+          Safefree (slf_argv);
+          New (0, slf_argv, slf_arga, SV *);
         }
 
       slf_argc = items;
@@ -2796,7 +2799,7 @@ slf_init_signal_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
       av_push (av, SvREFCNT_inc_NN (cb_cv));
 
       if (SvIVX (AvARRAY (av)[0]))
-        coro_signal_wake (aTHX_ av, 1); /* ust be the only waiter */
+        coro_signal_wake (aTHX_ av, 1); /* must be the only waiter */
 
       frame->prepare = prepare_nop;
       frame->check   = slf_check_nop;
@@ -2968,7 +2971,7 @@ slf_init_aio_req (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     call_sv ((SV *)req, G_VOID | G_DISCARD);
   }
 
-  /* now that the requets is going, we loop toll we have a result */
+  /* now that the request is going, we loop till we have a result */
   frame->data    = (void *)state;
   frame->prepare = prepare_schedule;
   frame->check   = slf_check_aio_req;
@@ -3277,15 +3280,15 @@ is_ready (Coro::State coro)
         RETVAL
 
 void
-throw (Coro::State self, SV *throw = &PL_sv_undef)
+throw (Coro::State self, SV *exception = &PL_sv_undef)
 	PROTOTYPE: $;$
         CODE:
 {
 	struct coro *current = SvSTATE_current;
-	SV **throwp = self == current ? &CORO_THROW : &self->except;
-        SvREFCNT_dec (*throwp);
-        SvGETMAGIC (throw);
-        *throwp = SvOK (throw) ? newSVsv (throw) : 0;
+	SV **exceptionp = self == current ? &CORO_THROW : &self->except;
+        SvREFCNT_dec (*exceptionp);
+        SvGETMAGIC (exception);
+        *exceptionp = SvOK (exception) ? newSVsv (exception) : 0;
 }
 
 void

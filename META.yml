@@ -1,33 +1,41 @@
---- #YAML:1.0
-name:               Coro
-version:            5.23
-abstract:           ~
-author:  []
-license:            unknown
-distribution_type:  module
-configure_requires:
-    ExtUtils::MakeMaker:  0
-build_requires:
-    ExtUtils::MakeMaker:  0
-requires:
-    AnyEvent:       5
-    common::sense:  0
-    Guard:          0.5
-    Scalar::Util:   0
-    Storable:       2.15
-    Time::HiRes:    0
-no_index:
-    directory:
-        - t
-        - inc
-generated_by:       ExtUtils::MakeMaker version 6.55_02
-meta-spec:
-    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
-    version:  1.4
-recommends:
-    AnyEvent::AIO:  1
-    AnyEvent::BDB:  1
-    BDB:            0
-    EV:             3
-    Event:          1.08
-    IO::AIO:        3.1
+{
+   "no_index" : {
+      "directory" : [
+         "t",
+         "inc"
+      ]
+   },
+   "meta-spec" : {
+      "version" : 1.4,
+      "url" : "http://module-build.sourceforge.net/META-spec-v1.4.html"
+   },
+   "generated_by" : "ExtUtils::MakeMaker version 6.56",
+   "distribution_type" : "module",
+   "version" : "5.24",
+   "name" : "Coro",
+   "author" : [],
+   "license" : "unknown",
+   "build_requires" : {
+      "ExtUtils::MakeMaker" : 0
+   },
+   "requires" : {
+      "Scalar::Util" : 0,
+      "AnyEvent" : 5,
+      "Guard" : 0.5,
+      "Storable" : 2.15,
+      "Time::HiRes" : 0,
+      "common::sense" : 0
+   },
+   "recommends" : {
+      "BDB" : 0,
+      "AnyEvent::AIO" : 1,
+      "Event" : 1.08,
+      "EV" : 3,
+      "IO::AIO" : 3.1,
+      "AnyEvent::BDB" : 1
+   },
+   "abstract" : null,
+   "configure_requires" : {
+      "ExtUtils::MakeMaker" : 0
+   }
+}

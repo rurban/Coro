@@ -323,9 +323,11 @@ _loop_oneshot ()
         /* same reasoning as above, make sure it is stopped */
         if (ev_is_active (&idler))
           ev_idle_stop (EV_DEFAULT_UC, &idler);
-
+#if EV_VERSION_MAJOR >= 4
+        ev_run (EV_DEFAULT_UC, EVRUN_ONCE);
+#else
         ev_loop (EV_DEFAULT_UC, EVLOOP_ONESHOT);
-
+#endif
         --inhibit;
 }
 

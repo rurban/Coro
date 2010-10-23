@@ -90,7 +90,7 @@ void
 _install_std_cb (SV *self, int type)
         CODE:
 {
-        pe_watcher *w = GEventAPI->sv_2watcher (self);
+        pe_watcher *w = (pe_watcher *)GEventAPI->sv_2watcher (self);
 
         if (w->callback)
           croak ("Coro::Event watchers must not have a callback (see Coro::Event), caught");
@@ -106,7 +106,7 @@ _install_std_cb (SV *self, int type)
           AvARRAY (priv)[CD_GOT ] = newSViv (0);
           SvREADONLY_on (priv);
 
-          w->callback = coro_std_cb;
+          w->callback = (void *)coro_std_cb;
           w->ext_data = priv;
 
           {
@@ -121,7 +121,7 @@ void
 _next (SV *self)
         CODE:
 {
-        pe_watcher *w = GEventAPI->sv_2watcher (self);
+        pe_watcher *w = (pe_watcher *)GEventAPI->sv_2watcher (self);
         AV *priv = (AV *)w->ext_data;
 
         if (AvARRAY (priv)[CD_OK] == &PL_sv_yes)
@@ -146,7 +146,7 @@ _event (SV *self)
           XSRETURN_EMPTY;
 
         {
-          pe_watcher *w = GEventAPI->sv_2watcher (self);
+          pe_watcher *w = (pe_watcher *)GEventAPI->sv_2watcher (self);
           AV *priv = (AV *)w->ext_data;
 
           RETVAL = newRV_inc ((SV *)priv);

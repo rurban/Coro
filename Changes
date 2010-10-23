@@ -6,6 +6,14 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+5.24  Sat Oct 23 11:27:12 CEST 2010
+	- port to the EV 4.0 API.
+	- work around bugs in mingw32, making strawberry perl work
+          out of the box.
+	- correctly modify Coro::AIO function prototypes
+          so that they reflect the "no optional parameters" rule.
+	- "ported" libcoro to C++.
+
 5.23  Mon May 17 18:50:42 CEST 2010
 	- be more resistant to ordering changes when initialising
           Coro::AnyEvent, Coro::EV and Coro::Event (reported by Matthias

@@ -20,7 +20,7 @@ will schedule and run all ready (= runnable) threads of the same or
 higher priority. After that, it will cede once to a threads of lower
 priority, then continue in the event loop.
 
-That means that threads with the same or higher pripority as the threads
+That means that threads with the same or higher priority as the threads
 running the main loop will inhibit event processing, while threads of
 lower priority will get the CPU, but cannot completeley inhibit event
 processing. Note that for that to work you actually have to run the EV
@@ -56,7 +56,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.23;
+   our $VERSION = 5.24;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;

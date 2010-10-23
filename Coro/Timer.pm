@@ -30,7 +30,7 @@ use AnyEvent ();
 use Coro ();
 use Coro::AnyEvent ();
 
-our $VERSION = 5.23;
+our $VERSION = 5.24;
 our @EXPORT_OK = qw(timeout sleep);
 
 =item $flag = timeout $seconds;
