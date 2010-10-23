@@ -69,7 +69,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 5.23;
+our $VERSION = 5.24;
 
 our @EXPORT    = (@IO::AIO::EXPORT, qw(aio_wait));
 our @EXPORT_OK = @IO::AIO::EXPORT_OK;
@@ -92,7 +92,7 @@ our $AUTOLOAD;
       my $proto = prototype $iosub;
 
       $proto =~ s/;//g; # we do not support optional arguments
-      $proto =~ s/^(\$+)\$$/$1/ or die "$iosub($proto): unable to remove callback slot from prototype";
+      $proto =~ s/^(\$*)\$$/$1/ or die "$iosub($proto): unable to remove callback slot from prototype";
 
       _register "Coro::AIO::$sub", $proto, \&{$iosub};
    }

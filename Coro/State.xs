@@ -1,3 +1,6 @@
+/* this works around a bug in mingw32 providing a non-working setjmp */
+#define USE_NO_MINGW_SETJMP_TWO_ARGS
+
 #define NDEBUG 1
 
 #include "libcoro/coro.c"
@@ -2796,7 +2799,7 @@ slf_init_signal_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
       av_push (av, SvREFCNT_inc_NN (cb_cv));
 
       if (SvIVX (AvARRAY (av)[0]))
-        coro_signal_wake (aTHX_ av, 1); /* ust be the only waiter */
+        coro_signal_wake (aTHX_ av, 1); /* must be the only waiter */
 
       frame->prepare = prepare_nop;
       frame->check   = slf_check_nop;
