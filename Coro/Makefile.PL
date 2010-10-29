@@ -66,7 +66,7 @@ if (exists $ENV{CORO_INTERFACE}) {
    # hey, it might actually work, with some hacks.
    $iface = "p";
 
-   if ($Config{libs} =~ "-lpthread") {
+   if ($Config{libs} !~ "-lpthread") {
       # uh-oh
       print <<EOF;
 

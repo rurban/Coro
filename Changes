@@ -6,6 +6,9 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+	- try a different approach on netbsd - netbsd 5 finally has marginally
+          working pthreads, but still broken ucontext/sigaltstack.
+
 5.24  Sat Oct 23 11:27:12 CEST 2010
 	- port to the EV 4.0 API.
 	- work around bugs in mingw32, making strawberry perl work
