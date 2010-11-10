@@ -84,7 +84,7 @@ BEGIN {
 use Storable;
 use base "Exporter";
 
-our $VERSION = 5.24;
+our $VERSION = 5.25;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 our $GRANULARITY = 0.01;

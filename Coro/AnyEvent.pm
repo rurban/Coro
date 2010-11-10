@@ -155,7 +155,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.24;
+our $VERSION = 5.25;
 
 #############################################################################
 # idle handler
