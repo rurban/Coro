@@ -615,7 +615,18 @@ coro. This is just a free-form string you can associate with a
 coro.
 
 This method simply sets the C<< $coro->{desc} >> member to the given
-string. You can modify this member directly if you wish.
+string. You can modify this member directly if you wish, and in fact, this
+is often preferred to indicate major processing states that cna then be
+seen for example in a L<Coro::Debug> session:
+
+   sub my_long_function {
+      local $Coro::current->{desc} = "now in my_long_function";
+      ...
+      $Coro::current->{desc} = "my_long_function: phase 1";
+      ...
+      $Coro::current->{desc} = "my_long_function: phase 2";
+      ...
+   }
 
 =cut
 
