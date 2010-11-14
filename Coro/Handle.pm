@@ -69,7 +69,7 @@ sub new_from_fh {
 
 =item $fh = unblock $fh
 
-This is a convinience function that just calls C<new_from_fh> on the
+This is a convenience function that just calls C<new_from_fh> on the
 given filehandle. Use it to replace a normal perl filehandle by a
 non-(coroutine-)blocking equivalent.
 
