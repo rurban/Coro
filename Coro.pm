@@ -870,7 +870,7 @@ lack of understanding of this area - if it is hard to understand for Chip,
 it is probably not obvious to everybody).
 
 What follows is an ultra-condensed version of my talk about threads in
-scripting languages given onthe perl workshop 2009:
+scripting languages given on the perl workshop 2009:
 
 The so-called "ithreads" were originally implemented for two reasons:
 first, to (badly) emulate unix processes on native win32 perls, and
