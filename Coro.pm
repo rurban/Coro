@@ -673,11 +673,12 @@ will return immediately without blocking, returning nothing, while the
 original code ref will be called (with parameters) from within another
 coro.
 
-The reason this function exists is that many event libraries (such as the
-venerable L<Event|Event> module) are not thread-safe (a weaker form
+The reason this function exists is that many event libraries (such as
+the venerable L<Event|Event> module) are not thread-safe (a weaker form
 of reentrancy). This means you must not block within event callbacks,
 otherwise you might suffer from crashes or worse. The only event library
-currently known that is safe to use without C<unblock_sub> is L<EV>.
+currently known that is safe to use without C<unblock_sub> is L<EV> (but
+you might still run into deadlocks if all event loops are blocked).
 
 Coro will try to catch you when you block in the event loop
 ("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
