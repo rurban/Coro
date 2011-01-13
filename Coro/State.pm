@@ -223,6 +223,8 @@ in the code below, and use it in your threads:
 Another way is to use dynamic winders, see C<Coro::on_enter> and
 C<Coro::on_leave> for this.
 
+Yet another way that works onyl for variables is C<< ->swap_sv >>.
+
 =item $prev->transfer ($next)
 
 Save the state of the current subroutine in C<$prev> and switch to the
@@ -281,7 +283,7 @@ This (very advanced) function can be used to make I<any> variable local to
 a thread.
 
 It works by swapping the contents of C<$sv> and C<$swap_sv> each time the
-thread is entered and left again, i.e. it is similarly to:
+thread is entered and left again, i.e. it is similar to:
 
    $tmp = $sv; $sv = $swap_sv; $swap_sv = $tmp;
 
