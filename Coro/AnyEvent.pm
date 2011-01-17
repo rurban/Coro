@@ -8,7 +8,16 @@ Coro::AnyEvent - integrate threads into AnyEvent
  use AnyEvent;
  # using both Coro and AnyEvent will automatically load Coro::AnyEvent
 
- # use Coro within an AnyEvent environment
+ # or load it manually for it's utility functions:
+ use Coro::AnyEvent;
+
+ Coro::AnyEvent::sleep 5;     # block current thread for 5s
+ Coro::AnyEvent::poll;        # poll for new events once
+ Coro::AnyEvent::idle;        # block until process no longer busy
+ Coro::AnyEvent::idle_upto 5; # same, but only up to 5 seconds
+
+ Coro::AnyEvent::readable $fh, 60
+    or die "fh didn't become readbale within 60 seconds\n";
 
 =head1 DESCRIPTION
 
