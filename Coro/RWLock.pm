@@ -4,7 +4,7 @@ Coro::RWLock - reader/write locks
 
 =head1 SYNOPSIS
 
- use Coro;
+ use Coro::RWLock;
 
  $lck = new Coro::RWLock;
 

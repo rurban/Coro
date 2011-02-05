@@ -4,7 +4,7 @@ Coro::Semaphore - counting semaphores
 
 =head1 SYNOPSIS
 
- use Coro;
+ use Coro::Semaphore;
 
  $sig = new Coro::Semaphore [initial value];
 
