@@ -4,7 +4,7 @@ Coro::Channel - message queues
 
 =head1 SYNOPSIS
 
- use Coro::Channel;
+ use Coro;
 
  $q1 = new Coro::Channel <maxsize>;
 
@@ -20,6 +20,9 @@ message ports): you can put things into it on one end and read things out
 of it from the other end. If the capacity of the Channel is maxed out
 writers will block. Both ends of a Channel can be read/written from by as
 many coroutines as you want concurrently.
+
+You don't have to load C<Coro::Channel> manually, it will be loaded
+automatically when you C<use Coro> and call the C<new> constructor.
 
 =over 4
 

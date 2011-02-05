@@ -759,6 +759,20 @@ See the section B<HOW TO WAIT FOR A CALLBACK> for an actual usage example.
 
 =cut
 
+for my $module (qw(Channel RWLock Semaphore SemaphoreSet Signal Specific)) {
+   my $old = defined &{"Coro::$module\::new"} && \&{"Coro::$module\::new"};
+
+   *{"Coro::$module\::new"} = sub {
+      require "Coro/$module.pm";
+
+      # some modules have their new predefined in State.xs, some don't
+      *{"Coro::$module\::new"} = $old
+         if $old;
+
+      goto &{"Coro::$module\::new"};
+   };
+}
+
 1;
 
 =head1 HOW TO WAIT FOR A CALLBACK

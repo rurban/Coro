@@ -4,7 +4,7 @@ Coro::SemaphoreSet - efficient set of counting semaphores
 
 =head1 SYNOPSIS
 
- use Coro::SemaphoreSet;
+ use Coro;
 
  $sig = new Coro::SemaphoreSet [initial value];
 
@@ -23,6 +23,9 @@ as members, but is more efficiently managed.
 This is useful if you want to allow parallel tasks to run in parallel but
 not on the same problem. Just use a SemaphoreSet and lock on the problem
 identifier.
+
+You don't have to load C<Coro::SemaphoreSet> manually, it will be loaded 
+automatically when you C<use Coro> and call the C<new> constructor. 
 
 =over 4
 
