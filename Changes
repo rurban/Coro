@@ -11,6 +11,7 @@ TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
           method call.
         - undocument Coro::Timer::sleep and obsolete whole module.
         - optimise Coro::Timer::timeout memory and cpu usage.
+        - slightly updated Coro::Intro for recent changes.
 
 5.25  Thu Nov 11 01:08:39 CET 2010
 	- try a different approach on netbsd - netbsd 5 finally has marginally

@@ -182,15 +182,15 @@ that will wake up some thread.
 
 =head2 Semaphores and other locks
 
-Using only C<ready>, C<cede> and C<schedule> to synchronise threads
-is difficult, especially if many threads are ready at the same
-time. Coro supports a number of modules to help synchronising threads
-in easier ways. The first such module is L<Coro::Semaphore>, which
-implements counting semaphores (binary semaphores are also available as
-L<Coro::Signal>):
+Using only C<ready>, C<cede> and C<schedule> to synchronise threads is
+difficult, especially if many threads are ready at the same time. Coro
+supports a number of primitives to help synchronising threads in easier
+ways. The first such primitives is L<Coro::Semaphore>, which implements
+counting semaphores (binary semaphores are available as L<Coro::Signal>,
+and there are L<Coro::SemaphoreSet> and L<Coro::RWLock> primitives as
+well):
 
    use Coro;
-   use Coro::Semaphore;
 
    my $sem = new Coro::Semaphore 0; # a locked semaphore
 
@@ -270,7 +270,7 @@ also a reader-writer lock (L<Coro::RWLock>) and a semaphore set
 Semaphores are fine, but usually you want to communicate by exchanging
 data as well. This is where L<Coro::Channel> comes in useful: Channels
 are the Coro equivalent of a unix pipe (and very similar to amiga message
-ports) - you can put stuff into it on one side, and read data from it on
+ports :) - you can put stuff into it on one side, and read data from it on
 the other.
 
 Here is a simple example that creates a thread and sends it
@@ -278,7 +278,6 @@ numbers. The thread calculates the square of the number, and puts it
 into another channel, which the main thread reads the result from:
 
    use Coro;
-   use Coro::Channel;
 
    my $calculate = new Coro::Channel;
    my $result    = new Coro::Channel;
@@ -337,9 +336,7 @@ and read from C<$result>, they won't know which result is theirs. The
 solution for this is to either use a semaphore, or send not just the
 number, but also your own private result channel.
 
-L<Coro::Channel> can buffer some amount of items. It is also very
-instructive to read its source code, as it is very simple and uses two
-counting semaphores internally for synchronisation.
+L<Coro::Channel> can buffer some amount of items.
 
 
 =head2 What is mine, what is ours?
@@ -533,7 +530,6 @@ program that uses EV usually looks like this:
 
    use EV;
    use Coro;
-   use Coro::AnyEvent;
 
    # start coroutines or event watchers
 
