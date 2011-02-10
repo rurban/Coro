@@ -17,7 +17,7 @@ Coro::AnyEvent - integrate threads into AnyEvent
  Coro::AnyEvent::idle_upto 5; # same, but only up to 5 seconds
 
  Coro::AnyEvent::readable $fh, 60
-    or die "fh didn't become readbale within 60 seconds\n";
+    or die "fh didn't become readable within 60 seconds\n";
 
 =head1 DESCRIPTION
 
