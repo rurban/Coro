@@ -6,6 +6,9 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+	- try a tentative workaround against the breakage that 5.13 has
+          introduced without depreciation period. sigh.
+
 5.36  Sun Feb 13 05:33:41 CET 2011
 	- automatically load Coro::Channel, Coro::RWLock, Coro::Semaphore,
           Coro::SemaphoreSet, Coro::Signal and Coro::Specific on first "new"
