@@ -4,7 +4,7 @@ Coro::RWLock - reader/write locks
 
 =head1 SYNOPSIS
 
- use Coro::RWLock;
+ use Coro;
 
  $lck = new Coro::RWLock;
 
@@ -38,7 +38,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 =item $l = new Coro::RWLock;
 

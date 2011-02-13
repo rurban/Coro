@@ -4,7 +4,7 @@ Coro::SemaphoreSet - efficient set of counting semaphores
 
 =head1 SYNOPSIS
 
- use Coro::SemaphoreSet;
+ use Coro;
 
  $sig = new Coro::SemaphoreSet [initial value];
 
@@ -35,7 +35,7 @@ package Coro::SemaphoreSet;
 
 use common::sense;
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 use Coro::Semaphore ();
 

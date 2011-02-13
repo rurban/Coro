@@ -83,7 +83,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -569,9 +569,11 @@ sub join {
 
 =item $coro->on_destroy (\&cb)
 
-Registers a callback that is called when this coro gets destroyed,
+Registers a callback that is called when this coro thread gets destroyed,
 but before it is joined. The callback gets passed the terminate arguments,
 if any, and I<must not> die, under any circumstances.
+
+There can be any number of C<on_destroy> callbacks per coro.
 
 =cut
 
@@ -584,8 +586,8 @@ sub on_destroy {
 =item $oldprio = $coro->prio ($newprio)
 
 Sets (or gets, if the argument is missing) the priority of the
-coro. Higher priority coro get run before lower priority
-coro. Priorities are small signed integers (currently -4 .. +3),
+coro thread. Higher priority coro get run before lower priority
+coros. Priorities are small signed integers (currently -4 .. +3),
 that you can refer to using PRIO_xxx constants (use the import tag :prio
 to get then):
 
@@ -595,23 +597,23 @@ to get then):
    # set priority to HIGH
    current->prio (PRIO_HIGH);
 
-The idle coro ($Coro::idle) always has a lower priority than any
+The idle coro thread ($Coro::idle) always has a lower priority than any
 existing coro.
 
 Changing the priority of the current coro will take effect immediately,
-but changing the priority of coro in the ready queue (but not
-running) will only take effect after the next schedule (of that
-coro). This is a bug that will be fixed in some future version.
+but changing the priority of a coro in the ready queue (but not running)
+will only take effect after the next schedule (of that coro). This is a
+bug that will be fixed in some future version.
 
 =item $newprio = $coro->nice ($change)
 
 Similar to C<prio>, but subtract the given value from the priority (i.e.
-higher values mean lower priority, just as in unix).
+higher values mean lower priority, just as in UNIX's nice command).
 
 =item $olddesc = $coro->desc ($newdesc)
 
 Sets (or gets in case the argument is missing) the description for this
-coro. This is just a free-form string you can associate with a
+coro thread. This is just a free-form string you can associate with a
 coro.
 
 This method simply sets the C<< $coro->{desc} >> member to the given

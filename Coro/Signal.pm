@@ -4,7 +4,7 @@ Coro::Signal - thread signals (binary semaphores)
 
 =head1 SYNOPSIS
 
- use Coro::Signal;
+ use Coro;
 
  $sig = new Coro::Signal;
 
@@ -38,7 +38,7 @@ use common::sense;
 
 use Coro::Semaphore ();
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 =item $sig = new Coro::Signal;
 

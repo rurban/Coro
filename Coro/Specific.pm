@@ -36,7 +36,7 @@ package Coro::Specific;
 
 use common::sense;
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 =item new
 

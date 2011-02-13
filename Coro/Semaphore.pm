@@ -4,7 +4,7 @@ Coro::Semaphore - counting semaphores
 
 =head1 SYNOPSIS
 
- use Coro::Semaphore;
+ use Coro;
 
  $sig = new Coro::Semaphore [initial value];
 
@@ -40,7 +40,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 =item new [inital count]
 
