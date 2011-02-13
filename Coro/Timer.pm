@@ -4,6 +4,8 @@ Coro::Timer - timers and timeouts, independent of any event loop
 
 =head1 SYNOPSIS
 
+ # This package is mostly obsoleted by Coro::AnyEvent.
+
  use Coro::Timer qw(sleep timeout);
  # nothing exported by default
 
@@ -11,8 +13,8 @@ Coro::Timer - timers and timeouts, independent of any event loop
 
 =head1 DESCRIPTION
 
-This package implements a simple timer callback system which works
-independent of the event loop mechanism used.
+This package has been mostly obsoleted by L<Coro::AnyEvent>, the only
+really useful function left in here is C<timeout>.
 
 =over 4
 
@@ -25,20 +27,23 @@ use common::sense;
 use Carp ();
 use base Exporter::;
 
-use AnyEvent ();
-
 use Coro ();
 use Coro::AnyEvent ();
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 our @EXPORT_OK = qw(timeout sleep);
 
-=item $flag = timeout $seconds;
+# compatibility with older programs
+*sleep = \&Coro::AnyEvent::sleep;
 
-This function will wake up the current coroutine after $seconds
-seconds and sets $flag to true (it is false initially).  If $flag goes
-out of scope earlier nothing happens. This is used to implement the
-C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
+=item $flag = timeout $seconds
+
+This function will wake up the current coroutine after $seconds seconds
+and sets $flag to true (it is false initially).  If $flag goes out
+of scope earlier then nothing happens.
+
+This is used by Coro itself to implement the C<timed_down>, C<timed_wait>
+etc. primitives. It is used like this:
 
    sub timed_wait {
       my $timeout = Coro::Timer::timeout 60;
@@ -56,34 +61,21 @@ C<timed_down>, C<timed_wait> etc. primitives. It is used like this:
 sub timeout($) {
    my $current = $Coro::current;
    my $timeout;
-   bless {
-      timer => (AE::timer $_[0], 0, sub {
-                  $timeout = 1;
-                  $current->ready;
-               }),
-      timeout => \$timeout,
-   }, "Coro::Timer::Timeout";
+
+   bless [
+      \$timeout,
+      (AE::timer $_[0], 0, sub {
+         $timeout = 1;
+         $current->ready;
+      }),
+   ], "Coro::Timer::Timeout";
 }
 
 package Coro::Timer::Timeout;
 
-sub bool { ${$_[0]{timeout}} }
+sub bool { ${ $_[0][0] } }
 
 use overload 'bool' => \&bool, '0+' => \&bool;
-
-package Coro::Timer;
-
-=item sleep $seconds
-
-This function works like the built-in sleep, except maybe more precise
-and, most important, without blocking other coroutines.
-
-=cut
-
-sub sleep {
-   my $timer = AE::timer $_[0], 0, Coro::rouse_cb;
-   Coro::rouse_wait;
-}
 
 1;
 

@@ -6,6 +6,15 @@ TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+5.36  Sun Feb 13 05:33:41 CET 2011
+	- automatically load Coro::Channel, Coro::RWLock, Coro::Semaphore,
+          Coro::SemaphoreSet, Coro::Signal and Coro::Specific on first "new"
+          method call.
+        - undocument Coro::Timer::sleep and obsolete whole module.
+        - optimise Coro::Timer::timeout memory and cpu usage.
+        - slightly updated Coro::Intro for recent changes.
+        - do not initialise PL_dirty anymore.
+
 5.25  Thu Nov 11 01:08:39 CET 2010
 	- try a different approach on netbsd - netbsd 5 finally has marginally
           working pthreads, but still broken ucontext/sigaltstack.

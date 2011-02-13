@@ -1015,7 +1015,6 @@ init_perl (pTHX_ struct coro *coro)
   PL_curpm      = 0;
   PL_curpad     = 0;
   PL_localizing = 0;
-  PL_dirty      = 0;
   PL_restartop  = 0;
 #if PERL_VERSION_ATLEAST (5,10,0)
   PL_parser     = 0;
@@ -3877,5 +3876,4 @@ unpatch_pp_sselect ()
             PL_ppaddr [OP_SSELECT] = coro_old_pp_sselect;
             coro_old_pp_sselect = 0;
           }
-
 

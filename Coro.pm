@@ -83,7 +83,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -569,9 +569,11 @@ sub join {
 
 =item $coro->on_destroy (\&cb)
 
-Registers a callback that is called when this coro gets destroyed,
+Registers a callback that is called when this coro thread gets destroyed,
 but before it is joined. The callback gets passed the terminate arguments,
 if any, and I<must not> die, under any circumstances.
+
+There can be any number of C<on_destroy> callbacks per coro.
 
 =cut
 
@@ -584,8 +586,8 @@ sub on_destroy {
 =item $oldprio = $coro->prio ($newprio)
 
 Sets (or gets, if the argument is missing) the priority of the
-coro. Higher priority coro get run before lower priority
-coro. Priorities are small signed integers (currently -4 .. +3),
+coro thread. Higher priority coro get run before lower priority
+coros. Priorities are small signed integers (currently -4 .. +3),
 that you can refer to using PRIO_xxx constants (use the import tag :prio
 to get then):
 
@@ -595,27 +597,38 @@ to get then):
    # set priority to HIGH
    current->prio (PRIO_HIGH);
 
-The idle coro ($Coro::idle) always has a lower priority than any
+The idle coro thread ($Coro::idle) always has a lower priority than any
 existing coro.
 
 Changing the priority of the current coro will take effect immediately,
-but changing the priority of coro in the ready queue (but not
-running) will only take effect after the next schedule (of that
-coro). This is a bug that will be fixed in some future version.
+but changing the priority of a coro in the ready queue (but not running)
+will only take effect after the next schedule (of that coro). This is a
+bug that will be fixed in some future version.
 
 =item $newprio = $coro->nice ($change)
 
 Similar to C<prio>, but subtract the given value from the priority (i.e.
-higher values mean lower priority, just as in unix).
+higher values mean lower priority, just as in UNIX's nice command).
 
 =item $olddesc = $coro->desc ($newdesc)
 
 Sets (or gets in case the argument is missing) the description for this
-coro. This is just a free-form string you can associate with a
+coro thread. This is just a free-form string you can associate with a
 coro.
 
 This method simply sets the C<< $coro->{desc} >> member to the given
-string. You can modify this member directly if you wish.
+string. You can modify this member directly if you wish, and in fact, this
+is often preferred to indicate major processing states that cna then be
+seen for example in a L<Coro::Debug> session:
+
+   sub my_long_function {
+      local $Coro::current->{desc} = "now in my_long_function";
+      ...
+      $Coro::current->{desc} = "my_long_function: phase 1";
+      ...
+      $Coro::current->{desc} = "my_long_function: phase 2";
+      ...
+   }
 
 =cut
 
@@ -662,11 +675,12 @@ will return immediately without blocking, returning nothing, while the
 original code ref will be called (with parameters) from within another
 coro.
 
-The reason this function exists is that many event libraries (such as the
-venerable L<Event|Event> module) are not thread-safe (a weaker form
+The reason this function exists is that many event libraries (such as
+the venerable L<Event|Event> module) are not thread-safe (a weaker form
 of reentrancy). This means you must not block within event callbacks,
 otherwise you might suffer from crashes or worse. The only event library
-currently known that is safe to use without C<unblock_sub> is L<EV>.
+currently known that is safe to use without C<unblock_sub> is L<EV> (but
+you might still run into deadlocks if all event loops are blocked).
 
 Coro will try to catch you when you block in the event loop
 ("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
@@ -746,6 +760,20 @@ See the section B<HOW TO WAIT FOR A CALLBACK> for an actual usage example.
 =back
 
 =cut
+
+for my $module (qw(Channel RWLock Semaphore SemaphoreSet Signal Specific)) {
+   my $old = defined &{"Coro::$module\::new"} && \&{"Coro::$module\::new"};
+
+   *{"Coro::$module\::new"} = sub {
+      require "Coro/$module.pm";
+
+      # some modules have their new predefined in State.xs, some don't
+      *{"Coro::$module\::new"} = $old
+         if $old;
+
+      goto &{"Coro::$module\::new"};
+   };
+}
 
 1;
 
@@ -859,7 +887,7 @@ lack of understanding of this area - if it is hard to understand for Chip,
 it is probably not obvious to everybody).
 
 What follows is an ultra-condensed version of my talk about threads in
-scripting languages given onthe perl workshop 2009:
+scripting languages given on the perl workshop 2009:
 
 The so-called "ithreads" were originally implemented for two reasons:
 first, to (badly) emulate unix processes on native win32 perls, and

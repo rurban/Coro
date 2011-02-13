@@ -7,13 +7,17 @@ Coro::EV - do events the coro-way, with EV
  use Coro;
  use Coro::EV;
 
+ EV::READ & Coro::EV::timed_io_once $fh, EV::READ, 60
+    or die "timeout\n";
+
  EV::loop;
 
 =head1 DESCRIPTION
 
 This module does two things: First, it offers some utility functions that
-might be useful for threads, and secondly, it integrates Coro into the
-EV main loop:
+might be useful for threads (although L<Coro::AnyEvent> offers more and
+more portable functions), and secondly, it integrates Coro into the EV
+main loop:
 
 Before the process blocks (in EV::loop) to wait for events, this module
 will schedule and run all ready (= runnable) threads of the same or
@@ -56,7 +60,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.25;
+   our $VERSION = 5.26;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;
@@ -78,9 +82,15 @@ Blocks the coroutine until either the given event set has occured on the
 fd, or the timeout has been reached (if timeout is missing or C<undef>
 then there will be no timeout). Returns the received flags.
 
+Consider using C<Coro::AnyEvent::readable> and C<Coro::AnyEvent::writable>
+instead, they work with any AnyEvent-supported eventloop.
+
 =item Coro::EV::timer_once $after
 
 Blocks the coroutine for at least C<$after> seconds.
+
+Consider using C<Coro::AnyEvent::sleep> instead, which works with any
+AnyEvent-supported eventloop.
 
 =cut
 

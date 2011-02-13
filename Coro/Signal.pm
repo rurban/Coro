@@ -4,7 +4,7 @@ Coro::Signal - thread signals (binary semaphores)
 
 =head1 SYNOPSIS
 
- use Coro::Signal;
+ use Coro;
 
  $sig = new Coro::Signal;
 
@@ -25,6 +25,9 @@ It is recommended not to mix C<send> and C<broadcast> calls on the same
 C<Coro::Signal> - it should work as documented, but it can easily confuse
 you :->
 
+You don't have to load C<Coro::Signal> manually, it will be loaded 
+automatically when you C<use Coro> and call the C<new> constructor. 
+
 =over 4
 
 =cut
@@ -35,7 +38,7 @@ use common::sense;
 
 use Coro::Semaphore ();
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 =item $sig = new Coro::Signal;
 

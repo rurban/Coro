@@ -212,8 +212,8 @@ coro_create (coro_context *ctx, coro_func coro, void *arg, void *sptr, long ssiz
     }
 
   /* set the new stack */
-  nstk.ss_sp    = STACK_ADJUST_PTR (sptr,ssize); /* yes, some platforms (IRIX) get this wrong. */
-  nstk.ss_size  = STACK_ADJUST_SIZE (sptr,ssize);
+  nstk.ss_sp    = STACK_ADJUST_PTR (sptr, ssize); /* yes, some platforms (IRIX) get this wrong. */
+  nstk.ss_size  = STACK_ADJUST_SIZE (sptr, ssize);
   nstk.ss_flags = 0;
 
   if (sigaltstack (&nstk, &ostk) < 0)
@@ -404,7 +404,12 @@ coro_create (coro_context *ctx, coro_func coro, void *arg, void *sptr, long ssiz
       args.main = &nctx;
 
       pthread_attr_init (&attr);
+#if __UCLIBC__
+      /* exists, but is borked */
+      /*pthread_attr_setstacksize (&attr, (size_t)ssize);*/
+#else
       pthread_attr_setstack (&attr, sptr, (size_t)ssize);
+#endif
       pthread_attr_setscope (&attr, PTHREAD_SCOPE_PROCESS);
       pthread_create (&ctx->id, &attr, coro_init, &args);
 

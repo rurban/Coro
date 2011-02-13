@@ -89,5 +89,4 @@ eg/readline
 
 doc/cede-vs-schedule
 
-META.yml                                 Module meta-data (added by MakeMaker)
 META.json                                Module meta-data (added by MakeMaker)

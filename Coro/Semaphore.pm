@@ -4,7 +4,7 @@ Coro::Semaphore - counting semaphores
 
 =head1 SYNOPSIS
 
- use Coro::Semaphore;
+ use Coro;
 
  $sig = new Coro::Semaphore [initial value];
 
@@ -27,6 +27,9 @@ resources, with the semaphore count initialized to the number of free
 resources. Threads then increment the count when resources are added
 and decrement the count when resources are removed.
 
+You don't have to load C<Coro::Semaphore> manually, it will be loaded 
+automatically when you C<use Coro> and call the C<new> constructor. 
+
 =over 4
 
 =cut
@@ -37,7 +40,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 =item new [inital count]
 

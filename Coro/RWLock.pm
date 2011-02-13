@@ -4,13 +4,18 @@ Coro::RWLock - reader/write locks
 
 =head1 SYNOPSIS
 
- use Coro::RWLock;
+ use Coro;
 
  $lck = new Coro::RWLock;
 
  $lck->rdlock; # acquire read lock
+ $lck->unlock; # unlock lock again
 
- $lck->unlock;
+ # or:
+ $lck->wrlock; # acquire write lock
+ $lck->tryrdlock; # try a readlock
+ $lck->trywrlock; # try a write lock
+
 
 =head1 DESCRIPTION
 
@@ -19,6 +24,9 @@ read by many coroutines in parallel as long as no writer has locked it
 (shared access). A single write lock can be acquired when no readers
 exist. RWLocks basically allow many concurrent readers (without writers)
 OR a single writer (but no readers).
+
+You don't have to load C<Coro::RWLock> manually, it will be loaded 
+automatically when you C<use Coro> and call the C<new> constructor. 
 
 =over 4
 
@@ -30,7 +38,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 5.25;
+our $VERSION = 5.26;
 
 =item $l = new Coro::RWLock;
 
@@ -91,7 +99,7 @@ sub trywrlock {
 
 =item $l->unlock
 
-Give up the rwlock.
+Give up a previous C<rdlock> or C<wrlock>.
 
 =cut
 

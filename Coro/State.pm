@@ -92,7 +92,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.25;
+   our $VERSION = 5.26;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -223,6 +223,8 @@ in the code below, and use it in your threads:
 Another way is to use dynamic winders, see C<Coro::on_enter> and
 C<Coro::on_leave> for this.
 
+Yet another way that works onyl for variables is C<< ->swap_sv >>.
+
 =item $prev->transfer ($next)
 
 Save the state of the current subroutine in C<$prev> and switch to the
@@ -281,7 +283,7 @@ This (very advanced) function can be used to make I<any> variable local to
 a thread.
 
 It works by swapping the contents of C<$sv> and C<$swap_sv> each time the
-thread is entered and left again, i.e. it is similarly to:
+thread is entered and left again, i.e. it is similar to:
 
    $tmp = $sv; $sv = $swap_sv; $swap_sv = $tmp;
 
@@ -341,15 +343,25 @@ in doing so, however.
 
 =item $ncctx = Coro::State::cctx_count
 
-Returns the number of C-level coro allocated. If this number is
-very high (more than a dozen) it might help to identify points of C-level
-recursion in your code and moving this into a separate coro.
+Returns the number of C-level thread contexts allocated. If this number is
+very high (more than a dozen) it might be beneficial to identify points of
+C-level recursion (perl calls C/XS, which calls perl again which switches
+coros - this forces an allocation of a C-level thread context) in your
+code and moving this into a separate coro.
 
 =item $nidle = Coro::State::cctx_idle
 
-Returns the number of allocated but idle (free for reuse) C level
-coro. Currently, Coro will limit the number of idle/unused cctxs to
-8.
+Returns the number of allocated but idle (currently unused and free for
+reuse) C level thread contexts.
+
+=item $old = Coro::State::cctx_max_idle [$new_count]
+
+Coro caches C contexts that are not in use currently, as creating them
+from scratch has some overhead.
+
+This function returns the current maximum number of idle C contexts and
+optionally sets the new amount. The count must be at least C<1>, with the
+default being C<4>.
 
 =item $old = Coro::State::cctx_stacksize [$new_stacksize]
 
@@ -362,15 +374,6 @@ guaranteed this minimum stack size.
 Please note that coros will only need to use a C-level stack if the
 interpreter recurses or calls a function in a module that calls back into
 the interpreter, so use of this feature is usually never needed.
-
-=item $old = Coro::State::cctx_max_idle [$new_count]
-
-Coro caches C contexts that are not in use currently, as creating them
-from scratch has some overhead.
-
-This function returns the current maximum number of idle C contexts and
-optionally sets the new amount. The count must be at least C<1>, with the
-default being C<4>.
 
 =item @states = Coro::State::list
 
