@@ -242,7 +242,7 @@ struct coro {
   int refcnt;  /* coroutines are refcounted, yes */
   int flags;   /* CF_ flags */
   HV *hv;      /* the perl hash associated with this coro, if any */
-  void (*on_destroy)(pTHX_ struct coro *coro);
+  void (*on_destroy)(pTHX_ struct coro *coro); /* for temporary use by xs in critical sections */
 
   /* statistics */
   int usecount; /* number of transfers to this coro */

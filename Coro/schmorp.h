@@ -8,7 +8,11 @@
 #include <signal.h>
 #include <errno.h>
 
-#ifndef _WIN32
+#if defined(WIN32 ) || defined(_MINIX)
+# define SCHMORP_H_PREFER_SELECT 1
+#endif
+
+#if !SCHMORP_H_PREFER_SELECT
 # include <poll.h>
 #endif
 
@@ -329,6 +333,7 @@ s_fd_prepare (int fd)
 #endif
 
 #if __linux && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 7))
+# define SCHMORP_H_HAVE_EVENTFD 1
 /* our minimum requirement is glibc 2.7 which has the stub, but not the header */
 # include <stdint.h>
 # ifdef __cplusplus
@@ -406,7 +411,11 @@ s_epipe_signal (s_epipe *epp)
   DWORD dummy;
   WriteFile (S_TO_HANDLE (epp->fd [1]), (LPCVOID)&dummy, 1, &dummy, 0);
 #else
+# if SCHMORP_H_HAVE_EVENTFD
   static uint64_t counter = 1;
+# else
+  static char counter [8];
+# endif
   /* some modules accept fd's from outside, support eventfd here */
   if (write (epp->fd [1], &counter, epp->len) < 0
       && errno == EINVAL
@@ -465,7 +474,7 @@ static int
 s_epipe_wait (s_epipe *epp)
 {
   dTHX;
-#ifdef _WIN32
+#if SCHMORP_H_PREFER_SELECT
   fd_set rfd;
   int fd = s_epipe_fd (epp);
 

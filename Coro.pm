@@ -133,7 +133,7 @@ The default implementation dies with "FATAL: deadlock detected.", followed
 by a thread listing, because the program has no other way to continue.
 
 This hook is overwritten by modules such as C<Coro::EV> and
-C<Coro::AnyEvent> to wait on an external event that hopefully wake up a
+C<Coro::AnyEvent> to wait on an external event that hopefully wakes up a
 coro so the scheduler can run it.
 
 See L<Coro::EV> or L<Coro::AnyEvent> for examples of using this technique.
