@@ -1,6 +1,7 @@
 =head1 Introduction to Coro
 
-This tutorial will introduce you to the main features of the Coro module family.
+This tutorial will introduce you to the main features of the Coro module
+family.
 
 It first introduces some basic concepts, and later gives a short overview
 of the module family.
@@ -608,12 +609,12 @@ This introduction only mentions a very few methods and modules, Coro has
 many other functions (see the L<Coro> manpage) and modules (documented in
 the C<SEE ALSO> section of the L<Coro> manpage).
 
-Noteworthy modules are L<Coro::LWP> (for parallel LWP request, but
-see L<AnyEvent::HTTP> for a better, but more limited, alternative),
-L<Coro::BDB>, for when you need an asynchronous database, L<Coro::Handle>,
-when you need to use any file handle in a coroutine (popular to access
-C<STDIN> and C<STDOUT>) and L<Coro::EV>, the optimised interface to L<EV>
-(which gets used automatically by L<Coro::AnyEvent>).
+Noteworthy modules are L<Coro::LWP> (for parallel LWP requests, but see
+L<AnyEvent::HTTP> for a better HTTP-only alternative), L<Coro::BDB>, for
+when you need an asynchronous database, L<Coro::Handle>, when you need
+to use any file handle in a coroutine (popular to access C<STDIN> and
+C<STDOUT>) and L<Coro::EV>, the optimised interface to L<EV> (which gets
+used automatically by L<Coro::AnyEvent>).
 
 
 =head1 AUTHOR

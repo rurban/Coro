@@ -1,10 +1,15 @@
 Revision history for Perl extension Coro.
 
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
-TODO: unready_all
-TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
+
+5.37  Sat Feb 19 07:49:44 CET 2011
+	- add a big "Coro thread life cycle" section to "man Coro".
+	- try a tentative workaround against the breakage that 5.13 has
+          introduced without depreciation period. sigh.
+        - no longer use Time::HiRes if gettimeofday is available, which
+          saves quite a lot of memory.
 
 5.36  Sun Feb 13 05:33:41 CET 2011
 	- automatically load Coro::Channel, Coro::RWLock, Coro::Semaphore,

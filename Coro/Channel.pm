@@ -35,7 +35,7 @@ use common::sense;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = 5.26;
+our $VERSION = 5.37;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }
@@ -110,7 +110,7 @@ C<shutdown> signals this fact to any consumers.
 =cut
 
 sub shutdown {
-   Coro::Semaphore::adjust $_[0][SGET], 2_000_000_000;
+   Coro::Semaphore::adjust $_[0][SGET], 1_000_000_000;
 }
 
 =item $q->size

@@ -45,7 +45,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 5.26;
+our $VERSION = 5.37;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -62,7 +62,7 @@ sub new_from_fh {
    my $fh = shift or return;
    my $self = do { local *Coro::Handle };
 
-   tie $self, 'Coro::Handle::FH', fh => $fh, @_;
+   tie *$self, 'Coro::Handle::FH', fh => $fh, @_;
 
    bless \$self, ref $class ? ref $class : $class
 }
@@ -86,8 +86,8 @@ until an error condition happens (and return false).
 
 =cut
 
-sub readable	{ Coro::Handle::FH::readable (tied ${$_[0]}) }
-sub writable	{ Coro::Handle::FH::writable (tied ${$_[0]}) }
+sub readable	{ Coro::Handle::FH::readable (tied *${$_[0]}) }
+sub writable	{ Coro::Handle::FH::writable (tied *${$_[0]}) }
 
 =item $fh->readline ([$terminator])
 
@@ -98,7 +98,7 @@ effect.
 
 =cut
 
-sub readline	{ tied(${+shift})->READLINE (@_) }
+sub readline	{ tied(*${+shift})->READLINE (@_) }
 
 =item $fh->autoflush ([...])
 
@@ -117,17 +117,17 @@ work but it's not efficient).
 
 =cut
 
-sub read	{ Coro::Handle::FH::READ   (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub sysread	{ Coro::Handle::FH::READ   (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub syswrite	{ Coro::Handle::FH::WRITE  (tied ${$_[0]}, $_[1], $_[2], $_[3]) }
-sub print	{ Coro::Handle::FH::WRITE  (tied ${+shift}, join "", @_) }
-sub printf	{ Coro::Handle::FH::PRINTF (tied ${+shift}, @_) }
-sub fileno	{ Coro::Handle::FH::FILENO (tied ${$_[0]}) }
-sub close	{ Coro::Handle::FH::CLOSE  (tied ${$_[0]}) }
+sub read	{ Coro::Handle::FH::READ   (tied *${$_[0]}, $_[1], $_[2], $_[3]) }
+sub sysread	{ Coro::Handle::FH::READ   (tied *${$_[0]}, $_[1], $_[2], $_[3]) }
+sub syswrite	{ Coro::Handle::FH::WRITE  (tied *${$_[0]}, $_[1], $_[2], $_[3]) }
+sub print	{ Coro::Handle::FH::WRITE  (tied *${+shift}, join "", @_) }
+sub printf	{ Coro::Handle::FH::PRINTF (tied *${+shift}, @_) }
+sub fileno	{ Coro::Handle::FH::FILENO (tied *${$_[0]}) }
+sub close	{ Coro::Handle::FH::CLOSE  (tied *${$_[0]}) }
 sub blocking    { !0 } # this handler always blocks the caller
 
 sub partial     {
-   my $obj = tied ${$_[0]};
+   my $obj = tied *${$_[0]};
 
    my $retval = $obj->[8];
    $obj->[8] = $_[1] if @_ > 1;
@@ -142,16 +142,16 @@ true on EINPROGRESS). Remember that these must be method calls.
 
 =cut
 
-sub connect	{ connect     tied(${$_[0]})->[0], $_[1] or $! == EINPROGRESS or $! == EAGAIN or $! == WSAEWOULDBLOCK }
-sub bind	{ bind        tied(${$_[0]})->[0], $_[1] }
-sub listen	{ listen      tied(${$_[0]})->[0], $_[1] }
-sub getsockopt	{ getsockopt  tied(${$_[0]})->[0], $_[1], $_[2] }
-sub setsockopt	{ setsockopt  tied(${$_[0]})->[0], $_[1], $_[2], $_[3] }
-sub send	{ send        tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub recv	{ recv        tied(${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
-sub sockname	{ getsockname tied(${$_[0]})->[0] }
-sub peername	{ getpeername tied(${$_[0]})->[0] }
-sub shutdown	{ shutdown    tied(${$_[0]})->[0], $_[1] }
+sub connect	{ connect     tied(*${$_[0]})->[0], $_[1] or $! == EINPROGRESS or $! == EAGAIN or $! == WSAEWOULDBLOCK }
+sub bind	{ bind        tied(*${$_[0]})->[0], $_[1] }
+sub listen	{ listen      tied(*${$_[0]})->[0], $_[1] }
+sub getsockopt	{ getsockopt  tied(*${$_[0]})->[0], $_[1], $_[2] }
+sub setsockopt	{ setsockopt  tied(*${$_[0]})->[0], $_[1], $_[2], $_[3] }
+sub send	{ send        tied(*${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
+sub recv	{ recv        tied(*${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
+sub sockname	{ getsockname tied(*${$_[0]})->[0] }
+sub peername	{ getpeername tied(*${$_[0]})->[0] }
+sub shutdown	{ shutdown    tied(*${$_[0]})->[0], $_[1] }
 
 =item ($fh, $peername) = $listen_fh->accept
 
@@ -163,7 +163,7 @@ list context return the ($fh, $peername) pair (or nothing).
 sub accept {
    my ($peername, $fh);
    while () {
-      $peername = accept $fh, tied(${$_[0]})->[0]
+      $peername = accept $fh, tied(*${$_[0]})->[0]
          and return wantarray 
                     ? ($_[0]->new_from_fh($fh), $peername)
                     :  $_[0]->new_from_fh($fh);
@@ -184,7 +184,7 @@ C<0> is a valid timeout, use C<undef> to disable the timeout.
 =cut
 
 sub timeout {
-   my $self = tied ${$_[0]};
+   my $self = tied *${$_[0]};
    if (@_ > 1) {
       $self->[2] = $_[1];
       $self->[5]->timeout ($_[1]) if $self->[5];
@@ -226,11 +226,11 @@ readline nor sysread are viable candidates, like this:
 =cut
 
 sub fh {
-   (tied ${$_[0]})->[0];
+   (tied *${$_[0]})->[0];
 }
 
 sub rbuf : lvalue {
-   (tied ${$_[0]})->[3];
+   (tied *${$_[0]})->[3];
 }
 
 sub DESTROY {
@@ -240,7 +240,7 @@ sub DESTROY {
 our $AUTOLOAD;
 
 sub AUTOLOAD {
-   my $self = tied ${$_[0]};
+   my $self = tied *${$_[0]};
 
    (my $func = $AUTOLOAD) =~ s/^(.*):://;
 

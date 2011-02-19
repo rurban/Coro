@@ -42,14 +42,15 @@ issue, making thread programming much safer and easier than using other
 thread models.
 
 Unlike the so-called "Perl threads" (which are not actually real threads
-but only the windows process emulation (see section of same name for more
-details) ported to unix, and as such act as processes), Coro provides
-a full shared address space, which makes communication between threads
-very easy. And Coro's threads are fast, too: disabling the Windows
+but only the windows process emulation (see section of same name for
+more details) ported to UNIX, and as such act as processes), Coro
+provides a full shared address space, which makes communication between
+threads very easy. And coro threads are fast, too: disabling the Windows
 process emulation code in your perl and using Coro can easily result in
 a two to four times speed increase for your programs. A parallel matrix
-multiplication benchmark runs over 300 times faster on a single core than
-perl's pseudo-threads on a quad core using all four cores.
+multiplication benchmark (very communication-intensive) runs over 300
+times faster on a single core than perls pseudo-threads on a quad core
+using all four cores.
 
 Coro achieves that by supporting multiple running interpreters that share
 data, which is especially useful to code pseudo-parallel processes and
@@ -64,6 +65,252 @@ variables (see L<Coro::State> for more configuration and background info).
 
 See also the C<SEE ALSO> section at the end of this document - the Coro
 module family is quite large.
+
+=head1 CORO THREAD LIFE CYCLE
+
+During the long and exciting (or not) life of a coro thread, it goes
+through a number of states:
+
+=over 4
+
+=item 1. Creation
+
+The first thing in the life of a coro thread is it's creation -
+obviously. The typical way to create a thread is to call the C<async
+BLOCK> function:
+
+   async {
+      # thread code goes here
+   };
+
+You can also pass arguments, which are put in C<@_>:
+
+   async {
+      print $_[1]; # prints 2
+   } 1, 2, 3;
+
+This creates a new coro thread and puts it into the ready queue, meaning
+it will run as soon as the CPU is free for it.
+
+C<async> will return a coro object - you can store this for future
+reference or ignore it, the thread itself will keep a reference to it's
+thread object - threads are alive on their own.
+
+Another way to create a thread is to call the C<new> constructor with a
+code-reference:
+
+   new Coro sub {
+      # thread code goes here
+   }, @optional_arguments;
+
+This is quite similar to calling C<async>, but the important difference is
+that the new thread is not put into the ready queue, so the thread will
+not run until somebody puts it there. C<async> is, therefore, identical to
+this sequence:
+
+   my $coro = new Coro sub {
+      # thread code goes here
+   };
+   $coro->ready;
+   return $coro;
+
+=item 2. Startup
+
+When a new coro thread is created, only a copy of the code reference
+and the arguments are stored, no extra memory for stacks and so on is
+allocated, keeping the coro thread in a low-memory state.
+
+Only when it actually starts executing will all the resources be finally
+allocated.
+
+The optional arguments specified at coro creation are available in C<@_>,
+similar to function calls.
+
+=item 3. Running / Blocking
+
+A lot can happen after the coro thread has started running. Quite usually,
+it will not run to the end in one go (because you could use a function
+instead), but it will give up the CPU regularly because it waits for
+external events.
+
+As long as a coro thread runs, it's coro object is available in the global
+variable C<$Coro::current>.
+
+The low-level way to give up the CPU is to call the scheduler, which
+selects a new coro thread to run:
+
+   Coro::schedule;
+
+Since running threads are not in the ready queue, calling the scheduler
+without doing anything else will block the coro thread forever - you need
+to arrange either for the coro to put woken up (readied) by some other
+event or some other thread, or you can put it into the ready queue before
+scheduling:
+
+   # this is exactly what Coro::cede does
+   $Coro::current->ready;
+   Coro::schedule;
+
+All the higher-level synchronisation methods (Coro::Semaphore,
+Coro::rouse_*...) are actually implemented via C<< ->ready >> and C<<
+Coro::schedule >>.
+
+While the coro thread is running it also might get assigned a C-level
+thread, or the C-level thread might be unassigned from it, as the Coro
+runtime wishes. A C-level thread needs to be assigned when your perl
+thread calls into some C-level function and that function in turn calls
+perl and perl then wants to switch coroutines. This happens most often
+when you run an event loop and block in the callback, or when perl
+itself calls some function such as C<AUTOLOAD> or methods via the C<tie>
+mechanism.
+
+=item 4. Termination
+
+Many threads actually terminate after some time. There are a number of
+ways to terminate a coro thread, the simplest is returning from the
+top-level code reference:
+
+   async {
+      # after returning from here, the coro thread is terminated
+   };
+
+   async {
+      return if 0.5 <  rand; # terminate a little earlier, maybe
+      print "got a chance to print this\n";
+      # or here
+   };
+
+Any values returned from the coroutine can be recovered using C<< ->join
+>>:
+
+   my $coro = async {
+      "hello, world\n" # return a string
+   };
+
+   my $hello_world = $coro->join;
+
+   print $hello_world;
+
+Another way to terminate is to call C<< Coro::terminate >>, which at any
+subroutine call nesting level:
+
+   async {
+      Coro::terminate "return value 1", "return value 2";
+   };
+
+And yet another way is to C<< ->cancel >> the coro thread from another
+thread:
+
+   my $coro = async {
+      exit 1;
+   };
+
+   $coro->cancel; # an also accept values for ->join to retrieve
+
+Cancellation I<can> be dangerous - it's a bit like calling C<exit> without
+actually exiting, and might leave C libraries and XS modules in a weird
+state. Unlike other thread implementations, however, Coro is exceptionally
+safe with regards to cancellation, as perl will always be in a consistent
+state.
+
+So, cancelling a thread that runs in an XS event loop might not be the
+best idea, but any other combination that deals with perl only (cancelling
+when a thread is in a C<tie> method or an C<AUTOLOAD> for example) is
+safe.
+
+=item 5. Cleanup
+
+Threads will allocate various resources. Most but not all will be returned
+when a thread terminates, during clean-up.
+
+Cleanup is quite similar to throwing an uncaught exception: perl will
+work it's way up through all subroutine calls and blocks. On it's way, it
+will release all C<my> variables, undo all C<local>'s and free any other
+resources truly local to the thread.
+
+So, a common way to free resources is to keep them referenced only by my
+variables:
+
+   async {
+      my $big_cache = new Cache ...;
+   };
+
+If there are no other references, then the C<$big_cache> object will be
+freed when the thread terminates, regardless of how it does so.
+
+What it does C<NOT> do is unlock any Coro::Semaphores or similar
+resources, but that's where the C<guard> methods come in handy:
+
+   my $sem = new Coro::Semaphore;
+
+   async {
+      my $lock_guard = $sem->guard;
+      # if we reutrn, or die or get cancelled, here,
+      # then the semaphore will be "up"ed.
+   };
+
+The C<Guard::guard> function comes in handy for any custom cleanup you
+might want to do:
+
+   async {
+      my $window = new Gtk2::Window "toplevel";
+      # The window will not be cleaned up automatically, even when $window
+      # gets freed, so use a guard to ensure it's destruction
+      # in case of an error:
+      my $window_guard = Guard::guard { $window->destroy };
+
+      # we are safe here
+   };
+
+Last not least, C<local> can often be handy, too, e.g. when temporarily
+replacing the coro thread description:
+
+   sub myfunction {
+      local $Coro::current->{desc} = "inside myfunction(@_)";
+
+      # if we return or die here, the description will be restored
+   }
+
+=item 6. Viva La Zombie Muerte
+
+Even after a thread has terminated and cleaned up it's resources, the coro
+object still is there and stores the return values of the thread. Only in
+this state will the coro object be "reference counted" in the normal perl
+sense: the thread code keeps a reference to it when it is active, but not
+after it has terminated.
+
+The means the coro object gets freed automatically when the thread has
+terminated and cleaned up and there arenot other references.
+
+If there are, the coro object will stay around, and you can call C<<
+->join >> as many times as you wish to retrieve the result values:
+
+   async {
+      print "hi\n";
+      1
+   };
+
+   # run the async above, and free everything before returning
+   # from Coro::cede:
+   Coro::cede;
+
+   {
+      my $coro = async {
+         print "hi\n";
+         1
+      };
+
+      # run the async above, and clean up, but do not free the coro
+      # object:
+      Coro::cede;
+
+      # optionally retrieve the result values
+      my @results = $coro->join;
+
+      # now $coro goes out of scope, and presumably gets freed
+   };
+
+=back
 
 =cut
 
@@ -83,7 +330,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 5.26;
+our $VERSION = 5.37;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -133,7 +380,7 @@ The default implementation dies with "FATAL: deadlock detected.", followed
 by a thread listing, because the program has no other way to continue.
 
 This hook is overwritten by modules such as C<Coro::EV> and
-C<Coro::AnyEvent> to wait on an external event that hopefully wake up a
+C<Coro::AnyEvent> to wait on an external event that hopefully wakes up a
 coro so the scheduler can run it.
 
 See L<Coro::EV> or L<Coro::AnyEvent> for examples of using this technique.
