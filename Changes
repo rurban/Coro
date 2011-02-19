@@ -1,8 +1,6 @@
 Revision history for Perl extension Coro.
 
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
-TODO: unready_all
-TODO: myhttpd header parsing
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 

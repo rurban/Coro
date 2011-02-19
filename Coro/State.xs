@@ -588,7 +588,7 @@ swap_svs (pTHX_ Coro__State c)
 
 #if PERL_VERSION_ATLEAST (5,10,0)
       /* perl 5.10 complicates this _quite_ a bit, but it also is
-       * is much faster, so no quarrels here. alternatively, we could
+       * much faster, so no quarrels here. alternatively, we could
        * sv_upgrade to avoid this.
        */
       {

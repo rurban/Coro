@@ -110,7 +110,7 @@ C<shutdown> signals this fact to any consumers.
 =cut
 
 sub shutdown {
-   Coro::Semaphore::adjust $_[0][SGET], 2_000_000_000;
+   Coro::Semaphore::adjust $_[0][SGET], 1_000_000_000;
 }
 
 =item $q->size
