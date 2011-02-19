@@ -76,8 +76,6 @@ use common::sense;
 
 use Carp;
 
-use Time::HiRes (); # currently only used for PerlIO::cede
-
 our $DIEHOOK;
 our $WARNHOOK;
 
@@ -92,7 +90,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.26;
+   our $VERSION = 5.37;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.

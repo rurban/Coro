@@ -316,6 +316,58 @@ coro_pp_sselect (pTHX)
   return PL_ppaddr [OP_ENTERSUB](aTHX);
 }
 
+/** time stuff **************************************************************/
+
+#ifdef HAS_GETTIMEOFDAY
+
+static void
+coro_u2time (aTHX_ UV ret[2])
+{
+  struct timeval tv;
+  gettimeofday (&tv, 0);
+
+  ret [0] = tv.tv_sec;
+  ret [1] = tv.tv_usec;
+}
+
+static double
+coro_nvtime ()
+{
+  struct timeval tv;
+  gettimeofday (&tv, 0);
+
+  return tv.tv_sec + tv.tv_usec * 1e-6;
+}
+
+static void
+time_init (void)
+{
+  nvtime = coro_nvtime;
+  u2time = coro_u2time;
+}
+
+#else
+
+static void
+time_init (void)
+{
+  SV **svp;
+
+  require_pv ("Time::HiRes");
+  
+  svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
+
+  if (!svp)          croak ("Time::HiRes is required");
+  if (!SvIOK (*svp)) croak ("Time::NVtime isn't a function pointer");
+
+  nvtime = INT2PTR (double (*)(), SvIV (*svp));
+
+  svp = hv_fetch (PL_modglobal, "Time::U2time", 12, 0);
+  u2time = INT2PTR (void (*)(pTHX_ UV ret[2]), SvIV (*svp));
+}
+
+#endif
+
 /** lowlevel stuff **********************************************************/
 
 static SV *
@@ -3111,17 +3163,7 @@ BOOT:
         coroapi.prepare_cede         = prepare_cede;
         coroapi.prepare_cede_notself = prepare_cede_notself;
 
-        {
-          SV **svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
-
-          if (!svp)          croak ("Time::HiRes is required");
-          if (!SvIOK (*svp)) croak ("Time::NVtime isn't a function pointer");
-
-          nvtime = INT2PTR (double (*)(), SvIV (*svp));
-
-          svp = hv_fetch (PL_modglobal, "Time::U2time", 12, 0);
-          u2time = INT2PTR (void (*)(pTHX_ UV ret[2]), SvIV (*svp));
-        }
+        time_init ();
 
         assert (("PRIO_NORMAL must be 0", !CORO_PRIO_NORMAL));
 }
