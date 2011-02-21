@@ -4,6 +4,9 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+5.371 Mon Feb 21 14:36:08 CET 2011
+	- backport to windows process emulation code again.
+
 5.37  Sat Feb 19 07:49:44 CET 2011
 	- add a big "Coro thread life cycle" section to "man Coro".
 	- try a tentative workaround against the breakage that 5.13 has

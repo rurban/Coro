@@ -321,7 +321,7 @@ coro_pp_sselect (pTHX)
 #ifdef HAS_GETTIMEOFDAY
 
 static void
-coro_u2time (aTHX_ UV ret[2])
+coro_u2time (pTHX_ UV ret[2])
 {
   struct timeval tv;
   gettimeofday (&tv, 0);
