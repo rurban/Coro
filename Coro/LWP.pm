@@ -94,7 +94,7 @@ use Net::HTTP ();
 use Net::FTP ();
 use Net::NNTP ();
 
-our $VERSION = 5.37;
+our $VERSION = 5.371;
 
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 
