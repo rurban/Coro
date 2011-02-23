@@ -4,6 +4,12 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+5.372 Wed Feb 23 06:14:30 CET 2011
+	- apparently mingw doesn't provide a working gettimeofday, try to
+          work around that by relying on Time::HiRes (indirectly brought to
+          my attention by Max Maischein).
+        - fix some portability issues when Time::HiRes was used.
+
 5.371 Mon Feb 21 14:36:08 CET 2011
 	- backport to windows process emulation code again.
 
