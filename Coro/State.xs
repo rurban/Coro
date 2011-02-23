@@ -24,6 +24,7 @@
 #endif
 
 #ifdef WIN32
+# undef HAS_GETTIMEOFDAY
 # undef setjmp
 # undef longjmp
 # undef _exit
@@ -340,7 +341,7 @@ coro_nvtime ()
 }
 
 static void
-time_init (void)
+time_init (pTHX)
 {
   nvtime = coro_nvtime;
   u2time = coro_u2time;
@@ -349,15 +350,15 @@ time_init (void)
 #else
 
 static void
-time_init (void)
+time_init (pTHX)
 {
   SV **svp;
 
-  require_pv ("Time::HiRes");
+  require_pv ("Time/HiRes.pm");
   
   svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
 
-  if (!svp)          croak ("Time::HiRes is required");
+  if (!svp)          croak ("Time::HiRes is required, but missing.");
   if (!SvIOK (*svp)) croak ("Time::NVtime isn't a function pointer");
 
   nvtime = INT2PTR (double (*)(), SvIV (*svp));
@@ -3163,7 +3164,7 @@ BOOT:
         coroapi.prepare_cede         = prepare_cede;
         coroapi.prepare_cede_notself = prepare_cede_notself;
 
-        time_init ();
+        time_init (aTHX);
 
         assert (("PRIO_NORMAL must be 0", !CORO_PRIO_NORMAL));
 }
