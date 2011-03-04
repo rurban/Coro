@@ -23,7 +23,7 @@
 # define SVs_PADSTALE 0
 #endif
 
-#ifdef WIN32
+#if defined(_WIN32)
 # undef HAS_GETTIMEOFDAY
 # undef setjmp
 # undef longjmp

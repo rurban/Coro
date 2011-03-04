@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#if defined(WIN32 ) || defined(_MINIX)
+#if defined(_WIN32) || defined(_MINIX)
 # define SCHMORP_H_PREFER_SELECT 1
 #endif
 
