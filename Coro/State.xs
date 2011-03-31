@@ -3397,7 +3397,6 @@ cancel (Coro::State self)
 	coro_state_destroy (aTHX_ self);
         coro_call_on_destroy (aTHX_ self); /* actually only for Coro objects */
 
-
 SV *
 enable_times (int enabled = enable_times)
 	CODE:
