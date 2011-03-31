@@ -2010,11 +2010,12 @@ static void
 coro_call_on_destroy (pTHX_ struct coro *coro)
 {
   SV **on_destroyp = hv_fetch (coro->hv, "_on_destroy", sizeof ("_on_destroy") - 1, 0);
-  SV **statusp     = hv_fetch (coro->hv, "_status", sizeof ("_status") - 1, 0);
 
   if (on_destroyp)
     {
-      AV *on_destroy = (AV *)SvRV (*on_destroyp);
+      SV **statusp = hv_fetch (coro->hv, "_status", sizeof ("_status") - 1, 0);
+      AV *on_destroy =           sv_2mortal (SvREFCNT_inc ((AV *)SvRV (*on_destroyp)));
+      AV *status     = statusp ? sv_2mortal (SvREFCNT_inc ((AV *)SvRV (*statusp))) : 0;
 
       while (AvFILLp (on_destroy) >= 0)
         {
@@ -2026,7 +2027,6 @@ coro_call_on_destroy (pTHX_ struct coro *coro)
           if (statusp)
             {
               int i;
-              AV *status = (AV *)SvRV (*statusp);
               EXTEND (SP, AvFILLp (status) + 1);
 
               for (i = 0; i <= AvFILLp (status); ++i)
