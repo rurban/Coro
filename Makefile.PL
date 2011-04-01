@@ -36,7 +36,7 @@ EOF
       print "\nEvent version $Event::VERSION found, building Event support.\n\n";
    }
 } else {
-   print "\n*** Event not found, not build Event support.\n\n";
+   print "\n*** Event not found, not building Event support.\n\n";
 }
 
 if (eval { require EV }) {
@@ -56,7 +56,7 @@ EOF
       print "\nEV version $EV::VERSION found, building EV support.\n\n";
    }
 } else {
-   print "\n*** EV not found, not build EV support.\n\n";
+   print "\n*** EV not found, not building EV support.\n\n";
 }
 
 WriteMakefile(
