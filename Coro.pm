@@ -730,7 +730,7 @@ not ever be scheduled.
 =item $coro->cancel (arg...)
 
 Terminates the given Coro and makes it return the given arguments as
-status (default: the empty list). Never returns if the Coro is the
+status (default: an empty list). Never returns if the Coro is the
 current Coro.
 
 =cut
