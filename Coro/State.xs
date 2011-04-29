@@ -198,7 +198,7 @@ typedef struct coro_cctx
   unsigned char flags;
 } coro_cctx;
 
-coro_cctx *cctx_current; /* the currently running cctx */
+static coro_cctx *cctx_current; /* the currently running cctx */
 
 /*****************************************************************************/
 
@@ -208,6 +208,7 @@ enum {
   CF_NEW       = 0x0004, /* has never been switched to */
   CF_DESTROYED = 0x0008, /* coroutine data has been freed */
   CF_SUSPENDED = 0x0010, /* coroutine can't be scheduled */
+  CF_NOCANCEL  = 0x0020, /* cannot cancel, set slf_frame.data to 1 (hackish) */
 };
 
 /* the structure where most of the perl state is stored, overlaid on the cxstack */
@@ -277,7 +278,7 @@ typedef struct coro *Coro__State_or_hashref;
 
 /* the following variables are effectively part of the perl context */
 /* and get copied between struct coro and these variables */
-/* the mainr easonw e don't support windows process emulation */
+/* the main reason we don't support windows process emulation */
 static struct CoroSLF slf_frame; /* the current slf frame */
 
 /** Coro ********************************************************************/
@@ -1498,7 +1499,7 @@ cctx_destroy (coro_cctx *cctx)
   if (!cctx)
     return;
 
-  assert (("FATAL: tried to destroy current cctx", cctx != cctx_current));//D temporary?
+  assert (("FATAL: tried to destroy current cctx", cctx != cctx_current));
 
   --cctx_count;
   coro_destroy (&cctx->cctx);
@@ -1675,6 +1676,14 @@ coro_state_destroy (pTHX_ struct coro *coro)
 
   if (coro->on_destroy && !PL_dirty)
     coro->on_destroy (aTHX_ coro);
+
+  /*
+   * The on_destroy above most likely is from an SLF call.
+   * Since by definition the SLF call will not finish when we destroy
+   * the coro, we will have to force-finish it here, otherwise
+   * cleanup functions cannot call SLF functions.
+   */
+  coro->slf_frame.prepare = 0;
 
   coro->flags |= CF_DESTROYED;
   
@@ -2095,17 +2104,47 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
   coro_set_status (coro_hv, arg + 1, items - 1);
   
-  /* cancelling the current coro is allowed, and equals terminate */
-  if (coro_hv == (HV *)SvRV (coro_current))
-    slf_init_terminate_cancel_common (frame, coro_hv);
-  else
+  if (expect_false (coro->flags & CF_NOCANCEL))
     {
-      /* otherwise we cancel ourselves */
-      coro_state_destroy (aTHX_ coro);
-      coro_call_on_destroy (aTHX_ coro);
+      /* coro currently busy cancelling something, so just notify it */
+      coro->slf_frame.data = (void *)coro;
 
       frame->prepare = prepare_nop;
       frame->check   = slf_check_nop;
+    }
+  else if (coro_hv == (HV *)SvRV (coro_current))
+    {
+      /* cancelling the current coro is allowed, and equals terminate */
+      slf_init_terminate_cancel_common (frame, coro_hv);
+    }
+  else
+    {
+      struct coro *self = SvSTATE_current;
+
+      /* otherwise we cancel directly, purely for speed reasons
+       * unfortunately, this requires some magic trickery, as
+       * somebody else could cancel us, so we have to fight the cancellation.
+       * this is ugly, and hopefully fully worth the extra speed.
+       * besides, I can't get the slow-but-safe version working...
+       */
+      slf_frame.data = 0;
+      self->flags |= CF_NOCANCEL;
+      
+      coro_state_destroy (aTHX_ coro);
+      coro_call_on_destroy (aTHX_ coro);
+
+      self->flags &= ~CF_NOCANCEL;
+
+      if (slf_frame.data)
+        {
+          /* while we were busy we have been cancelled, so terminate */
+          slf_init_terminate_cancel_common (frame, self->hv);
+        }
+      else
+        {
+          frame->prepare = prepare_nop;
+          frame->check   = slf_check_nop;
+        }
     }
 }
 
@@ -3309,12 +3348,22 @@ call (Coro::State coro, SV *coderef)
         if (coro->mainstack && ((coro->flags & CF_RUNNING) || coro->slot))
           {
             struct coro *current = SvSTATE_current;
+            struct CoroSLF slf_save;
 
             if (current != coro)
               {
                 PUTBACK;
                 save_perl (aTHX_ current);
                 load_perl (aTHX_ coro);
+                /* the coro is most likely in an active SLF call.
+                 * while not strictly required (the code we execute is
+                 * not allowed to call any SLF functions), it's cleaner
+                 * to reinitialise the slf_frame and restore it later.
+                 * This might one day allow us to actually do SLF calls
+                 * from code executed here.
+                 */
+                slf_save = slf_frame;
+                slf_frame.prepare = 0;
                 SPAGAIN;
               }
 
@@ -3334,6 +3383,7 @@ call (Coro::State coro, SV *coderef)
             if (current != coro)
               {
                 PUTBACK;
+                slf_frame = slf_save;
                 save_perl (aTHX_ coro);
                 load_perl (aTHX_ current);
                 SPAGAIN;
