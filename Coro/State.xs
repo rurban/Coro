@@ -358,8 +358,8 @@ time_init (pTHX)
   
   svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
 
-  if (!svp)          croak ("Time::HiRes is required, but missing.");
-  if (!SvIOK (*svp)) croak ("Time::NVtime isn't a function pointer");
+  if (!svp)          croak ("Time::HiRes is required, but missing. Caught");
+  if (!SvIOK (*svp)) croak ("Time::NVtime isn't a function pointer. Caught");
 
   nvtime = INT2PTR (double (*)(), SvIV (*svp));
 
@@ -2040,24 +2040,28 @@ coro_call_on_destroy (pTHX_ struct coro *coro)
 }
 
 static void
-slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+coro_set_status (HV *coro_hv, SV **arg, int items)
 {
-  int i;
-  HV *hv = (HV *)SvRV (coro_current);
   AV *av = newAV ();
 
   /* items are actually not so common, so optimise for this case */
   if (items)
     {
+      int i;
+
       av_extend (av, items - 1);
 
       for (i = 0; i < items; ++i)
         av_push (av, SvREFCNT_inc_NN (arg [i]));
     }
 
-  hv_store (hv, "_status", sizeof ("_status") - 1, newRV_noinc ((SV *)av), 0);
+  hv_store (coro_hv, "_status", sizeof ("_status") - 1, newRV_noinc ((SV *)av), 0);
+}
 
-  av_push (av_destroy, (SV *)newRV_inc ((SV *)hv)); /* RVinc for perl */
+static void
+slf_init_terminate_cancel_common (pTHX_ struct CoroSLF *frame, HV *coro_hv)
+{
+  av_push (av_destroy, (SV *)newRV_inc ((SV *)coro_hv)); /* RVinc for perl */
   api_ready (aTHX_ sv_manager);
 
   frame->prepare = prepare_schedule;
@@ -2066,6 +2070,43 @@ slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   /* as a minor optimisation, we could unwind all stacks here */
   /* but that puts extra pressure on pp_slf, and is not worth much */
   /*coro_unwind_stacks (aTHX);*/
+}
+
+static void
+slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  HV *coro_hv = (HV *)SvRV (coro_current);
+
+  coro_set_status (coro_hv, arg, items);
+  slf_init_terminate_cancel_common (frame, coro_hv);
+}
+
+static void
+slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  HV *coro_hv;
+  struct coro *coro;
+
+  if (items <= 0)
+    croak ("Coro::cancel called without coro object,");
+
+  coro = SvSTATE (arg [0]);
+  coro_hv = coro->hv;
+
+  coro_set_status (coro_hv, arg + 1, items - 1);
+  
+  /* cancelling the current coro is allowed, and equals terminate */
+  if (coro_hv == (HV *)SvRV (coro_current))
+    slf_init_terminate_cancel_common (frame, coro_hv);
+  else
+    {
+      /* otherwise we cancel ourselves */
+      coro_state_destroy (aTHX_ coro);
+      coro_call_on_destroy (aTHX_ coro);
+
+      frame->prepare = prepare_nop;
+      frame->check   = slf_check_nop;
+    }
 }
 
 /*****************************************************************************/
@@ -3184,13 +3225,6 @@ transfer (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_transfer);
 
-bool
-_destroy (SV *coro_sv)
-	CODE:
-	RETVAL = coro_state_destroy (aTHX_ SvSTATE (coro_sv));
-	OUTPUT:
-        RETVAL
-
 void
 _exit (int code)
         PROTOTYPE: $
@@ -3395,7 +3429,6 @@ void
 cancel (Coro::State self)
 	CODE:
 	coro_state_destroy (aTHX_ self);
-        coro_call_on_destroy (aTHX_ self); /* actually only for Coro objects */
 
 SV *
 enable_times (int enabled = enable_times)
@@ -3510,9 +3543,21 @@ async (...)
         RETVAL
 
 void
+_destroy (Coro::State coro)
+	CODE:
+	/* used by the manager thread */
+	coro_state_destroy (aTHX_ coro);
+        coro_call_on_destroy (aTHX_ coro);
+
+void
 terminate (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_terminate);
+
+void
+cancel (...)
+	CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_cancel);
 
 void
 schedule (...)

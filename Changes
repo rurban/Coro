@@ -3,9 +3,12 @@ Revision history for Perl extension Coro.
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
+TODO: cancel calling another coro that cancels ourselves => crash (CF_DELAYCANCEL?) -> canceltest
 
+	- implement Coro->cancel in XS for a 20% speed improvement, and to
+          be able to implement mutual cancellation.
 	- be a bit more crash-resistant when calling (buggy) on_destroy
-          callbacks (bets effort).
+          callbacks (best effort).
 
 5.372 Wed Feb 23 06:14:30 CET 2011
 	- apparently mingw doesn't provide a working gettimeofday, try to

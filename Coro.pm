@@ -401,7 +401,7 @@ our $manager;
 
 $manager = new Coro sub {
    while () {
-      Coro::State::cancel shift @destroy
+      _destroy shift @destroy
          while @destroy;
 
       &schedule;
@@ -545,7 +545,8 @@ progress is made.
 
 =item terminate [arg...]
 
-Terminates the current coro with the given status values (see L<cancel>).
+Terminates the current coro with the given status values (see
+L<cancel>). The values will not be copied, but referenced directly.
 
 =item Coro::on_enter BLOCK, Coro::on_leave BLOCK
 
@@ -729,22 +730,19 @@ not ever be scheduled.
 
 =item $coro->cancel (arg...)
 
-Terminates the given Coro and makes it return the given arguments as
+Terminates the given Coro object and makes it return the given arguments as
 status (default: an empty list). Never returns if the Coro is the
 current Coro.
 
-=cut
+The arguments are not copied, but instead will be referenced directly
+(e.g. if you pass C<$var> and after the call change that variable, then
+you might change the return values passed to e.g. C<join>, so don't do
+that).
 
-sub cancel {
-   my $self = shift;
-
-   if ($current == $self) {
-      terminate @_;
-   } else {
-      $self->{_status} = [@_];
-      Coro::State::cancel $self;
-   }
-}
+The resources of the Coro are usually freed (or destructed) before this
+call returns, but this can be delayed for an indefinite amount of time, as
+in some cases the manager thread has to run first to actually destruct the
+Coro object.
 
 =item $coro->schedule_to
 
