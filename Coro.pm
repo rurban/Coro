@@ -790,7 +790,7 @@ C<kill>ing a coro with a signal (in this case, a scalar).
 
 Wait until the coro terminates and return any values given to the
 C<terminate> or C<cancel> functions. C<join> can be called concurrently
-from multiple coro, and all will be resumed and given the status
+from multiple threads, and all will be resumed and given the status
 return once the C<$coro> terminates.
 
 =cut
