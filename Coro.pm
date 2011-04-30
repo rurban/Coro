@@ -815,10 +815,12 @@ sub join {
 =item $coro->on_destroy (\&cb)
 
 Registers a callback that is called when this coro thread gets destroyed,
-but before it is joined. The callback gets passed the terminate arguments,
-if any, and I<must not> die, under any circumstances.
+that is, after it's resources have been freed but before it is joined. The
+callback gets passed the terminate/cancel arguments, if any, and I<must
+not> die, under any circumstances.
 
-There can be any number of C<on_destroy> callbacks per coro.
+There can be any number of C<on_destroy> callbacks per coro, and there is
+no way currently to remove a callback once added.
 
 =cut
 

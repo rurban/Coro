@@ -1668,12 +1668,13 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
 /** high level stuff ********************************************************/
 
-static int
+static void
 coro_state_destroy (pTHX_ struct coro *coro)
 {
   if (coro->flags & CF_DESTROYED)
-    return 0;
+    return;
 
+  /* this callback is reserved for slf functions needing to do cleanup */
   if (coro->on_destroy && !PL_dirty)
     coro->on_destroy (aTHX_ coro);
 
@@ -1711,8 +1712,6 @@ coro_state_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (coro->args);
   SvREFCNT_dec (coro->swap_sv);
   SvREFCNT_dec (CORO_THROW);
-
-  return 1;
 }
 
 static int
