@@ -5,9 +5,9 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
         - croak when a coro being cancelled tries to block (e.g. while
-          executing a guard block).
-        - implement a Coro::State->safe_cancel method that might fail, but
-          cancels in a "safer" way.
+          executing a guard block), instead of crashing or deadlocking.
+        - implement a Coro->safe_cancel method that might fail, but
+          cancels in a "safer" way if it succeeds.
 	- implement Coro->cancel in XS for a 20% speed improvement, and to
           be able to implement mutual cancellation.
         - cancelling a coro while it itself is cancelling another coro is
