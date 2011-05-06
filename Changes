@@ -4,14 +4,18 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
-        - croak when a coro being cancelled tries to block (e.g. while executing
-          a guard block).
+        - croak when a coro being cancelled tries to block (e.g. while
+          executing a guard block).
+        - implement a Coro::State->safe_cancel method that might fail, but
+          cancels in a "safer" way.
 	- implement Coro->cancel in XS for a 20% speed improvement, and to
           be able to implement mutual cancellation.
         - cancelling a coro while it itself is cancelling another coro is
           now supported and working, instead of triggering an assertion.
 	- be a bit more crash-resistant when calling (buggy) on_destroy
           callbacks (best effort).
+        - move on_destroy into the slf_frame, to allow extension slf
+          functions to have destructors.
 
 5.372 Wed Feb 23 06:14:30 CET 2011
 	- apparently mingw doesn't provide a working gettimeofday, try to

@@ -128,6 +128,7 @@ static void   (*u2time)(pTHX_ UV ret[2]);
 /* we hijack an hopefully unused CV flag for our purposes */
 #define CVf_SLF 0x4000
 static OP *pp_slf (pTHX);
+static void slf_destroy (pTHX_ struct coro *coro);
 
 static U32 cctx_gen;
 static size_t cctx_stacksize = CORO_STACKSIZE;
@@ -244,7 +245,6 @@ struct coro {
   int refcnt;  /* coroutines are refcounted, yes */
   int flags;   /* CF_ flags */
   HV *hv;      /* the perl hash associated with this coro, if any */
-  void (*on_destroy)(pTHX_ struct coro *coro); /* for temporary use by xs in critical sections */
 
   /* statistics */
   int usecount; /* number of transfers to this coro */
@@ -294,7 +294,7 @@ static struct CoroSLF slf_frame; /* the current slf frame */
 static SV *coro_current;
 static SV *coro_readyhook;
 static struct coro *coro_ready [CORO_PRIO_MAX - CORO_PRIO_MIN + 1][2]; /* head|tail */
-static CV *cv_coro_run, *cv_coro_terminate;
+static CV *cv_coro_run;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
 
@@ -1156,12 +1156,16 @@ destroy_perl (pTHX_ struct coro *coro)
   SV *svf [9];
 
   {
-    struct coro *current = SvSTATE_current;
+    SV *old_current = SvRV (coro_current);
+    struct coro *current = SvSTATE (old_current);
 
     assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
 
     save_perl (aTHX_ current);
-    SvRV_set (coro_current, (SV *)coro->hv); /* this will cause acroak in transfer_check */
+
+    /* this will cause transfer_check to croak on block*/
+    SvRV_set (coro_current, (SV *)coro->hv);
+
     load_perl (aTHX_ coro);
 
     coro_unwind_stacks (aTHX);
@@ -1182,7 +1186,8 @@ destroy_perl (pTHX_ struct coro *coro)
     svf    [8] =       PL_warnhook;
     assert (9 == sizeof (svf) / sizeof (*svf));
 
-    SvRV_set (coro_current, (SV *)current->hv);
+    SvRV_set (coro_current, old_current);
+
     load_perl (aTHX_ current);
   }
 
@@ -1676,17 +1681,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
   if (coro->flags & CF_DESTROYED)
     return;
 
-  /* this callback is reserved for slf functions needing to do cleanup */
-  if (coro->on_destroy && !PL_dirty)
-    coro->on_destroy (aTHX_ coro);
-
-  /*
-   * The on_destroy above most likely is from an SLF call.
-   * Since by definition the SLF call will not finish when we destroy
-   * the coro, we will have to force-finish it here, otherwise
-   * cleanup functions cannot call SLF functions.
-   */
-  coro->slf_frame.prepare = 0;
+  slf_destroy (aTHX_ coro);
 
   coro->flags |= CF_DESTROYED;
   
@@ -2149,6 +2144,46 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     }
 }
 
+static int
+slf_check_safe_cancel (pTHX_ struct CoroSLF *frame)
+{
+  frame->prepare = 0;
+  coro_unwind_stacks ();
+
+  slf_init_terminate_cancel_common (aTHX_ frame, (HV *)SvRV (coro_current));
+
+  return 1;
+}
+
+static int
+safe_cancel (pTHX_ struct coro *coro, SV **arg, int items)
+{
+  if (coro->cctx)
+    croak ("coro inside C callback, unable to cancel at this time, caught");
+
+  if (coro->flags & CF_NEW)
+    {
+      coro_set_status (coro->hv, arg, items);
+      coro_state_destroy (aTHX_ coro);
+      coro_call_on_destroy (aTHX_ coro);
+    }
+  else
+    {
+      if (!coro->slf_frame.prepare)
+        croak ("coro outside an SLF function, unable to cancel at this time, caught");
+
+      slf_destroy (coro);
+
+      coro_set_status (coro->hv, arg, items);
+      coro->slf_frame.prepare = prepare_nop;
+      coro->slf_frame.check   = slf_check_safe_cancel;
+
+      api_ready (aTHX_ coro->hv);
+    }
+
+  return 1;
+}
+
 /*****************************************************************************/
 /* async pool handler */
 
@@ -2196,10 +2231,8 @@ slf_init_pool_handler (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
       if (coro_rss (aTHX_ coro) > SvUV (sv_pool_rss)
           || av_len (av_async_pool) + 1 >= SvIV (sv_pool_size))
         {
-          coro->invoke_cb = SvREFCNT_inc_NN ((SV *)cv_coro_terminate);
-          coro->invoke_av = newAV ();
-
-          frame->prepare = prepare_nop;
+          slf_init_terminate_cancel_common (aTHX_ frame, hv);
+          return;
         }
       else
         {
@@ -2432,6 +2465,23 @@ slf_init_cede_notself (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   frame->prepare = prepare_cede_notself;
   frame->check   = slf_check_nop;
+}
+
+/* "undo"/cancel a running slf call - used when cancelling a coro, mainly */
+static void
+slf_destroy (pTHX_ struct coro *coro)
+{
+  /* this callback is reserved for slf functions needing to do cleanup */
+  if (coro->slf_frame.destroy && coro->slf_frame.prepare && !PL_dirty)
+    coro->slf_frame.destroy (aTHX_ coro);
+
+  /*
+   * The on_destroy above most likely is from an SLF call.
+   * Since by definition the SLF call will not finish when we destroy
+   * the coro, we will have to force-finish it here, otherwise
+   * cleanup functions cannot call SLF functions.
+   */
+  coro->slf_frame.prepare = 0;
 }
 
 /*
@@ -2767,7 +2817,7 @@ coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
 }
 
 static void
-coro_semaphore_on_destroy (pTHX_ struct coro *coro)
+coro_semaphore_destroy (pTHX_ struct coro *coro)
 {
   /* call $sem->adjust (0) to possibly wake up some other waiters */
   coro_semaphore_adjust (aTHX_ (AV *)coro->slf_frame.data, 0);
@@ -2784,7 +2834,7 @@ slf_check_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, int acquire)
     return 0;
   else if (SvIVX (count_sv) > 0)
     {
-      SvSTATE_current->on_destroy = 0;
+      frame->destroy = 0;
 
       if (acquire)
         SvIVX (count_sv) = SvIVX (count_sv) - 1;
@@ -2837,10 +2887,9 @@ slf_init_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, 
 
       frame->data    = (void *)sv_2mortal (SvREFCNT_inc ((SV *)av));
       frame->prepare = prepare_schedule;
-
       /* to avoid race conditions when a woken-up coro gets terminated */
       /* we arrange for a temporary on_destroy that calls adjust (0) */
-      SvSTATE_current->on_destroy = coro_semaphore_on_destroy;
+      frame->destroy = coro_semaphore_destroy;
     }
 }
 
@@ -3545,7 +3594,6 @@ BOOT:
         sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
         cv_coro_run        =      get_cv (      "Coro::_coro_run" , GV_ADD);
-        cv_coro_terminate  =      get_cv (      "Coro::terminate" , GV_ADD);
         coro_current       = coro_get_sv (aTHX_ "Coro::current"   , FALSE); SvREADONLY_on (coro_current);
         av_async_pool      = coro_get_av (aTHX_ "Coro::async_pool", TRUE);
         av_destroy         = coro_get_av (aTHX_ "Coro::destroy"   , TRUE);
@@ -3609,6 +3657,10 @@ void
 cancel (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_cancel);
+
+int
+safe_cancel (Coro::State self, ...)
+	C_ARGS: aTHX_ self, &ST (1), items - 1
 
 void
 schedule (...)

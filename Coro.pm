@@ -198,8 +198,8 @@ subroutine call nesting level:
       Coro::terminate "return value 1", "return value 2";
    };
 
-And yet another way is to C<< ->cancel >> the coro thread from another
-thread:
+And yet another way is to C<< ->cancel >> (or C<< ->safe_cancel >>) the
+coro thread from another thread:
 
    my $coro = async {
       exit 1;
@@ -207,11 +207,13 @@ thread:
 
    $coro->cancel; # an also accept values for ->join to retrieve
 
-Cancellation I<can> be dangerous - it's a bit like calling C<exit> without
-actually exiting, and might leave C libraries and XS modules in a weird
-state. Unlike other thread implementations, however, Coro is exceptionally
-safe with regards to cancellation, as perl will always be in a consistent
-state.
+Cancellation I<can> be dangerous - it's a bit like calling C<exit>
+without actually exiting, and might leave C libraries and XS modules in
+a weird state. Unlike other thread implementations, however, Coro is
+exceptionally safe with regards to cancellation, as perl will always be
+in a consistent state, and for those cases where you want to do truly
+marvellous things with your coro while it is being cancelled, there is
+even a C<< ->safe_cancel >> method.
 
 So, cancelling a thread that runs in an XS event loop might not be the
 best idea, but any other combination that deals with perl only (cancelling
@@ -730,9 +732,18 @@ not ever be scheduled.
 
 =item $coro->cancel (arg...)
 
-Terminates the given Coro object and makes it return the given arguments as
+Terminates the given Coro thread and makes it return the given arguments as
 status (default: an empty list). Never returns if the Coro is the
 current Coro.
+
+This is a rather brutal way to free a coro, with some limitations - if
+the thread is inside a C callback that doesn't expect to be canceled,
+bad things can happen, or if the cancelled thread insists on running
+complicated cleanup handlers that rely on it'S thread context, things will
+not work.
+
+Sometimes it is safer to C<< ->throw >> an exception, or use C<<
+->safe_cancel >>.
 
 The arguments are not copied, but instead will be referenced directly
 (e.g. if you pass C<$var> and after the call change that variable, then
@@ -743,6 +754,31 @@ The resources of the Coro are usually freed (or destructed) before this
 call returns, but this can be delayed for an indefinite amount of time, as
 in some cases the manager thread has to run first to actually destruct the
 Coro object.
+
+=item $coro->safe_cancel ($arg...)
+
+Works mostly like C<< ->cancel >>, but is inherently "safer", and
+consequently, can fail with an exception in cases the thread is not in a
+cancellable state.
+
+This method works a bit like throwing an exception that cannot be caught
+- specifically, it will clean up the thread from within itself, so all
+cleanup handlers (e.g. C<guard> blocks) are run with full thread context
+and can block if they wish.
+
+A thread is safe-cancellable if it either hasn't been run yet, or
+it has no C context attached and is inside an SLF function.
+
+The latter two basically mean that the thread isn't currently inside a
+perl callback called from some C function (usually XS modules) and isn't
+currently inside some C function itself.
+
+This call always returns true when it could cancel the thread, or croaks
+with an error otherwise, so you can write things like this:
+
+   if (! eval { $coro->safe_cancel }) {
+      warn "unable to cancel thread: $@";
+   }
 
 =item $coro->schedule_to
 
