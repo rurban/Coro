@@ -1161,7 +1161,7 @@ destroy_perl (pTHX_ struct coro *coro)
     assert (("FATAL: tried to destroy currently running coroutine", coro->mainstack != PL_mainstack));
 
     save_perl (aTHX_ current);
-    /*SvRV_set (coro_current, (SV *)coro->hv);*/
+    SvRV_set (coro_current, (SV *)coro->hv); /* this will cause acroak in transfer_check */
     load_perl (aTHX_ coro);
 
     coro_unwind_stacks (aTHX);
@@ -1182,7 +1182,7 @@ destroy_perl (pTHX_ struct coro *coro)
     svf    [8] =       PL_warnhook;
     assert (9 == sizeof (svf) / sizeof (*svf));
 
-    /*SvRV_set (coro_current, (SV *)current->hv);*/
+    SvRV_set (coro_current, (SV *)current->hv);
     load_perl (aTHX_ current);
   }
 
