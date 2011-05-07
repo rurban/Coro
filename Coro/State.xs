@@ -225,6 +225,7 @@ typedef struct
 #undef VAR
 } perl_slots;
 
+// how many context stack entries do we need for perl_slots
 #define SLOT_COUNT ((sizeof (perl_slots) + sizeof (PERL_CONTEXT) - 1) / sizeof (PERL_CONTEXT))
 
 /* this is a structure representing a perl-level coroutine */
@@ -800,16 +801,15 @@ save_perl (pTHX_ Coro__State c)
   }
 
   /* allocate some space on the context stack for our purposes */
-  /* we manually unroll here, as usually 2 slots is enough */
-  if (SLOT_COUNT >= 1) CXINC;
-  if (SLOT_COUNT >= 2) CXINC;
-  if (SLOT_COUNT >= 3) CXINC;
-  {
-    unsigned int i;
-    for (i = 3; i < SLOT_COUNT; ++i)
-      CXINC;
-  }
-  cxstack_ix -= SLOT_COUNT; /* undo allocation */
+  if (expect_false (cxstack_ix + SLOT_COUNT >= cxstack_max))
+    {
+      unsigned int i;
+
+      for (i = 0; i < SLOT_COUNT; ++i)
+        CXINC;
+
+      cxstack_ix -= SLOT_COUNT; /* undo allocation */
+    }
 
   c->mainstack = PL_mainstack;
 
@@ -840,7 +840,7 @@ save_perl (pTHX_ Coro__State c)
 static void
 coro_init_stacks (pTHX)
 {
-    PL_curstackinfo = new_stackinfo(32, 8);
+    PL_curstackinfo = new_stackinfo(32, 4 + SLOT_COUNT); /* 3 is minimum due to perl rounding down in scope.c:GROW() */
     PL_curstackinfo->si_type = PERLSI_MAIN;
     PL_curstack = PL_curstackinfo->si_stack;
     PL_mainstack = PL_curstack;		/* remember in case we switch stacks */
@@ -2045,7 +2045,7 @@ coro_call_on_destroy (pTHX_ struct coro *coro)
 }
 
 static void
-coro_set_status (HV *coro_hv, SV **arg, int items)
+coro_set_status (pTHX_ HV *coro_hv, SV **arg, int items)
 {
   AV *av = newAV ();
 
@@ -2082,8 +2082,8 @@ slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   HV *coro_hv = (HV *)SvRV (coro_current);
 
-  coro_set_status (coro_hv, arg, items);
-  slf_init_terminate_cancel_common (frame, coro_hv);
+  coro_set_status (aTHX_ coro_hv, arg, items);
+  slf_init_terminate_cancel_common (aTHX_ frame, coro_hv);
 }
 
 static void
@@ -2098,7 +2098,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   coro = SvSTATE (arg [0]);
   coro_hv = coro->hv;
 
-  coro_set_status (coro_hv, arg + 1, items - 1);
+  coro_set_status (aTHX_ coro_hv, arg + 1, items - 1);
   
   if (expect_false (coro->flags & CF_NOCANCEL))
     {
@@ -2111,7 +2111,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   else if (coro_hv == (HV *)SvRV (coro_current))
     {
       /* cancelling the current coro is allowed, and equals terminate */
-      slf_init_terminate_cancel_common (frame, coro_hv);
+      slf_init_terminate_cancel_common (aTHX_ frame, coro_hv);
     }
   else
     {
@@ -2134,7 +2134,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
       if (slf_frame.data)
         {
           /* while we were busy we have been cancelled, so terminate */
-          slf_init_terminate_cancel_common (frame, self->hv);
+          slf_init_terminate_cancel_common (aTHX_ frame, self->hv);
         }
       else
         {
@@ -2148,7 +2148,7 @@ static int
 slf_check_safe_cancel (pTHX_ struct CoroSLF *frame)
 {
   frame->prepare = 0;
-  coro_unwind_stacks ();
+  coro_unwind_stacks (aTHX);
 
   slf_init_terminate_cancel_common (aTHX_ frame, (HV *)SvRV (coro_current));
 
@@ -2163,7 +2163,7 @@ safe_cancel (pTHX_ struct coro *coro, SV **arg, int items)
 
   if (coro->flags & CF_NEW)
     {
-      coro_set_status (coro->hv, arg, items);
+      coro_set_status (aTHX_ coro->hv, arg, items);
       coro_state_destroy (aTHX_ coro);
       coro_call_on_destroy (aTHX_ coro);
     }
@@ -2172,9 +2172,9 @@ safe_cancel (pTHX_ struct coro *coro, SV **arg, int items)
       if (!coro->slf_frame.prepare)
         croak ("coro outside an SLF function, unable to cancel at this time, caught");
 
-      slf_destroy (coro);
+      slf_destroy (aTHX_ coro);
 
-      coro_set_status (coro->hv, arg, items);
+      coro_set_status (aTHX_ coro->hv, arg, items);
       coro->slf_frame.prepare = prepare_nop;
       coro->slf_frame.check   = slf_check_safe_cancel;
 

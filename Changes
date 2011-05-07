@@ -10,6 +10,8 @@ TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
           cancels in a "safer" way if it succeeds.
 	- implement Coro->cancel in XS for a 20% speed improvement, and to
           be able to implement mutual cancellation.
+	- speed up context switches by a percent or two by more efficiently
+          allocating context stack entries.
         - cancelling a coro while it itself is cancelling another coro is
           now supported and working, instead of triggering an assertion.
 	- be a bit more crash-resistant when calling (buggy) on_destroy
