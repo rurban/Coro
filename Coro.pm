@@ -205,15 +205,16 @@ coro thread from another thread:
       exit 1;
    };
 
-   $coro->cancel; # an also accept values for ->join to retrieve
+   $coro->cancel; # also accepts values for ->join to retrieve
 
-Cancellation I<can> be dangerous - it's a bit like calling C<exit>
-without actually exiting, and might leave C libraries and XS modules in
-a weird state. Unlike other thread implementations, however, Coro is
-exceptionally safe with regards to cancellation, as perl will always be
-in a consistent state, and for those cases where you want to do truly
-marvellous things with your coro while it is being cancelled, there is
-even a C<< ->safe_cancel >> method.
+Cancellation I<can> be dangerous - it's a bit like calling C<exit> without
+actually exiting, and might leave C libraries and XS modules in a weird
+state. Unlike other thread implementations, however, Coro is exceptionally
+safe with regards to cancellation, as perl will always be in a consistent
+state, and for those cases where you want to do truly marvellous things
+with your coro while it is being cancelled - that is, make sure all
+cleanup code is executed from the thread being cancelled - there is even a
+C<< ->safe_cancel >> method.
 
 So, cancelling a thread that runs in an XS event loop might not be the
 best idea, but any other combination that deals with perl only (cancelling
@@ -742,13 +743,17 @@ bad things can happen, or if the cancelled thread insists on running
 complicated cleanup handlers that rely on it'S thread context, things will
 not work.
 
-Sometimes it is safer to C<< ->throw >> an exception, or use C<<
-->safe_cancel >>.
+Any cleanup code being run (e.g. from C<guard> blocks) will be run without
+a thread context, and is not allowed to switch to other threads. On the
+plus side, C<< ->cancel >> will always clean up the thread, no matter
+what.  If your cleanup code is complex or you want to avoid cancelling a
+C-thread that doesn't know how to clean up itself, it can be better to C<<
+->throw >> an exception, or use C<< ->safe_cancel >>.
 
-The arguments are not copied, but instead will be referenced directly
-(e.g. if you pass C<$var> and after the call change that variable, then
-you might change the return values passed to e.g. C<join>, so don't do
-that).
+The arguments to C<< ->cancel >> are not copied, but instead will
+be referenced directly (e.g. if you pass C<$var> and after the call
+change that variable, then you might change the return values passed to
+e.g. C<join>, so don't do that).
 
 The resources of the Coro are usually freed (or destructed) before this
 call returns, but this can be delayed for an indefinite amount of time, as
@@ -762,23 +767,44 @@ consequently, can fail with an exception in cases the thread is not in a
 cancellable state.
 
 This method works a bit like throwing an exception that cannot be caught
-- specifically, it will clean up the thread from within itself, so all
-cleanup handlers (e.g. C<guard> blocks) are run with full thread context
-and can block if they wish.
+- specifically, it will clean up the thread from within itself, so
+all cleanup handlers (e.g. C<guard> blocks) are run with full thread
+context and can block if they wish. The downside is that there is no
+guarantee that the thread can be cancelled when you call this method, and
+therefore, it might fail. It is also considerably slower than C<cancel> or
+C<terminate>.
 
-A thread is safe-cancellable if it either hasn't been run yet, or
-it has no C context attached and is inside an SLF function.
+A thread is in a safe-cancellable state if it either hasn't been run yet,
+or it has no C context attached and is inside an SLF function.
 
 The latter two basically mean that the thread isn't currently inside a
-perl callback called from some C function (usually XS modules) and isn't
-currently inside some C function itself.
+perl callback called from some C function (usually via some XS modules)
+and isn't currently executing inside some C function itself (via Coro's XS
+API).
 
-This call always returns true when it could cancel the thread, or croaks
-with an error otherwise, so you can write things like this:
+This call returns true when it could cancel the thread, or croaks with an
+error otherwise (i.e. it either returns true or doesn't return at all).
+
+Why the weird interface? Well, there are two common models on how and
+when to cancel things. In the first, you have the expectation that your
+coro thread can be cancelled when you want to cancel it - if the thread
+isn't cancellable, this would be a bug somewhere, so C<< ->safe_cancel >>
+croaks to notify of the bug.
+
+In the second model you sometimes want to ask nicely to cancel a thread,
+but if it's not a good time, well, then don't cancel. This can be done
+relatively easy like this:
 
    if (! eval { $coro->safe_cancel }) {
       warn "unable to cancel thread: $@";
    }
+
+However, what you never should do is first try to cancel "safely" and
+if that fails, cancel the "hard" way with C<< ->cancel >>. That makes
+no sense: either you rely on being able to execute cleanup code in your
+thread context, or you don't. If you do, then C<< ->safe_cancel >> is the
+only way, and if you don't, then C<< ->cancel >> is always faster and more
+direct.
 
 =item $coro->schedule_to
 
@@ -807,17 +833,18 @@ clears the exception object.
 
 Coro will check for the exception each time a schedule-like-function
 returns, i.e. after each C<schedule>, C<cede>, C<< Coro::Semaphore->down
->>, C<< Coro::Handle->readable >> and so on. Most of these functions
-detect this case and return early in case an exception is pending.
+>>, C<< Coro::Handle->readable >> and so on. Most of those functions (all
+that are part of Coro itself) detect this case and return early in case an
+exception is pending.
 
 The exception object will be thrown "as is" with the specified scalar in
 C<$@>, i.e. if it is a string, no line number or newline will be appended
 (unlike with C<die>).
 
-This can be used as a softer means than C<cancel> to ask a coro to
-end itself, although there is no guarantee that the exception will lead to
-termination, and if the exception isn't caught it might well end the whole
-program.
+This can be used as a softer means than either C<cancel> or C<safe_cancel
+>to ask a coro to end itself, although there is no guarantee that the
+exception will lead to termination, and if the exception isn't caught it
+might well end the whole program.
 
 You might also think of C<throw> as being the moral equivalent of
 C<kill>ing a coro with a signal (in this case, a scalar).
@@ -845,7 +872,7 @@ sub join {
       &schedule while $current;
    }
 
-   wantarray ? @{$self->{_status}} : $self->{_status}[0];
+   wantarray ? @{$self->{_status}} : $self->{_status}[0]
 }
 
 =item $coro->on_destroy (\&cb)
