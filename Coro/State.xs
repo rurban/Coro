@@ -168,7 +168,8 @@ static char times_valid;
 static struct coro_cctx *cctx_first;
 static int cctx_count, cctx_idle;
 
-enum {
+enum
+{
   CC_MAPPED     = 0x01,
   CC_NOREUSE    = 0x02, /* throw this away after tracing */
   CC_TRACE      = 0x04,
@@ -203,7 +204,10 @@ static coro_cctx *cctx_current; /* the currently running cctx */
 
 /*****************************************************************************/
 
-enum {
+static MGVTBL coro_state_vtbl;
+
+enum
+{
   CF_RUNNING   = 0x0001, /* coroutine is running */
   CF_READY     = 0x0002, /* coroutine is ready */
   CF_NEW       = 0x0004, /* has never been switched to */
@@ -229,7 +233,8 @@ typedef struct
 #define SLOT_COUNT ((sizeof (perl_slots) + sizeof (PERL_CONTEXT) - 1) / sizeof (PERL_CONTEXT))
 
 /* this is a structure representing a perl-level coroutine */
-struct coro {
+struct coro
+{
   /* the C coroutine allocated to this perl coroutine, if any */
   coro_cctx *cctx;
 
@@ -241,19 +246,20 @@ struct coro {
   AV *mainstack;
   perl_slots *slot; /* basically the saved sp */
 
-  CV *startcv; /* the CV to execute */
-  AV *args;    /* data associated with this coroutine (initial args) */
-  int refcnt;  /* coroutines are refcounted, yes */
-  int flags;   /* CF_ flags */
-  HV *hv;      /* the perl hash associated with this coro, if any */
+  CV *startcv;  /* the CV to execute */
+  AV *args;     /* data associated with this coroutine (initial args) */
+  int flags;    /* CF_ flags */
+  HV *hv;       /* the perl hash associated with this coro, if any */
 
   /* statistics */
   int usecount; /* number of transfers to this coro */
 
   /* coro process data */
   int prio;
-  SV *except; /* exception to be thrown */
-  SV *rouse_cb;
+  SV *except;   /* exception to be thrown */
+  SV *rouse_cb; /* last rouse callback */
+  AV *on_destroy; /* callbacks or coros to notify on destroy */
+  AV *status;   /* the exit status list */
 
   /* async_pool */
   SV *saved_deffh;
@@ -469,27 +475,33 @@ coro_times_sub (struct coro *c)
 #define CORO_MAGIC_cv(cv)    CORO_MAGIC    (((SV *)(cv)), CORO_MAGIC_type_cv)
 #define CORO_MAGIC_state(sv) CORO_MAGIC_NN (((SV *)(sv)), CORO_MAGIC_type_state)
 
+INLINE MAGIC *
+SvSTATEhv_p (pTHX_ SV *coro)
+{
+  MAGIC *mg;
+
+  if (expect_true (
+        SvTYPE (coro) == SVt_PVHV
+        && (mg = CORO_MAGIC_state (coro))
+        && mg->mg_virtual == &coro_state_vtbl
+     ))
+    return mg;
+
+  return 0;
+}
+
 INLINE struct coro *
 SvSTATE_ (pTHX_ SV *coro)
 {
-  HV *stash;
   MAGIC *mg;
 
   if (SvROK (coro))
     coro = SvRV (coro);
 
-  if (expect_false (SvTYPE (coro) != SVt_PVHV))
+  mg = SvSTATEhv_p (coro);
+  if (!mg)
     croak ("Coro::State object required");
 
-  stash = SvSTASH (coro);
-  if (expect_false (stash != coro_stash && stash != coro_state_stash))
-    {
-      /* very slow, but rare, check */
-      if (!sv_derived_from (sv_2mortal (newRV_inc (coro)), "Coro::State"))
-        croak ("Coro::State object required");
-    }
-
-  mg = CORO_MAGIC_state (coro);
   return (struct coro *)mg->mg_ptr;
 }
 
@@ -1108,6 +1120,7 @@ init_perl (pTHX_ struct coro *coro)
    */
   slf_frame.prepare = prepare_nop;   /* provide a nop function for an eventual pp_slf */
   slf_frame.check   = slf_check_nop; /* signal pp_slf to not repeat */
+  slf_frame.destroy = 0;
 
   /* and we have to provide the pp_slf op in any case, so pp_slf can skip it */
   init_perl_op.op_next   = PL_op;
@@ -1169,10 +1182,11 @@ destroy_perl (pTHX_ struct coro *coro)
     load_perl (aTHX_ coro);
 
     coro_unwind_stacks (aTHX);
-    coro_destruct_stacks (aTHX);
 
     /* restore swapped sv's */
     SWAP_SVS (coro);
+
+    coro_destruct_stacks (aTHX);
 
     // now save some sv's to be free'd later
     svf    [0] =       GvSV (PL_defgv);
@@ -1209,7 +1223,7 @@ free_coro_mortal (pTHX)
 {
   if (expect_true (coro_mortal))
     {
-      SvREFCNT_dec (coro_mortal);
+      SvREFCNT_dec ((SV *)coro_mortal);
       coro_mortal = 0;
     }
 }
@@ -1675,6 +1689,11 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
 /** high level stuff ********************************************************/
 
+/* this function is actually Coro, not Coro::State, but we call it from here */
+/* because it is convenient - but it hasn't been declared yet for that reason */
+static void
+coro_call_on_destroy (pTHX_ struct coro *coro);
+
 static void
 coro_state_destroy (pTHX_ struct coro *coro)
 {
@@ -1694,21 +1713,25 @@ coro_state_destroy (pTHX_ struct coro *coro)
   else
     coro->flags |= CF_READY; /* make sure it is NOT put into the readyqueue */
 
+  if (coro->next) coro->next->prev = coro->prev;
+  if (coro->prev) coro->prev->next = coro->next;
+  if (coro == coro_first) coro_first = coro->next;
+
   if (coro->mainstack
       && coro->mainstack != main_mainstack
       && coro->slot
       && !PL_dirty)
     destroy_perl (aTHX_ coro);
 
-  if (coro->next) coro->next->prev = coro->prev;
-  if (coro->prev) coro->prev->next = coro->next;
-  if (coro == coro_first) coro_first = coro->next;
-
   cctx_destroy (coro->cctx);
   SvREFCNT_dec (coro->startcv);
   SvREFCNT_dec (coro->args);
   SvREFCNT_dec (coro->swap_sv);
   SvREFCNT_dec (CORO_THROW);
+
+  coro_call_on_destroy (coro);
+
+  /* more destruction mayhem in coro_state_free */
 }
 
 static int
@@ -1717,13 +1740,11 @@ coro_state_free (pTHX_ SV *sv, MAGIC *mg)
   struct coro *coro = (struct coro *)mg->mg_ptr;
   mg->mg_ptr = 0;
 
-  coro->hv = 0;
+  coro_state_destroy (coro);
+  SvREFCNT_dec (coro->on_destroy);
+  SvREFCNT_dec (coro->status);
 
-  if (--coro->refcnt < 0)
-    {
-      coro_state_destroy (aTHX_ coro);
-      Safefree (coro);
-    }
+  Safefree (coro);
 
   return 0;
 }
@@ -1731,9 +1752,10 @@ coro_state_free (pTHX_ SV *sv, MAGIC *mg)
 static int
 coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
 {
-  struct coro *coro = (struct coro *)mg->mg_ptr;
-
-  ++coro->refcnt;
+  /* called when perl clones the current process the slow way (windows process emulation) */
+  /* WE SIMply nuke the pointers in the copy, causing perl to croak */
+  mg->mg_ptr     = 0;
+  mg->mg_virtual = 0;
 
   return 0;
 }
@@ -2012,30 +2034,106 @@ api_trace (pTHX_ SV *coro_sv, int flags)
 }
 
 static void
+coro_push_av (pTHX_ AV *av, I32 gimme_v)
+{
+  if (AvFILLp (av) >= 0 && gimme_v != G_VOID)
+    {
+      dSP;
+
+      if (gimme_v == G_SCALAR)
+        XPUSHs (AvARRAY (av)[AvFILLp (av)]);
+      else
+        {
+          int i;
+          EXTEND (SP, AvFILLp (av) + 1);
+
+          for (i = 0; i <= AvFILLp (av); ++i)
+            PUSHs (AvARRAY (av)[i]);
+        }
+
+      PUTBACK;
+    }
+}
+
+static void
+coro_push_on_destroy (aTHX_ struct coro *coro, SV *cb)
+{
+  if (!coro->on_destroy)
+    coro->on_destroy = newAV ();
+
+  av_push (coro->on_destroy, cb);
+}
+
+static void
+slf_destroy_join (pTHX_ struct CoroSLF *frame)
+{
+  SvREFCNT_dec ((SV *)((struct coro *)frame->data)->hv);
+}
+
+static int
+slf_check_join (pTHX_ struct CoroSLF *frame)
+{
+  struct coro *coro = (struct coro *)frame->data;
+
+  if (!coro->status)
+    return 1;
+
+  frame->destroy = 0;
+
+  coro_push_av (coro->status, GIMME_V);
+
+  SvREFCNT_dec ((SV *)coro->hv);
+
+  return 0;
+}
+
+static void
+slf_init_join (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
+{
+  struct coro *coro = SvSTATE (items > 0 ? arg [0] : &PL_sv_undef);
+
+  if (items > 1)
+    croak ("join called with too many arguments");
+
+  if (coro->status)
+    frame->prepare = prepare_nop;
+  else
+    {
+      coro_push_on_destroy (aTHX_ coro, SvREFCNT_inc_NN (SvRV (coro_current)));
+      frame->prepare = prepare_schedule;
+    }
+
+  frame->check   = slf_check_join;
+  frame->destroy = slf_destroy_join;
+  frame->data    = (void *)coro;
+  SvREFCNT_inc (coro->hv);
+}
+
+static void
 coro_call_on_destroy (pTHX_ struct coro *coro)
 {
-  SV **on_destroyp = hv_fetch (coro->hv, "_on_destroy", sizeof ("_on_destroy") - 1, 0);
+  AV *od = coro->on_destroy;
 
-  if (on_destroyp)
+  if (!od)
+    return;
+
+  while (AvFILLp (od) >= 0)
     {
-      SV **statusp = hv_fetch (coro->hv, "_status", sizeof ("_status") - 1, 0);
-      AV *on_destroy =           sv_2mortal (SvREFCNT_inc ((AV *)SvRV (*on_destroyp)));
-      AV *status     = statusp ? sv_2mortal (SvREFCNT_inc ((AV *)SvRV (*statusp))) : 0;
+      SV *cb = sv_2mortal (av_pop (od));
 
-      while (AvFILLp (on_destroy) >= 0)
+      /* coro hv's (and only hv's at the moment) are supported as well */
+      if (SvSTATEhv_p (aTHX_ cb))
+        api_ready (aTHX_ cb);
+      else
         {
           dSP; /* don't disturb outer sp */
-          SV *cb = av_pop (on_destroy);
-
           PUSHMARK (SP);
 
-          if (statusp)
+          if (coro->status)
             {
-              int i;
-              EXTEND (SP, AvFILLp (status) + 1);
-
-              for (i = 0; i <= AvFILLp (status); ++i)
-                PUSHs (AvARRAY (status)[i]);
+              PUTBACK;
+              coro_push_av (aTHX_ coro->status, G_ARRAY);
+              SPAGAIN;
             }
 
           PUTBACK;
@@ -2045,9 +2143,17 @@ coro_call_on_destroy (pTHX_ struct coro *coro)
 }
 
 static void
-coro_set_status (pTHX_ HV *coro_hv, SV **arg, int items)
+coro_set_status (pTHX_ struct coro *coro, SV **arg, int items)
 {
-  AV *av = newAV ();
+  AV *av;
+  
+  if (coro->status)
+    {
+      av = coro->status;
+      av_clear (av);
+    }
+  else
+    av = coro->status = newAV ();
 
   /* items are actually not so common, so optimise for this case */
   if (items)
@@ -2059,8 +2165,6 @@ coro_set_status (pTHX_ HV *coro_hv, SV **arg, int items)
       for (i = 0; i < items; ++i)
         av_push (av, SvREFCNT_inc_NN (arg [i]));
     }
-
-  hv_store (coro_hv, "_status", sizeof ("_status") - 1, newRV_noinc ((SV *)av), 0);
 }
 
 static void
@@ -2082,7 +2186,7 @@ slf_init_terminate (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   HV *coro_hv = (HV *)SvRV (coro_current);
 
-  coro_set_status (aTHX_ coro_hv, arg, items);
+  coro_set_status (aTHX_ SvSTATE ((SV *)coro_hv), arg, items);
   slf_init_terminate_cancel_common (aTHX_ frame, coro_hv);
 }
 
@@ -2098,7 +2202,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   coro = SvSTATE (arg [0]);
   coro_hv = coro->hv;
 
-  coro_set_status (aTHX_ coro_hv, arg + 1, items - 1);
+  coro_set_status (aTHX_ coro, arg + 1, items - 1);
   
   if (expect_false (coro->flags & CF_NOCANCEL))
     {
@@ -2125,10 +2229,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
        */
       slf_frame.data = 0;
       self->flags |= CF_NOCANCEL;
-      
       coro_state_destroy (aTHX_ coro);
-      coro_call_on_destroy (aTHX_ coro);
-
       self->flags &= ~CF_NOCANCEL;
 
       if (slf_frame.data)
@@ -2163,9 +2264,8 @@ safe_cancel (pTHX_ struct coro *coro, SV **arg, int items)
 
   if (coro->flags & CF_NEW)
     {
-      coro_set_status (aTHX_ coro->hv, arg, items);
+      coro_set_status (aTHX_ coro, arg, items);
       coro_state_destroy (aTHX_ coro);
-      coro_call_on_destroy (aTHX_ coro);
     }
   else
     {
@@ -2174,11 +2274,11 @@ safe_cancel (pTHX_ struct coro *coro, SV **arg, int items)
 
       slf_destroy (aTHX_ coro);
 
-      coro_set_status (aTHX_ coro->hv, arg, items);
+      coro_set_status (aTHX_ coro, arg, items);
       coro->slf_frame.prepare = prepare_nop;
       coro->slf_frame.check   = slf_check_safe_cancel;
 
-      api_ready (aTHX_ coro->hv);
+      api_ready (aTHX_ (SV *)coro->hv);
     }
 
   return 1;
@@ -2473,7 +2573,7 @@ slf_destroy (pTHX_ struct coro *coro)
 {
   /* this callback is reserved for slf functions needing to do cleanup */
   if (coro->slf_frame.destroy && coro->slf_frame.prepare && !PL_dirty)
-    coro->slf_frame.destroy (aTHX_ coro);
+    coro->slf_frame.destroy (aTHX_ &coro->slf_frame);
 
   /*
    * The on_destroy above most likely is from an SLF call.
@@ -2560,14 +2660,15 @@ pp_slf (pTHX)
 
   /* return value handling - mostly like entersub */
   /* make sure we put something on the stack in scalar context */
-  if (GIMME_V == G_SCALAR)
+  if (GIMME_V == G_SCALAR
+      && expect_false (PL_stack_sp != PL_stack_base + checkmark + 1))
     {
       dSP;
       SV **bot = PL_stack_base + checkmark;
 
       if (sp == bot) /* too few, push undef */
         bot [1] = &PL_sv_undef;
-      else if (sp != bot + 1) /* too many, take last one */
+      else /* too many, take last one */
         bot [1] = *sp;
 
       SP = bot + 1;
@@ -2817,10 +2918,10 @@ coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
 }
 
 static void
-coro_semaphore_destroy (pTHX_ struct coro *coro)
+coro_semaphore_destroy (pTHX_ struct CoroSLF *frame)
 {
   /* call $sem->adjust (0) to possibly wake up some other waiters */
-  coro_semaphore_adjust (aTHX_ (AV *)coro->slf_frame.data, 0);
+  coro_semaphore_adjust (aTHX_ (AV *)frame->data, 0);
 }
 
 static int
@@ -2828,6 +2929,7 @@ slf_check_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, int acquire)
 {
   AV *av = (AV *)frame->data;
   SV *count_sv = AvARRAY (av)[0];
+  SV *coro_hv = SvRV (coro_current);
 
   /* if we are about to throw, don't actually acquire the lock, just throw */
   if (CORO_THROW)
@@ -2849,12 +2951,11 @@ slf_check_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, int acquire)
       /* if we were woken up but can't down, we look through the whole */
       /* waiters list and only add us if we aren't in there already */
       /* this avoids some degenerate memory usage cases */
-
-      for (i = 1; i <= AvFILLp (av); ++i)
-        if (AvARRAY (av)[i] == SvRV (coro_current))
+      for (i = AvFILLp (av); i > 0; --i) // i > 0 is not an off-by-one bug
+        if (AvARRAY (av)[i] == coro_hv)
           return 1;
 
-      av_push (av, SvREFCNT_inc (SvRV (coro_current)));
+      av_push (av, SvREFCNT_inc (coro_hv));
       return 1;
     }
 }
@@ -3646,7 +3747,16 @@ _destroy (Coro::State coro)
 	CODE:
 	/* used by the manager thread */
 	coro_state_destroy (aTHX_ coro);
-        coro_call_on_destroy (aTHX_ coro);
+
+void
+on_destroy (Coro::State coro, SV *cb)
+	CODE:
+        coro_push_on_destroy (aTHX_ coro, newSVsv (cb));
+
+void
+join (...)
+	CODE:
+        CORO_EXECUTE_SLF_XS (slf_init_join);
 
 void
 terminate (...)

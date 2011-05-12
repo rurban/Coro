@@ -29,7 +29,7 @@ struct CoroSLF
   void (*prepare) (pTHX_ struct coro_transfer_args *ta); /* 0 means not yet initialised */
   int (*check) (pTHX_ struct CoroSLF *frame);
   void *data; /* for use by prepare/check/destroy */
-  void (*destroy) (pTHX_ struct coro *coro);
+  void (*destroy) (pTHX_ struct CoroSLF *frame);
 };
 
 /* needs to fill in the *frame */

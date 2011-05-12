@@ -858,7 +858,7 @@ return once the C<$coro> terminates.
 
 =cut
 
-sub join {
+sub xjoin {
    my $self = shift;
 
    unless ($self->{_status}) {
@@ -887,7 +887,7 @@ no way currently to remove a callback once added.
 
 =cut
 
-sub on_destroy {
+sub xon_destroy {
    my ($self, $cb) = @_;
 
    push @{ $self->{_on_destroy} }, $cb;
@@ -1172,6 +1172,9 @@ future to allow per-thread schedulers, but Coro::State does not yet allow
 this). I recommend disabling thread support and using processes, as having
 the windows process emulation enabled under unix roughly halves perl
 performance, even when not used.
+
+Attempts to use threads created in another emulated process will crash
+("cleanly", with a null pointer exception).
 
 =item coro switching is not signal safe
 
