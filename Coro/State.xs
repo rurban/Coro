@@ -211,7 +211,7 @@ enum
   CF_RUNNING   = 0x0001, /* coroutine is running */
   CF_READY     = 0x0002, /* coroutine is ready */
   CF_NEW       = 0x0004, /* has never been switched to */
-  CF_DESTROYED = 0x0008, /* coroutine data has been freed */
+  CF_ZOMBIE    = 0x0008, /* coroutine data has been freed */
   CF_SUSPENDED = 0x0010, /* coroutine can't be scheduled */
   CF_NOCANCEL  = 0x0020, /* cannot cancel, set slf_frame.data to 1 (hackish) */
 };
@@ -1596,7 +1596,7 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
       if (expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
         croak ("Coro::State::transfer called with a blocked prev Coro::State, but can only transfer from running or new states,");
 
-      if (expect_false (next->flags & (CF_RUNNING | CF_DESTROYED | CF_SUSPENDED)))
+      if (expect_false (next->flags & (CF_RUNNING | CF_ZOMBIE | CF_SUSPENDED)))
         croak ("Coro::State::transfer called with running, destroyed or suspended next Coro::State, but can only transfer to inactive states,");
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
@@ -1697,12 +1697,12 @@ coro_call_on_destroy (pTHX_ struct coro *coro);
 static void
 coro_state_destroy (pTHX_ struct coro *coro)
 {
-  if (coro->flags & CF_DESTROYED)
+  if (coro->flags & CF_ZOMBIE)
     return;
 
   slf_destroy (aTHX_ coro);
 
-  coro->flags |= CF_DESTROYED;
+  coro->flags |= CF_ZOMBIE;
   
   if (coro->flags & CF_READY)
     {
@@ -1891,7 +1891,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
       if (expect_true (next))
         {
           /* cannot transfer to destroyed coros, skip and look for next */
-          if (expect_false (next->flags & (CF_DESTROYED | CF_SUSPENDED)))
+          if (expect_false (next->flags & (CF_ZOMBIE | CF_SUSPENDED)))
             SvREFCNT_dec (next->hv); /* coro_nready has already been taken care of by destroy */
           else
             {
@@ -2137,7 +2137,7 @@ coro_call_on_destroy (pTHX_ struct coro *coro)
             }
 
           PUTBACK;
-          call_sv (sv_2mortal (cb), G_VOID | G_DISCARD);
+          call_sv (cb, G_VOID | G_DISCARD);
         }
     }
 }
@@ -3549,7 +3549,8 @@ is_ready (Coro::State coro)
         is_ready     = CF_READY
         is_running   = CF_RUNNING
         is_new       = CF_NEW
-        is_destroyed = CF_DESTROYED
+        is_destroyed = CF_ZOMBIE
+        is_zombie    = CF_ZOMBIE
         is_suspended = CF_SUSPENDED
 	CODE:
         RETVAL = boolSV (coro->flags & ix);

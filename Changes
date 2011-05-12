@@ -4,9 +4,10 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
-TODO:mg_virtual check
-TODO:detah on refcnt
-TODO:slf_xx_yy=>slf_yy_xx
+TODO: tutorial
+	- INCOMPATIBLE CHANGE: unreferenced coro objects will now be
+          destroyed and cleaned up automatically (e.g. async { schedule }).
+        - Coro::State->is_destroyed is now called is_zombie.
         - croak when a coro that is being cancelled tries to block
           (e.g. while executing a guard block), instead of crashing or
           deadlocking.

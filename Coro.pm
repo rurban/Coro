@@ -92,9 +92,9 @@ You can also pass arguments, which are put in C<@_>:
 This creates a new coro thread and puts it into the ready queue, meaning
 it will run as soon as the CPU is free for it.
 
-C<async> will return a coro object - you can store this for future
-reference or ignore it, the thread itself will keep a reference to it's
-thread object - threads are alive on their own.
+C<async> will return a Coro object - you can store this for future
+reference or ignore it - a thread that is running, ready to run or waiting
+for some event is alive on it's own.
 
 Another way to create a thread is to call the C<new> constructor with a
 code-reference:
@@ -133,7 +133,7 @@ it will not run to the end in one go (because you could use a function
 instead), but it will give up the CPU regularly because it waits for
 external events.
 
-As long as a coro thread runs, it's coro object is available in the global
+As long as a coro thread runs, its Coro object is available in the global
 variable C<$Coro::current>.
 
 The low-level way to give up the CPU is to call the scheduler, which
@@ -221,6 +221,20 @@ best idea, but any other combination that deals with perl only (cancelling
 when a thread is in a C<tie> method or an C<AUTOLOAD> for example) is
 safe.
 
+Lastly, a coro thread object that isn't referenced is C<< ->cancel >>'ed
+automatically - just like other objects in Perl. This is not such a common
+case, however - a running thread is referencedy b C<$Coro::current>, a
+thread ready to run is referenced by the ready queue, a thread waiting
+on a lock or semaphore is referenced by being in some wait list and so
+on. But a thread that isn't in any of those queues gets cancelled:
+
+   async {
+      schedule; # cede to other coros, don't go into the ready queue
+   };
+
+   cede;
+   # now the async above is destroyed, as it is not referenced by anything.
+
 =item 5. Cleanup
 
 Threads will allocate various resources. Most but not all will be returned
@@ -253,7 +267,8 @@ resources, but that's where the C<guard> methods come in handy:
    };
 
 The C<Guard::guard> function comes in handy for any custom cleanup you
-might want to do:
+might want to do (but you cannot switch to other coroutines form those
+code blocks):
 
    async {
       my $window = new Gtk2::Window "toplevel";
@@ -276,16 +291,13 @@ replacing the coro thread description:
 
 =item 6. Viva La Zombie Muerte
 
-Even after a thread has terminated and cleaned up it's resources, the coro
-object still is there and stores the return values of the thread. Only in
-this state will the coro object be "reference counted" in the normal perl
-sense: the thread code keeps a reference to it when it is active, but not
-after it has terminated.
+Even after a thread has terminated and cleaned up its resources, the Coro
+object still is there and stores the return values of the thread.
 
-The means the coro object gets freed automatically when the thread has
+The means the Coro object gets freed automatically when the thread has
 terminated and cleaned up and there arenot other references.
 
-If there are, the coro object will stay around, and you can call C<<
+If there are, the Coro object will stay around, and you can call C<<
 ->join >> as many times as you wish to retrieve the result values:
 
    async {
@@ -715,6 +727,23 @@ unconditionally, as every synchronisation mechanism must protect itself
 against spurious wakeups, and the one in the Coro family certainly do
 that.
 
+=item $state->is_new
+
+Returns true iff this Coro object is "new", i.e. has never been run
+yet. Those states basically consist of only the code reference to call and
+the arguments, but consumes very little other resources. New states will
+automatically get assigned a perl interpreter when they are transfered to.
+
+=item $state->is_zombie
+
+Returns true iff the Coro object has been cancelled, i.e.
+it's resources freed because they were C<cancel>'ed, C<terminate>'d,
+C<safe_cancel>'ed or simply went out of scope.
+
+The name "zombie" stems from UNIX culture, where a process that has
+exited and only stores and exit status and no other resources is called a
+"zombie".
+
 =item $is_ready = $coro->is_ready
 
 Returns true iff the Coro object is in the ready queue. Unless the Coro
@@ -856,25 +885,6 @@ C<terminate> or C<cancel> functions. C<join> can be called concurrently
 from multiple threads, and all will be resumed and given the status
 return once the C<$coro> terminates.
 
-=cut
-
-sub xjoin {
-   my $self = shift;
-
-   unless ($self->{_status}) {
-      my $current = $current;
-
-      push @{$self->{_on_destroy}}, sub {
-         $current->ready;
-         undef $current;
-      };
-
-      &schedule while $current;
-   }
-
-   wantarray ? @{$self->{_status}} : $self->{_status}[0]
-}
-
 =item $coro->on_destroy (\&cb)
 
 Registers a callback that is called when this coro thread gets destroyed,
@@ -884,14 +894,6 @@ not> die, under any circumstances.
 
 There can be any number of C<on_destroy> callbacks per coro, and there is
 no way currently to remove a callback once added.
-
-=cut
-
-sub xon_destroy {
-   my ($self, $cb) = @_;
-
-   push @{ $self->{_on_destroy} }, $cb;
-}
 
 =item $oldprio = $coro->prio ($newprio)
 
