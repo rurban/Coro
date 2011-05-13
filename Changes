@@ -8,13 +8,13 @@ TODO: tutorial
 	- INCOMPATIBLE CHANGE: unreferenced coro objects will now be
           destroyed and cleaned up automatically (e.g. async { schedule }).
         - Coro::State->is_destroyed is now called is_zombie.
+        - implement a Coro->safe_cancel method that might fail, but
+          cancels in a "safer" way if it succeeds.
         - croak when a coro that is being cancelled tries to block
           (e.g. while executing a guard block), instead of crashing or
           deadlocking.
         - use a more robust and also faster method to identify Coro::State
           objects - speeds up everything a bit.
-        - implement a Coro->safe_cancel method that might fail, but
-          cancels in a "safer" way if it succeeds.
 	- implement Coro->cancel in XS for a 20% speed improvement, and to
           be able to implement mutual cancellation.
 	- speed up context switches by a percent or two by more efficiently
