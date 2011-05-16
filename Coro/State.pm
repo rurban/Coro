@@ -96,13 +96,7 @@ BEGIN {
    # it might exist already because Coro::Specific created it.
    $Coro::current ||= { };
 
-   {
-      # save/restore the handlers before/after overwriting %SIG magic
-      local $SIG{__DIE__};
-      local $SIG{__WARN__};
-
-      XSLoader::load __PACKAGE__, $VERSION;
-   }
+   XSLoader::load __PACKAGE__, $VERSION;
 
    # need to do it after overwriting the %SIG magic
    $SIG{__DIE__}  ||= \&diehook;

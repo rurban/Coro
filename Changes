@@ -10,6 +10,8 @@ TODO: tutorial
         - Coro::State->is_destroyed is now called is_zombie.
         - implement a Coro->safe_cancel method that might fail, but
           cancels in a "safer" way if it succeeds.
+        - get rid of two hash-accesses when initialising a new Coro - this
+          speeds up coro creation by almost a factor of two.
         - croak when a coro that is being cancelled tries to block
           (e.g. while executing a guard block), instead of crashing or
           deadlocking.
@@ -29,6 +31,8 @@ TODO: tutorial
           functions to have destructors.
         - get rid if coro refcounting - simply crash in other interpreter
           threads by nulling the pointers on clone.
+        - simplify warn/die hook handling when loading Coro - the convoluted
+          logic seems to be no longer neccessary.
 
 5.372 Wed Feb 23 06:14:30 CET 2011
 	- apparently mingw doesn't provide a working gettimeofday, try to

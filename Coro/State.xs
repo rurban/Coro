@@ -969,8 +969,8 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
 /*
  * This overrides the default magic get method of %SIG elements.
  * The original one doesn't provide for reading back of PL_diehook/PL_warnhook
- * and instead of trying to save and restore the hash elements, we just provide
- * readback here.
+ * and instead of trying to save and restore the hash elements (extremely slow),
+ * we just provide our own readback here.
  */
 static int
 coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
@@ -1088,8 +1088,8 @@ init_perl (pTHX_ struct coro *coro)
   PL_hints      = 0;
 
   /* recreate the die/warn hooks */
-  PL_diehook  = 0; SvSetMagicSV (*hv_fetch (hv_sig, "__DIE__" , sizeof ("__DIE__" ) - 1, 1), rv_diehook );
-  PL_warnhook = 0; SvSetMagicSV (*hv_fetch (hv_sig, "__WARN__", sizeof ("__WARN__") - 1, 1), rv_warnhook);
+  PL_diehook  = SvREFCNT_inc (rv_diehook);
+  PL_warnhook = SvREFCNT_inc (rv_warnhook);
   
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
