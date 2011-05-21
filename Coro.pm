@@ -18,7 +18,6 @@ Coro - the only real threads in perl
   cede; # and again
   
   # use locking
-  use Coro::Semaphore;
   my $lock = new Coro::Semaphore;
   my $locked;
   
