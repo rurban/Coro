@@ -498,7 +498,7 @@ SvSTATE_ (pTHX_ SV *coro)
   if (SvROK (coro))
     coro = SvRV (coro);
 
-  mg = SvSTATEhv_p (coro);
+  mg = SvSTATEhv_p (aTHX_ coro);
   if (!mg)
     croak ("Coro::State object required");
 
@@ -1729,7 +1729,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
   SvREFCNT_dec (coro->swap_sv);
   SvREFCNT_dec (CORO_THROW);
 
-  coro_call_on_destroy (coro);
+  coro_call_on_destroy (aTHX_ coro);
 
   /* more destruction mayhem in coro_state_free */
 }
@@ -1740,7 +1740,7 @@ coro_state_free (pTHX_ SV *sv, MAGIC *mg)
   struct coro *coro = (struct coro *)mg->mg_ptr;
   mg->mg_ptr = 0;
 
-  coro_state_destroy (coro);
+  coro_state_destroy (aTHX_ coro);
   SvREFCNT_dec (coro->on_destroy);
   SvREFCNT_dec (coro->status);
 
@@ -2056,7 +2056,7 @@ coro_push_av (pTHX_ AV *av, I32 gimme_v)
 }
 
 static void
-coro_push_on_destroy (aTHX_ struct coro *coro, SV *cb)
+coro_push_on_destroy (pTHX_ struct coro *coro, SV *cb)
 {
   if (!coro->on_destroy)
     coro->on_destroy = newAV ();
@@ -2080,7 +2080,7 @@ slf_check_join (pTHX_ struct CoroSLF *frame)
 
   frame->destroy = 0;
 
-  coro_push_av (coro->status, GIMME_V);
+  coro_push_av (aTHX_ coro->status, GIMME_V);
 
   SvREFCNT_dec ((SV *)coro->hv);
 
