@@ -15,6 +15,7 @@
 
 #include "schmorp.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>

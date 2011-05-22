@@ -5,6 +5,7 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
 TODO: tutorial
+TODO: in_eval, PL_tained
 	- INCOMPATIBLE CHANGE: unreferenced coro objects will now be
           destroyed and cleaned up automatically (e.g. async { schedule }).
         - Coro::State->is_destroyed is now called is_zombie.
