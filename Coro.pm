@@ -768,7 +768,7 @@ current Coro.
 This is a rather brutal way to free a coro, with some limitations - if
 the thread is inside a C callback that doesn't expect to be canceled,
 bad things can happen, or if the cancelled thread insists on running
-complicated cleanup handlers that rely on it'S thread context, things will
+complicated cleanup handlers that rely on its thread context, things will
 not work.
 
 Any cleanup code being run (e.g. from C<guard> blocks) will be run without
