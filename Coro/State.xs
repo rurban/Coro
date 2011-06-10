@@ -14,6 +14,7 @@
 #include "perliol.h"
 
 #include "schmorp.h"
+#include "ecb.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -88,21 +89,6 @@ static int cctx_max_idle = 4;
 #endif
 
 #define IN_DESTRUCT PL_dirty
-
-#if __GNUC__ >= 3
-# define attribute(x) __attribute__(x)
-# define expect(expr,value) __builtin_expect ((expr), (value))
-# define INLINE static inline
-#else
-# define attribute(x)
-# define expect(expr,value) (expr)
-# define INLINE static
-#endif
-
-#define expect_false(expr) expect ((expr) != 0, 0)
-#define expect_true(expr)  expect ((expr) != 0, 1)
-
-#define NOINLINE attribute ((noinline))
 
 #include "CoroAPI.h"
 #define GCoroAPI (&coroapi) /* very sneaky */
@@ -330,7 +316,7 @@ coro_pp_sselect (pTHX)
 
 #ifdef HAS_GETTIMEOFDAY
 
-static void
+ECB_INLINE void
 coro_u2time (pTHX_ UV ret[2])
 {
   struct timeval tv;
@@ -340,7 +326,7 @@ coro_u2time (pTHX_ UV ret[2])
   ret [1] = tv.tv_usec;
 }
 
-static double
+ECB_INLINE double
 coro_nvtime ()
 {
   struct timeval tv;
@@ -349,7 +335,7 @@ coro_nvtime ()
   return tv.tv_sec + tv.tv_usec * 1e-6;
 }
 
-static void
+ECB_INLINE void
 time_init (pTHX)
 {
   nvtime = coro_nvtime;
@@ -358,7 +344,7 @@ time_init (pTHX)
 
 #else
 
-static void
+ECB_INLINE void
 time_init (pTHX)
 {
   SV **svp;
@@ -380,7 +366,7 @@ time_init (pTHX)
 
 /** lowlevel stuff **********************************************************/
 
-static SV *
+static SV * ecb_noinline
 coro_get_sv (pTHX_ const char *name, int create)
 {
 #if PERL_VERSION_ATLEAST (5,10,0)
@@ -390,7 +376,7 @@ coro_get_sv (pTHX_ const char *name, int create)
   return get_sv (name, create);
 }
 
-static AV *
+static AV * ecb_noinline
 coro_get_av (pTHX_ const char *name, int create)
 {
 #if PERL_VERSION_ATLEAST (5,10,0)
@@ -400,7 +386,7 @@ coro_get_av (pTHX_ const char *name, int create)
   return get_av (name, create);
 }
 
-static HV *
+static HV * ecb_noinline
 coro_get_hv (pTHX_ const char *name, int create)
 {
 #if PERL_VERSION_ATLEAST (5,10,0)
@@ -410,7 +396,7 @@ coro_get_hv (pTHX_ const char *name, int create)
   return get_hv (name, create);
 }
 
-INLINE void
+ECB_INLINE void
 coro_times_update ()
 {
 #ifdef coro_clock_gettime
@@ -433,7 +419,7 @@ coro_times_update ()
 #endif
 }
 
-INLINE void
+ECB_INLINE void
 coro_times_add (struct coro *c)
 {
   c->t_real [1] += time_real [1];
@@ -445,7 +431,7 @@ coro_times_add (struct coro *c)
   c->t_cpu  [0] += time_cpu  [0];
 }
 
-INLINE void
+ECB_INLINE void
 coro_times_sub (struct coro *c)
 {
   if (c->t_real [1] < time_real [1]) { c->t_real [1] += 1000000000; --c->t_real [0]; }
@@ -463,25 +449,25 @@ coro_times_sub (struct coro *c)
 #define CORO_MAGIC_type_cv    26
 #define CORO_MAGIC_type_state PERL_MAGIC_ext
 
-#define CORO_MAGIC_NN(sv, type)			\
-  (expect_true (SvMAGIC (sv)->mg_type == type)	\
-    ? SvMAGIC (sv)				\
+#define CORO_MAGIC_NN(sv, type)				\
+  (ecb_expect_true (SvMAGIC (sv)->mg_type == type)	\
+    ? SvMAGIC (sv)					\
     : mg_find (sv, type))
 
-#define CORO_MAGIC(sv, type)			\
-  (expect_true (SvMAGIC (sv))			\
-    ? CORO_MAGIC_NN (sv, type)			\
+#define CORO_MAGIC(sv, type)				\
+  (ecb_expect_true (SvMAGIC (sv))			\
+    ? CORO_MAGIC_NN (sv, type)				\
     : 0)
 
 #define CORO_MAGIC_cv(cv)    CORO_MAGIC    (((SV *)(cv)), CORO_MAGIC_type_cv)
 #define CORO_MAGIC_state(sv) CORO_MAGIC_NN (((SV *)(sv)), CORO_MAGIC_type_state)
 
-INLINE MAGIC *
+ECB_INLINE MAGIC *
 SvSTATEhv_p (pTHX_ SV *coro)
 {
   MAGIC *mg;
 
-  if (expect_true (
+  if (ecb_expect_true (
         SvTYPE (coro) == SVt_PVHV
         && (mg = CORO_MAGIC_state (coro))
         && mg->mg_virtual == &coro_state_vtbl
@@ -491,7 +477,7 @@ SvSTATEhv_p (pTHX_ SV *coro)
   return 0;
 }
 
-INLINE struct coro *
+ECB_INLINE struct coro *
 SvSTATE_ (pTHX_ SV *coro)
 {
   MAGIC *mg;
@@ -515,7 +501,7 @@ SvSTATE_ (pTHX_ SV *coro)
 /*****************************************************************************/
 /* padlist management and caching */
 
-static AV *
+ECB_INLINE AV *
 coro_derive_padlist (pTHX_ CV *cv)
 {
   AV *padlist = CvPADLIST (cv);
@@ -537,7 +523,7 @@ coro_derive_padlist (pTHX_ CV *cv)
   return newpadlist;
 }
 
-static void
+ECB_INLINE void
 free_padlist (pTHX_ AV *padlist)
 {
   /* may be during global destruction */
@@ -590,13 +576,13 @@ static MGVTBL coro_cv_vtbl = {
 };
 
 /* the next two functions merely cache the padlists */
-static void
+ECB_INLINE void
 get_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
   AV *av;
 
-  if (expect_true (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0))
+  if (ecb_expect_true (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0))
     CvPADLIST (cv) = (AV *)AvARRAY (av)[AvFILLp (av)--];
   else
    {
@@ -613,18 +599,18 @@ get_padlist (pTHX_ CV *cv)
    }
 }
 
-static void
+ECB_INLINE void
 put_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
   AV *av;
 
-  if (expect_false (!mg))
+  if (ecb_expect_false (!mg))
     mg = sv_magicext ((SV *)cv, (SV *)newAV (), CORO_MAGIC_type_cv, &coro_cv_vtbl, 0, 0);
 
   av = (AV *)mg->mg_obj;
 
-  if (expect_false (AvFILLp (av) >= AvMAX (av)))
+  if (ecb_expect_false (AvFILLp (av) >= AvMAX (av)))
     av_extend (av, AvFILLp (av) + 1);
 
   AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
@@ -679,8 +665,8 @@ swap_svs (pTHX_ Coro__State c)
     }
 }
 
-#define SWAP_SVS(coro)		\
-  if (expect_false ((coro)->swap_sv))	\
+#define SWAP_SVS(coro)				\
+  if (ecb_expect_false ((coro)->swap_sv))	\
     swap_svs (aTHX_ (coro))
 
 static void
@@ -710,7 +696,7 @@ load_perl (pTHX_ Coro__State c)
     CV *cv;
 
     /* now do the ugly restore mess */
-    while (expect_true (cv = (CV *)POPs))
+    while (ecb_expect_true (cv = (CV *)POPs))
       {
         put_padlist (aTHX_ cv); /* mark this padlist as available */
         CvDEPTH (cv) = PTR2IV (POPs);
@@ -723,15 +709,15 @@ load_perl (pTHX_ Coro__State c)
   slf_frame  = c->slf_frame;
   CORO_THROW = c->except;
 
-  if (expect_false (enable_times))
+  if (ecb_expect_false (enable_times))
     {
-      if (expect_false (!times_valid))
+      if (ecb_expect_false (!times_valid))
         coro_times_update ();
 
       coro_times_sub (c);
     }
 
-  if (expect_false (c->on_enter))
+  if (ecb_expect_false (c->on_enter))
     {
       int i;
 
@@ -747,7 +733,7 @@ save_perl (pTHX_ Coro__State c)
 {
   SWAP_SVS (c);
 
-  if (expect_false (c->on_leave))
+  if (ecb_expect_false (c->on_leave))
     {
       int i;
 
@@ -757,7 +743,7 @@ save_perl (pTHX_ Coro__State c)
 
   times_valid = 0;
 
-  if (expect_false (enable_times))
+  if (ecb_expect_false (enable_times))
     {
       coro_times_update (); times_valid = 1;
       coro_times_add (c);
@@ -781,15 +767,15 @@ save_perl (pTHX_ Coro__State c)
     /* this loop was inspired by pp_caller */
     for (;;)
       {
-        while (expect_true (cxix >= 0))
+        while (ecb_expect_true (cxix >= 0))
           {
             PERL_CONTEXT *cx = &ccstk[cxix--];
 
-            if (expect_true (CxTYPE (cx) == CXt_SUB) || expect_false (CxTYPE (cx) == CXt_FORMAT))
+            if (ecb_expect_true (CxTYPE (cx) == CXt_SUB) || ecb_expect_false (CxTYPE (cx) == CXt_FORMAT))
               {
                 CV *cv = cx->blk_sub.cv;
 
-                if (expect_true (CvDEPTH (cv)))
+                if (ecb_expect_true (CvDEPTH (cv)))
                   {
                     EXTEND (SP, 3);
                     PUSHs ((SV *)CvPADLIST (cv));
@@ -802,7 +788,7 @@ save_perl (pTHX_ Coro__State c)
               }
           }
 
-        if (expect_true (top_si->si_type == PERLSI_MAIN))
+        if (ecb_expect_true (top_si->si_type == PERLSI_MAIN))
           break;
 
         top_si = top_si->si_prev;
@@ -814,7 +800,7 @@ save_perl (pTHX_ Coro__State c)
   }
 
   /* allocate some space on the context stack for our purposes */
-  if (expect_false (cxstack_ix + SLOT_COUNT >= cxstack_max))
+  if (ecb_expect_false (cxstack_ix + SLOT_COUNT >= cxstack_max))
     {
       unsigned int i;
 
@@ -973,7 +959,7 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
  * and instead of trying to save and restore the hash elements (extremely slow),
  * we just provide our own readback here.
  */
-static int
+static int ecb_cold
 coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
 {
   const char *s = MgPV_nolen_const (mg);
@@ -995,7 +981,7 @@ coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
   return orig_sigelem_get ? orig_sigelem_get (aTHX_ sv, mg) : 0;
 }
 
-static int
+static int ecb_cold
 coro_sigelem_clr (pTHX_ SV *sv, MAGIC *mg)
 {
   const char *s = MgPV_nolen_const (mg);
@@ -1019,7 +1005,7 @@ coro_sigelem_clr (pTHX_ SV *sv, MAGIC *mg)
   return orig_sigelem_clr ? orig_sigelem_clr (aTHX_ sv, mg) : 0;
 }
 
-static int
+static int ecb_cold
 coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
 {
   const char *s = MgPV_nolen_const (mg);
@@ -1064,7 +1050,7 @@ slf_check_repeat (pTHX_ struct CoroSLF *frame)
 
 static UNOP init_perl_op;
 
-static void NOINLINE /* noinline to keep it out of the transfer fast path */
+ecb_noinline static void /* noinline to keep it out of the transfer fast path */
 init_perl (pTHX_ struct coro *coro)
 {
   /*
@@ -1136,7 +1122,7 @@ init_perl (pTHX_ struct coro *coro)
 
   SWAP_SVS (coro);
 
-  if (expect_false (enable_times))
+  if (ecb_expect_false (enable_times))
     {
       coro_times_update ();
       coro_times_sub (coro);
@@ -1219,10 +1205,10 @@ destroy_perl (pTHX_ struct coro *coro)
   }
 }
 
-INLINE void
+ECB_INLINE void
 free_coro_mortal (pTHX)
 {
-  if (expect_true (coro_mortal))
+  if (ecb_expect_true (coro_mortal))
     {
       SvREFCNT_dec ((SV *)coro_mortal);
       coro_mortal = 0;
@@ -1367,7 +1353,7 @@ slf_check_set_stacklevel (pTHX_ struct CoroSLF *frame)
 }
 
 /* initialises PL_top_env and injects a pseudo-slf-call to set the stacklevel */
-static void NOINLINE
+static void ecb_noinline
 cctx_prepare (pTHX)
 {
   PL_top_env = &PL_start_env;
@@ -1388,7 +1374,7 @@ cctx_prepare (pTHX)
 }
 
 /* the tail of transfer: execute stuff we can only do after a transfer */
-INLINE void
+ECB_INLINE void
 transfer_tail (pTHX)
 {
   free_coro_mortal (aTHX);
@@ -1550,13 +1536,13 @@ cctx_destroy (coro_cctx *cctx)
 static coro_cctx *
 cctx_get (pTHX)
 {
-  while (expect_true (cctx_first))
+  while (ecb_expect_true (cctx_first))
     {
       coro_cctx *cctx = cctx_first;
       cctx_first = cctx->next;
       --cctx_idle;
 
-      if (expect_true (!CCTX_EXPIRED (cctx)))
+      if (ecb_expect_true (!CCTX_EXPIRED (cctx)))
         return cctx;
 
       cctx_destroy (cctx);
@@ -1571,7 +1557,7 @@ cctx_put (coro_cctx *cctx)
   assert (("FATAL: cctx_put called on non-initialised cctx in Coro (please report)", cctx->sptr));
 
   /* free another cctx if overlimit */
-  if (expect_false (cctx_idle >= cctx_max_idle))
+  if (ecb_expect_false (cctx_idle >= cctx_max_idle))
     {
       coro_cctx *first = cctx_first;
       cctx_first = first->next;
@@ -1592,38 +1578,38 @@ transfer_check (pTHX_ struct coro *prev, struct coro *next)
 {
   /* TODO: throwing up here is considered harmful */
 
-  if (expect_true (prev != next))
+  if (ecb_expect_true (prev != next))
     {
-      if (expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
+      if (ecb_expect_false (!(prev->flags & (CF_RUNNING | CF_NEW))))
         croak ("Coro::State::transfer called with a blocked prev Coro::State, but can only transfer from running or new states,");
 
-      if (expect_false (next->flags & (CF_RUNNING | CF_ZOMBIE | CF_SUSPENDED)))
+      if (ecb_expect_false (next->flags & (CF_RUNNING | CF_ZOMBIE | CF_SUSPENDED)))
         croak ("Coro::State::transfer called with running, destroyed or suspended next Coro::State, but can only transfer to inactive states,");
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
-      if (expect_false (PL_lex_state != LEX_NOTPARSING))
+      if (ecb_expect_false (PL_lex_state != LEX_NOTPARSING))
         croak ("Coro::State::transfer called while parsing, but this is not supported in your perl version,");
 #endif
     }
 }
 
 /* always use the TRANSFER macro */
-static void NOINLINE /* noinline so we have a fixed stackframe */
+static void ecb_noinline /* noinline so we have a fixed stackframe */
 transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 {
   dSTACKLEVEL;
 
   /* sometimes transfer is only called to set idle_sp */
-  if (expect_false (!prev))
+  if (ecb_expect_false (!prev))
     {
       cctx_current->idle_sp = STACKLEVEL;
       assert (cctx_current->idle_te = PL_top_env); /* just for the side-effect when asserts are enabled */
     }
-  else if (expect_true (prev != next))
+  else if (ecb_expect_true (prev != next))
     {
       coro_cctx *cctx_prev;
 
-      if (expect_false (prev->flags & CF_NEW))
+      if (ecb_expect_false (prev->flags & CF_NEW))
         {
           /* create a new empty/source context */
           prev->flags &= ~CF_NEW;
@@ -1636,7 +1622,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       /* first get rid of the old state */
       save_perl (aTHX_ prev);
 
-      if (expect_false (next->flags & CF_NEW))
+      if (ecb_expect_false (next->flags & CF_NEW))
         {
           /* need to start coroutine */
           next->flags &= ~CF_NEW;
@@ -1647,7 +1633,7 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
         load_perl (aTHX_ next);
 
       /* possibly untie and reuse the cctx */
-      if (expect_true (
+      if (ecb_expect_true (
             cctx_current->idle_sp == STACKLEVEL
             && !(cctx_current->flags & CC_TRACE)
             && !force_cctx
@@ -1658,8 +1644,8 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
 
           /* if the cctx is about to be destroyed we need to make sure we won't see it in cctx_get. */
           /* without this the next cctx_get might destroy the running cctx while still in use */
-          if (expect_false (CCTX_EXPIRED (cctx_current)))
-            if (expect_true (!next->cctx))
+          if (ecb_expect_false (CCTX_EXPIRED (cctx_current)))
+            if (ecb_expect_true (!next->cctx))
               next->cctx = cctx_get (aTHX);
 
           cctx_put (cctx_current);
@@ -1670,11 +1656,11 @@ transfer (pTHX_ struct coro *prev, struct coro *next, int force_cctx)
       ++next->usecount;
 
       cctx_prev    = cctx_current;
-      cctx_current = expect_false (next->cctx) ? next->cctx : cctx_get (aTHX);
+      cctx_current = ecb_expect_false (next->cctx) ? next->cctx : cctx_get (aTHX);
 
       next->cctx = 0;
 
-      if (expect_false (cctx_prev != cctx_current))
+      if (ecb_expect_false (cctx_prev != cctx_current))
         {
           cctx_prev->top_env = PL_top_env;
           PL_top_env = cctx_current->top_env;
@@ -1750,7 +1736,7 @@ coro_state_free (pTHX_ SV *sv, MAGIC *mg)
   return 0;
 }
 
-static int
+static int ecb_cold
 coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
 {
   /* called when perl clones the current process the slow way (windows process emulation) */
@@ -1791,7 +1777,7 @@ api_transfer (pTHX_ SV *prev_sv, SV *next_sv)
 
 /** Coro ********************************************************************/
 
-INLINE void
+ECB_INLINE void
 coro_enq (pTHX_ struct coro *coro)
 {
   struct coro **ready = coro_ready [coro->prio - CORO_PRIO_MIN];
@@ -1803,7 +1789,7 @@ coro_enq (pTHX_ struct coro *coro)
   ready [1] = coro;
 }
 
-INLINE struct coro *
+ECB_INLINE struct coro *
 coro_deq (pTHX)
 {
   int prio;
@@ -1866,7 +1852,7 @@ api_is_ready (pTHX_ SV *coro_sv)
 }
 
 /* expects to own a reference to next->hv */
-INLINE void
+ECB_INLINE void
 prepare_schedule_to (pTHX_ struct coro_transfer_args *ta, struct coro *next)
 {
   SV *prev_sv = SvRV (coro_current);
@@ -1889,10 +1875,10 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
     {
       struct coro *next = coro_deq (aTHX);
 
-      if (expect_true (next))
+      if (ecb_expect_true (next))
         {
           /* cannot transfer to destroyed coros, skip and look for next */
-          if (expect_false (next->flags & (CF_ZOMBIE | CF_SUSPENDED)))
+          if (ecb_expect_false (next->flags & (CF_ZOMBIE | CF_SUSPENDED)))
             SvREFCNT_dec (next->hv); /* coro_nready has already been taken care of by destroy */
           else
             {
@@ -1935,14 +1921,14 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
     }
 }
 
-INLINE void
+ECB_INLINE void
 prepare_cede (pTHX_ struct coro_transfer_args *ta)
 {
   api_ready (aTHX_ coro_current);
   prepare_schedule (aTHX_ ta);
 }
 
-INLINE void
+ECB_INLINE void
 prepare_cede_notself (pTHX_ struct coro_transfer_args *ta)
 {
   SV *prev = SvRV (coro_current);
@@ -1982,7 +1968,7 @@ api_cede (pTHX)
 
   prepare_cede (aTHX_ &ta);
 
-  if (expect_true (ta.prev != ta.next))
+  if (ecb_expect_true (ta.prev != ta.next))
     {
       TRANSFER (ta, 1);
       return 1;
@@ -2205,7 +2191,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
   coro_set_status (aTHX_ coro, arg + 1, items - 1);
   
-  if (expect_false (coro->flags & CF_NOCANCEL))
+  if (ecb_expect_false (coro->flags & CF_NOCANCEL))
     {
       /* coro currently busy cancelling something, so just notify it */
       coro->slf_frame.data = (void *)coro;
@@ -2323,7 +2309,7 @@ slf_init_pool_handler (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   HV *hv = (HV *)SvRV (coro_current);
   struct coro *coro = SvSTATE_hv ((SV *)hv);
 
-  if (expect_true (coro->saved_deffh))
+  if (ecb_expect_true (coro->saved_deffh))
     {
       /* subsequent iteration */
       SvREFCNT_dec ((SV *)PL_defoutgv); PL_defoutgv = (GV *)coro->saved_deffh;
@@ -2599,7 +2585,7 @@ pp_slf (pTHX)
   /* set up the slf frame, unless it has already been set-up */
   /* the latter happens when a new coro has been started */
   /* or when a new cctx was attached to an existing coroutine */
-  if (expect_true (!slf_frame.prepare))
+  if (ecb_expect_true (!slf_frame.prepare))
     {
       /* first iteration */
       dSP;
@@ -2650,7 +2636,7 @@ pp_slf (pTHX)
   slf_frame.prepare = 0; /* invalidate the frame, we are done processing it */
 
   /* exception handling */
-  if (expect_false (CORO_THROW))
+  if (ecb_expect_false (CORO_THROW))
     {
       SV *exception = sv_2mortal (CORO_THROW);
 
@@ -2662,7 +2648,7 @@ pp_slf (pTHX)
   /* return value handling - mostly like entersub */
   /* make sure we put something on the stack in scalar context */
   if (GIMME_V == G_SCALAR
-      && expect_false (PL_stack_sp != PL_stack_base + checkmark + 1))
+      && ecb_expect_false (PL_stack_sp != PL_stack_base + checkmark + 1))
     {
       dSP;
       SV **bot = PL_stack_base + checkmark;
@@ -2786,7 +2772,7 @@ typedef struct
   NV next, every;
 } PerlIOCede;
 
-static IV
+static IV ecb_cold
 PerlIOCede_pushed (pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
 {
   PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
@@ -2797,7 +2783,7 @@ PerlIOCede_pushed (pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab
   return PerlIOBuf_pushed (aTHX_ f, mode, Nullsv, tab);
 }
 
-static SV *
+static SV * ecb_cold
 PerlIOCede_getarg (pTHX_ PerlIO *f, CLONE_PARAMS *param, int flags)
 {
   PerlIOCede *self = PerlIOSelf (f, PerlIOCede);
@@ -3219,7 +3205,7 @@ slf_init_aio_req (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
       static SV *prio_cv;
       static SV *prio_sv;
 
-      if (expect_false (!prio_cv))
+      if (ecb_expect_false (!prio_cv))
         {
           prio_cv = (SV *)get_cv ("IO::AIO::aioreq_pri", 0);
           prio_sv = newSViv (0);
@@ -3334,6 +3320,10 @@ coro_new (pTHX_ HV *stash, SV **argv, int argc, int is_coro)
 
   return coro_sv;
 }
+
+#ifndef __cplusplus
+ecb_cold XS(boot_Coro__State);
+#endif
 
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
@@ -3656,7 +3646,7 @@ times (Coro::State self)
 {
   	struct coro *current = SvSTATE (coro_current);
 
-        if (expect_false (current == self))
+        if (ecb_expect_false (current == self))
           {
             coro_times_update ();
             coro_times_add (SvSTATE (coro_current));
@@ -3666,7 +3656,7 @@ times (Coro::State self)
         PUSHs (sv_2mortal (newSVnv (self->t_real [0] + self->t_real [1] * 1e-9)));
         PUSHs (sv_2mortal (newSVnv (self->t_cpu  [0] + self->t_cpu  [1] * 1e-9)));
 
-        if (expect_false (current == self))
+        if (ecb_expect_false (current == self))
           coro_times_sub (SvSTATE (coro_current));
 }
 

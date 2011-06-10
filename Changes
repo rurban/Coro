@@ -34,6 +34,7 @@ TODO: in_eval, PL_tained
           threads by nulling the pointers on clone.
         - simplify warn/die hook handling when loading Coro - the convoluted
           logic seems to be no longer neccessary.
+        - use libecb instead of our own home-grown gcc hacks.
 
 5.372 Wed Feb 23 06:14:30 CET 2011
 	- apparently mingw doesn't provide a working gettimeofday, try to
