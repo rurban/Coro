@@ -3379,7 +3379,7 @@ jit_init (pTHX)
 
   map_base = mmap (0, load_len + save_len + 16, PROT_EXEC | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-  assert (("Coro: unable mmap jit code page, cannot continue.", map_base != (char *)MAP_FAILED));
+  assert (("Coro: unable to mmap jit code page, cannot continue.", map_base != (char *)MAP_FAILED));
 
   load_perl_slots = (load_save_perl_slots_type)map_base;
   memcpy (map_base, load_ptr, load_len);
