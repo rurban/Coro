@@ -323,11 +323,13 @@ print <<EOF;
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
 
 Coro can use a simple JIT compiler to compile a part of the thread switch
-function at runtime. On threaded perls, this results in a 50% speed
-improvement. On non-threaded perls, the gain is much less, usually around
-5%. If you enable this option, then the JIT will be enabled, on compatible
-operating systems and CPUs. Otherwise, it will be disabled. It should be
-safe to turn on.
+function at runtime. On perls with windows process emulation (most!),
+this results in a 50% speed improvement. On sane perls, the gain is much
+less, usually around 5%. If you enable this option, then the JIT will be
+enabled, on compatible operating systems and CPUs (curretnly only amd64 on
+certain unix clones). Otherwise, it will be disabled. It should be safe to
+leave on - this setting is only here so you can switch it off in case of
+problems.
 
 EOF
 

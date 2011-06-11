@@ -294,7 +294,7 @@ static struct coro *coro_first;
 
 #if CORO_JIT
   #ifndef CORO_JIT_TYPE
-    #if __linux && __amd64
+    #if __x86_64 && (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris)
       #define CORO_JIT_TYPE "amd64-unix"
       typedef void (*load_save_perl_slots_type)(perl_slots *);
     #else
@@ -304,9 +304,7 @@ static struct coro *coro_first;
 #endif
 
 #if CORO_JIT
-
 static load_save_perl_slots_type load_perl_slots, save_perl_slots;
-
 #endif
 
 /** Coro::Select ************************************************************/
