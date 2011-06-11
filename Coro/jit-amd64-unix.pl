@@ -27,7 +27,7 @@
       my ($size, $mod_rm, $store, $offset) = @_;
 
       if ($offset < -128 || $offset > 127) {
-         $mod_rm |= $modrm_disp16;
+         $mod_rm |= $modrm_disp32;
          $offset = pack "V", $offset;
       } elsif ($offset) {
          $mod_rm |= $modrm_disp8;
