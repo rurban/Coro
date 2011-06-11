@@ -99,6 +99,9 @@ static void *coro_thx;
 # endif
 #endif
 
+/* used in state.h */
+#define VAR(name,type) VARx(name, PL_ ## name, type)
+
 #ifdef __linux
 # include <time.h> /* for timespec */
 # include <syscall.h> /* for SYS_* */
@@ -206,14 +209,9 @@ enum
 /* the structure where most of the perl state is stored, overlaid on the cxstack */
 typedef struct
 {
-  SV *defsv;
-  AV *defav;
-  SV *errsv;
-  SV *irsgv;
-  HV *hinthv;
-#define VAR(name,type) type name;
+#define VARx(name,expr,type) type name;
 # include "state.h"
-#undef VAR
+#undef VARx
 } perl_slots;
 
 // how many context stack entries do we need for perl_slots
@@ -291,6 +289,25 @@ static struct coro *coro_ready [CORO_PRIO_MAX - CORO_PRIO_MIN + 1][2]; /* head|t
 static CV *cv_coro_run;
 static struct coro *coro_first;
 #define coro_nready coroapi.nready
+
+/** JIT *********************************************************************/
+
+#if CORO_JIT
+  #ifndef CORO_JIT_TYPE
+    #if __linux && __amd64
+      #define CORO_JIT_TYPE "amd64-unix"
+      typedef void (*load_save_perl_slots_type)(perl_slots *);
+    #else
+      #undef CORO_JIT
+    #endif
+  #endif
+#endif
+
+#if CORO_JIT
+
+static load_save_perl_slots_type load_perl_slots, save_perl_slots;
+
+#endif
 
 /** Coro::Select ************************************************************/
 
@@ -680,15 +697,13 @@ load_perl (pTHX_ Coro__State c)
 
   PL_mainstack = c->mainstack;
 
-  GvSV (PL_defgv)  = slot->defsv;
-  GvAV (PL_defgv)  = slot->defav;
-  GvSV (PL_errgv)  = slot->errsv;
-  GvSV (irsgv)     = slot->irsgv;
-  GvHV (PL_hintgv) = slot->hinthv;
-
-  #define VAR(name,type) PL_ ## name = slot->name;
+#if CORO_JIT
+  load_perl_slots (slot);
+#else
+  #define VARx(name,expr,type) expr = slot->name;
   # include "state.h"
-  #undef VAR
+  #undef VARx
+#endif
 
   {
     dSP;
@@ -815,15 +830,13 @@ save_perl (pTHX_ Coro__State c)
   {
     perl_slots *slot = c->slot = (perl_slots *)(cxstack + cxstack_ix + 1);
 
-    slot->defav  = GvAV (PL_defgv);
-    slot->defsv  = DEFSV;
-    slot->errsv  = ERRSV;
-    slot->irsgv  = GvSV (irsgv);
-    slot->hinthv = GvHV (PL_hintgv);
-
-    #define VAR(name,type) slot->name = PL_ ## name;
+#if CORO_JIT
+    save_perl_slots (slot);
+#else
+    #define VARx(name,expr,type) slot->name = expr;
     # include "state.h"
-    #undef VAR
+    #undef VARx
+#endif
   }
 }
 
@@ -3325,6 +3338,59 @@ coro_new (pTHX_ HV *stash, SV **argv, int argc, int is_coro)
 ecb_cold XS(boot_Coro__State);
 #endif
 
+#if CORO_JIT
+
+static void ecb_noinline ecb_cold
+pushav_3uv (pTHX_ UV a, UV b, UV c)
+{
+  dSP;
+  AV *av = newAV ();
+
+  av_store (av, 2, newSVuv (c));
+  av_store (av, 1, newSVuv (b));
+  av_store (av, 0, newSVuv (a));
+
+  XPUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
+
+  PUTBACK;
+}
+
+static void ecb_noinline ecb_cold
+jit_init (pTHX)
+{
+  dSP;
+  SV *load, *save;
+  char *map_base;
+  char *load_ptr, *save_ptr;
+  STRLEN load_len, save_len;
+  int count;
+
+  PUSHMARK (SP);
+  PUTBACK;
+#define VARx(name,expr,type) pushav_3uv (aTHX_ (UV)&(expr), offsetof (perl_slots, name), sizeof (type));
+# include "state.h"
+#undef VARx
+  count = call_pv ("Coro::State::_jit", G_ARRAY);
+  SPAGAIN;
+
+  save = POPs; save_ptr = SvPVbyte (save, save_len);
+  load = POPs; load_ptr = SvPVbyte (load, load_len);
+
+  map_base = mmap (0, load_len + save_len + 16, PROT_EXEC | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  assert (("Coro: unable mmap jit code page, cannot continue.", map_base != (char *)MAP_FAILED));
+
+  load_perl_slots = (load_save_perl_slots_type)map_base;
+  memcpy (map_base, load_ptr, load_len);
+
+  map_base += (load_len + 15) & ~15;
+
+  save_perl_slots = (load_save_perl_slots_type)map_base;
+  memcpy (map_base, save_ptr, save_len);
+}
+
+#endif
+
 MODULE = Coro::State                PACKAGE = Coro::State	PREFIX = api_
 
 PROTOTYPES: DISABLE
@@ -3337,6 +3403,13 @@ BOOT:
 # endif
 #endif
         BOOT_PAGESIZE;
+
+        /* perl defines these to check for existance first, but why it doesn't */
+        /* just create them one at init time is not clear to me, except for */
+        /* programs trying to delete them, but... */
+        /* anyway, we declare this as invalid and make sure they are initialised here */
+        DEFSV;
+        ERRSV;
 
         cctx_current = cctx_new_empty ();
 
@@ -3389,6 +3462,13 @@ BOOT:
         time_init (aTHX);
 
         assert (("PRIO_NORMAL must be 0", !CORO_PRIO_NORMAL));
+#if CORO_JIT
+	PUTBACK;
+        require_pv ("Coro/jit-" CORO_JIT_TYPE ".pl");
+	jit_init (aTHX);
+        perl_eval_pv ("undef &Coro::State::_jit", 1);
+        SPAGAIN;
+#endif
 }
 
 SV *

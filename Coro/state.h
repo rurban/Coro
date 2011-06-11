@@ -1,4 +1,11 @@
 /* list the interpreter variables that need to be saved/restored */
+
+VARx(defsv, GvSV (PL_defgv), SV *)
+VARx(defav, GvAV (PL_defgv), AV *)
+VARx(errsv, GvSV (PL_errgv), SV *)
+VARx(irsgv, GvSV (irsgv), SV *)
+VARx(hinthv, GvHV (PL_hintgv), HV *);
+
 /* mostly copied from thrdvar.h */
 
 VAR(stack_sp,      SV **)          /* the main stack */

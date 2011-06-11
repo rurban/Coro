@@ -15,6 +15,7 @@ Coro/State.pm
 Coro/State.xs
 Coro/clone.c
 Coro/state.h
+Coro/jit-amd64-unix.pl
 Coro/Signal.pm
 Coro/Semaphore.pm
 Coro/SemaphoreSet.pm

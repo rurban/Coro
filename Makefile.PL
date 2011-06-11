@@ -44,7 +44,7 @@ if (eval { require EV }) {
       print <<EOF
 
 *** 
-*** WARNING: Event version $EV::VERSION found, NOT building EV support.
+*** WARNING: EV version $EV::VERSION found, NOT building EV support.
 ***
 *** This version is ABI-incompatible with Coro, please upgrade to at least 3.3.
 ***
@@ -108,6 +108,7 @@ WriteMakefile(
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
 
     		    'Coro/State.pm'	=> '$(INST_LIBDIR)/Coro/State.pm',
+    		    'Coro/jit-amd64-unix.pl' => '$(INST_LIBDIR)/Coro/jit-amd64-unix.pl',
 
     		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
     		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',

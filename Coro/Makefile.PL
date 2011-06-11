@@ -127,7 +127,7 @@ correct in most cases, but you still can chose between these alternatives:
 
 u  The unix 'ucontext.h' functions are relatively new and not implemented
    or well-tested in older unices. They allow very fast coroutine creation
-   and reasonably fast switching.  They are, however, usually slower than
+   and reasonably fast switching. They are, however, usually slower than
    the other alternatives due to an extra syscall done by swapcontext. And
    while nominally most portable (it's the only POSIX-standardised
    interface for coroutines), ucontext functions are, as usual, broken on
@@ -322,6 +322,23 @@ print <<EOF;
 
 *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
 
+Coro can use a simple JIT compiler to compile a part of the thread switch
+function at runtime. On threaded perls, this results in a 50% speed
+improvement. On non-threaded perls, the gain is much less, usually around
+5%. If you enable this option, then the JIT will be enabled, on compatible
+operating systems and CPUs. Otherwise, it will be disabled. It should be
+safe to turn on.
+
+EOF
+
+my $orgasm = $ENV{CORO_JIT} || "y";
+$orgasm = prompt ("Try to use the JIT compiler, if available?", $orgasm);
+$DEFINE .= " -DCORO_JIT=1" if $orgasm =~ /[yY]/;
+
+print <<EOF;
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+
 Coro has experimental support for cloning states. This can be used
 to implement a scheme-like call/cc. However, this doesn't add to the
 expressiveness in general, and is likely perl-version specific (and perl
@@ -349,7 +366,7 @@ WriteMakefile(
   LIBS         => @LIBS,
   DIR          => [],
   depend => {
-     "State.c" => "state.h clone.c libcoro/coro.h libcoro/coro.c",
+     "State.c" => "state.h clone.c ecb.h libcoro/coro.h libcoro/coro.c",
   },
 );
 
