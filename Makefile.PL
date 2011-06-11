@@ -109,6 +109,7 @@ WriteMakefile(
 
     		    'Coro/State.pm'	=> '$(INST_LIBDIR)/Coro/State.pm',
     		    'Coro/jit-amd64-unix.pl' => '$(INST_LIBDIR)/Coro/jit-amd64-unix.pl',
+    		    'Coro/jit-x86-unix.pl'   => '$(INST_LIBDIR)/Coro/jit-x86-unix.pl',
 
     		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
     		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',

@@ -17,16 +17,14 @@
    $insn[1][8] = "\x48\x89"; # movq   rax -> mem
 
    my $modrm_disp8  = 0x40;
-   my $modrm_disp16 = 0x80;
+   my $modrm_disp32 = 0x80;
    my $modrm_rsi    = 0x06;
    my $modrm_rdi    = 0x07;
 
    my @vars;
 
    my $mov_ind = sub {
-      my ($size, $mod_reg, $store, $offset) = @_;
-
-      my $mod_rm = $mod_reg;
+      my ($size, $mod_rm, $store, $offset) = @_;
 
       if ($offset < -128 || $offset > 127) {
          $mod_rm |= $modrm_disp16;
@@ -56,7 +54,7 @@
 
          my $slotofs = $slot - $curslot;
 
-         # the sort ensures that this condition and adjustment suffice
+         # the sort ensures that this condition and adjustment suffices
          if ($slotofs > 127) {
             my $adj = 256;
             $code .= "\x48\x81\xc7" . pack "i", $adj; # add imm32, %rdi

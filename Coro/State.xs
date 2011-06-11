@@ -297,6 +297,9 @@ static struct coro *coro_first;
     #if __x86_64 && (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris)
       #define CORO_JIT_TYPE "amd64-unix"
       typedef void (*load_save_perl_slots_type)(perl_slots *);
+    #elif __i386 && (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris)
+      #define CORO_JIT_TYPE "x86-unix"
+      typedef void (*load_save_perl_slots_type)(perl_slots *);
     #else
       #undef CORO_JIT
     #endif
@@ -3462,7 +3465,7 @@ BOOT:
         assert (("PRIO_NORMAL must be 0", !CORO_PRIO_NORMAL));
 #if CORO_JIT
 	PUTBACK;
-        require_pv ("Coro/jit-" CORO_JIT_TYPE ".pl");
+        eval_pv ("require 'Coro/jit-" CORO_JIT_TYPE ".pl'", 1);
 	jit_init (aTHX);
         perl_eval_pv ("undef &Coro::State::_jit", 1);
         SPAGAIN;
