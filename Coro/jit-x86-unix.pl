@@ -17,7 +17,7 @@
    my $modrm_abs    = 0x05;
    my $modrm_disp8  = 0x40;
    my $modrm_disp32 = 0x80;
-   my $modrm_rdi    = 0x07;
+   my $modrm_edx    = 0x02;
 
    my @vars;
 
@@ -53,7 +53,7 @@
    my $gencopy = sub {
       my ($save) = shift;
 
-      my $code = "\x8b\x7c\x24\x04"; # mov 4(%esp),%edi
+      my $code = "\x8b\x54\x24\x04"; # mov 4(%esp),%edx
 
       my $curslot = 0;
 
@@ -65,16 +65,16 @@
          # the sort ensures that this condition and adjustment suffices
          if ($slotofs > 127) {
             my $adj = 256;
-            $code .= "\x81\xc7" . pack "i", $adj; # add imm32, %edi
+            $code .= "\x81\xc2" . pack "i", $adj; # add imm32, %edi
             $curslot += $adj;
             $slotofs -= $adj;
          }
 
          if ($save) {
             $code .= $mov->($size, $modrm_abs, 0, $addr);
-            $code .= $mov->($size, $modrm_rdi, 1, $slotofs);
+            $code .= $mov->($size, $modrm_edx, 1, $slotofs);
          } else {
-            $code .= $mov->($size, $modrm_rdi, 0, $slotofs);
+            $code .= $mov->($size, $modrm_edx, 0, $slotofs);
             $code .= $mov->($size, $modrm_abs, 1, $addr);
          }
       }

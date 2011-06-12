@@ -301,6 +301,7 @@ static struct coro *coro_first;
       #define CORO_JIT_TYPE "x86-unix"
       typedef void (*load_save_perl_slots_type)(perl_slots *);
     #else
+      x x x x
       #undef CORO_JIT
     #endif
   #endif
@@ -3366,8 +3367,9 @@ jit_init (pTHX)
   STRLEN load_len, save_len;
   int count;
 
+  eval_pv ("require 'Coro/jit-" CORO_JIT_TYPE ".pl'", 1);
+
   PUSHMARK (SP);
-  PUTBACK;
 #define VARx(name,expr,type) pushav_3uv (aTHX_ (UV)&(expr), offsetof (perl_slots, name), sizeof (type));
 # include "state.h"
 #undef VARx
@@ -3388,6 +3390,9 @@ jit_init (pTHX)
 
   save_perl_slots = (load_save_perl_slots_type)map_base;
   memcpy (map_base, save_ptr, save_len);
+
+  PUTBACK;
+  eval_pv ("undef &Coro::State::_jit", 1);
 }
 
 #endif
@@ -3465,9 +3470,7 @@ BOOT:
         assert (("PRIO_NORMAL must be 0", !CORO_PRIO_NORMAL));
 #if CORO_JIT
 	PUTBACK;
-        eval_pv ("require 'Coro/jit-" CORO_JIT_TYPE ".pl'", 1);
 	jit_init (aTHX);
-        perl_eval_pv ("undef &Coro::State::_jit", 1);
         SPAGAIN;
 #endif
 }
