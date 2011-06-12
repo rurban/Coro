@@ -120,9 +120,6 @@ typedef int ecb_bool;
 #define ecb_likely(expr)   ecb_expect_true  (expr)
 #define ecb_unlikely(expr) ecb_expect_false (expr)
 
-/* try to tell the compiler that some condition is definitely true */
-#define ecb_assume(cond) do { if (!(cond)) ecb_unreachable (); } while (0)
-
 /* count trailing zero bits and count # of one bits */
 #if ECB_GCC_VERSION(3,4)
   #define ecb_ctz32(x)      __builtin_ctz      (x)
@@ -190,6 +187,9 @@ typedef int ecb_bool;
   ecb_function_ void ecb_unreachable (void) { }
 #endif
 
+/* try to tell the compiler that some condition is definitely true */
+#define ecb_assume(cond) do { if (!(cond)) ecb_unreachable (); } while (0)
+
 ecb_function_ unsigned char ecb_byteorder_helper (void) ecb_const;
 ecb_function_ unsigned char
 ecb_byteorder_helper (void)
@@ -199,9 +199,9 @@ ecb_byteorder_helper (void)
 }
 
 ecb_function_ ecb_bool ecb_big_endian    (void) ecb_const;
-ecb_function_ ecb_bool ecb_big_endian    (void) { return ecb_byteorder_helper () == 0x11; };
+ecb_function_ ecb_bool ecb_big_endian    (void) { return ecb_byteorder_helper () == 0x11; }
 ecb_function_ ecb_bool ecb_little_endian (void) ecb_const;
-ecb_function_ ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () == 0x44; };
+ecb_function_ ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () == 0x44; }
 
 #if ECB_GCC_VERSION(3,0) || ECB_C99
   #define ecb_mod(m,n) ((m) % (n) + ((m) % (n) < 0 ? (n) : 0))
@@ -210,7 +210,7 @@ ecb_function_ ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper ()
 #endif
 
 #if ecb_cplusplus_does_not_suck
-  // does not work for local types (http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2657.htm)
+  /* does not work for local types (http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2657.htm) */
   template<typename T, int N>
   static inline int ecb_array_length (const T (&arr)[N])
   {

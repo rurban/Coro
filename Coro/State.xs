@@ -35,7 +35,7 @@
 # include <inttypes.h> /* most portable stdint.h */
 #endif
 
-#ifdef HAVE_MMAP
+#if HAVE_MMAP
 # include <unistd.h>
 # include <sys/mman.h>
 # ifndef MAP_ANONYMOUS
@@ -214,7 +214,7 @@ typedef struct
 #undef VARx
 } perl_slots;
 
-// how many context stack entries do we need for perl_slots
+/* how many context stack entries do we need for perl_slots */
 #define SLOT_COUNT ((sizeof (perl_slots) + sizeof (PERL_CONTEXT) - 1) / sizeof (PERL_CONTEXT))
 
 /* this is a structure representing a perl-level coroutine */
@@ -293,22 +293,24 @@ static struct coro *coro_first;
 /** JIT *********************************************************************/
 
 #if CORO_JIT
+  /* APPLE doesn't have HAVE_MMAP though */
+  #define CORO_JIT_UNIXY (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris || __APPLE__)
   #ifndef CORO_JIT_TYPE
-    #if __x86_64 && (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris)
+    #if __x86_64 && CORO_JIT_UNIXY
       #define CORO_JIT_TYPE "amd64-unix"
-      typedef void (*load_save_perl_slots_type)(perl_slots *);
-    #elif __i386 && (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris)
+    #elif __i386 && CORO_JIT_UNIXY
       #define CORO_JIT_TYPE "x86-unix"
-      typedef void (*load_save_perl_slots_type)(perl_slots *);
-    #else
-      x x x x
-      #undef CORO_JIT
     #endif
   #endif
 #endif
 
+#if !defined(CORO_JIT_TYPE) || !HAVE_MMAP
+  #undef CORO_JIT
+#endif
+
 #if CORO_JIT
-static load_save_perl_slots_type load_perl_slots, save_perl_slots;
+  typedef void (*load_save_perl_slots_type)(perl_slots *);
+  static load_save_perl_slots_type load_perl_slots, save_perl_slots;
 #endif
 
 /** Coro::Select ************************************************************/
@@ -346,7 +348,7 @@ coro_u2time (pTHX_ UV ret[2])
 }
 
 ECB_INLINE double
-coro_nvtime ()
+coro_nvtime (void)
 {
   struct timeval tv;
   gettimeofday (&tv, 0);
@@ -416,7 +418,7 @@ coro_get_hv (pTHX_ const char *name, int create)
 }
 
 ECB_INLINE void
-coro_times_update ()
+coro_times_update (void)
 {
 #ifdef coro_clock_gettime
   struct timespec ts;
@@ -1190,7 +1192,7 @@ destroy_perl (pTHX_ struct coro *coro)
 
     coro_destruct_stacks (aTHX);
 
-    // now save some sv's to be free'd later
+    /* now save some sv's to be free'd later */
     svf    [0] =       GvSV (PL_defgv);
     svf    [1] = (SV *)GvAV (PL_defgv);
     svf    [2] =       GvSV (PL_errgv);
@@ -1443,7 +1445,7 @@ cctx_run (void *arg)
 }
 
 static coro_cctx *
-cctx_new ()
+cctx_new (void)
 {
   coro_cctx *cctx;
 
@@ -1459,7 +1461,7 @@ cctx_new ()
 
 /* create a new cctx only suitable as source */
 static coro_cctx *
-cctx_new_empty ()
+cctx_new_empty (void)
 {
   coro_cctx *cctx = cctx_new ();
 
@@ -1471,7 +1473,7 @@ cctx_new_empty ()
 
 /* create a new cctx suitable as destination/running a perl interpreter */
 static coro_cctx *
-cctx_new_run ()
+cctx_new_run (void)
 {
   coro_cctx *cctx = cctx_new ();
   void *stack_start;
@@ -1480,7 +1482,7 @@ cctx_new_run ()
 #if HAVE_MMAP
   cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
   /* mmap supposedly does allocate-on-write for us */
-  cctx->sptr = mmap (0, cctx->ssize, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+  cctx->sptr = mmap (0, cctx->ssize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, 0, 0);
 
   if (cctx->sptr != (void *)-1)
     {
@@ -2953,7 +2955,7 @@ slf_check_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, int acquire)
       /* if we were woken up but can't down, we look through the whole */
       /* waiters list and only add us if we aren't in there already */
       /* this avoids some degenerate memory usage cases */
-      for (i = AvFILLp (av); i > 0; --i) // i > 0 is not an off-by-one bug
+      for (i = AvFILLp (av); i > 0; --i) /* i > 0 is not an off-by-one bug */
         if (AvARRAY (av)[i] == coro_hv)
           return 1;
 
@@ -3364,7 +3366,7 @@ jit_init (pTHX)
   SV *load, *save;
   char *map_base;
   char *load_ptr, *save_ptr;
-  STRLEN load_len, save_len;
+  STRLEN load_len, save_len, map_len;
   int count;
 
   eval_pv ("require 'Coro/jit-" CORO_JIT_TYPE ".pl'", 1);
@@ -3379,7 +3381,9 @@ jit_init (pTHX)
   save = POPs; save_ptr = SvPVbyte (save, save_len);
   load = POPs; load_ptr = SvPVbyte (load, load_len);
 
-  map_base = mmap (0, load_len + save_len + 16, PROT_EXEC | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  map_len = load_len + save_len + 16;
+
+  map_base = mmap (0, map_len, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
   assert (("Coro: unable to mmap jit code page, cannot continue.", map_base != (char *)MAP_FAILED));
 
@@ -3390,6 +3394,10 @@ jit_init (pTHX)
 
   save_perl_slots = (load_save_perl_slots_type)map_base;
   memcpy (map_base, save_ptr, save_len);
+
+  /* we are good citizens and try to make the page read-only, so the evil evil */
+  /* hackers might have it a bit more difficult */
+  mprotect (map_base, map_len, PROT_READ | PROT_EXEC);
 
   PUTBACK;
   eval_pv ("undef &Coro::State::_jit", 1);
