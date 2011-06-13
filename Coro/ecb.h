@@ -30,7 +30,23 @@
 #ifndef ECB_H
 #define ECB_H
 
-#include <inttypes.h>
+#ifdef _WIN32
+  typedef   signed char   int8_t;
+  typedef unsigned char  uint8_t;
+  typedef   signed short  int16_t;
+  typedef unsigned short uint16_t;
+  typedef   signed int    int32_t;
+  typedef unsigned int   uint32_t;
+  #if __GNUC__
+    typedef   signed long long int64_t;
+    typedef unsigned long long uint64_t;
+  #else
+    typedef   signed __int64   int64_t;
+    typedef unsigned __int64   uint64_t;
+  #endif
+#else
+  #include <inttypes.h>
+#endif
 
 /* many compilers define _GNUC_ to some versions but then only implement
  * what their idiot authors think are the "more important" extensions,
@@ -40,7 +56,7 @@
  * an issue with that they should have done it right in the first place.
  */
 #ifndef ECB_GCC_VERSION
-  #if defined(__INTEL_COMPILER) || defined(__SUNPRO_C) || defined(__llvm__)
+  #if defined(__INTEL_COMPILER) || defined(__SUNPRO_C) || defined(__SUNPRO_CC) || defined(__llvm__) || defined(__clang__)
     #define ECB_GCC_VERSION(major,minor) 0
   #else
     #define ECB_GCC_VERSION(major,minor) (__GNUC__ > (major) || (__GNUC__ == (major) && __GNUC_MINOR__ >= (minor)))
@@ -131,7 +147,7 @@ typedef int ecb_bool;
   {
     int r = 0;
 
-    x &= -x; /* this isolates the lowest bit */
+    x &= (uint32_t)-(int32_t)x; /* this isolates the lowest bit */
 
     if (x & 0xaaaaaaaa) r +=  1;
     if (x & 0xcccccccc) r +=  2;

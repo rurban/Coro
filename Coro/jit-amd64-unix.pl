@@ -50,7 +50,7 @@
       my $curslot = 0;
 
       for (@vars) {
-         my ($addr, $slot, $size) = @$_;
+         my ($addr, $asize, $slot, $ssize) = @$_;
 
          my $slotofs = $slot - $curslot;
 
@@ -63,11 +63,11 @@
          }
 
          if ($save) {
-            $code .= $mov_ind->($size, $modrm_rsi, 0, $addr - $curbase);
-            $code .= $mov_ind->($size, $modrm_rdi, 1, $slotofs);
+            $code .= $mov_ind->($asize, $modrm_rsi, 0, $addr - $curbase);
+            $code .= $mov_ind->($ssize, $modrm_rdi, 1, $slotofs);
          } else {
-            $code .= $mov_ind->($size, $modrm_rdi, 0, $slotofs);
-            $code .= $mov_ind->($size, $modrm_rsi, 1, $addr - $curbase);
+            $code .= $mov_ind->($ssize, $modrm_rdi, 0, $slotofs);
+            $code .= $mov_ind->($asize, $modrm_rsi, 1, $addr - $curbase);
          }
       }
 
@@ -83,7 +83,7 @@
       # so gencopy can += 256 occasionally. within those blocks,
       # sort by address so we can play further tricks.
       @vars = sort {
-         (($a->[1] + 128) & ~255) <=> (($b->[1] + 128) & ~255)
+         (($a->[2] + 128) & ~255) <=> (($b->[2] + 128) & ~255)
             or $a->[0] <=> $b->[0]
       } @vars;
 

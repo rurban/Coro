@@ -58,24 +58,24 @@
       my $curslot = 0;
 
       for (@vars) {
-         my ($addr, $slot, $size) = @$_;
+         my ($addr, $asize, $slot, $ssize) = @$_;
 
          my $slotofs = $slot - $curslot;
 
          # the sort ensures that this condition and adjustment suffices
          if ($slotofs > 127) {
             my $adj = 256;
-            $code .= "\x81\xc2" . pack "i", $adj; # add imm32, %edi
+            $code .= "\x81\xc2" . pack "V", $adj; # add imm32, %edi
             $curslot += $adj;
             $slotofs -= $adj;
          }
 
          if ($save) {
-            $code .= $mov->($size, $modrm_abs, 0, $addr);
-            $code .= $mov->($size, $modrm_edx, 1, $slotofs);
+            $code .= $mov->($asize, $modrm_abs, 0, $addr);
+            $code .= $mov->($ssize, $modrm_edx, 1, $slotofs);
          } else {
-            $code .= $mov->($size, $modrm_edx, 0, $slotofs);
-            $code .= $mov->($size, $modrm_abs, 1, $addr);
+            $code .= $mov->($ssize, $modrm_edx, 0, $slotofs);
+            $code .= $mov->($asize, $modrm_abs, 1, $addr);
          }
       }
 
@@ -90,14 +90,20 @@
       # split 8-byte accesses into two 4-byte accesses
       # not needed even for 64 bit perls, but you never know
       for (@vars) {
-         if ($_->[2] == 8) {
-            $_->[2] = 4;
-            push @vars, [$_->[0] + 4, $_->[1] + 4, 4];
+         if ($_->[1] == 8) {
+            die "Coro: FATAL - cannot handle size mismatch between 8 and $_->[3] byte slots.\n";
+
+            $_->[1] =
+            $_->[3] = 4;
+
+            push @vars,
+               [$_->[0] + 4, 4,
+                $_->[1] + 4, 4];
          }
       }
 
       # sort by slot offset, required by gencopy to work
-      @vars = sort { $a->[1] <=> $b->[1] } @vars;
+      @vars = sort { $a->[2] <=> $b->[2] } @vars;
 
       # we *could* combine adjacent vars, but this is not very common
 

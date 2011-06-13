@@ -819,7 +819,7 @@ save_perl (pTHX_ Coro__State c)
   }
 
   /* allocate some space on the context stack for our purposes */
-  if (ecb_expect_false (cxstack_ix + SLOT_COUNT >= cxstack_max))
+  if (ecb_expect_false (cxstack_ix + (int)SLOT_COUNT >= cxstack_max))
     {
       unsigned int i;
 
@@ -3345,11 +3345,12 @@ ecb_cold XS(boot_Coro__State);
 #if CORO_JIT
 
 static void ecb_noinline ecb_cold
-pushav_3uv (pTHX_ UV a, UV b, UV c)
+pushav_4uv (pTHX_ UV a, UV b, UV c, UV d)
 {
   dSP;
   AV *av = newAV ();
 
+  av_store (av, 3, newSVuv (d));
   av_store (av, 2, newSVuv (c));
   av_store (av, 1, newSVuv (b));
   av_store (av, 0, newSVuv (a));
@@ -3372,7 +3373,7 @@ jit_init (pTHX)
   eval_pv ("require 'Coro/jit-" CORO_JIT_TYPE ".pl'", 1);
 
   PUSHMARK (SP);
-#define VARx(name,expr,type) pushav_3uv (aTHX_ (UV)&(expr), offsetof (perl_slots, name), sizeof (type));
+#define VARx(name,expr,type) pushav_4uv (aTHX_ (UV)&(expr), sizeof (expr), offsetof (perl_slots, name), sizeof (type));
 # include "state.h"
 #undef VARx
   count = call_pv ("Coro::State::_jit", G_ARRAY);
