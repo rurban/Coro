@@ -4141,7 +4141,7 @@ waiters (SV *self)
 MODULE = Coro::State                PACKAGE = Coro::SemaphoreSet
 
 void
-_may_delete (SV *sem, int count, int extra_refs)
+_may_delete (SV *sem, int count, unsigned int extra_refs)
 	PPCODE:
 {
   	AV *av = (AV *)SvRV (sem);
