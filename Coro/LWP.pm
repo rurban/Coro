@@ -6,6 +6,37 @@ Coro::LWP - make LWP non-blocking - as much as possible
 
  use Coro::LWP; # afterwards LWP should not block
 
+=head1 ALTERNATIVES
+
+Over the years, a number of less-invasive alternatives have popped up,
+which you might find more acceptable than this rather invasive and
+fragile module:
+
+=over 4
+
+=item L<AnyEvent::HTTP>
+
+For HTTP and HTTPS only, works fine without Coro. Requires using a very
+different API than LWP.
+
+=item L<LWP::Protocol::AnyEvent::http>
+
+Makes LWP use L<AnyEvent::HTTP>. Does not make LWP event-based, but allows
+Coro threads to schedule unimpeded through its AnyEvent integration.
+
+Let's you use the LWP API normally.
+
+=item L<LWP::Protocol::Coro::http>
+
+Basically the same as above, distinction unclear. :)
+
+=item L<AnyEvent::HTTP::LWP::UserAgent>
+
+A different user agent implementation, not completely transparent to
+users, requires Coro.
+
+=back
+
 =head1 DESCRIPTION
 
 This module is an L<AnyEvent> user, you need to make sure that you use and
