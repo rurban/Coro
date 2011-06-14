@@ -9,15 +9,16 @@ Coro::LWP - make LWP non-blocking - as much as possible
 =head1 ALTERNATIVES
 
 Over the years, a number of less-invasive alternatives have popped up,
-which you might find more acceptable than this rather invasive and
-fragile module:
+which you might find more acceptable than this rather invasive and fragile
+module. All of them only support HTTP (and sometimes HTTPS).
 
 =over 4
 
 =item L<AnyEvent::HTTP>
 
-For HTTP and HTTPS only, works fine without Coro. Requires using a very
-different API than LWP.
+Works fine without Coro. Requires using a very different API than
+LWP. Probably the best choice I<iff> you can do with a completely
+different event-based API.
 
 =item L<LWP::Protocol::AnyEvent::http>
 
