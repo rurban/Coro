@@ -56,7 +56,7 @@
  * an issue with that they should have done it right in the first place.
  */
 #ifndef ECB_GCC_VERSION
-  #if defined(__INTEL_COMPILER) || defined(__SUNPRO_C) || defined(__SUNPRO_CC) || defined(__llvm__) || defined(__clang__)
+  #if !defined(__GNUC_MINOR__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_C) || defined(__SUNPRO_CC) || defined(__llvm__) || defined(__clang__)
     #define ECB_GCC_VERSION(major,minor) 0
   #else
     #define ECB_GCC_VERSION(major,minor) (__GNUC__ > (major) || (__GNUC__ == (major) && __GNUC_MINOR__ >= (minor)))
@@ -66,13 +66,13 @@
 #define ECB_C99 (__STDC_VERSION__ >= 199901L)
 
 #if __cplusplus
-  #define ECB_INLINE static inline
+  #define ecb_inline static inline
 #elif ECB_GCC_VERSION(2,5)
-  #define ECB_INLINE static __inline__
+  #define ecb_inline static __inline__
 #elif ECB_C99
-  #define ECB_INLINE static inline
+  #define ecb_inline static inline
 #else
-  #define ECB_INLINE static
+  #define ecb_inline static
 #endif
 
 #if ECB_GCC_VERSION(3,3)
@@ -90,7 +90,7 @@ typedef int ecb_bool;
 #define ECB_STRINGIFY_(a) # a
 #define ECB_STRINGIFY(a) ECB_STRINGIFY_(a)
 
-#define ecb_function_ ECB_INLINE
+#define ecb_function_ ecb_inline
 
 #if ECB_GCC_VERSION(3,1)
   #define ecb_attribute(attrlist)        __attribute__(attrlist)
@@ -138,8 +138,13 @@ typedef int ecb_bool;
 
 /* count trailing zero bits and count # of one bits */
 #if ECB_GCC_VERSION(3,4)
+  /* we assume int == 32 bit, long == 32 or 64 bit and long long == 64 bit */
+  #define ecb_ld32(x)      (__builtin_clz      (x) ^ 31)
+  #define ecb_ld64(x)      (__builtin_clzll    (x) ^ 63)
   #define ecb_ctz32(x)      __builtin_ctz      (x)
+  #define ecb_ctz64(x)      __builtin_ctzll    (x)
   #define ecb_popcount32(x) __builtin_popcount (x)
+  /* no popcountll */
 #else
   ecb_function_ int ecb_ctz32 (uint32_t x) ecb_const;
   ecb_function_ int
@@ -147,7 +152,7 @@ typedef int ecb_bool;
   {
     int r = 0;
 
-    x &= (uint32_t)-(int32_t)x; /* this isolates the lowest bit */
+    x &= ~x + 1; /* this isolates the lowest bit */
 
     if (x & 0xaaaaaaaa) r +=  1;
     if (x & 0xcccccccc) r +=  2;
@@ -156,6 +161,14 @@ typedef int ecb_bool;
     if (x & 0xffff0000) r += 16;
 
     return r;
+  }
+
+  ecb_function_ int ecb_ctz64 (uint64_t x) ecb_const;
+  ecb_function_ int
+  ecb_ctz64 (uint64_t x)
+  {
+    int shift = x & 0xffffffffU ? 0 : 32;
+    return ecb_ctz (x >> shift) + shift;
   }
 
   ecb_function_ int ecb_popcount32 (uint32_t x) ecb_const;
@@ -169,12 +182,64 @@ typedef int ecb_bool;
 
     return x >> 24;
   }
+
+  /* you have the choice beetween something with a table lookup, */
+  /* something using lots of bit arithmetic and a simple loop */
+  /* we went for the loop */
+  ecb_function_ int ecb_ld32 (uint32_t x) ecb_const;
+  ecb_function_ int ecb_ld32 (uint32_t x)
+  {
+    int r = -1;
+
+    do
+      {
+        x >>= 1;
+        ++r;
+      }
+    while (x);
+
+    return r;
+  }
+
+  ecb_function_ int ecb_ld64 (uint64_t x) ecb_const;
+  ecb_function_ int ecb_ld64 (uint64_t x)
+  {
+    int r = -1;
+
+    do
+      {
+        x >>= 1;
+        ++r;
+      }
+    while (x);
+
+    return r;
+  }
 #endif
 
+/* popcount64 is only available on 64 bit cpus as gcc builtin */
+/* so for this version we are lazy */
+ecb_function_ int ecb_popcount64 (uint64_t x) ecb_const;
+ecb_function_ int
+ecb_popcount64 (uint64_t x)
+{
+  return ecb_popcount32 (x) + ecb_popcount32 (x >> 32);
+}
+
 #if ECB_GCC_VERSION(4,3)
-  #define ecb_bswap32(x) __builtin_bswap32 (x)
-  #define ecb_bswap16(x) (__builtin_bswap32(x) >> 16)
+  #define ecb_bswap16(x) (__builtin_bswap32 (x) >> 16)
+  #define ecb_bswap32(x)  __builtin_bswap32 (x)
+  #define ecb_bswap64(x)  __builtin_bswap64 (x)
 #else
+  ecb_function_ uint32_t ecb_bswap16 (uint32_t x) ecb_const;
+  ecb_function_ uint32_t
+  ecb_bswap16 (uint32_t x)
+  {
+    return ((x >>  8) & 0xff)
+        |  ((x <<  8) & 0x00ff0000)
+        |  (x << 24);
+  }
+
   ecb_function_ uint32_t ecb_bswap32 (uint32_t x) ecb_const;
   ecb_function_ uint32_t
   ecb_bswap32 (uint32_t x)
@@ -185,13 +250,12 @@ typedef int ecb_bool;
         |  (x << 24);
   }
 
-  ecb_function_ uint32_t ecb_bswap16 (uint32_t x) ecb_const;
-  ecb_function_ uint32_t
-  ecb_bswap16 (uint32_t x)
+  ecb_function_ uint64_t ecb_bswap64 (uint64_t x) ecb_const;
+  ecb_function_ uint64_t
+  ecb_bswap64 (uint64_t x)
   {
-    return ((x >>  8) & 0xff)
-        |  ((x <<  8) & 0x00ff0000)
-        |  (x << 24);
+    return (((uint64_t)ecb_bswap32 (x)) << 32)
+         | ecb_bswap32 (x >> 32);
   }
 #endif
 
@@ -236,18 +300,32 @@ ecb_function_ ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper ()
   #define ecb_array_length(name) (sizeof (name) / sizeof (name [0]))
 #endif
 
-ECB_INLINE uint32_t ecb_rotr32 (uint32_t x, unsigned int count) ecb_const;
-ECB_INLINE uint32_t
+ecb_inline uint32_t ecb_rotr32 (uint32_t x, unsigned int count) ecb_const;
+ecb_inline uint32_t
 ecb_rotr32 (uint32_t x, unsigned int count)
 {
   return (x << (32 - count)) | (x >> count);
 }
 
-ECB_INLINE uint32_t ecb_rotl32 (uint32_t x, unsigned int count) ecb_const;
-ECB_INLINE uint32_t
+ecb_inline uint32_t ecb_rotl32 (uint32_t x, unsigned int count) ecb_const;
+ecb_inline uint32_t
 ecb_rotl32 (uint32_t x, unsigned int count)
 {
   return (x >> (32 - count)) | (x << count);
+}
+
+ecb_inline uint64_t ecb_rotr64 (uint64_t x, unsigned int count) ecb_const;
+ecb_inline uint64_t
+ecb_rotr64 (uint64_t x, unsigned int count)
+{
+  return (x << (64 - count)) | (x >> count);
+}
+
+ecb_inline uint64_t ecb_rotl64 (uint64_t x, unsigned int count) ecb_const;
+ecb_inline uint64_t
+ecb_rotl64 (uint64_t x, unsigned int count)
+{
+  return (x >> (64 - count)) | (x << count);
 }
 
 #endif

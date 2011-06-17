@@ -337,7 +337,7 @@ coro_pp_sselect (pTHX)
 
 #ifdef HAS_GETTIMEOFDAY
 
-ECB_INLINE void
+ecb_inline void
 coro_u2time (pTHX_ UV ret[2])
 {
   struct timeval tv;
@@ -347,7 +347,7 @@ coro_u2time (pTHX_ UV ret[2])
   ret [1] = tv.tv_usec;
 }
 
-ECB_INLINE double
+ecb_inline double
 coro_nvtime (void)
 {
   struct timeval tv;
@@ -356,7 +356,7 @@ coro_nvtime (void)
   return tv.tv_sec + tv.tv_usec * 1e-6;
 }
 
-ECB_INLINE void
+ecb_inline void
 time_init (pTHX)
 {
   nvtime = coro_nvtime;
@@ -365,7 +365,7 @@ time_init (pTHX)
 
 #else
 
-ECB_INLINE void
+ecb_inline void
 time_init (pTHX)
 {
   SV **svp;
@@ -417,7 +417,7 @@ coro_get_hv (pTHX_ const char *name, int create)
   return get_hv (name, create);
 }
 
-ECB_INLINE void
+ecb_inline void
 coro_times_update (void)
 {
 #ifdef coro_clock_gettime
@@ -440,7 +440,7 @@ coro_times_update (void)
 #endif
 }
 
-ECB_INLINE void
+ecb_inline void
 coro_times_add (struct coro *c)
 {
   c->t_real [1] += time_real [1];
@@ -452,7 +452,7 @@ coro_times_add (struct coro *c)
   c->t_cpu  [0] += time_cpu  [0];
 }
 
-ECB_INLINE void
+ecb_inline void
 coro_times_sub (struct coro *c)
 {
   if (c->t_real [1] < time_real [1]) { c->t_real [1] += 1000000000; --c->t_real [0]; }
@@ -483,7 +483,7 @@ coro_times_sub (struct coro *c)
 #define CORO_MAGIC_cv(cv)    CORO_MAGIC    (((SV *)(cv)), CORO_MAGIC_type_cv)
 #define CORO_MAGIC_state(sv) CORO_MAGIC_NN (((SV *)(sv)), CORO_MAGIC_type_state)
 
-ECB_INLINE MAGIC *
+ecb_inline MAGIC *
 SvSTATEhv_p (pTHX_ SV *coro)
 {
   MAGIC *mg;
@@ -498,7 +498,7 @@ SvSTATEhv_p (pTHX_ SV *coro)
   return 0;
 }
 
-ECB_INLINE struct coro *
+ecb_inline struct coro *
 SvSTATE_ (pTHX_ SV *coro)
 {
   MAGIC *mg;
@@ -522,7 +522,7 @@ SvSTATE_ (pTHX_ SV *coro)
 /*****************************************************************************/
 /* padlist management and caching */
 
-ECB_INLINE AV *
+ecb_inline AV *
 coro_derive_padlist (pTHX_ CV *cv)
 {
   AV *padlist = CvPADLIST (cv);
@@ -544,7 +544,7 @@ coro_derive_padlist (pTHX_ CV *cv)
   return newpadlist;
 }
 
-ECB_INLINE void
+ecb_inline void
 free_padlist (pTHX_ AV *padlist)
 {
   /* may be during global destruction */
@@ -597,7 +597,7 @@ static MGVTBL coro_cv_vtbl = {
 };
 
 /* the next two functions merely cache the padlists */
-ECB_INLINE void
+ecb_inline void
 get_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
@@ -620,7 +620,7 @@ get_padlist (pTHX_ CV *cv)
    }
 }
 
-ECB_INLINE void
+ecb_inline void
 put_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
@@ -1222,7 +1222,7 @@ destroy_perl (pTHX_ struct coro *coro)
   }
 }
 
-ECB_INLINE void
+ecb_inline void
 free_coro_mortal (pTHX)
 {
   if (ecb_expect_true (coro_mortal))
@@ -1391,7 +1391,7 @@ cctx_prepare (pTHX)
 }
 
 /* the tail of transfer: execute stuff we can only do after a transfer */
-ECB_INLINE void
+ecb_inline void
 transfer_tail (pTHX)
 {
   free_coro_mortal (aTHX);
@@ -1794,7 +1794,7 @@ api_transfer (pTHX_ SV *prev_sv, SV *next_sv)
 
 /** Coro ********************************************************************/
 
-ECB_INLINE void
+ecb_inline void
 coro_enq (pTHX_ struct coro *coro)
 {
   struct coro **ready = coro_ready [coro->prio - CORO_PRIO_MIN];
@@ -1806,7 +1806,7 @@ coro_enq (pTHX_ struct coro *coro)
   ready [1] = coro;
 }
 
-ECB_INLINE struct coro *
+ecb_inline struct coro *
 coro_deq (pTHX)
 {
   int prio;
@@ -1869,7 +1869,7 @@ api_is_ready (pTHX_ SV *coro_sv)
 }
 
 /* expects to own a reference to next->hv */
-ECB_INLINE void
+ecb_inline void
 prepare_schedule_to (pTHX_ struct coro_transfer_args *ta, struct coro *next)
 {
   SV *prev_sv = SvRV (coro_current);
@@ -1938,14 +1938,14 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
     }
 }
 
-ECB_INLINE void
+ecb_inline void
 prepare_cede (pTHX_ struct coro_transfer_args *ta)
 {
   api_ready (aTHX_ coro_current);
   prepare_schedule (aTHX_ ta);
 }
 
-ECB_INLINE void
+ecb_inline void
 prepare_cede_notself (pTHX_ struct coro_transfer_args *ta)
 {
   SV *prev = SvRV (coro_current);

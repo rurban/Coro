@@ -11,9 +11,9 @@
    $insn[0][2] = "\x0f\xb7"; # movzwl mem -> rax
    $insn[0][4] =     "\x8b"; # movl   mem -> rax
    $insn[0][8] = "\x48\x8b"; # movq   mem -> rax
-   $insn[1][1] =     "\x88"; # movb   rax -> mem
-   $insn[1][2] = "\x66\x89"; # movw   rax -> mem
-   $insn[1][4] =     "\x89"; # movl   rax -> mem
+   $insn[1][1] =     "\x88"; # movb    al -> mem
+   $insn[1][2] = "\x66\x89"; # movw    ax -> mem
+   $insn[1][4] =     "\x89"; # movl   eax -> mem
    $insn[1][8] = "\x48\x89"; # movq   rax -> mem
 
    my $modrm_disp8  = 0x40;
@@ -57,7 +57,7 @@
          # the sort ensures that this condition and adjustment suffices
          if ($slotofs > 127) {
             my $adj = 256;
-            $code .= "\x48\x81\xc7" . pack "i", $adj; # add imm32, %rdi
+            $code .= "\x48\x81\xc7" . pack "i", $adj; # addq imm32, %rdi
             $curslot += $adj;
             $slotofs -= $adj;
          }
