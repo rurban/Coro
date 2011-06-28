@@ -90,7 +90,8 @@ EOF
    # mirbsd seems to be bug-to-bug compatible openbsd fork,
    # with the name change being the biggest difference.
    if ($Config{libs} !~ "-lpthread") {
-      # asm seems to work, setjmp might, ucontext is missing, threads lets not talk about
+      # asm seems to work, setjmp might, ucontext is missing,
+      # threads lets not talk about
       # try setjmp/longjmp on 4.4, but pthread on earlier
       $iface = $iface_asm || ($Config{osvers} >= 4.4 ? "s" : "p");
    } else {
