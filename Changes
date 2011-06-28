@@ -42,6 +42,8 @@ TODO: in_eval, PL_tained
           logic seems to be no longer neccessary.
         - use libecb instead of our own home-grown gcc hacks.
         - document alternatives to Coro::LWP. Please use them :)
+        - work around another mindless idiotic NEEDLESS bug in openbsd/mirbsds
+          sigaltstack.
 
 5.372 Wed Feb 23 06:14:30 CET 2011
 	- apparently mingw doesn't provide a working gettimeofday, try to

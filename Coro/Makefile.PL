@@ -87,13 +87,20 @@ EOF
    }
 
 } elsif ($^O =~ /(openbsd|mirbsd)/) {
-   # openbsd:
-   # asm seems to work, setjmp might, ucontext is missing, threads lets not talk about
-   # try setjmp/longjmp on 4.4, but pthread on earlier
-   # mirbsd:
-   # seems to be bug-to-bug compatible openbsd fork,
+   # mirbsd seems to be bug-to-bug compatible openbsd fork,
    # with the name change being the biggest difference.
-   $iface = $iface_asm || ($Config{osvers} >= 4.4 ? "s" : "p");
+   if ($Config{libs} !~ "-lpthread") {
+      # asm seems to work, setjmp might, ucontext is missing, threads lets not talk about
+      # try setjmp/longjmp on 4.4, but pthread on earlier
+      $iface = $iface_asm || ($Config{osvers} >= 4.4 ? "s" : "p");
+   } else {
+      # seems newer openbsd platforms have marginally working pthreads, but
+      # their pthreads break sigaltstack - reading the sigaltstack sources
+      # again shows how fundamentally clueless those people are (if no thread
+      # has ever been created, then the program is bound to a kernel-scheduled
+      # entity. get that? GET THAT?)
+      $iface = "p";
+   }
 
 } elsif ($^O =~ /solaris/) {
    # setjmp, ucontext seem to work, as well as asm
