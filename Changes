@@ -5,7 +5,6 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
 TODO: tutorial
-TODO: in_eval, PL_tained
 	- INCOMPATIBLE CHANGE: unreferenced coro objects will now be
           destroyed and cleaned up automatically (e.g. async { schedule }).
         - implement a JIT compiler for part of the thread switch code,
@@ -17,6 +16,7 @@ TODO: in_eval, PL_tained
         - Coro::State->is_destroyed is now called is_zombie.
         - implement a Coro->safe_cancel method that might fail, but
           cancels in a "safer" way if it succeeds.
+        - add preliminary support for DEBUGGING perls.
         - get rid of two hash-accesses when initialising a new Coro - this
           speeds up coro creation by almost a factor of two.
         - croak when a coro that is being cancelled tries to block
@@ -44,7 +44,7 @@ TODO: in_eval, PL_tained
         - document alternatives to Coro::LWP. Please use them :)
         - work around another mindless idiotic NEEDLESS bug in openbsd/mirbsds
           sigaltstack. Really. wine suffers from it, erlang suffers from it,
-          and its' known since at least 2006.
+          and it's known since at least 2006.
 
 5.372 Wed Feb 23 06:14:30 CET 2011
 	- apparently mingw doesn't provide a working gettimeofday, try to

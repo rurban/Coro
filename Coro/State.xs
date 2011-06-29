@@ -65,6 +65,10 @@ static long pagesize;
 /* the maximum number of idle cctx that will be pooled */
 static int cctx_max_idle = 4;
 
+#if defined(DEBUGGING) && PERL_VERSION_ATLEAST(5,12,0)
+# define HAS_SCOPESTACK_NAME 1
+#endif
+
 #if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
 # undef CORO_STACKGUARD
 #endif
@@ -881,6 +885,9 @@ coro_init_stacks (pTHX)
     New(54,PL_scopestack,8,I32);
     PL_scopestack_ix = 0;
     PL_scopestack_max = 8;
+#if HAS_SCOPESTACK_NAME
+    New(54,PL_scopestack_name,8,const char*);
+#endif
 
     New(54,PL_savestack,24,ANY);
     PL_savestack_ix = 0;
@@ -918,6 +925,9 @@ coro_destruct_stacks (pTHX)
   Safefree (PL_tmps_stack);
   Safefree (PL_markstack);
   Safefree (PL_scopestack);
+#if HAS_SCOPESTACK_NAME
+  Safefree (PL_scopestack_name);
+#endif
   Safefree (PL_savestack);
 #if !PERL_VERSION_ATLEAST (5,10,0)
   Safefree (PL_retstack);

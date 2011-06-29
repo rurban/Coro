@@ -22,6 +22,9 @@ VAR(stack_max,     SV **)
 VAR(scopestack,    I32 *)          /* scopes we've ENTERed */
 VAR(scopestack_ix, I32)
 VAR(scopestack_max,I32)
+#if HAS_SCOPESTACK_NAME
+VAR(scopestack_name,const char **)
+#endif
 
 VAR(savestack,     ANY *)          /* items that need to be restored
                                       when LEAVEing scopes we've ENTERed */
