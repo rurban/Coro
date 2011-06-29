@@ -28,7 +28,8 @@ struct CoroSLF
 {
   void (*prepare) (pTHX_ struct coro_transfer_args *ta); /* 0 means not yet initialised */
   int (*check) (pTHX_ struct CoroSLF *frame);
-  void *data; /* for use by prepare/check */
+  void *data; /* for use by prepare/check/destroy */
+  void (*destroy) (pTHX_ struct CoroSLF *frame);
 };
 
 /* needs to fill in the *frame */
@@ -40,8 +41,8 @@ struct CoroAPI
   /* private */
   I32 ver;
   I32 rev;
-#define CORO_API_VERSION 7
-#define CORO_API_REVISION 0
+#define CORO_API_VERSION 7 /* reorder CoroSLF on change */
+#define CORO_API_REVISION 1
 
   /* Coro */
   int nready;

@@ -90,19 +90,13 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.372;
+   our $VERSION = 6.0;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
    $Coro::current ||= { };
 
-   {
-      # save/restore the handlers before/after overwriting %SIG magic
-      local $SIG{__DIE__};
-      local $SIG{__WARN__};
-
-      XSLoader::load __PACKAGE__, $VERSION;
-   }
+   XSLoader::load __PACKAGE__, $VERSION;
 
    # need to do it after overwriting the %SIG magic
    $SIG{__DIE__}  ||= \&diehook;
@@ -231,29 +225,20 @@ thread saved in C<$next>.
 The "state" of a subroutine includes the scope, i.e. lexical variables and
 the current execution state (subroutine, stack).
 
+=item $state->throw ([$scalar])
+
 =item $state->is_new
 
-Returns true iff this Coro::State object is "new", i.e. has never been run
-yet. Those states basically consist of only the code reference to call and
-the arguments, but consumes very little other resources. New states will
-automatically get assigned a perl interpreter when they are transfered to.
+=item $state->is_zombie
 
-=item $state->is_destroyed
-
-Returns true iff the Coro::State object has been destroyed (by
-C<cancel>), i.e. it's resources freed because they were C<cancel>'d (or
-C<terminate>'d).
+See the corresponding method for L<Coro> objects. 
 
 =item $state->cancel
 
 Forcefully destructs the given Coro::State. While you can keep the
 reference, and some memory is still allocated, the Coro::State object is
-effecticely dead, destructors have been freed, it cannot be transfered to
-anymore.
-
-=item $state->throw ([$scalar])
-
-See L<< Coro->throw >>.
+effectively dead, destructors have been freed, it cannot be transfered to
+anymore, it's pushing up the daisies.
 
 =item $state->call ($coderef)
 

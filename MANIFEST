@@ -9,11 +9,14 @@ Makefile.PL
 Coro.pm
 Coro/Makefile.PL
 Coro/typemap
+Coro/ecb.h
 Coro/schmorp.h
 Coro/State.pm
 Coro/State.xs
 Coro/clone.c
 Coro/state.h
+Coro/jit-amd64-unix.pl
+Coro/jit-x86-unix.pl
 Coro/Signal.pm
 Coro/Semaphore.pm
 Coro/SemaphoreSet.pm
@@ -61,6 +64,7 @@ t/16_signal.t
 t/17_rouse.t
 t/18_winder.t
 t/19_handle.t
+t/20_mutual_cancel.t
 
 EV/Makefile.PL
 EV/EV.pm

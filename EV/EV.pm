@@ -60,7 +60,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.372;
+   our $VERSION = 6.0;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;

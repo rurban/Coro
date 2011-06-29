@@ -36,7 +36,7 @@ EOF
       print "\nEvent version $Event::VERSION found, building Event support.\n\n";
    }
 } else {
-   print "\n*** Event not found, not build Event support.\n\n";
+   print "\n*** Event not found, not building Event support.\n\n";
 }
 
 if (eval { require EV }) {
@@ -44,7 +44,7 @@ if (eval { require EV }) {
       print <<EOF
 
 *** 
-*** WARNING: Event version $EV::VERSION found, NOT building EV support.
+*** WARNING: EV version $EV::VERSION found, NOT building EV support.
 ***
 *** This version is ABI-incompatible with Coro, please upgrade to at least 3.3.
 ***
@@ -56,7 +56,7 @@ EOF
       print "\nEV version $EV::VERSION found, building EV support.\n\n";
    }
 } else {
-   print "\n*** EV not found, not build EV support.\n\n";
+   print "\n*** EV not found, not building EV support.\n\n";
 }
 
 WriteMakefile(
@@ -108,6 +108,8 @@ WriteMakefile(
     		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
 
     		    'Coro/State.pm'	=> '$(INST_LIBDIR)/Coro/State.pm',
+    		    'Coro/jit-amd64-unix.pl' => '$(INST_LIBDIR)/Coro/jit-amd64-unix.pl',
+    		    'Coro/jit-x86-unix.pl'   => '$(INST_LIBDIR)/Coro/jit-x86-unix.pl',
 
     		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
     		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',

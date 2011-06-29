@@ -16,7 +16,6 @@ SYNOPSIS
       cede; # and again
   
       # use locking
-      use Coro::Semaphore;
       my $lock = new Coro::Semaphore;
       my $locked;
   
@@ -86,9 +85,9 @@ CORO THREAD LIFE CYCLE
         This creates a new coro thread and puts it into the ready queue,
         meaning it will run as soon as the CPU is free for it.
 
-        "async" will return a coro object - you can store this for future
-        reference or ignore it, the thread itself will keep a reference to
-        it's thread object - threads are alive on their own.
+        "async" will return a Coro object - you can store this for future
+        reference or ignore it - a thread that is running, ready to run or
+        waiting for some event is alive on it's own.
 
         Another way to create a thread is to call the "new" constructor with
         a code-reference:
@@ -125,7 +124,7 @@ CORO THREAD LIFE CYCLE
         a function instead), but it will give up the CPU regularly because
         it waits for external events.
 
-        As long as a coro thread runs, it's coro object is available in the
+        As long as a coro thread runs, its Coro object is available in the
         global variable $Coro::current.
 
         The low-level way to give up the CPU is to call the scheduler, which
@@ -189,25 +188,43 @@ CORO THREAD LIFE CYCLE
               Coro::terminate "return value 1", "return value 2";
            };
 
-        And yet another way is to "->cancel" the coro thread from another
-        thread:
+        And yet another way is to "->cancel" (or "->safe_cancel") the coro
+        thread from another thread:
 
            my $coro = async {
               exit 1;
            };
 
-           $coro->cancel; # an also accept values for ->join to retrieve
+           $coro->cancel; # also accepts values for ->join to retrieve
 
         Cancellation *can* be dangerous - it's a bit like calling "exit"
         without actually exiting, and might leave C libraries and XS modules
         in a weird state. Unlike other thread implementations, however, Coro
         is exceptionally safe with regards to cancellation, as perl will
-        always be in a consistent state.
+        always be in a consistent state, and for those cases where you want
+        to do truly marvellous things with your coro while it is being
+        cancelled - that is, make sure all cleanup code is executed from the
+        thread being cancelled - there is even a "->safe_cancel" method.
 
         So, cancelling a thread that runs in an XS event loop might not be
         the best idea, but any other combination that deals with perl only
         (cancelling when a thread is in a "tie" method or an "AUTOLOAD" for
         example) is safe.
+
+        Lastly, a coro thread object that isn't referenced is "->cancel"'ed
+        automatically - just like other objects in Perl. This is not such a
+        common case, however - a running thread is referencedy b
+        $Coro::current, a thread ready to run is referenced by the ready
+        queue, a thread waiting on a lock or semaphore is referenced by
+        being in some wait list and so on. But a thread that isn't in any of
+        those queues gets cancelled:
+
+           async {
+              schedule; # cede to other coros, don't go into the ready queue
+           };
+
+           cede;
+           # now the async above is destroyed, as it is not referenced by anything.
 
     5. Cleanup
         Threads will allocate various resources. Most but not all will be
@@ -240,7 +257,8 @@ CORO THREAD LIFE CYCLE
            };
 
         The "Guard::guard" function comes in handy for any custom cleanup
-        you might want to do:
+        you might want to do (but you cannot switch to other coroutines form
+        those code blocks):
 
            async {
               my $window = new Gtk2::Window "toplevel";
@@ -262,16 +280,14 @@ CORO THREAD LIFE CYCLE
            }
 
     6. Viva La Zombie Muerte
-        Even after a thread has terminated and cleaned up it's resources,
-        the coro object still is there and stores the return values of the
-        thread. Only in this state will the coro object be "reference
-        counted" in the normal perl sense: the thread code keeps a reference
-        to it when it is active, but not after it has terminated.
+        Even after a thread has terminated and cleaned up its resources, the
+        Coro object still is there and stores the return values of the
+        thread.
 
-        The means the coro object gets freed automatically when the thread
+        The means the Coro object gets freed automatically when the thread
         has terminated and cleaned up and there arenot other references.
 
-        If there are, the coro object will stay around, and you can call
+        If there are, the Coro object will stay around, and you can call
         "->join" as many times as you wish to retrieve the result values:
 
            async {
@@ -440,7 +456,7 @@ STATIC METHODS
 
     terminate [arg...]
         Terminates the current coro with the given status values (see
-        cancel).
+        cancel). The values will not be copied, but referenced directly.
 
     Coro::on_enter BLOCK, Coro::on_leave BLOCK
         These function install enter and leave winders in the current scope.
@@ -582,6 +598,22 @@ CORO OBJECT METHODS
         protect itself against spurious wakeups, and the one in the Coro
         family certainly do that.
 
+    $state->is_new
+        Returns true iff this Coro object is "new", i.e. has never been run
+        yet. Those states basically consist of only the code reference to
+        call and the arguments, but consumes very little other resources.
+        New states will automatically get assigned a perl interpreter when
+        they are transfered to.
+
+    $state->is_zombie
+        Returns true iff the Coro object has been cancelled, i.e. it's
+        resources freed because they were "cancel"'ed, "terminate"'d,
+        "safe_cancel"'ed or simply went out of scope.
+
+        The name "zombie" stems from UNIX culture, where a process that has
+        exited and only stores and exit status and no other resources is
+        called a "zombie".
+
     $is_ready = $coro->is_ready
         Returns true iff the Coro object is in the ready queue. Unless the
         Coro object gets destroyed, it will eventually be scheduled by the
@@ -597,9 +629,79 @@ CORO OBJECT METHODS
         Coros will not ever be scheduled.
 
     $coro->cancel (arg...)
-        Terminates the given Coro and makes it return the given arguments as
-        status (default: the empty list). Never returns if the Coro is the
-        current Coro.
+        Terminates the given Coro thread and makes it return the given
+        arguments as status (default: an empty list). Never returns if the
+        Coro is the current Coro.
+
+        This is a rather brutal way to free a coro, with some limitations -
+        if the thread is inside a C callback that doesn't expect to be
+        canceled, bad things can happen, or if the cancelled thread insists
+        on running complicated cleanup handlers that rely on its thread
+        context, things will not work.
+
+        Any cleanup code being run (e.g. from "guard" blocks) will be run
+        without a thread context, and is not allowed to switch to other
+        threads. On the plus side, "->cancel" will always clean up the
+        thread, no matter what. If your cleanup code is complex or you want
+        to avoid cancelling a C-thread that doesn't know how to clean up
+        itself, it can be better to "->throw" an exception, or use
+        "->safe_cancel".
+
+        The arguments to "->cancel" are not copied, but instead will be
+        referenced directly (e.g. if you pass $var and after the call change
+        that variable, then you might change the return values passed to
+        e.g. "join", so don't do that).
+
+        The resources of the Coro are usually freed (or destructed) before
+        this call returns, but this can be delayed for an indefinite amount
+        of time, as in some cases the manager thread has to run first to
+        actually destruct the Coro object.
+
+    $coro->safe_cancel ($arg...)
+        Works mostly like "->cancel", but is inherently "safer", and
+        consequently, can fail with an exception in cases the thread is not
+        in a cancellable state.
+
+        This method works a bit like throwing an exception that cannot be
+        caught - specifically, it will clean up the thread from within
+        itself, so all cleanup handlers (e.g. "guard" blocks) are run with
+        full thread context and can block if they wish. The downside is that
+        there is no guarantee that the thread can be cancelled when you call
+        this method, and therefore, it might fail. It is also considerably
+        slower than "cancel" or "terminate".
+
+        A thread is in a safe-cancellable state if it either hasn't been run
+        yet, or it has no C context attached and is inside an SLF function.
+
+        The latter two basically mean that the thread isn't currently inside
+        a perl callback called from some C function (usually via some XS
+        modules) and isn't currently executing inside some C function itself
+        (via Coro's XS API).
+
+        This call returns true when it could cancel the thread, or croaks
+        with an error otherwise (i.e. it either returns true or doesn't
+        return at all).
+
+        Why the weird interface? Well, there are two common models on how
+        and when to cancel things. In the first, you have the expectation
+        that your coro thread can be cancelled when you want to cancel it -
+        if the thread isn't cancellable, this would be a bug somewhere, so
+        "->safe_cancel" croaks to notify of the bug.
+
+        In the second model you sometimes want to ask nicely to cancel a
+        thread, but if it's not a good time, well, then don't cancel. This
+        can be done relatively easy like this:
+
+           if (! eval { $coro->safe_cancel }) {
+              warn "unable to cancel thread: $@";
+           }
+
+        However, what you never should do is first try to cancel "safely"
+        and if that fails, cancel the "hard" way with "->cancel". That makes
+        no sense: either you rely on being able to execute cleanup code in
+        your thread context, or you don't. If you do, then "->safe_cancel"
+        is the only way, and if you don't, then "->cancel" is always faster
+        and more direct.
 
     $coro->schedule_to
         Puts the current coro to sleep (like "Coro::schedule"), but instead
@@ -626,17 +728,17 @@ CORO OBJECT METHODS
         Coro will check for the exception each time a schedule-like-function
         returns, i.e. after each "schedule", "cede",
         "Coro::Semaphore->down", "Coro::Handle->readable" and so on. Most of
-        these functions detect this case and return early in case an
-        exception is pending.
+        those functions (all that are part of Coro itself) detect this case
+        and return early in case an exception is pending.
 
         The exception object will be thrown "as is" with the specified
         scalar in $@, i.e. if it is a string, no line number or newline will
         be appended (unlike with "die").
 
-        This can be used as a softer means than "cancel" to ask a coro to
-        end itself, although there is no guarantee that the exception will
-        lead to termination, and if the exception isn't caught it might well
-        end the whole program.
+        This can be used as a softer means than either "cancel" or
+        "safe_cancel "to ask a coro to end itself, although there is no
+        guarantee that the exception will lead to termination, and if the
+        exception isn't caught it might well end the whole program.
 
         You might also think of "throw" as being the moral equivalent of
         "kill"ing a coro with a signal (in this case, a scalar).
@@ -644,16 +746,17 @@ CORO OBJECT METHODS
     $coro->join
         Wait until the coro terminates and return any values given to the
         "terminate" or "cancel" functions. "join" can be called concurrently
-        from multiple coro, and all will be resumed and given the status
+        from multiple threads, and all will be resumed and given the status
         return once the $coro terminates.
 
     $coro->on_destroy (\&cb)
         Registers a callback that is called when this coro thread gets
-        destroyed, but before it is joined. The callback gets passed the
-        terminate arguments, if any, and *must not* die, under any
-        circumstances.
+        destroyed, that is, after it's resources have been freed but before
+        it is joined. The callback gets passed the terminate/cancel
+        arguments, if any, and *must not* die, under any circumstances.
 
-        There can be any number of "on_destroy" callbacks per coro.
+        There can be any number of "on_destroy" callbacks per coro, and
+        there is no way currently to remove a callback once added.
 
     $oldprio = $coro->prio ($newprio)
         Sets (or gets, if the argument is missing) the priority of the coro
@@ -849,6 +952,9 @@ BUGS/LIMITATIONS
         not yet allow this). I recommend disabling thread support and using
         processes, as having the windows process emulation enabled under
         unix roughly halves perl performance, even when not used.
+
+        Attempts to use threads created in another emulated process will
+        crash ("cleanly", with a null pointer exception).
 
     coro switching is not signal safe
         You must not switch to another coro from within a signal handler

@@ -164,7 +164,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 5.372;
+our $VERSION = 6.0;
 
 #############################################################################
 # idle handler
@@ -240,11 +240,12 @@ AnyEvent::post_detect {
 =item Coro::AnyEvent::poll
 
 This call will block the current thread until the event loop has polled
-for new events and instructs the event loop to poll for new events once,
-without blocking.
+for potential new events and instructs the event loop to poll for new
+events once, without blocking.
 
-Note that this call will not actually execute the poll, just block until
-new events have been polled, so other threads will have a chance to run.
+Note that this call will not actually execute the poll, nor will it wait
+until there are some events, just block until the event loop has polled
+for new events, so other threads will have a chance to run.
 
 This is useful when you have a thread that does some computations, but you
 still want to poll for new events from time to time. Simply call C<poll>

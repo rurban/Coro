@@ -4,6 +4,49 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+6.0   Wed Jun 29 19:43:35 CEST 2011
+	- INCOMPATIBLE CHANGE: unreferenced coro objects will now be
+          destroyed and cleaned up automatically (e.g. async { schedule }).
+        - implement a JIT compiler for part of the thread switch code,
+          which gives a 50% speed improvement on threaded perls, and
+          about 4% on non-thraeded perls (so threaded perls now finally
+          reach about half the speed of non-threaded perls).
+        - slightly modernise Coro::Intro, add section about rouse functions.
+        - avoid DEFSV and ERRSV, giving another 10% improvement
+          in thread switching.
+        - Coro::State->is_destroyed is now called is_zombie.
+        - implement a Coro->safe_cancel method that might fail, but
+          cancels in a "safer" way if it succeeds.
+        - add preliminary support for DEBUGGING perls.
+        - get rid of two hash-accesses when initialising a new Coro - this
+          speeds up coro creation by almost a factor of two.
+        - croak when a coro that is being cancelled tries to block
+          (e.g. while executing a guard block), instead of crashing or
+          deadlocking.
+        - use a more robust and also faster method to identify Coro::State
+          objects - speeds up everything a bit.
+	- implement Coro->cancel in XS for a 20% speed improvement, and to
+          be able to implement mutual cancellation.
+	- speed up context switches by a percent or two by more efficiently
+          allocating context stack entries.
+        - implement Coro->join and Coro->on_destroy in XS for a speedup and
+          a reduction in memory use.
+        - cancelling a coro while it itself is cancelling another coro is
+          now supported and working, instead of triggering an assertion.
+	- be a bit more crash-resistant when calling (buggy) on_destroy
+          callbacks (best effort).
+        - move on_destroy into the slf_frame, to allow extension slf
+          functions to have destructors.
+        - get rid if coro refcounting - simply crash in other interpreter
+          threads by nulling the pointers on clone.
+        - simplify warn/die hook handling when loading Coro - the convoluted
+          logic seems to be no longer neccessary.
+        - use libecb instead of our own home-grown gcc hacks.
+        - document alternatives to Coro::LWP. Please use them :)
+        - work around another mindless idiotic NEEDLESS bug in openbsd/mirbsds
+          sigaltstack. Really. wine suffers from it, erlang suffers from it,
+          and it's known since at least 2006.
+
 5.372 Wed Feb 23 06:14:30 CET 2011
 	- apparently mingw doesn't provide a working gettimeofday, try to
           work around that by relying on Time::HiRes (indirectly brought to

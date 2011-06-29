@@ -28,8 +28,6 @@ $b = async {
 
 cede;
 
-$main = $Coro::main;
-
 *transfer = \&Coro::State::transfer;
 
 sub doit0 {
@@ -63,21 +61,22 @@ $c1 = new Coro::State sub {
 #$c0->save (0);
 #$c1->save (-1);
 
-transfer($main, $c0);
-transfer($main, $c1);
-
 #Coro::State::enable_times 1;
 #use Coro::Debug; Coro::Debug::command "ps";#d#
 #(async {
-timethese 5000000, {
-   function  => 'a(5); a(6)',
-   method    => '$a->b(5); $a->b(6)',
-   cede      => 'cede',
-   transfer0 => 'transfer($main, $c0)',
-   transfer1 => 'transfer($main, $c1)',
-};
+   $main = $Coro::current;
+
+   transfer($main, $c0);
+   transfer($main, $c1);
+
+   timethese 5000000, {
+      function  => 'a(5); a(6)',
+      method    => '$a->b(5); $a->b(6)',
+      cede      => 'cede',
+      transfer0 => 'transfer($main, $c0)',
+      transfer1 => 'transfer($main, $c1)',
+   };
 #})->join;
 #use Coro::Debug; Coro::Debug::command "ps";#d#
-
 
 
