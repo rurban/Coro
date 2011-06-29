@@ -11,6 +11,7 @@ TODO: tutorial
           which gives a 50% speed improvement on threaded perls, and
           about 4% on non-thraeded perls (so threaded perls now finally
           reach about half the speed of non-threaded perls).
+        - slightly modernise Coro::Intro, add section about rouse functions.
         - avoid DEFSV and ERRSV, giving another 10% improvement
           in thread switching.
         - Coro::State->is_destroyed is now called is_zombie.
