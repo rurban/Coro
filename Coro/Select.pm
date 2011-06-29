@@ -67,7 +67,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 5.372;
+our $VERSION = 6.0;
 our @EXPORT_OK = "select";
 
 sub import {

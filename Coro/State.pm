@@ -90,7 +90,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 5.372;
+   our $VERSION = 6.0;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.

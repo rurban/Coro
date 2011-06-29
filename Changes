@@ -4,7 +4,7 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
-TODO: tutorial
+6.0   Wed Jun 29 19:43:35 CEST 2011
 	- INCOMPATIBLE CHANGE: unreferenced coro objects will now be
           destroyed and cleaned up automatically (e.g. async { schedule }).
         - implement a JIT compiler for part of the thread switch code,
