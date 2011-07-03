@@ -35,6 +35,13 @@ my $iface;
 # default to assembly on x86 and x86_64 sometimes
 my $iface_asm = $Config{archname} =~ /^(i[3456]86|amd64|x86_64)-/ ? "a" : undef;
 
+# detect whether this perl is threaded, for those broken operating
+# systems that need it.
+
+my $pthread = $Config{libs} =~ /-lpthread/
+           || $Config{ldflags} =~ /-pthread/
+           || $Config{archname} =~ /-thread/;
+
 if (exists $ENV{CORO_INTERFACE}) {
    $iface = $ENV{CORO_INTERFACE};
 
@@ -66,7 +73,7 @@ if (exists $ENV{CORO_INTERFACE}) {
    # hey, it might actually work, with some hacks.
    $iface = "p";
 
-   if ($Config{libs} !~ "-lpthread") {
+   if (!$pthread) {
       # uh-oh
       print <<EOF;
 
@@ -89,7 +96,7 @@ EOF
 } elsif ($^O =~ /(openbsd|mirbsd)/) {
    # mirbsd seems to be bug-to-bug compatible openbsd fork,
    # with the name change being the biggest difference.
-   if ($Config{libs} !~ "-lpthread") {
+   if (!$pthread) {
       # asm seems to work, setjmp might, ucontext is missing,
       # threads lets not talk about
       # try setjmp/longjmp on 4.4, but pthread on earlier
