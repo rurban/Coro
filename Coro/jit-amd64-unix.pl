@@ -42,15 +42,19 @@
    my $gencopy = sub {
       my ($save) = shift;
 
-      # all perl variables must be within 32-bits of this address
-      my $curbase = $vars[$#vars >> 1][0];
+      my $curbase = undef;
 
-      my $code = "\x48\xbe" . pack "Q", $curbase; # mov imm64, %rsi
+      my $code;
 
       my $curslot = 0;
 
       for (@vars) {
          my ($addr, $asize, $slot, $ssize) = @$_;
+
+         if (!defined $curbase || abs ($curbase - $addr) > 0x7ffffff) {
+            $curbase = $addr + 128;
+            $code .= "\x48\xbe" . pack "Q", $curbase; # mov imm64, %rsi
+         }
 
          my $slotofs = $slot - $curslot;
 
@@ -89,15 +93,12 @@
 
       # we *could* combine adjacent vars, but this is not very common
 
-      $vars[-1][0] - $vars[0][0] <= 0x7fffffff
-         or die "JIT failed, perl var spread >31 bit\n";
-
       my $load = $gencopy->(0);
       my $save = $gencopy->(1);
 
-      #open my $fh, ">dat"; syswrite $fh, $save; system "objdump -b binary -m i386 -M x86-64 -D dat";
-      #warn length $load;
-      #warn length $save;
+      #open my $fh, ">dat"; syswrite $fh, $save; system "objdump -b binary -m i386 -M x86-64 -D dat";#d#
+      #warn length $load;#d#
+      #warn length $save;#d#
 
       ($load, $save)
    }
