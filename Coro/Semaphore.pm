@@ -40,7 +40,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 6.01;
+our $VERSION = 6.02;
 
 =item new [inital count]
 
