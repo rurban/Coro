@@ -4,6 +4,12 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+6.02  Wed Jul 13 04:35:19 CEST 2011
+	- "improve portability to Gentoo" - gentoo manages to put perl variables
+          in memory areas that are farther than 2gb apart, which the jit couldn't
+          handle and barfed. now it's just a bit slower on gentoo and similar
+          systems.
+
 6.01  Sun Jul  3 12:31:14 CEST 2011
 	- workarounds are good, but the test for whether pthreads are used
           was not good. thisone should be better.

@@ -11,7 +11,7 @@
    },
    "generated_by" : "ExtUtils::MakeMaker::JSONMETA version 7.000",
    "distribution_type" : "module",
-   "version" : "6.01",
+   "version" : "6.02",
    "name" : "Coro",
    "author" : [],
    "license" : "unknown",
