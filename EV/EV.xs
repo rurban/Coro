@@ -243,7 +243,7 @@ slf_init_rw (pTHX_ struct CoroSLF *frame, SV *arg, int wr)
   dir = wr ? &data->w : &data->r;
 
   if (ev_is_active (&dir->io) || ev_is_active (&dir->tw))
-    croak ("recursive invocation of readable_ev or writable_ev");
+    croak ("recursive invocation of readable_ev or writable_ev (concurrent Coro::Handle calls on same handle?), detected");
 
   dir->data = sv_2mortal (newRV_inc (CORO_CURRENT));
 

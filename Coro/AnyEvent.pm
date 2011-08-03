@@ -164,7 +164,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 6.02;
+our $VERSION = 6.03;
 
 #############################################################################
 # idle handler
@@ -183,8 +183,6 @@ sub _activity {
 Coro::_set_readyhook (\&AnyEvent::detect);
 
 AnyEvent::post_detect {
-   unshift @AnyEvent::CondVar::ISA, "Coro::AnyEvent::CondVar";
-
    my $model = $AnyEvent::MODEL;
 
    if ($model eq "AnyEvent::Impl::EV" and eval { require Coro::EV }) {
@@ -221,10 +219,11 @@ AnyEvent::post_detect {
       Coro::_set_readyhook \&_activity;
 
       $IDLE = new Coro sub {
-         my $one_event = AnyEvent->can ("one_event");
+         my $_poll = AnyEvent->can ("_poll")
+                  || AnyEvent->can ("one_event"); # AnyEvent < 6.0
 
          while () {
-            $one_event->();
+            $_poll->();
             Coro::schedule if Coro::nready;
          }
       };
@@ -235,6 +234,19 @@ AnyEvent::post_detect {
       # call the readyhook, in case coroutines were already readied
       _activity;
    }
+
+   # augment condvars
+
+   *AnyEvent::CondVar::_send = sub {
+      (delete $_[0]{_ae_coro})->ready if $_[0]{_ae_coro};
+   };
+
+   *AnyEvent::CondVar::_wait = sub {
+      do {
+         local $_[0]{_ae_coro} = $Coro::current;
+         Coro::schedule;
+      } until $_[0]{_ae_sent};
+   };
 };
 
 =item Coro::AnyEvent::poll
@@ -343,22 +355,6 @@ sub writable($;$) {
    my $w = AE::io $_[0], 1, sub { $cb->(1) };
    my $t = defined $_[1] && AE::timer $_[1], 0, sub { $cb->(0) };
    Coro::rouse_wait
-}
-
-#############################################################################
-# override condvars
-
-package Coro::AnyEvent::CondVar;
-
-sub _send {
-   (delete $_[0]{_ae_coro})->ready if $_[0]{_ae_coro};
-}
-
-sub _wait {
-   while (!$_[0]{_ae_sent}) {
-      local $_[0]{_ae_coro} = $Coro::current;
-      Coro::schedule;
-   }
 }
 
 1;
