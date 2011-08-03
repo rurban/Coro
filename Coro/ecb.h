@@ -68,14 +68,13 @@
 #ifndef ECB_MEMORY_FENCE
   #if ECB_GCC_VERSION(2,5)
     #if __x86
-      /* xchg might be an alternative */
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("lock; orb $0, -1(%%esp)" : : : "memory")
       #define ECB_MEMORY_FENCE_ACQUIRE ECB_MEMORY_FENCE /* non-lock xchg might be enough */
       #define ECB_MEMORY_FENCE_RELEASE do { } while (0) /* unlikely to change in future cpus */
     #elif __amd64
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mfence" : : : "memory")
       #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("lfence" : : : "memory")
-      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("sfence") /* play safe - not needed in all current cpus */
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("sfence") /* play safe - not needed in any current cpu */
     #endif
   #endif
 #endif
@@ -99,6 +98,13 @@
 #endif
 
 #ifndef ECB_MEMORY_FENCE
+  /*
+   * if you get undefined symbol references to pthread_mutex_lock,
+   * or failure to find pthread.h, then you should implement
+   * the ECB_MEMORY_FENCE operations for your cpu/compiler
+   * OR proide pthread.h and link against the posix thread library
+   * of your system.
+   */
   #include <pthread.h>
 
   static pthread_mutex_t ecb_mf_lock = PTHREAD_MUTEX_INITIALIZER;
