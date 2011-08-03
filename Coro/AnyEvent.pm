@@ -164,7 +164,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 6.03;
+our $VERSION = 6.04;
 
 #############################################################################
 # idle handler
@@ -236,17 +236,7 @@ AnyEvent::post_detect {
    }
 
    # augment condvars
-
-   *AnyEvent::CondVar::_send = sub {
-      (delete $_[0]{_ae_coro})->ready if $_[0]{_ae_coro};
-   };
-
-   *AnyEvent::CondVar::_wait = sub {
-      do {
-         local $_[0]{_ae_coro} = $Coro::current;
-         Coro::schedule;
-      } until $_[0]{_ae_sent};
-   };
+   unshift @AnyEvent::CondVar::ISA, "Coro::AnyEvent::CondVar";
 };
 
 =item Coro::AnyEvent::poll
@@ -356,6 +346,21 @@ sub writable($;$) {
    my $t = defined $_[1] && AE::timer $_[1], 0, sub { $cb->(0) };
    Coro::rouse_wait
 }
+
+sub Coro::AnyEvent::CondVar::send {
+   (delete $_[0]{_ae_coro})->ready if $_[0]{_ae_coro};
+
+   AnyEvent::CondVar::Base::send $_[0];
+};
+
+sub Coro::AnyEvent::CondVar::recv {
+   until ($_[0]{_ae_sent}) {
+      local $_[0]{_ae_coro} = $Coro::current;
+      Coro::schedule;
+   }
+
+   AnyEvent::CondVar::Base::recv $_[0];
+};
 
 1;
 

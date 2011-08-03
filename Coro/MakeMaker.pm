@@ -7,7 +7,7 @@ use base 'Exporter';
 
 our $installsitearch;
 
-our $VERSION = 6.03;
+our $VERSION = 6.04;
 our @EXPORT_OK = qw(&coro_args $installsitearch);
 
 my %opt;
