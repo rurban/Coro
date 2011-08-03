@@ -4,8 +4,8 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
-6.04
-	- use even more effciient and more compatible condvars for
+6.04  Wed Aug  3 17:15:45 CEST 2011
+	- use even more efficient and more compatible condvars for
           compatibility to AnyEvent 6.x :)
         - more inconsequential ecb.h updates.
 
