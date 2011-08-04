@@ -30,7 +30,7 @@ use base Exporter::;
 use Coro ();
 use Coro::AnyEvent ();
 
-our $VERSION = 6.04;
+our $VERSION = 6.05;
 our @EXPORT_OK = qw(timeout sleep);
 
 # compatibility with older programs
