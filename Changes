@@ -4,6 +4,12 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+6.05 Thu Aug  4 21:36:36 CEST 2011
+	- blush, condvar values would not be propagated from send to recv anymore
+          (reported by Chip Salzenberg).
+	- use exponential increase for the readline buffer length in
+          Coro::Handle. also reduce initial allocation to 1020 from 4096 bytes.
+
 6.04  Wed Aug  3 17:15:45 CEST 2011
 	- use even more efficient and more compatible condvars for
           compatibility to AnyEvent 6.x :)

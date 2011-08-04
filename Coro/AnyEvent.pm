@@ -164,7 +164,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 6.04;
+our $VERSION = 6.05;
 
 #############################################################################
 # idle handler
@@ -350,7 +350,7 @@ sub writable($;$) {
 sub Coro::AnyEvent::CondVar::send {
    (delete $_[0]{_ae_coro})->ready if $_[0]{_ae_coro};
 
-   AnyEvent::CondVar::Base::send $_[0];
+   &AnyEvent::CondVar::Base::send;
 };
 
 sub Coro::AnyEvent::CondVar::recv {
@@ -359,7 +359,7 @@ sub Coro::AnyEvent::CondVar::recv {
       Coro::schedule;
    }
 
-   AnyEvent::CondVar::Base::recv $_[0];
+   &AnyEvent::CondVar::Base::recv;
 };
 
 1;

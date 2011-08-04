@@ -31,4 +31,4 @@ requires:
   Storable: 2.15
   Time::HiRes: 0
   common::sense: 0
-version: 6.04
+version: 6.05
