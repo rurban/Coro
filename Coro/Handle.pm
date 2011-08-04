@@ -492,6 +492,7 @@ sub READ {
 sub READLINE {
    my $irs = @_ > 1 ? $_[1] : $/;
    my ($ofs, $len, $pos);
+   my $read = 1020;
 
    while () {
       if (length $irs) {
@@ -513,7 +514,8 @@ sub READLINE {
          $ofs = (length $_[0][3]) - 1;
       }
 
-      $len = sysread $_[0][0], $_[0][3], $len + 4096, length $_[0][3];
+      $len = sysread $_[0][0], $_[0][3], $read, length $_[0][3];
+      $read *= 2 if $len == $read;
 
       unless ($len) {
          if (defined $len) {
