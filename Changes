@@ -4,6 +4,16 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+6.06 Mon Aug  8 23:59:48 CEST 2011
+	- cygwin unfortunately patches the stack at runtime, so we use the pthreads
+          backend, which is an order of magnitutde slower. unfortunately, cygwins
+          pthread implementation isn't very complete either, so allocate the stack
+          twice just to be sure.
+          (note: cygwin also enables mymalloc, which is NOT THREADSAFE ON WINDOWS,
+          in its ithreaded perl - best recompile cygwin and use the 'w'indows
+          backend for much better performance. also disable ithreads for
+          even better performance...).
+
 6.05 Thu Aug  4 21:36:36 CEST 2011
 	- blush, condvar values would not be propagated from send to recv anymore
           (reported by Chip Salzenberg).

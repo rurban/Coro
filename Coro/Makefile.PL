@@ -45,9 +45,14 @@ my $pthread = $Config{libs} =~ /-lpthread/
 if (exists $ENV{CORO_INTERFACE}) {
    $iface = $ENV{CORO_INTERFACE};
 
-} elsif ($^O =~ /win32/i or $^O =~ /cygwin/ or $^O =~ /mswin/) {
+} elsif ($^O =~ /mswin32/i) {
    # nothing works, really, without deep hacks
    $iface = 'w';
+
+} elsif ($^O =~ /cygwin/) {
+   # cygwin true to its form, be an order of magnitutde slower,
+   # while using twice the amount of ram. yeah!
+   $iface = 'p';
 
 } elsif ($^O =~ /irix/) {
    # sigaltstack works like sigstack, i.e. expects stack pointer, not stack base
