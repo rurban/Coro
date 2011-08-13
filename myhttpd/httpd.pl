@@ -1,3 +1,5 @@
+use AnyEvent ();
+
 use Coro;
 use Coro::Semaphore;
 use Coro::SemaphoreSet;
@@ -138,10 +140,9 @@ use Socket;
 use HTTP::Date;
 use Convert::Scalar 'weaken';
 use IO::AIO;
+use AnyEvent::AIO;
 
 IO::AIO::min_parallel $::AIO_PARALLEL;
-
-our $AIO_WATCHER = EV::io IO::AIO::poll_fileno, EV::READ, \&IO::AIO::poll_cb;
 
 our %conn; # $conn{ip}{self} => connobj
 our %uri;  # $uri{ip}{uri}{self}
@@ -211,7 +212,7 @@ sub prune_caches {
    }
 }
 
-our $PRUNE_WATCHER = EV::timer 60, 60, \&prune_caches;
+our $PRUNE_WATCHER = AE::timer 60, 60, \&prune_caches;
 
 sub slog {
    my $self = shift;

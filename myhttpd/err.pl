@@ -106,7 +106,7 @@ sub conn::err_blocked {
    $block->[3] = $::NOW + 10;
 
    if ($limit > $::NOW) {
-      Coro::EV::timer_once $limit - $::NOW;
+      Coro::AnyEvent::sleep $limit - $::NOW;
 
       if ($block->[2] > 20) {
          $block->[3] = $::NOW + $::DYNABLOCK + 360;

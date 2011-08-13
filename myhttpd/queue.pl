@@ -15,7 +15,7 @@ sub new {
       lastspb => 0,
       avgspb  => 0,
    }, $class;
-   $self->{reschedule} = EV::timer 10, 3, sub { $self->wake_next };
+   $self->{reschedule} = AE::timer 10, 3, sub { $self->wake_next };
    $self;
 }
 
