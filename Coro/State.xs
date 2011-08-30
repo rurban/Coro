@@ -1000,7 +1000,16 @@ coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
       
       if (svp)
         {
-          sv_setsv (sv, *svp ? *svp : &PL_sv_undef);
+          SV *ssv;
+
+          if (!*svp)
+            ssv = &PL_sv_undef;
+          else if (SvTYPE (*svp) == SVt_PVCV) /* perlio directly stores a CV in warnhook. ugh. */
+            ssv = sv_2mortal (newRV_inc (*svp));
+          else
+            ssv = *svp;
+
+          sv_setsv (sv, ssv);
           return 0;
         }
     }
