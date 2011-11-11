@@ -4,9 +4,13 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+6.07 Fri Nov 11 21:21:48 CET 2011
+	- work around a bug in PerlIO (setting $SIG{__WARN__} to a PVCV).
+        - update ecb.h.
+
 6.06 Mon Aug  8 23:59:48 CEST 2011
 	- cygwin unfortunately patches the stack at runtime, so we use the pthreads
-          backend, which is an order of magnitutde slower. unfortunately, cygwins
+          backend, which is an order of magnitude slower. unfortunately, cygwins
           pthread implementation isn't very complete either, so allocate the stack
           twice just to be sure.
           (note: cygwin also enables mymalloc, which is NOT THREADSAFE ON WINDOWS,

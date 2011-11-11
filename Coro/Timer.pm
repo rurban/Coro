@@ -6,10 +6,8 @@ Coro::Timer - timers and timeouts, independent of any event loop
 
  # This package is mostly obsoleted by Coro::AnyEvent.
 
- use Coro::Timer qw(sleep timeout);
+ use Coro::Timer qw(timeout);
  # nothing exported by default
-
- sleep 10;
 
 =head1 DESCRIPTION
 
@@ -30,7 +28,7 @@ use base Exporter::;
 use Coro ();
 use Coro::AnyEvent ();
 
-our $VERSION = 6.06;
+our $VERSION = 6.07;
 our @EXPORT_OK = qw(timeout sleep);
 
 # compatibility with older programs
