@@ -126,7 +126,7 @@ use Net::HTTP ();
 use Net::FTP ();
 use Net::NNTP ();
 
-our $VERSION = 6.06;
+our $VERSION = 6.07;
 
 *Socket::inet_aton = \&Coro::Util::inet_aton;
 
