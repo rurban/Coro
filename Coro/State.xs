@@ -183,7 +183,9 @@ typedef struct coro_cctx
 
   /* cpu state */
   void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
-  JMPENV *idle_te; /* same as idle_sp, but for top_env, TODO: remove once stable */
+#ifndef NDEBUG
+  JMPENV *idle_te; /* same as idle_sp, but for top_env */
+#endif
   JMPENV *top_env;
   coro_context cctx;
 
@@ -643,51 +645,52 @@ put_padlist (pTHX_ CV *cv)
 
 /** load & save, init *******************************************************/
 
+ecb_inline void
+swap_sv (SV *a, SV *b)
+{
+  const U32 keep = SVs_PADSTALE | SVs_PADTMP | SVs_PADMY; /* keep these flags */
+  SV tmp;
+
+  /* swap sv_any */
+  SvANY (&tmp) = SvANY (a); SvANY (a) = SvANY (b); SvANY (b) = SvANY (&tmp);
+
+  /* swap sv_flags */
+  SvFLAGS (&tmp) = SvFLAGS (a);
+  SvFLAGS (a)    = (SvFLAGS (a) & keep) | (SvFLAGS (b   ) & ~keep);
+  SvFLAGS (b)    = (SvFLAGS (b) & keep) | (SvFLAGS (&tmp) & ~keep);
+
+#if PERL_VERSION_ATLEAST (5,10,0)
+  /* perl 5.10 and later complicates this _quite_ a bit, but it also
+   * is much faster, so no quarrels here. alternatively, we could
+   * sv_upgrade to avoid this.
+   */
+  {
+    /* swap sv_u */
+    tmp.sv_u = a->sv_u; a->sv_u = b->sv_u; b->sv_u = tmp.sv_u;
+
+    /* if SvANY points to the head, we need to adjust the pointers,
+     * as the pointer for a still points to b, and maybe vice versa.
+     */
+    #define svany_in_head(type) \
+       (((1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV)) & (1 << (type)))
+
+    if (svany_in_head (SvTYPE (a)))
+      SvANY (a) = (void *)((PTRV)SvANY (a) - (PTRV)b + (PTRV)a);
+
+    if (svany_in_head (SvTYPE (b)))
+      SvANY (b) = (void *)((PTRV)SvANY (b) - (PTRV)a + (PTRV)b);
+  }
+#endif
+}
+
 /* swap sv heads, at least logically */
 static void
 swap_svs (pTHX_ Coro__State c)
 {
   int i;
 
-  for (i = 0; i <= AvFILLp (c->swap_sv); )
-    {
-      SV *a = AvARRAY (c->swap_sv)[i++];
-      SV *b = AvARRAY (c->swap_sv)[i++];
-
-      const U32 keep = SVs_PADSTALE | SVs_PADTMP | SVs_PADMY; /* keep these flags */
-      SV tmp;
-
-      /* swap sv_any */
-      SvANY (&tmp) = SvANY (a); SvANY (a) = SvANY (b); SvANY (b) = SvANY (&tmp);
-
-      /* swap sv_flags */
-      SvFLAGS (&tmp) = SvFLAGS (a);
-      SvFLAGS (a)    = (SvFLAGS (a) & keep) | (SvFLAGS (b   ) & ~keep);
-      SvFLAGS (b)    = (SvFLAGS (b) & keep) | (SvFLAGS (&tmp) & ~keep);
-
-#if PERL_VERSION_ATLEAST (5,10,0)
-      /* perl 5.10 complicates this _quite_ a bit, but it also is
-       * much faster, so no quarrels here. alternatively, we could
-       * sv_upgrade to avoid this.
-       */
-      {
-        /* swap sv_u */
-        tmp.sv_u = a->sv_u; a->sv_u = b->sv_u; b->sv_u = tmp.sv_u;
-
-        /* if SvANY points to the head, we need to adjust the pointers,
-         * as the pointer for a still points to b, and maybe vice versa.
-         */
-        #define svany_in_head(type) \
-           (((1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV)) & (1 << (type)))
-
-        if (svany_in_head (SvTYPE (a)))
-          SvANY (a) = (void *)((PTRV)SvANY (a) - (PTRV)b + (PTRV)a);
-
-        if (svany_in_head (SvTYPE (b)))
-          SvANY (b) = (void *)((PTRV)SvANY (b) - (PTRV)a + (PTRV)b);
-      }
-#endif
-    }
+  for (i = 0; i <= AvFILLp (c->swap_sv); i += 2)
+    swap_sv (AvARRAY (c->swap_sv)[i], AvARRAY (c->swap_sv)[i + 1]);
 }
 
 #define SWAP_SVS(coro)				\
