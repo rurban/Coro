@@ -1412,6 +1412,18 @@ cctx_prepare (pTHX)
   slf_frame.check   = slf_check_set_stacklevel;
 }
 
+/* try to exit the same way perl's main function would do */
+/* we do not bother resetting the environment or other things *7
+/* that are not, uhm, essential */
+/* this obviously also doesn't work when perl is embedded */
+static void ecb_noinline ecb_cold
+perlish_exit (void)
+{
+  int exitstatus = perl_destruct (PL_curinterp);
+  perl_free (PL_curinterp);
+  exit (exitstatus);
+}
+
 /* the tail of transfer: execute stuff we can only do after a transfer */
 ecb_inline void
 transfer_tail (pTHX)
@@ -1455,14 +1467,10 @@ cctx_run (void *arg)
     /*
      * If perl-run returns we assume exit() was being called or the coro
      * fell off the end, which seems to be the only valid (non-bug)
-     * reason for perl_run to return. We try to exit by jumping to the
-     * bootstrap-time "top" top_env, as we cannot restore the "main"
-     * coroutine as Coro has no such concept.
-     * This actually isn't valid with the pthread backend, but OSes requiring
-     * that backend are too broken to do it in a standards-compliant way.
+     * reason for perl_run to return. We try to mimic whatever perl is normally
+     * doing in that case. YMMV.
      */
-    PL_top_env = main_top_env;
-    JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
+    perlish_exit ();
   }
 }
 

@@ -4,6 +4,9 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 
+	- be more aggressive about exiting like perl does - formerly,
+          exiting from the non-main thread would not execute END blocks.
+
 6.07 Fri Nov 11 21:21:48 CET 2011
 	- work around a bug in PerlIO (setting $SIG{__WARN__} to a PVCV).
         - update ecb.h.
