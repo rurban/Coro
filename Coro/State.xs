@@ -103,9 +103,6 @@ static void *coro_thx;
 # endif
 #endif
 
-/* used in state.h */
-#define VAR(name,type) VARx(name, PL_ ## name, type)
-
 #ifdef __linux
 # include <time.h> /* for timespec */
 # include <syscall.h> /* for SYS_* */
@@ -215,9 +212,8 @@ enum
 /* the structure where most of the perl state is stored, overlaid on the cxstack */
 typedef struct
 {
-#define VARx(name,expr,type) type name;
-# include "state.h"
-#undef VARx
+  #define VARx(name,expr,type) type name;
+  #include "state.h"
 } perl_slots;
 
 /* how many context stack entries do we need for perl_slots */
@@ -712,8 +708,7 @@ load_perl (pTHX_ Coro__State c)
   load_perl_slots (slot);
 #else
   #define VARx(name,expr,type) expr = slot->name;
-  # include "state.h"
-  #undef VARx
+  #include "state.h"
 #endif
 
   {
@@ -845,8 +840,7 @@ save_perl (pTHX_ Coro__State c)
     save_perl_slots (slot);
 #else
     #define VARx(name,expr,type) slot->name = expr;
-    # include "state.h"
-    #undef VARx
+    #include "state.h"
 #endif
   }
 }
@@ -3403,9 +3397,8 @@ jit_init (pTHX)
   eval_pv ("require 'Coro/jit-" CORO_JIT_TYPE ".pl'", 1);
 
   PUSHMARK (SP);
-#define VARx(name,expr,type) pushav_4uv (aTHX_ (UV)&(expr), sizeof (expr), offsetof (perl_slots, name), sizeof (type));
-# include "state.h"
-#undef VARx
+  #define VARx(name,expr,type) pushav_4uv (aTHX_ (UV)&(expr), sizeof (expr), offsetof (perl_slots, name), sizeof (type));
+  #include "state.h"
   count = call_pv ("Coro::State::_jit", G_ARRAY);
   SPAGAIN;
 
