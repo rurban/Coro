@@ -1412,6 +1412,13 @@ cctx_prepare (pTHX)
   slf_frame.check   = slf_check_set_stacklevel;
 }
 
+/* the tail of transfer: execute stuff we can only do after a transfer */
+ecb_inline void
+transfer_tail (pTHX)
+{
+  free_coro_mortal (aTHX);
+}
+
 /* try to exit the same way perl's main function would do */
 /* we do not bother resetting the environment or other things *7
 /* that are not, uhm, essential */
@@ -1422,13 +1429,6 @@ perlish_exit (void)
   int exitstatus = perl_destruct (PL_curinterp);
   perl_free (PL_curinterp);
   exit (exitstatus);
-}
-
-/* the tail of transfer: execute stuff we can only do after a transfer */
-ecb_inline void
-transfer_tail (pTHX)
-{
-  free_coro_mortal (aTHX);
 }
 
 /*
