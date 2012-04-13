@@ -1,3 +1,8 @@
+/* used in state.h */
+#ifndef VAR
+  #define VAR(name,type) VARx(name, PL_ ## name, type)
+#endif
+
 /* list the interpreter variables that need to be saved/restored */
 
 VARx(defsv, GvSV (PL_defgv), SV *)
@@ -83,4 +88,7 @@ VAR(hints,         U32)            /* pragma-tic compile-time flags */
 #if PERL_VERSION_ATLEAST (5,10,0)
 VAR(parser,        yy_parser *)
 #endif
+
+#undef VAR
+#undef VARx
 

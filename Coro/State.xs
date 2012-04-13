@@ -103,9 +103,6 @@ static void *coro_thx;
 # endif
 #endif
 
-/* used in state.h */
-#define VAR(name,type) VARx(name, PL_ ## name, type)
-
 #ifdef __linux
 # include <time.h> /* for timespec */
 # include <syscall.h> /* for SYS_* */
@@ -183,7 +180,9 @@ typedef struct coro_cctx
 
   /* cpu state */
   void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
-  JMPENV *idle_te; /* same as idle_sp, but for top_env, TODO: remove once stable */
+#ifndef NDEBUG
+  JMPENV *idle_te; /* same as idle_sp, but for top_env */
+#endif
   JMPENV *top_env;
   coro_context cctx;
 
@@ -213,9 +212,8 @@ enum
 /* the structure where most of the perl state is stored, overlaid on the cxstack */
 typedef struct
 {
-#define VARx(name,expr,type) type name;
-# include "state.h"
-#undef VARx
+  #define VARx(name,expr,type) type name;
+  #include "state.h"
 } perl_slots;
 
 /* how many context stack entries do we need for perl_slots */
@@ -643,51 +641,52 @@ put_padlist (pTHX_ CV *cv)
 
 /** load & save, init *******************************************************/
 
+ecb_inline void
+swap_sv (SV *a, SV *b)
+{
+  const U32 keep = SVs_PADSTALE | SVs_PADTMP | SVs_PADMY; /* keep these flags */
+  SV tmp;
+
+  /* swap sv_any */
+  SvANY (&tmp) = SvANY (a); SvANY (a) = SvANY (b); SvANY (b) = SvANY (&tmp);
+
+  /* swap sv_flags */
+  SvFLAGS (&tmp) = SvFLAGS (a);
+  SvFLAGS (a)    = (SvFLAGS (a) & keep) | (SvFLAGS (b   ) & ~keep);
+  SvFLAGS (b)    = (SvFLAGS (b) & keep) | (SvFLAGS (&tmp) & ~keep);
+
+#if PERL_VERSION_ATLEAST (5,10,0)
+  /* perl 5.10 and later complicates this _quite_ a bit, but it also
+   * is much faster, so no quarrels here. alternatively, we could
+   * sv_upgrade to avoid this.
+   */
+  {
+    /* swap sv_u */
+    tmp.sv_u = a->sv_u; a->sv_u = b->sv_u; b->sv_u = tmp.sv_u;
+
+    /* if SvANY points to the head, we need to adjust the pointers,
+     * as the pointer for a still points to b, and maybe vice versa.
+     */
+    #define svany_in_head(type) \
+       (((1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV)) & (1 << (type)))
+
+    if (svany_in_head (SvTYPE (a)))
+      SvANY (a) = (void *)((PTRV)SvANY (a) - (PTRV)b + (PTRV)a);
+
+    if (svany_in_head (SvTYPE (b)))
+      SvANY (b) = (void *)((PTRV)SvANY (b) - (PTRV)a + (PTRV)b);
+  }
+#endif
+}
+
 /* swap sv heads, at least logically */
 static void
 swap_svs (pTHX_ Coro__State c)
 {
   int i;
 
-  for (i = 0; i <= AvFILLp (c->swap_sv); )
-    {
-      SV *a = AvARRAY (c->swap_sv)[i++];
-      SV *b = AvARRAY (c->swap_sv)[i++];
-
-      const U32 keep = SVs_PADSTALE | SVs_PADTMP | SVs_PADMY; /* keep these flags */
-      SV tmp;
-
-      /* swap sv_any */
-      SvANY (&tmp) = SvANY (a); SvANY (a) = SvANY (b); SvANY (b) = SvANY (&tmp);
-
-      /* swap sv_flags */
-      SvFLAGS (&tmp) = SvFLAGS (a);
-      SvFLAGS (a)    = (SvFLAGS (a) & keep) | (SvFLAGS (b   ) & ~keep);
-      SvFLAGS (b)    = (SvFLAGS (b) & keep) | (SvFLAGS (&tmp) & ~keep);
-
-#if PERL_VERSION_ATLEAST (5,10,0)
-      /* perl 5.10 complicates this _quite_ a bit, but it also is
-       * much faster, so no quarrels here. alternatively, we could
-       * sv_upgrade to avoid this.
-       */
-      {
-        /* swap sv_u */
-        tmp.sv_u = a->sv_u; a->sv_u = b->sv_u; b->sv_u = tmp.sv_u;
-
-        /* if SvANY points to the head, we need to adjust the pointers,
-         * as the pointer for a still points to b, and maybe vice versa.
-         */
-        #define svany_in_head(type) \
-           (((1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV)) & (1 << (type)))
-
-        if (svany_in_head (SvTYPE (a)))
-          SvANY (a) = (void *)((PTRV)SvANY (a) - (PTRV)b + (PTRV)a);
-
-        if (svany_in_head (SvTYPE (b)))
-          SvANY (b) = (void *)((PTRV)SvANY (b) - (PTRV)a + (PTRV)b);
-      }
-#endif
-    }
+  for (i = 0; i <= AvFILLp (c->swap_sv); i += 2)
+    swap_sv (AvARRAY (c->swap_sv)[i], AvARRAY (c->swap_sv)[i + 1]);
 }
 
 #define SWAP_SVS(coro)				\
@@ -709,8 +708,7 @@ load_perl (pTHX_ Coro__State c)
   load_perl_slots (slot);
 #else
   #define VARx(name,expr,type) expr = slot->name;
-  # include "state.h"
-  #undef VARx
+  #include "state.h"
 #endif
 
   {
@@ -842,8 +840,7 @@ save_perl (pTHX_ Coro__State c)
     save_perl_slots (slot);
 #else
     #define VARx(name,expr,type) slot->name = expr;
-    # include "state.h"
-    #undef VARx
+    #include "state.h"
 #endif
   }
 }
@@ -1416,6 +1413,18 @@ transfer_tail (pTHX)
   free_coro_mortal (aTHX);
 }
 
+/* try to exit the same way perl's main function would do */
+/* we do not bother resetting the environment or other things *7
+/* that are not, uhm, essential */
+/* this obviously also doesn't work when perl is embedded */
+static void ecb_noinline ecb_cold
+perlish_exit (pTHX)
+{
+  int exitstatus = perl_destruct (PL_curinterp);
+  perl_free (PL_curinterp);
+  exit (exitstatus);
+}
+
 /*
  * this is a _very_ stripped down perl interpreter ;)
  */
@@ -1452,14 +1461,10 @@ cctx_run (void *arg)
     /*
      * If perl-run returns we assume exit() was being called or the coro
      * fell off the end, which seems to be the only valid (non-bug)
-     * reason for perl_run to return. We try to exit by jumping to the
-     * bootstrap-time "top" top_env, as we cannot restore the "main"
-     * coroutine as Coro has no such concept.
-     * This actually isn't valid with the pthread backend, but OSes requiring
-     * that backend are too broken to do it in a standards-compliant way.
+     * reason for perl_run to return. We try to mimic whatever perl is normally
+     * doing in that case. YMMV.
      */
-    PL_top_env = main_top_env;
-    JMPENV_JUMP (2); /* I do not feel well about the hardcoded 2 at all */
+    perlish_exit (aTHX);
   }
 }
 
@@ -3392,9 +3397,8 @@ jit_init (pTHX)
   eval_pv ("require 'Coro/jit-" CORO_JIT_TYPE ".pl'", 1);
 
   PUSHMARK (SP);
-#define VARx(name,expr,type) pushav_4uv (aTHX_ (UV)&(expr), sizeof (expr), offsetof (perl_slots, name), sizeof (type));
-# include "state.h"
-#undef VARx
+  #define VARx(name,expr,type) pushav_4uv (aTHX_ (UV)&(expr), sizeof (expr), offsetof (perl_slots, name), sizeof (type));
+  #include "state.h"
   count = call_pv ("Coro::State::_jit", G_ARRAY);
   SPAGAIN;
 

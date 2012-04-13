@@ -90,7 +90,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 6.07;
+   our $VERSION = 6.08;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -215,7 +215,7 @@ in the code below, and use it in your threads:
 Another way is to use dynamic winders, see C<Coro::on_enter> and
 C<Coro::on_leave> for this.
 
-Yet another way that works onyl for variables is C<< ->swap_sv >>.
+Yet another way that works only for variables is C<< ->swap_sv >>.
 
 =item $prev->transfer ($next)
 
@@ -272,6 +272,11 @@ thread is entered and left again, i.e. it is similar to:
 
 Except that it doesn't make an copies and works on hashes and even more
 exotic values (code references!).
+
+When called on the current thread (i.e. from within the thread that will
+receive the swap_sv), then this method acts as if it was called from
+another thread, i.e. after adding the two SV's to the threads swap list
+their values will be swapped.
 
 Needless to say, this function can be very very dangerous: you can easily
 swap a hash with a reference (i.e. C<%hash> I<becomes> a reference), and perl

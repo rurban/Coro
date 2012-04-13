@@ -8,7 +8,7 @@ Coro::AnyEvent - integrate threads into AnyEvent
  use AnyEvent;
  # using both Coro and AnyEvent will automatically load Coro::AnyEvent
 
- # or load it manually for it's utility functions:
+ # or load it manually for its utility functions:
  use Coro::AnyEvent;
 
  Coro::AnyEvent::sleep 5;     # block current thread for 5s
@@ -22,7 +22,7 @@ Coro::AnyEvent - integrate threads into AnyEvent
 =head1 DESCRIPTION
 
 When one naively starts to use threads in Perl, one will quickly run
-into the problem that threads that block on a syscall (sleeping,
+into the problem that threads which block on a syscall (sleeping,
 reading from a socket etc.) will block all threads.
 
 If one then uses an event loop, the problem is that the event loop has
@@ -51,7 +51,7 @@ method that should work with any event loop supported by L<AnyEvent>.
 =head2 RUN AN EVENT LOOP - OR NOT?
 
 For performance reasons, it is recommended that the main program or
-something else runs the event loop of the event model you use, i.e.
+something else run the event loop of the event model you use, i.e.
 
    use Gtk2; # <- the event model
    use AnyEvent;
@@ -79,12 +79,12 @@ get confusing:
       print "ping...\n";
    }
 
-You can also do nothing, in which case Coro:AnyEvent will invoke the event
+You can also do nothing, in which case Coro::AnyEvent will invoke the event
 loop as needed, which is less efficient, but sometimes very convenient.
 
-What you I<MUST NOT DO EVER> is to block inside an event loop
-callback. The reason is that most event loops are not reentrant and this
-can cause a deadlock at best and corrupt memory at worst.
+What you I<MUST NOT EVER DO> is to block inside an event loop
+callback. The reason is that most event loops are not reentrant and
+this can cause a deadlock at best and corrupt memory at worst.
 
 Coro will try to catch you when you block in the event loop
 ("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
@@ -105,7 +105,7 @@ handy (see the Coro manpage for details):
       Coro::rouse_wait;
    }
 
-=head2 EVENT MODULES OTHER THEN ANYEVENT
+=head2 EVENT MODULES OTHER THAN ANYEVENT
 
 Keep in mind that, as shipped, Coro and Coro::AnyEvent only work with
 AnyEvent, and only when AnyEvent is actually used (i.e. initialised), so
@@ -164,7 +164,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 6.07;
+our $VERSION = 6.08;
 
 #############################################################################
 # idle handler
@@ -427,10 +427,11 @@ loop recursively from any coroutine. This is not usually a difficult
 restriction to live with, just use condvars, C<unblock_sub> or other means
 of inter-coroutine-communications.
 
-If you use a module that supports AnyEvent (or uses the same event loop
-as AnyEvent, making the compatible), and it offers callbacks of any kind,
-then you must not block in them, either (or use e.g. C<unblock_sub>), see
-the description of C<unblock_sub> in the L<Coro> module.
+If you use a module that supports AnyEvent (or uses the same event
+loop as AnyEvent, making it implicitly compatible), and it offers
+callbacks of any kind, then you must not block in them, either (or use
+e.g. C<unblock_sub>), see the description of C<unblock_sub> in the
+L<Coro> module.
 
 This also means that you should load the module as early as possible,
 as only condvars created after this module has been loaded will work

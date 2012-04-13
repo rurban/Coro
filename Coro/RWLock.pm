@@ -38,7 +38,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 6.07;
+our $VERSION = 6.08;
 
 =item $l = new Coro::RWLock;
 
