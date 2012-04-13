@@ -1418,7 +1418,7 @@ transfer_tail (pTHX)
 /* that are not, uhm, essential */
 /* this obviously also doesn't work when perl is embedded */
 static void ecb_noinline ecb_cold
-perlish_exit (void)
+perlish_exit (pTHX)
 {
   int exitstatus = perl_destruct (PL_curinterp);
   perl_free (PL_curinterp);
@@ -1464,7 +1464,7 @@ cctx_run (void *arg)
      * reason for perl_run to return. We try to mimic whatever perl is normally
      * doing in that case. YMMV.
      */
-    perlish_exit ();
+    perlish_exit (aTHX);
   }
 }
 
