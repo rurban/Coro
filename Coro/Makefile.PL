@@ -351,6 +351,12 @@ x86/amd64 on certain unix clones). Otherwise, it will be disabled. It
 should be safe to leave on - this setting is only here so you can switch
 it off in case of problems.
 
+Note that some broken kernels (often calling themselves "hardened") break
+all JIT generation by manipulating some system calls. If you get bus
+errors or segmentation faults immediately when the JIT is enabled but not
+without, then note that disabling the JIT only fixes some symptoms, not
+the underlying problem, and you might run into other problems later.
+
 EOF
 
 my $orgasm = $ENV{CORO_JIT} || "y";
