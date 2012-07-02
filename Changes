@@ -6,6 +6,7 @@ TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
 	- use fd = -1 in mmap.
+        - cast I32 to int in error message printf.
 
 6.08 Fri Apr 13 12:05:47 CEST 2012
 	- be more aggressive about exiting like perl does - formerly,

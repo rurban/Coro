@@ -91,15 +91,15 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_CURRENT             SvRV (GCoroAPI->current)
 #define CORO_READYHOOK           (GCoroAPI->readyhook)
 
-#define I_CORO_API(YourName)                                                             \
-STMT_START {                                                                             \
-  SV *sv = perl_get_sv ("Coro::API", 0);                                                 \
-  if (!sv) croak ("Coro::API not found");                                                \
-  GCoroAPI = (struct CoroAPI*) SvIV (sv);                                                \
-  if (GCoroAPI->ver != CORO_API_VERSION                                                  \
-      || GCoroAPI->rev < CORO_API_REVISION)                                              \
-    croak ("Coro::API version mismatch (%d.%d vs. %d.%d) -- please recompile %s",        \
-           GCoroAPI->ver, GCoroAPI->rev, CORO_API_VERSION, CORO_API_REVISION, YourName); \
+#define I_CORO_API(YourName)                                                                       \
+STMT_START {                                                                                       \
+  SV *sv = perl_get_sv ("Coro::API", 0);                                                           \
+  if (!sv) croak ("Coro::API not found");                                                          \
+  GCoroAPI = (struct CoroAPI*) SvIV (sv);                                                          \
+  if (GCoroAPI->ver != CORO_API_VERSION                                                            \
+      || GCoroAPI->rev < CORO_API_REVISION)                                                        \
+    croak ("Coro::API version mismatch (%d.%d vs. %d.%d) -- please recompile %s",                  \
+           (int)GCoroAPI->ver, (int)GCoroAPI->rev, CORO_API_VERSION, CORO_API_REVISION, YourName); \
 } STMT_END
 
 #endif
