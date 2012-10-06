@@ -3665,15 +3665,18 @@ is_ready (Coro::State coro)
         RETVAL
 
 void
-throw (Coro::State self, SV *exception = &PL_sv_undef)
+throw (SV *self, SV *exception = &PL_sv_undef)
 	PROTOTYPE: $;$
         CODE:
 {
+	struct coro *coro    = SvSTATE (self);
 	struct coro *current = SvSTATE_current;
-	SV **exceptionp = self == current ? &CORO_THROW : &self->except;
+	SV **exceptionp = coro == current ? &CORO_THROW : &coro->except;
         SvREFCNT_dec (*exceptionp);
         SvGETMAGIC (exception);
         *exceptionp = SvOK (exception) ? newSVsv (exception) : 0;
+
+	api_ready (aTHX_ self);
 }
 
 void
