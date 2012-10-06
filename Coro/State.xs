@@ -1506,7 +1506,7 @@ cctx_new_run (void)
 #if HAVE_MMAP
   cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
   /* mmap supposedly does allocate-on-write for us */
-  cctx->sptr = mmap (0, cctx->ssize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, 0, 0);
+  cctx->sptr = mmap (0, cctx->ssize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, -1, 0);
 
   if (cctx->sptr != (void *)-1)
     {
@@ -3665,15 +3665,18 @@ is_ready (Coro::State coro)
         RETVAL
 
 void
-throw (Coro::State self, SV *exception = &PL_sv_undef)
+throw (SV *self, SV *exception = &PL_sv_undef)
 	PROTOTYPE: $;$
         CODE:
 {
+	struct coro *coro    = SvSTATE (self);
 	struct coro *current = SvSTATE_current;
-	SV **exceptionp = self == current ? &CORO_THROW : &self->except;
+	SV **exceptionp = coro == current ? &CORO_THROW : &coro->except;
         SvREFCNT_dec (*exceptionp);
         SvGETMAGIC (exception);
         *exceptionp = SvOK (exception) ? newSVsv (exception) : 0;
+
+	api_ready (aTHX_ self);
 }
 
 void

@@ -5,6 +5,16 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
+6.09 Sat Oct  6 23:25:02 CEST 2012
+	- Coro::EV I/O watchers were not interruptible by exceptions
+          (Coro::State::throw) (testcase by sten).
+        - ->throw now puts threads into the ready queue, as this seems to
+          be expected by existing code, and code that doesn't cope with spurious
+          wakeups needs fixing anyway.
+	- use fd -1 in mmap.
+        - cast I32 to int in error message printf.
+        - warn about broken so-called "hardened" kernels.
+
 6.08 Fri Apr 13 12:05:47 CEST 2012
 	- be more aggressive about exiting like perl does - formerly,
           exiting from the non-main thread would not execute END blocks.

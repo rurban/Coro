@@ -199,6 +199,10 @@ slf_check_rw (pTHX_ struct CoroSLF *frame)
 {
   SV *data = (SV *)frame->data;
 
+  /* return early when an exception is pending */
+  if (CORO_THROW)
+    return 0;
+
   if (SvROK (data))
     return 1;
   else

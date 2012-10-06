@@ -105,37 +105,37 @@ WriteMakefile(
         }
     },
     PM           => {
-    		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
+		    'Coro.pm'		=> '$(INST_LIBDIR)/Coro.pm',
 
-    		    'Coro/State.pm'	=> '$(INST_LIBDIR)/Coro/State.pm',
-    		    'Coro/jit-amd64-unix.pl' => '$(INST_LIBDIR)/Coro/jit-amd64-unix.pl',
-    		    'Coro/jit-x86-unix.pl'   => '$(INST_LIBDIR)/Coro/jit-x86-unix.pl',
+		    'Coro/State.pm'	=> '$(INST_LIBDIR)/Coro/State.pm',
+		    'Coro/jit-amd64-unix.pl' => '$(INST_LIBDIR)/Coro/jit-amd64-unix.pl',
+		    'Coro/jit-x86-unix.pl'   => '$(INST_LIBDIR)/Coro/jit-x86-unix.pl',
 
-    		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
-    		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',
+		    'Coro/MakeMaker.pm'	=> '$(INST_LIBDIR)/Coro/MakeMaker.pm',
+		    'Coro/CoroAPI.h'	=> '$(INST_LIBDIR)/Coro/CoroAPI.h',
 
-#    		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
+#		    'Coro/Cont.pm'	=> '$(INST_LIBDIR)/Coro/Cont.pm',
 
-    		    'Coro/Specific.pm'	=> '$(INST_LIBDIR)/Coro/Specific.pm',
+		    'Coro/Specific.pm'	=> '$(INST_LIBDIR)/Coro/Specific.pm',
 
-    		    'Coro/Timer.pm'	=> '$(INST_LIBDIR)/Coro/Timer.pm',
-    		    'Coro/Signal.pm'	=> '$(INST_LIBDIR)/Coro/Signal.pm',
-    		    'Coro/Channel.pm'	=> '$(INST_LIBDIR)/Coro/Channel.pm',
-    		    'Coro/Semaphore.pm'	=> '$(INST_LIBDIR)/Coro/Semaphore.pm',
-    		    'Coro/SemaphoreSet.pm'=> '$(INST_LIBDIR)/Coro/SemaphoreSet.pm',
-    		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
+		    'Coro/Timer.pm'	=> '$(INST_LIBDIR)/Coro/Timer.pm',
+		    'Coro/Signal.pm'	=> '$(INST_LIBDIR)/Coro/Signal.pm',
+		    'Coro/Channel.pm'	=> '$(INST_LIBDIR)/Coro/Channel.pm',
+		    'Coro/Semaphore.pm'	=> '$(INST_LIBDIR)/Coro/Semaphore.pm',
+		    'Coro/SemaphoreSet.pm'=> '$(INST_LIBDIR)/Coro/SemaphoreSet.pm',
+		    'Coro/RWLock.pm'	=> '$(INST_LIBDIR)/Coro/RWLock.pm',
 
-    		    'Coro/Debug.pm'	=> '$(INST_LIBDIR)/Coro/Debug.pm',
-    		    'Coro/Util.pm'	=> '$(INST_LIBDIR)/Coro/Util.pm',
-    		    'Coro/Select.pm'	=> '$(INST_LIBDIR)/Coro/Select.pm',
-    		    'Coro/Handle.pm'	=> '$(INST_LIBDIR)/Coro/Handle.pm',
-    		    'Coro/Socket.pm'	=> '$(INST_LIBDIR)/Coro/Socket.pm',
+		    'Coro/Debug.pm'	=> '$(INST_LIBDIR)/Coro/Debug.pm',
+		    'Coro/Util.pm'	=> '$(INST_LIBDIR)/Coro/Util.pm',
+		    'Coro/Select.pm'	=> '$(INST_LIBDIR)/Coro/Select.pm',
+		    'Coro/Handle.pm'	=> '$(INST_LIBDIR)/Coro/Handle.pm',
+		    'Coro/Socket.pm'	=> '$(INST_LIBDIR)/Coro/Socket.pm',
 
-    		    'Coro/AIO.pm'	=> '$(INST_LIBDIR)/Coro/AIO.pm',
-    		    'Coro/BDB.pm'	=> '$(INST_LIBDIR)/Coro/BDB.pm',
-    		    'Coro/LWP.pm'	=> '$(INST_LIBDIR)/Coro/LWP.pm',
-    		    'Coro/Storable.pm'	=> '$(INST_LIBDIR)/Coro/Storable.pm',
-    		    'Coro/AnyEvent.pm'	=> '$(INST_LIBDIR)/Coro/AnyEvent.pm',
+		    'Coro/AIO.pm'	=> '$(INST_LIBDIR)/Coro/AIO.pm',
+		    'Coro/BDB.pm'	=> '$(INST_LIBDIR)/Coro/BDB.pm',
+		    'Coro/LWP.pm'	=> '$(INST_LIBDIR)/Coro/LWP.pm',
+		    'Coro/Storable.pm'	=> '$(INST_LIBDIR)/Coro/Storable.pm',
+		    'Coro/AnyEvent.pm'	=> '$(INST_LIBDIR)/Coro/AnyEvent.pm',
                     },
 );
 
