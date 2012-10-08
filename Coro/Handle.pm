@@ -45,7 +45,7 @@ use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
 
 use base 'Exporter';
 
-our $VERSION = 6.09;
+our $VERSION = "6.10";
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
