@@ -14,6 +14,8 @@
 #include "perliol.h"
 
 #include "schmorp.h"
+
+#define ECB_NO_THREADS 1
 #include "ecb.h"
 
 #include <stddef.h>
