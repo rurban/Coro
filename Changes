@@ -5,6 +5,11 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
+6.10 Tue Oct  9 01:14:27 CEST 2012
+	- updated ecb.h, it had a typo that caused it to not compile on many
+          big endian systems (reported by many people).
+        - disable memory fences in ecb.h to improve portability.
+
 6.09 Sat Oct  6 23:25:02 CEST 2012
 	- Coro::EV I/O watchers were not interruptible by exceptions
           (Coro::State::throw) (testcase by sten).
