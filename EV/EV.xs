@@ -114,6 +114,7 @@ slf_init_timed_io (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   frame->prepare = GCoroAPI->prepare_schedule;
   frame->check   = slf_check_once;
 
+  return;
   ev_once (
     EV_DEFAULT_UC,
     fd,
