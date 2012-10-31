@@ -5,6 +5,11 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
+TODO: add peerhost/peerport from IO::Socket::INET etc.
+
+	- recommend AnyEvent 7+ or EV 4+, also require EV
+          version 4 or newer for Coro::EV.
+
 6.10 Tue Oct  9 01:14:27 CEST 2012
 	- updated ecb.h, it had a typo that caused it to not compile on many
           big endian systems (reported by many people).
