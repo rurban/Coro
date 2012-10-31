@@ -96,6 +96,7 @@ static void
 slf_init_timed_io (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 {
   SV *data;
+  int fd;
 
   if (items < 2 || items > 3)
     croak ("Coro::EV::timed_io_once requires exactly two or three parameters, not %d.\n", items);
@@ -106,6 +107,8 @@ slf_init_timed_io (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   if (items >= 3)
     SvGETMAGIC (arg [2]);
 
+  fd = sv_fileno (arg [0]);
+
   data = sv_2mortal (newRV_inc (CORO_CURRENT));
   frame->data    = (void *)data;
   frame->prepare = GCoroAPI->prepare_schedule;
@@ -113,7 +116,7 @@ slf_init_timed_io (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
   ev_once (
     EV_DEFAULT_UC,
-    sv_fileno (arg [0]),
+    fd,
     SvIV (arg [1]),
     items >= 3 && SvOK (arg [2]) ? SvNV (arg [2]) : -1.,
     once_cb,
