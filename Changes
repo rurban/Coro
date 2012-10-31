@@ -7,6 +7,8 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
 TODO: add peerhost/peerport from IO::Socket::INET etc.
 
+	- bad things could happen in Coro::EV::timed_once if  the arguments
+          were wrong. Also support magic values as timed_io_once args.
 	- recommend AnyEvent 7+ or EV 4+, also require EV
           version 4 or newer for Coro::EV.
 
