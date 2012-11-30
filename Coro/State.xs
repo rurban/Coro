@@ -375,7 +375,7 @@ time_init (pTHX)
   SV **svp;
 
   require_pv ("Time/HiRes.pm");
-  
+
   svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
 
   if (!svp)          croak ("Time::HiRes is required, but missing. Caught");
@@ -996,7 +996,7 @@ coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
 
       if (strEQ (s, "__DIE__" )) svp = &PL_diehook;
       if (strEQ (s, "__WARN__")) svp = &PL_warnhook;
-      
+
       if (svp)
         {
           SV *ssv;
@@ -1112,7 +1112,7 @@ init_perl (pTHX_ struct coro *coro)
   /* recreate the die/warn hooks */
   PL_diehook  = SvREFCNT_inc (rv_diehook);
   PL_warnhook = SvREFCNT_inc (rv_warnhook);
-  
+
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
   GvSV (PL_errgv)    = newSV (0);
@@ -1733,7 +1733,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
   slf_destroy (aTHX_ coro);
 
   coro->flags |= CF_ZOMBIE;
-  
+
   if (coro->flags & CF_READY)
     {
       /* reduce nready, as destroying a ready coro effectively unreadies it */
@@ -2176,7 +2176,7 @@ static void
 coro_set_status (pTHX_ struct coro *coro, SV **arg, int items)
 {
   AV *av;
-  
+ 
   if (coro->status)
     {
       av = coro->status;
@@ -2233,7 +2233,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   coro_hv = coro->hv;
 
   coro_set_status (aTHX_ coro, arg + 1, items - 1);
-  
+ 
   if (ecb_expect_false (coro->flags & CF_NOCANCEL))
     {
       /* coro currently busy cancelling something, so just notify it */
@@ -2422,7 +2422,7 @@ static int
 slf_check_rouse_wait (pTHX_ struct CoroSLF *frame)
 {
   SV *data = (SV *)frame->data;
-  
+ 
   if (CORO_THROW)
     return 0;
 
@@ -2468,7 +2468,7 @@ slf_init_rouse_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     }
 
   if (!SvROK (cb)
-      || SvTYPE (SvRV (cb)) != SVt_PVCV 
+      || SvTYPE (SvRV (cb)) != SVt_PVCV
       || CvXSUB ((CV *)SvRV (cb)) != coro_rouse_callback)
     croak ("Coro::rouse_wait called with illegal callback argument,");
 
@@ -3818,7 +3818,7 @@ BOOT:
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
         cv_pool_handler    = get_cv ("Coro::pool_handler", GV_ADD); SvREADONLY_on (cv_pool_handler);
         CvNODEBUG_on (get_cv ("Coro::_pool_handler", 0)); /* work around a debugger bug */
- 
+
 	coro_stash = gv_stashpv ("Coro", TRUE);
 
         newCONSTSUB (coro_stash, "PRIO_MAX",    newSViv (CORO_PRIO_MAX));
