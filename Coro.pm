@@ -1131,7 +1131,7 @@ function mentioned above:
    }
 
 In the case where C<rouse_cb> and C<rouse_wait> are not flexible enough,
-you can roll your own, using C<schedule>:
+you can roll your own, using C<schedule> and C<ready>:
 
    sub wait_for_child($) {
       my ($pid) = @_;
@@ -1144,7 +1144,8 @@ you can roll your own, using C<schedule>:
       # pass a closure to ->child
       my $watcher = AnyEvent->child (pid => $pid, cb => sub {
          $rstatus = $_[1]; # remember rstatus
-         $done = 1; # mark $rstatus as valud
+         $done = 1;        # mark $rstatus as valid
+         $current->ready;  # wake up the waiting thread
       });
 
       # wait until the closure has been called
