@@ -21,7 +21,7 @@ if (eval { require Event }) {
    if ($Event::VERSION < 0.86 or $Event::VERSION == 0.88) {
       print <<EOF
 
-*** 
+***
 *** WARNING: Event version $Event::VERSION found, NOT building Event support.
 ***
 *** This version of Event is broken. The only currently known non-broken
@@ -43,7 +43,7 @@ if (eval { require EV }) {
    if ($EV::VERSION < 4.0) {
       print <<EOF
 
-*** 
+***
 *** WARNING: EV version $EV::VERSION found, NOT building EV support.
 ***
 *** This version is ABI-incompatible with Coro, please upgrade to at least 4.0.

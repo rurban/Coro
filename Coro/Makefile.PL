@@ -13,7 +13,7 @@ use Config;
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro has a number of configuration options. Due to its maturity, the
 defaults that Coro chooses are usually fine, so you can decide to skip
@@ -47,12 +47,12 @@ if (exists $ENV{CORO_INTERFACE}) {
 
 } elsif ($^O =~ /mswin32/i) {
    # nothing works, really, without deep hacks
-   $iface = 'w';
+   $iface = "f";
 
 } elsif ($^O =~ /cygwin/) {
    # cygwin true to its form, be an order of magnitutde slower,
-   # while using twice the amount of ram. yeah!
-   $iface = 'p';
+   # while using twice the amount of ram. but it works! yeah!
+   $iface = "p";
 
 } elsif ($^O =~ /irix/) {
    # sigaltstack works like sigstack, i.e. expects stack pointer, not stack base
@@ -186,6 +186,9 @@ w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
    Perl), although, as there is no standard on how to do this under
    windows, different environments might work differently. Doh.
 
+f  Microsoft Windows. Try this on Microsoft Windows if w fails. It is slower
+   and uses a lot more memory, but should be working all the time.
+
 p  Use pthread API. Try to avoid this option, it was only created to
    make a point about the programming language shootout. It is unlikely
    to work with perls that have windows process emulation enabled ("perl
@@ -205,7 +208,7 @@ EOF
 retry:
 
 my $r = prompt "Use which implementation,\n" .
-               "<s>etjmp, <u>ctx, <a>sm, <i>rix, <l>inux, <w>indows or <p>threads?",
+               "<s>etjmp, <u>ctx, <a>sm, <i>rix, <l>inux, <p>threads, <w>indows, <f>iber?",
                $iface;
 $iface = lc $1 if $r =~ /(\S)/;
 
@@ -226,6 +229,9 @@ if ($iface eq "u") {
 } elsif ($iface eq "w") {
    $DEFINE .= " -DCORO_LOSER";
    print "\nUsing windows-specific implementation\n\n";
+} elsif ($iface eq "f") {
+   $DEFINE .= " -DCORO_FIBER";
+   print "\nUsing windows-specific fiber implementation\n\n";
 } elsif ($iface eq "a") {
    $DEFINE .= " -DCORO_ASM";
    print "\nUsing handcoded assembler implementation\n\n";
