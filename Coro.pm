@@ -359,7 +359,7 @@ our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
 =item $Coro::main
 
 This variable stores the Coro object that represents the main
-program. While you cna C<ready> it and do most other things you can do to
+program. While you can C<ready> it and do most other things you can do to
 coro, it is mainly useful to compare again C<$Coro::current>, to see
 whether you are running in the main program or not.
 
@@ -929,7 +929,7 @@ coro.
 
 This method simply sets the C<< $coro->{desc} >> member to the given
 string. You can modify this member directly if you wish, and in fact, this
-is often preferred to indicate major processing states that cna then be
+is often preferred to indicate major processing states that can then be
 seen for example in a L<Coro::Debug> session:
 
    sub my_long_function {
