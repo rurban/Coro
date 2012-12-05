@@ -1600,12 +1600,12 @@ cctx_destroy (coro_cctx *cctx)
         VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
       #endif
 
-#if HAVE_MMAP
-      if (cctx->flags & CC_MAPPED)
-        munmap (cctx->sptr, cctx->ssize);
-      else
-#endif
-        Safefree (cctx->sptr);
+      #if HAVE_MMAP
+        if (cctx->flags & CC_MAPPED)
+          munmap (cctx->sptr, cctx->ssize);
+        else
+      #endif
+          Safefree (cctx->sptr);
     }
 
   Safefree (cctx);
