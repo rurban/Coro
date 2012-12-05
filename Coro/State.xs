@@ -1535,35 +1535,43 @@ cctx_new_run (void)
   void *stack_start;
   size_t stack_size;
 
-#if HAVE_MMAP
-  cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
-  /* mmap supposedly does allocate-on-write for us */
-  cctx->sptr = mmap (0, cctx->ssize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, -1, 0);
+#if CORO_FIBER
 
-  if (cctx->sptr != (void *)-1)
-    {
-      #if CORO_STACKGUARD
-        mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
-      #endif
-      stack_start = (char *)cctx->sptr + CORO_STACKGUARD * PAGESIZE;
-      stack_size  = cctx->ssize        - CORO_STACKGUARD * PAGESIZE;
-      cctx->flags |= CC_MAPPED;
-    }
-  else
-#endif
-    {
-      cctx->ssize = cctx_stacksize * (long)sizeof (long);
-      New (0, cctx->sptr, cctx_stacksize, long);
+  cctx->ssize = cctx_stacksize * sizeof (long);
+  cctx->sptr  = 0;
 
-      if (!cctx->sptr)
-        {
-          perror ("FATAL: unable to allocate stack for coroutine, exiting.");
-          _exit (EXIT_FAILURE);
-        }
+#else
 
-      stack_start = cctx->sptr;
-      stack_size  = cctx->ssize;
-    }
+  #if HAVE_MMAP
+    cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
+    /* mmap supposedly does allocate-on-write for us */
+    cctx->sptr  = mmap (0, cctx->ssize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, -1, 0);
+
+    if (cctx->sptr != (void *)-1)
+      {
+        #if CORO_STACKGUARD
+          mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
+        #endif
+        stack_start = (char *)cctx->sptr + CORO_STACKGUARD * PAGESIZE;
+        stack_size  = cctx->ssize        - CORO_STACKGUARD * PAGESIZE;
+        cctx->flags |= CC_MAPPED;
+      }
+    else
+  #endif
+      {
+        cctx->ssize = cctx_stacksize * (long)sizeof (long);
+        New (0, cctx->sptr, cctx_stacksize, long);
+
+        if (!cctx->sptr)
+          {
+            perror ("FATAL: unable to allocate stack for coroutine, exiting.");
+            _exit (EXIT_FAILURE);
+          }
+
+        stack_start = cctx->sptr;
+        stack_size  = cctx->ssize;
+      }
+  #endif
 
   #if CORO_USE_VALGRIND
     cctx->valgrind_id = VALGRIND_STACK_REGISTER ((char *)stack_start, (char *)stack_start + stack_size);
