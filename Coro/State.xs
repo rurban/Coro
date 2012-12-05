@@ -3623,7 +3623,7 @@ list ()
 	PROTOTYPE:
 	PPCODE:
 {
-  	struct coro *coro;
+	struct coro *coro;
         for (coro = coro_first; coro; coro = coro->next)
           if (coro->hv)
             XPUSHs (sv_2mortal (newRV_inc ((SV *)coro->hv)));
@@ -3795,7 +3795,7 @@ void
 times (Coro::State self)
 	PPCODE:
 {
-  	struct coro *current = SvSTATE (coro_current);
+	struct coro *current = SvSTATE (coro_current);
 
         if (ecb_expect_false (current == self))
           {
@@ -4080,7 +4080,7 @@ on_enter (SV *block)
 	CODE:
 {
 	struct coro *coro = SvSTATE_current;
-  	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
+	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
 
         block = s_get_cv_croak (block);
 
@@ -4110,7 +4110,7 @@ SV *
 new (SV *klass, SV *count = 0)
 	CODE:
 {
-  	int semcnt = 1;
+	int semcnt = 1;
 
         if (count)
           {
@@ -4180,7 +4180,7 @@ try (SV *self)
 
 void
 waiters (SV *self)
-    	PPCODE:
+	PPCODE:
 {
         AV *av = (AV *)SvRV (self);
         int wcount = AvFILLp (av) + 1 - 1;
@@ -4202,7 +4202,7 @@ void
 _may_delete (SV *sem, int count, unsigned int extra_refs)
 	PPCODE:
 {
-  	AV *av = (AV *)SvRV (sem);
+	AV *av = (AV *)SvRV (sem);
 
         if (SvREFCNT ((SV *)av) == 1 + extra_refs
             && AvFILLp (av) == 0 /* no waiters, just count */
@@ -4233,7 +4233,7 @@ void
 broadcast (SV *self)
         CODE:
 {
-  	AV *av = (AV *)SvRV (self);
+	AV *av = (AV *)SvRV (self);
         coro_signal_wake (aTHX_ av, AvFILLp (av));
 }
 
@@ -4251,7 +4251,7 @@ send (SV *self)
 
 IV
 awaited (SV *self)
-    	CODE:
+	CODE:
         RETVAL = AvFILLp ((AV *)SvRV (self)) + 1 - 1;
 	OUTPUT:
         RETVAL
@@ -4266,7 +4266,7 @@ void
 _schedule (...)
 	CODE:
 {
-  	static int incede;
+	static int incede;
 
         api_cede_notself (aTHX);
 
