@@ -27,6 +27,23 @@
 # define SVs_PADSTALE 0
 #endif
 
+#ifdef PadARRAY
+# define NEWPADAPI
+# define newPADLIST(var)	(Newz (0, var, 1, PADLIST), Newx (PadlistARRAY (var), 2, PAD *))
+#else
+typedef AV PADNAMELIST;
+# if !PERL_VERSION_ATLEAST(5,8,0)
+typedef AV PADLIST;
+typedef AV PAD;
+# endif
+# define PadlistARRAY(pl)	((PAD **)AvARRAY (pl))
+# define PadlistMAX(pl)		AvFILLp (pl)
+# define PadlistNAMES(pl)	(*PadlistARRAY (pl))
+# define PadARRAY		AvARRAY
+# define PadMAX			AvFILLp
+# define newPADLIST(var)	((var) = newAV (), av_extend (var, 1))
+#endif
+
 #if defined(_WIN32)
 # undef HAS_GETTIMEOFDAY
 # undef setjmp
@@ -526,71 +543,82 @@ SvSTATE_ (pTHX_ SV *coro)
 /*****************************************************************************/
 /* padlist management and caching */
 
-ecb_inline AV *
+ecb_inline PADLIST *
 coro_derive_padlist (pTHX_ CV *cv)
 {
-  AV *padlist = CvPADLIST (cv);
-  AV *newpadlist, *newpad;
+  PADLIST *padlist = CvPADLIST (cv);
+  PADLIST *newpadlist;
+  PAD *newpad;
+  PADOFFSET const off = PadlistMAX (padlist) + 1;
 
-  newpadlist = newAV ();
+  newPADLIST(newpadlist);
+#if !PERL_VERSION_ATLEAST(5,15,3)
+  /* Padlists are AvREAL as of 5.15.3. See perl bug #98092 and perl commit 7d953ba. */
   AvREAL_off (newpadlist);
-#if PERL_VERSION_ATLEAST (5,10,0)
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
-#else
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
 #endif
-  newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
-  --AvFILLp (padlist);
+#if PERL_VERSION_ATLEAST (5,10,0)
+  Perl_pad_push (aTHX_ padlist, off);
+#else
+  Perl_pad_push (aTHX_ padlist, off, 1);
+#endif
+  newpad = PadlistARRAY (padlist)[off];
+  PadlistMAX (padlist) = off - 1;
 
-  av_store (newpadlist, 0, SvREFCNT_inc_NN (AvARRAY (padlist)[0]));
-  av_store (newpadlist, 1, (SV *)newpad);
+  /* Already extended to 2 elements by newPADLIST. */
+  PadlistMAX (newpadlist) = 1;
+  PadlistNAMES (newpadlist) = (PADNAMELIST *)SvREFCNT_inc_NN (PadlistNAMES (padlist));
+  PadlistARRAY (newpadlist)[1] = newpad;
 
   return newpadlist;
 }
 
 ecb_inline void
-free_padlist (pTHX_ AV *padlist)
+free_padlist (pTHX_ PADLIST *padlist)
 {
   /* may be during global destruction */
   if (!IN_DESTRUCT)
     {
-      I32 i = AvFILLp (padlist);
+      I32 i = PadlistMAX (padlist);
 
       while (i > 0) /* special-case index 0 */
         {
           /* we try to be extra-careful here */
-          AV *av = (AV *)AvARRAY (padlist)[i--];
-          I32 j = AvFILLp (av);
+          PAD *pad = PadlistARRAY (padlist)[i--];
+          I32 j = PadMAX (pad);
 
           while (j >= 0)
-            SvREFCNT_dec (AvARRAY (av)[j--]);
+            SvREFCNT_dec (PadARRAY (pad)[j--]);
 
-          AvFILLp (av) = -1;
-          SvREFCNT_dec (av);
+          PadMAX (pad) = -1;
+          SvREFCNT_dec (pad);
         }
 
-      SvREFCNT_dec (AvARRAY (padlist)[0]);
+      SvREFCNT_dec (PadlistNAMES (padlist));
 
+#ifdef NEWPADAPI
+      Safefree (PadlistARRAY (padlist));
+      Safefree (padlist);
+#else
       AvFILLp (padlist) = -1;
+      AvREAL_off (padlist);
       SvREFCNT_dec ((SV*)padlist);
+#endif
     }
 }
 
 static int
 coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 {
-  AV *padlist;
-  AV *av = (AV *)mg->mg_obj;
+  PADLIST *padlist;
+  PADLIST **padlists = (PADLIST **)(mg->mg_ptr + sizeof(size_t));
+  size_t len = *(size_t *)mg->mg_ptr;
 
   /* perl manages to free our internal AV and _then_ call us */
   if (IN_DESTRUCT)
     return 0;
 
-  /* casting is fun. */
-  while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-    free_padlist (aTHX_ padlist);
-
-  SvREFCNT_dec (av); /* sv_magicext increased the refcount */
+  while (len--)
+    free_padlist (aTHX_ padlists[len]);
 
   return 0;
 }
@@ -605,10 +633,10 @@ ecb_inline void
 get_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
-  AV *av;
+  size_t *lenp;
 
-  if (ecb_expect_true (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0))
-    CvPADLIST (cv) = (AV *)AvARRAY (av)[AvFILLp (av)--];
+  if (ecb_expect_true (mg && *(lenp = (size_t *)mg->mg_ptr)))
+    CvPADLIST (cv) = ((PADLIST **)(mg->mg_ptr + sizeof(size_t)))[--*lenp];
   else
    {
 #if CORO_PREFER_PERL_FUNCTIONS
@@ -628,17 +656,19 @@ ecb_inline void
 put_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
-  AV *av;
 
   if (ecb_expect_false (!mg))
-    mg = sv_magicext ((SV *)cv, (SV *)newAV (), CORO_MAGIC_type_cv, &coro_cv_vtbl, 0, 0);
+    {
+      mg = sv_magicext ((SV *)cv, 0, CORO_MAGIC_type_cv, &coro_cv_vtbl, 0, 0);
+      Newz (0, mg->mg_ptr ,sizeof (size_t) + sizeof (PADLIST *), char);
+      mg->mg_len = 1; /* so mg_free frees mg_ptr */
+    }
+  else
+    Renew (mg->mg_ptr,
+           sizeof(size_t) + (*(size_t *)mg->mg_ptr + 1) * sizeof(PADLIST *),
+           char);
 
-  av = (AV *)mg->mg_obj;
-
-  if (ecb_expect_false (AvFILLp (av) >= AvMAX (av)))
-    av_extend (av, AvFILLp (av) + 1);
-
-  AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
+  ((PADLIST **)(mg->mg_ptr + sizeof (size_t))) [(*(size_t *)mg->mg_ptr)++] = CvPADLIST (cv);
 }
 
 /** load & save, init *******************************************************/
@@ -723,7 +753,7 @@ load_perl (pTHX_ Coro__State c)
       {
         put_padlist (aTHX_ cv); /* mark this padlist as available */
         CvDEPTH (cv) = PTR2IV (POPs);
-        CvPADLIST (cv) = (AV *)POPs;
+        CvPADLIST (cv) = (PADLIST *)POPs;
       }
 
     PUTBACK;

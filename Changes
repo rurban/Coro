@@ -7,6 +7,8 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
 TODO: add peerhost/peerport from IO::Socket::INET etc.
 
+	- implement 5.17 compatibility by almost blindly applying a
+          good-looking patch by Father Chrysostomos.
 	- support magic values as timed_io_once args.
 	- recommend AnyEvent 7+ or EV 4+, also require EV
           version 4 or newer for Coro::EV.
