@@ -1,7 +1,7 @@
 /* this works around a bug in mingw32 providing a non-working setjmp */
 #define USE_NO_MINGW_SETJMP_TWO_ARGS
 
-#define NDEBUG 1
+#define NDEBUG 1 /* perl usually disables NDEBUG later */
 
 #include "libcoro/coro.c"
 
@@ -54,46 +54,11 @@ typedef AV PAD;
 # include <inttypes.h> /* most portable stdint.h */
 #endif
 
-#if HAVE_MMAP
-# include <unistd.h>
-# include <sys/mman.h>
-# ifndef MAP_ANONYMOUS
-#  ifdef MAP_ANON
-#   define MAP_ANONYMOUS MAP_ANON
-#  else
-#   undef HAVE_MMAP
-#  endif
-# endif
-# include <limits.h>
-# ifndef PAGESIZE
-#  define PAGESIZE pagesize
-#  define BOOT_PAGESIZE pagesize = sysconf (_SC_PAGESIZE)
-static long pagesize;
-# else
-#  define BOOT_PAGESIZE (void)0
-# endif
-#else
-# define PAGESIZE 0
-# define BOOT_PAGESIZE (void)0
-#endif
-
-#if CORO_USE_VALGRIND
-# include <valgrind/valgrind.h>
-#endif
-
 /* the maximum number of idle cctx that will be pooled */
 static int cctx_max_idle = 4;
 
 #if defined(DEBUGGING) && PERL_VERSION_ATLEAST(5,12,0)
 # define HAS_SCOPESTACK_NAME 1
-#endif
-
-#if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
-# undef CORO_STACKGUARD
-#endif
-
-#ifndef CORO_STACKGUARD
-# define CORO_STACKGUARD 0
 #endif
 
 /* prefer perl internal functions over our own? */
@@ -194,8 +159,7 @@ typedef struct coro_cctx
   struct coro_cctx *next;
 
   /* the stack */
-  void *sptr;
-  size_t ssize;
+  struct coro_stack stack;
 
   /* cpu state */
   void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
@@ -314,7 +278,7 @@ static struct coro *coro_first;
 /** JIT *********************************************************************/
 
 #if CORO_JIT
-  /* APPLE doesn't have HAVE_MMAP though */
+  /* APPLE doesn't have mmap though */
   #define CORO_JIT_UNIXY (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris || __APPLE__)
   #ifndef CORO_JIT_TYPE
     #if __x86_64 && CORO_JIT_UNIXY
@@ -325,7 +289,7 @@ static struct coro *coro_first;
   #endif
 #endif
 
-#if !defined(CORO_JIT_TYPE) || !HAVE_MMAP
+#if !defined(CORO_JIT_TYPE) || _POSIX_MEMORY_PROTECTION <= 0
   #undef CORO_JIT
 #endif
 
@@ -1521,7 +1485,7 @@ cctx_new_empty (void)
 {
   coro_cctx *cctx = cctx_new ();
 
-  cctx->sptr = 0;
+  cctx->stack.sptr = 0;
   coro_create (&cctx->cctx, 0, 0, 0, 0);
 
   return cctx;
@@ -1532,52 +1496,14 @@ static coro_cctx *
 cctx_new_run (void)
 {
   coro_cctx *cctx = cctx_new ();
-  void *stack_start;
-  size_t stack_size;
 
-#if CORO_FIBER
+  if (!coro_stack_alloc (&cctx->stack, cctx_stacksize))
+    {
+      perror ("FATAL: unable to allocate stack for coroutine, exiting.");
+      _exit (EXIT_FAILURE);
+    }
 
-  cctx->ssize = cctx_stacksize * sizeof (long);
-  cctx->sptr  = 0;
-
-#else
-
-  #if HAVE_MMAP
-    cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
-    /* mmap supposedly does allocate-on-write for us */
-    cctx->sptr  = mmap (0, cctx->ssize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, -1, 0);
-
-    if (cctx->sptr != (void *)-1)
-      {
-        #if CORO_STACKGUARD
-          mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
-        #endif
-        stack_start = (char *)cctx->sptr + CORO_STACKGUARD * PAGESIZE;
-        stack_size  = cctx->ssize        - CORO_STACKGUARD * PAGESIZE;
-        cctx->flags |= CC_MAPPED;
-      }
-    else
-  #endif
-      {
-        cctx->ssize = cctx_stacksize * (long)sizeof (long);
-        New (0, cctx->sptr, cctx_stacksize, long);
-
-        if (!cctx->sptr)
-          {
-            perror ("FATAL: unable to allocate stack for coroutine, exiting.");
-            _exit (EXIT_FAILURE);
-          }
-
-        stack_start = cctx->sptr;
-        stack_size  = cctx->ssize;
-      }
-  #endif
-
-  #if CORO_USE_VALGRIND
-    cctx->valgrind_id = VALGRIND_STACK_REGISTER ((char *)stack_start, (char *)stack_start + stack_size);
-  #endif
-
-  coro_create (&cctx->cctx, cctx_run, (void *)cctx, stack_start, stack_size);
+  coro_create (&cctx->cctx, cctx_run, (void *)cctx, cctx->stack.sptr, cctx->stack.ssze);
 
   return cctx;
 }
@@ -1593,20 +1519,7 @@ cctx_destroy (coro_cctx *cctx)
   --cctx_count;
   coro_destroy (&cctx->cctx);
 
-  /* coro_transfer creates new, empty cctx's */
-  if (cctx->sptr)
-    {
-      #if CORO_USE_VALGRIND
-        VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
-      #endif
-
-      #if HAVE_MMAP
-        if (cctx->flags & CC_MAPPED)
-          munmap (cctx->sptr, cctx->ssize);
-        else
-      #endif
-          Safefree (cctx->sptr);
-    }
+  coro_stack_free (&cctx->stack);
 
   Safefree (cctx);
 }
@@ -1635,7 +1548,7 @@ cctx_get (pTHX)
 static void
 cctx_put (coro_cctx *cctx)
 {
-  assert (("FATAL: cctx_put called on non-initialised cctx in Coro (please report)", cctx->sptr));
+  assert (("FATAL: cctx_put called on non-initialised cctx in Coro (please report)", cctx->stack.sptr));
 
   /* free another cctx if overlimit */
   if (ecb_expect_false (cctx_idle >= cctx_max_idle))
@@ -3480,8 +3393,6 @@ BOOT:
         coro_thx = PERL_GET_CONTEXT;
 # endif
 #endif
-        BOOT_PAGESIZE;
-
         /* perl defines these to check for existance first, but why it doesn't */
         /* just create them one at init time is not clear to me, except for */
         /* programs trying to delete them, but... */
