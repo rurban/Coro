@@ -5,8 +5,6 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
-TODO: add peerhost/peerport from IO::Socket::INET etc.
-
         - use experimental fiber implementation on native windows
           perls.
         - use sizeof (void *) as multiplication factor for stack sizes,
@@ -15,6 +13,8 @@ TODO: add peerhost/peerport from IO::Socket::INET etc.
           activeperl 5.16 crashes when PerlIO_define_layer is called due
           to some bug in the perl dll, strawberry perl at least passes
           the testsuite.
+        - implement Coro::Handle->peeraddr/host/port, for slightly
+          improved compatibility with LWP.
 	- implement 5.17 compatibility by almost blindly applying a
           good-looking patch by Father Chrysostomos.
         - move stack management functions into libcoro 3.
