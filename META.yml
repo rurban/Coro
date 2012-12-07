@@ -18,10 +18,11 @@ no_index:
     - t
     - inc
 recommends:
+  AnyEvent: 7
   AnyEvent::AIO: 1
   AnyEvent::BDB: 1
   BDB: 0
-  EV: 3
+  EV: 4
   Event: 1.08
   IO::AIO: 3.1
 requires:
@@ -31,4 +32,4 @@ requires:
   Storable: 2.15
   Time::HiRes: 0
   common::sense: 0
-version: 6.10
+version: 6.23

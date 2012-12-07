@@ -13,7 +13,7 @@ use Config;
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro has a number of configuration options. Due to its maturity, the
 defaults that Coro chooses are usually fine, so you can decide to skip
@@ -27,8 +27,6 @@ if (prompt ("Skip further questions and use defaults (y/n)?", "y") =~ /[yY]/) {
    $ENV{PERL_MM_USE_DEFAULT} = 1;
 }
 
-
-$DEFINE .= " -DHAVE_MMAP" if $Config{d_mmap} eq "define" && $Config{d_munmap} eq "define";
 
 my $iface;
 
@@ -47,12 +45,12 @@ if (exists $ENV{CORO_INTERFACE}) {
 
 } elsif ($^O =~ /mswin32/i) {
    # nothing works, really, without deep hacks
-   $iface = 'w';
+   $iface = "f";
 
 } elsif ($^O =~ /cygwin/) {
    # cygwin true to its form, be an order of magnitutde slower,
-   # while using twice the amount of ram. yeah!
-   $iface = 'p';
+   # while using twice the amount of ram. but it works! yeah!
+   $iface = "p";
 
 } elsif ($^O =~ /irix/) {
    # sigaltstack works like sigstack, i.e. expects stack pointer, not stack base
@@ -139,7 +137,7 @@ EOF
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro can use a number of methods to implement coroutines at the C
 level. The default chosen is based on your current confguration and is
@@ -186,6 +184,9 @@ w  Microsoft Windows. Try this on Microsoft Windows when using Cygwin or
    Perl), although, as there is no standard on how to do this under
    windows, different environments might work differently. Doh.
 
+f  Microsoft Windows. Try this on Microsoft Windows if w fails. It is slower
+   and uses a lot more memory, but should be working all the time.
+
 p  Use pthread API. Try to avoid this option, it was only created to
    make a point about the programming language shootout. It is unlikely
    to work with perls that have windows process emulation enabled ("perl
@@ -205,7 +206,7 @@ EOF
 retry:
 
 my $r = prompt "Use which implementation,\n" .
-               "<s>etjmp, <u>ctx, <a>sm, <i>rix, <l>inux, <w>indows or <p>threads?",
+               "<s>etjmp, <u>ctx, <a>sm, <i>rix, <l>inux, <p>threads, <w>indows, <f>iber?",
                $iface;
 $iface = lc $1 if $r =~ /(\S)/;
 
@@ -226,6 +227,9 @@ if ($iface eq "u") {
 } elsif ($iface eq "w") {
    $DEFINE .= " -DCORO_LOSER";
    print "\nUsing windows-specific implementation\n\n";
+} elsif ($iface eq "f") {
+   $DEFINE .= " -DCORO_FIBER";
+   print "\nUsing windows-specific fiber implementation\n\n";
 } elsif ($iface eq "a") {
    $DEFINE .= " -DCORO_ASM";
    print "\nUsing handcoded assembler implementation\n\n";
@@ -240,15 +244,15 @@ if ($iface eq "u") {
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Per-context stack size factor: Depending on your settings, Coro tries to
 share the C stacks is creates as much as possible, but sometimes it needs
 to allocate a new one. This setting controls the maximum size that gets
 allocated, and should not be set too high, as memory and address space
 still is wasted even if it's not fully used. The value entered will be
-multiplied by sizeof(long), which is usually 4 on 32-bit systems, and 8 on
-64-bit systems.
+multiplied by sizeof(void *), which is usually 4 on 32-bit systems, and 8
+on 64-bit systems.
 
 A setting of 16384 (the default) therefore corresponds to a 64k..128k
 stack, which usually is ample space (you might even want to try 8192 or
@@ -275,11 +279,11 @@ my $stacksize = $^O eq "linux" && $] < 5.008008 ? 128 * 1024 : 16384;
 $stacksize = prompt ("C stack size factor?", $stacksize);
 $DEFINE .= " -DCORO_STACKSIZE=$stacksize";
 
-print "using a stacksize of $stacksize * sizeof(long)\n";
+print "using a stacksize of $stacksize * sizeof(void*)\n";
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro can optionally put a guard area before each stack segment: When the
 stack is too small and the access is not too far outside the stack (i.e.
@@ -299,12 +303,12 @@ The default, as usual, should be just fine.
 
 EOF
 
-my $stackguard = prompt ("Number of guard pages (0 disables)?", "4");
-$DEFINE .= " -DCORO_STACKGUARD=$stackguard";
+my $guardpages = prompt ("Number of guard pages (0 disables)?", "4");
+$DEFINE .= " -DCORO_GUARDPAGES=$guardpages";
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro can tell valgrind about its stacks and so reduce spurious warnings
 where valgrind would otherwise complain about possible stack switches.
@@ -324,7 +328,7 @@ $DEFINE .= " -DCORO_USE_VALGRIND=1" if $valgrind =~ /[yY]/;
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro can use (or even trick) some perl functions into doing what it needs
 instead of relying on (some) of its own functions. This might increase
@@ -340,7 +344,7 @@ $DEFINE .= " -DCORO_PREFER_PERL_FUNCTIONS=1" if $use_internals =~ /[yY]/;
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro can use a simple JIT compiler to compile a part of the thread switch
 function at runtime. On perls with windows process emulation (most!),
@@ -365,7 +369,7 @@ $DEFINE .= " -DCORO_JIT=1" if $orgasm =~ /[yY]/;
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 Coro has experimental support for cloning states. This can be used
 to implement a scheme-like call/cc. However, this doesn't add to the
@@ -383,7 +387,7 @@ $DEFINE .= " -DCORO_CLONE=1" if $masturbate =~ /[yY]/;
 
 print <<EOF;
 
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** 
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 
 EOF
 

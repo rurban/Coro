@@ -100,13 +100,16 @@ slf_init_timed_io (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   if (items < 2 || items > 3)
     croak ("Coro::EV::timed_io_once requires exactly two or three parameters, not %d.\n", items);
 
+  SvGETMAGIC (arg [0]);
+  SvGETMAGIC (arg [1]);
+
+  if (items >= 3)
+    SvGETMAGIC (arg [2]);
+
   data = sv_2mortal (newRV_inc (CORO_CURRENT));
   frame->data    = (void *)data;
   frame->prepare = GCoroAPI->prepare_schedule;
   frame->check   = slf_check_once;
-
-  if (items >= 3)
-    SvGETMAGIC (arg [2]);
 
   ev_once (
     EV_DEFAULT_UC,
@@ -327,11 +330,7 @@ _loop_oneshot ()
         /* same reasoning as above, make sure it is stopped */
         if (ev_is_active (&idler))
           ev_idle_stop (EV_DEFAULT_UC, &idler);
-#if EV_VERSION_MAJOR >= 4
         ev_run (EV_DEFAULT_UC, EVRUN_ONCE);
-#else
-        ev_loop (EV_DEFAULT_UC, EVLOOP_ONESHOT);
-#endif
         --inhibit;
 }
 

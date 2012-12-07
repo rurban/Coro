@@ -42,10 +42,11 @@ use Carp ();
 use Errno qw(EAGAIN EINTR EINPROGRESS);
 
 use AnyEvent::Util qw(WSAEWOULDBLOCK WSAEINPROGRESS);
+use AnyEvent::Socket ();
 
 use base 'Exporter';
 
-our $VERSION = "6.10";
+our $VERSION = 6.23;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -152,6 +153,24 @@ sub recv	{ recv        tied(*${$_[0]})->[0], $_[1], $_[2], @_ > 2 ? $_[3] : () }
 sub sockname	{ getsockname tied(*${$_[0]})->[0] }
 sub peername	{ getpeername tied(*${$_[0]})->[0] }
 sub shutdown	{ shutdown    tied(*${$_[0]})->[0], $_[1] }
+
+=item peeraddr, peerhost, peerport
+
+Return the peer host (as numericla IP address) and peer port (as integer).
+
+=cut
+
+sub peeraddr {
+   (AnyEvent::Socket::unpack_sockaddr getpeername tied(*${$_[0]})->[0])[1]
+}
+
+sub peerport {
+   (AnyEvent::Socket::unpack_sockaddr getpeername tied(*${$_[0]})->[0])[0]
+}
+
+sub peerhost {
+   AnyEvent::Socket::format_address &peeraddr
+}
 
 =item ($fh, $peername) = $listen_fh->accept
 

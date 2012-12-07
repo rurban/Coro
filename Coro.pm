@@ -344,7 +344,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = "6.10";
+our $VERSION = 6.23;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -359,7 +359,7 @@ our @EXPORT_OK = (@{$EXPORT_TAGS{prio}}, qw(nready));
 =item $Coro::main
 
 This variable stores the Coro object that represents the main
-program. While you cna C<ready> it and do most other things you can do to
+program. While you can C<ready> it and do most other things you can do to
 coro, it is mainly useful to compare again C<$Coro::current>, to see
 whether you are running in the main program or not.
 
@@ -929,7 +929,7 @@ coro.
 
 This method simply sets the C<< $coro->{desc} >> member to the given
 string. You can modify this member directly if you wish, and in fact, this
-is often preferred to indicate major processing states that cna then be
+is often preferred to indicate major processing states that can then be
 seen for example in a L<Coro::Debug> session:
 
    sub my_long_function {
@@ -1131,7 +1131,7 @@ function mentioned above:
    }
 
 In the case where C<rouse_cb> and C<rouse_wait> are not flexible enough,
-you can roll your own, using C<schedule>:
+you can roll your own, using C<schedule> and C<ready>:
 
    sub wait_for_child($) {
       my ($pid) = @_;
@@ -1144,7 +1144,8 @@ you can roll your own, using C<schedule>:
       # pass a closure to ->child
       my $watcher = AnyEvent->child (pid => $pid, cb => sub {
          $rstatus = $_[1]; # remember rstatus
-         $done = 1; # mark $rstatus as valud
+         $done = 1;        # mark $rstatus as valid
+         $current->ready;  # wake up the waiting thread
       });
 
       # wait until the closure has been called

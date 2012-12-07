@@ -35,7 +35,7 @@ use common::sense;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = "6.10";
+our $VERSION = 6.23;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }
@@ -89,7 +89,7 @@ sub get {
 
 Shuts down the Channel by pushing a virtual end marker onto it: This
 changes the behaviour of the Channel when it becomes or is empty to return
-C<undef>, almost as if infinitely many C<undef> elements have been put
+C<undef>, almost as if infinitely many C<undef> elements had been put
 into the queue.
 
 Specifically, this function wakes up any pending C<get> calls and lets
@@ -106,6 +106,10 @@ similar to an end of stream on e.g. a tcp socket: You have one or more
 producers that C<put> data into the Channel and one or more consumers who
 C<get> them. When all producers have finished producing data, a call to
 C<shutdown> signals this fact to any consumers.
+
+A common implementation uses one or more threads that C<get> from
+a channel until it returns C<undef>. To clean everything up, first
+C<shutdown> the channel, then C<join> the threads.
 
 =cut
 

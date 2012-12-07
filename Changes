@@ -5,6 +5,25 @@ TODO: channel->maxsize(newsize)?
 TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
+6.23 Fri Dec  7 23:36:37 CET 2012
+        - use experimental fiber implementation on native windows
+          perls.
+        - use sizeof (void *) as multiplication factor for stack sizes,
+          to accomodate the totally braindamaged microsoft 64 bit "os".
+        - changed verifier host from win2k-ap510-32 to win7-sp516-32/64.
+          activeperl 5.16 crashes when PerlIO_define_layer is called due
+          to some bug in the perl dll, strawberry perl at least passes
+          the testsuite.
+        - implement Coro::Handle->peeraddr/host/port, for slightly
+          improved compatibility with LWP.
+	- implement 5.17 compatibility by almost blindly applying a
+          good-looking patch by Father Chrysostomos.
+        - move stack management functions into libcoro 3.
+        - libcoro version 3 "released".
+	- support magic values as timed_io_once args.
+	- recommend AnyEvent 7+ or EV 4+, also require EV
+          version 4 or newer for Coro::EV.
+
 6.10 Tue Oct  9 01:14:27 CEST 2012
 	- updated ecb.h, it had a typo that caused it to not compile on many
           big endian systems (reported by many people).

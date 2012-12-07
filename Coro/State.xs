@@ -1,7 +1,7 @@
 /* this works around a bug in mingw32 providing a non-working setjmp */
 #define USE_NO_MINGW_SETJMP_TWO_ARGS
 
-#define NDEBUG 1
+#define NDEBUG 1 /* perl usually disables NDEBUG later */
 
 #include "libcoro/coro.c"
 
@@ -27,6 +27,23 @@
 # define SVs_PADSTALE 0
 #endif
 
+#ifdef PadARRAY
+# define NEWPADAPI
+# define newPADLIST(var)	(Newz (0, var, 1, PADLIST), Newx (PadlistARRAY (var), 2, PAD *))
+#else
+typedef AV PADNAMELIST;
+# if !PERL_VERSION_ATLEAST(5,8,0)
+typedef AV PADLIST;
+typedef AV PAD;
+# endif
+# define PadlistARRAY(pl)	((PAD **)AvARRAY (pl))
+# define PadlistMAX(pl)		AvFILLp (pl)
+# define PadlistNAMES(pl)	(*PadlistARRAY (pl))
+# define PadARRAY		AvARRAY
+# define PadMAX			AvFILLp
+# define newPADLIST(var)	((var) = newAV (), av_extend (var, 1))
+#endif
+
 #if defined(_WIN32)
 # undef HAS_GETTIMEOFDAY
 # undef setjmp
@@ -37,46 +54,11 @@
 # include <inttypes.h> /* most portable stdint.h */
 #endif
 
-#if HAVE_MMAP
-# include <unistd.h>
-# include <sys/mman.h>
-# ifndef MAP_ANONYMOUS
-#  ifdef MAP_ANON
-#   define MAP_ANONYMOUS MAP_ANON
-#  else
-#   undef HAVE_MMAP
-#  endif
-# endif
-# include <limits.h>
-# ifndef PAGESIZE
-#  define PAGESIZE pagesize
-#  define BOOT_PAGESIZE pagesize = sysconf (_SC_PAGESIZE)
-static long pagesize;
-# else
-#  define BOOT_PAGESIZE (void)0
-# endif
-#else
-# define PAGESIZE 0
-# define BOOT_PAGESIZE (void)0
-#endif
-
-#if CORO_USE_VALGRIND
-# include <valgrind/valgrind.h>
-#endif
-
 /* the maximum number of idle cctx that will be pooled */
 static int cctx_max_idle = 4;
 
 #if defined(DEBUGGING) && PERL_VERSION_ATLEAST(5,12,0)
 # define HAS_SCOPESTACK_NAME 1
-#endif
-
-#if !__i386 && !__x86_64 && !__powerpc && !__m68k && !__alpha && !__mips && !__sparc64
-# undef CORO_STACKGUARD
-#endif
-
-#ifndef CORO_STACKGUARD
-# define CORO_STACKGUARD 0
 #endif
 
 /* prefer perl internal functions over our own? */
@@ -177,8 +159,7 @@ typedef struct coro_cctx
   struct coro_cctx *next;
 
   /* the stack */
-  void *sptr;
-  size_t ssize;
+  struct coro_stack stack;
 
   /* cpu state */
   void *idle_sp;   /* sp of top-level transfer/schedule/cede call */
@@ -297,7 +278,7 @@ static struct coro *coro_first;
 /** JIT *********************************************************************/
 
 #if CORO_JIT
-  /* APPLE doesn't have HAVE_MMAP though */
+  /* APPLE doesn't have mmap though */
   #define CORO_JIT_UNIXY (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris || __APPLE__)
   #ifndef CORO_JIT_TYPE
     #if __x86_64 && CORO_JIT_UNIXY
@@ -308,7 +289,7 @@ static struct coro *coro_first;
   #endif
 #endif
 
-#if !defined(CORO_JIT_TYPE) || !HAVE_MMAP
+#if !defined(CORO_JIT_TYPE) || _POSIX_MEMORY_PROTECTION <= 0
   #undef CORO_JIT
 #endif
 
@@ -375,7 +356,7 @@ time_init (pTHX)
   SV **svp;
 
   require_pv ("Time/HiRes.pm");
-  
+
   svp = hv_fetch (PL_modglobal, "Time::NVtime", 12, 0);
 
   if (!svp)          croak ("Time::HiRes is required, but missing. Caught");
@@ -526,71 +507,82 @@ SvSTATE_ (pTHX_ SV *coro)
 /*****************************************************************************/
 /* padlist management and caching */
 
-ecb_inline AV *
+ecb_inline PADLIST *
 coro_derive_padlist (pTHX_ CV *cv)
 {
-  AV *padlist = CvPADLIST (cv);
-  AV *newpadlist, *newpad;
+  PADLIST *padlist = CvPADLIST (cv);
+  PADLIST *newpadlist;
+  PAD *newpad;
+  PADOFFSET const off = PadlistMAX (padlist) + 1;
 
-  newpadlist = newAV ();
+  newPADLIST(newpadlist);
+#if !PERL_VERSION_ATLEAST(5,15,3)
+  /* Padlists are AvREAL as of 5.15.3. See perl bug #98092 and perl commit 7d953ba. */
   AvREAL_off (newpadlist);
-#if PERL_VERSION_ATLEAST (5,10,0)
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1);
-#else
-  Perl_pad_push (aTHX_ padlist, AvFILLp (padlist) + 1, 1);
 #endif
-  newpad = (AV *)AvARRAY (padlist)[AvFILLp (padlist)];
-  --AvFILLp (padlist);
+#if PERL_VERSION_ATLEAST (5,10,0)
+  Perl_pad_push (aTHX_ padlist, off);
+#else
+  Perl_pad_push (aTHX_ padlist, off, 1);
+#endif
+  newpad = PadlistARRAY (padlist)[off];
+  PadlistMAX (padlist) = off - 1;
 
-  av_store (newpadlist, 0, SvREFCNT_inc_NN (AvARRAY (padlist)[0]));
-  av_store (newpadlist, 1, (SV *)newpad);
+  /* Already extended to 2 elements by newPADLIST. */
+  PadlistMAX (newpadlist) = 1;
+  PadlistNAMES (newpadlist) = (PADNAMELIST *)SvREFCNT_inc_NN (PadlistNAMES (padlist));
+  PadlistARRAY (newpadlist)[1] = newpad;
 
   return newpadlist;
 }
 
 ecb_inline void
-free_padlist (pTHX_ AV *padlist)
+free_padlist (pTHX_ PADLIST *padlist)
 {
   /* may be during global destruction */
   if (!IN_DESTRUCT)
     {
-      I32 i = AvFILLp (padlist);
+      I32 i = PadlistMAX (padlist);
 
       while (i > 0) /* special-case index 0 */
         {
           /* we try to be extra-careful here */
-          AV *av = (AV *)AvARRAY (padlist)[i--];
-          I32 j = AvFILLp (av);
+          PAD *pad = PadlistARRAY (padlist)[i--];
+          I32 j = PadMAX (pad);
 
           while (j >= 0)
-            SvREFCNT_dec (AvARRAY (av)[j--]);
+            SvREFCNT_dec (PadARRAY (pad)[j--]);
 
-          AvFILLp (av) = -1;
-          SvREFCNT_dec (av);
+          PadMAX (pad) = -1;
+          SvREFCNT_dec (pad);
         }
 
-      SvREFCNT_dec (AvARRAY (padlist)[0]);
+      SvREFCNT_dec (PadlistNAMES (padlist));
 
+#ifdef NEWPADAPI
+      Safefree (PadlistARRAY (padlist));
+      Safefree (padlist);
+#else
       AvFILLp (padlist) = -1;
+      AvREAL_off (padlist);
       SvREFCNT_dec ((SV*)padlist);
+#endif
     }
 }
 
 static int
 coro_cv_free (pTHX_ SV *sv, MAGIC *mg)
 {
-  AV *padlist;
-  AV *av = (AV *)mg->mg_obj;
+  PADLIST *padlist;
+  PADLIST **padlists = (PADLIST **)(mg->mg_ptr + sizeof(size_t));
+  size_t len = *(size_t *)mg->mg_ptr;
 
   /* perl manages to free our internal AV and _then_ call us */
   if (IN_DESTRUCT)
     return 0;
 
-  /* casting is fun. */
-  while (&PL_sv_undef != (SV *)(padlist = (AV *)av_pop (av)))
-    free_padlist (aTHX_ padlist);
-
-  SvREFCNT_dec (av); /* sv_magicext increased the refcount */
+  while (len--)
+    free_padlist (aTHX_ padlists[len]);
 
   return 0;
 }
@@ -605,10 +597,10 @@ ecb_inline void
 get_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
-  AV *av;
+  size_t *lenp;
 
-  if (ecb_expect_true (mg && AvFILLp ((av = (AV *)mg->mg_obj)) >= 0))
-    CvPADLIST (cv) = (AV *)AvARRAY (av)[AvFILLp (av)--];
+  if (ecb_expect_true (mg && *(lenp = (size_t *)mg->mg_ptr)))
+    CvPADLIST (cv) = ((PADLIST **)(mg->mg_ptr + sizeof(size_t)))[--*lenp];
   else
    {
 #if CORO_PREFER_PERL_FUNCTIONS
@@ -628,17 +620,19 @@ ecb_inline void
 put_padlist (pTHX_ CV *cv)
 {
   MAGIC *mg = CORO_MAGIC_cv (cv);
-  AV *av;
 
   if (ecb_expect_false (!mg))
-    mg = sv_magicext ((SV *)cv, (SV *)newAV (), CORO_MAGIC_type_cv, &coro_cv_vtbl, 0, 0);
+    {
+      mg = sv_magicext ((SV *)cv, 0, CORO_MAGIC_type_cv, &coro_cv_vtbl, 0, 0);
+      Newz (0, mg->mg_ptr ,sizeof (size_t) + sizeof (PADLIST *), char);
+      mg->mg_len = 1; /* so mg_free frees mg_ptr */
+    }
+  else
+    Renew (mg->mg_ptr,
+           sizeof(size_t) + (*(size_t *)mg->mg_ptr + 1) * sizeof(PADLIST *),
+           char);
 
-  av = (AV *)mg->mg_obj;
-
-  if (ecb_expect_false (AvFILLp (av) >= AvMAX (av)))
-    av_extend (av, AvFILLp (av) + 1);
-
-  AvARRAY (av)[++AvFILLp (av)] = (SV *)CvPADLIST (cv);
+  ((PADLIST **)(mg->mg_ptr + sizeof (size_t))) [(*(size_t *)mg->mg_ptr)++] = CvPADLIST (cv);
 }
 
 /** load & save, init *******************************************************/
@@ -723,7 +717,7 @@ load_perl (pTHX_ Coro__State c)
       {
         put_padlist (aTHX_ cv); /* mark this padlist as available */
         CvDEPTH (cv) = PTR2IV (POPs);
-        CvPADLIST (cv) = (AV *)POPs;
+        CvPADLIST (cv) = (PADLIST *)POPs;
       }
 
     PUTBACK;
@@ -996,7 +990,7 @@ coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
 
       if (strEQ (s, "__DIE__" )) svp = &PL_diehook;
       if (strEQ (s, "__WARN__")) svp = &PL_warnhook;
-      
+
       if (svp)
         {
           SV *ssv;
@@ -1112,7 +1106,7 @@ init_perl (pTHX_ struct coro *coro)
   /* recreate the die/warn hooks */
   PL_diehook  = SvREFCNT_inc (rv_diehook);
   PL_warnhook = SvREFCNT_inc (rv_warnhook);
-  
+
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
   GvSV (PL_errgv)    = newSV (0);
@@ -1491,7 +1485,7 @@ cctx_new_empty (void)
 {
   coro_cctx *cctx = cctx_new ();
 
-  cctx->sptr = 0;
+  cctx->stack.sptr = 0;
   coro_create (&cctx->cctx, 0, 0, 0, 0);
 
   return cctx;
@@ -1502,44 +1496,14 @@ static coro_cctx *
 cctx_new_run (void)
 {
   coro_cctx *cctx = cctx_new ();
-  void *stack_start;
-  size_t stack_size;
 
-#if HAVE_MMAP
-  cctx->ssize = ((cctx_stacksize * sizeof (long) + PAGESIZE - 1) / PAGESIZE + CORO_STACKGUARD) * PAGESIZE;
-  /* mmap supposedly does allocate-on-write for us */
-  cctx->sptr = mmap (0, cctx->ssize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, -1, 0);
-
-  if (cctx->sptr != (void *)-1)
+  if (!coro_stack_alloc (&cctx->stack, cctx_stacksize))
     {
-      #if CORO_STACKGUARD
-        mprotect (cctx->sptr, CORO_STACKGUARD * PAGESIZE, PROT_NONE);
-      #endif
-      stack_start = (char *)cctx->sptr + CORO_STACKGUARD * PAGESIZE;
-      stack_size  = cctx->ssize        - CORO_STACKGUARD * PAGESIZE;
-      cctx->flags |= CC_MAPPED;
-    }
-  else
-#endif
-    {
-      cctx->ssize = cctx_stacksize * (long)sizeof (long);
-      New (0, cctx->sptr, cctx_stacksize, long);
-
-      if (!cctx->sptr)
-        {
-          perror ("FATAL: unable to allocate stack for coroutine, exiting.");
-          _exit (EXIT_FAILURE);
-        }
-
-      stack_start = cctx->sptr;
-      stack_size  = cctx->ssize;
+      perror ("FATAL: unable to allocate stack for coroutine, exiting.");
+      _exit (EXIT_FAILURE);
     }
 
-  #if CORO_USE_VALGRIND
-    cctx->valgrind_id = VALGRIND_STACK_REGISTER ((char *)stack_start, (char *)stack_start + stack_size);
-  #endif
-
-  coro_create (&cctx->cctx, cctx_run, (void *)cctx, stack_start, stack_size);
+  coro_create (&cctx->cctx, cctx_run, (void *)cctx, cctx->stack.sptr, cctx->stack.ssze);
 
   return cctx;
 }
@@ -1555,20 +1519,7 @@ cctx_destroy (coro_cctx *cctx)
   --cctx_count;
   coro_destroy (&cctx->cctx);
 
-  /* coro_transfer creates new, empty cctx's */
-  if (cctx->sptr)
-    {
-      #if CORO_USE_VALGRIND
-        VALGRIND_STACK_DEREGISTER (cctx->valgrind_id);
-      #endif
-
-#if HAVE_MMAP
-      if (cctx->flags & CC_MAPPED)
-        munmap (cctx->sptr, cctx->ssize);
-      else
-#endif
-        Safefree (cctx->sptr);
-    }
+  coro_stack_free (&cctx->stack);
 
   Safefree (cctx);
 }
@@ -1597,7 +1548,7 @@ cctx_get (pTHX)
 static void
 cctx_put (coro_cctx *cctx)
 {
-  assert (("FATAL: cctx_put called on non-initialised cctx in Coro (please report)", cctx->sptr));
+  assert (("FATAL: cctx_put called on non-initialised cctx in Coro (please report)", cctx->stack.sptr));
 
   /* free another cctx if overlimit */
   if (ecb_expect_false (cctx_idle >= cctx_max_idle))
@@ -1733,7 +1684,7 @@ coro_state_destroy (pTHX_ struct coro *coro)
   slf_destroy (aTHX_ coro);
 
   coro->flags |= CF_ZOMBIE;
-  
+
   if (coro->flags & CF_READY)
     {
       /* reduce nready, as destroying a ready coro effectively unreadies it */
@@ -2176,7 +2127,7 @@ static void
 coro_set_status (pTHX_ struct coro *coro, SV **arg, int items)
 {
   AV *av;
-  
+ 
   if (coro->status)
     {
       av = coro->status;
@@ -2233,7 +2184,7 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
   coro_hv = coro->hv;
 
   coro_set_status (aTHX_ coro, arg + 1, items - 1);
-  
+ 
   if (ecb_expect_false (coro->flags & CF_NOCANCEL))
     {
       /* coro currently busy cancelling something, so just notify it */
@@ -2422,7 +2373,7 @@ static int
 slf_check_rouse_wait (pTHX_ struct CoroSLF *frame)
 {
   SV *data = (SV *)frame->data;
-  
+ 
   if (CORO_THROW)
     return 0;
 
@@ -2468,7 +2419,7 @@ slf_init_rouse_wait (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     }
 
   if (!SvROK (cb)
-      || SvTYPE (SvRV (cb)) != SVt_PVCV 
+      || SvTYPE (SvRV (cb)) != SVt_PVCV
       || CvXSUB ((CV *)SvRV (cb)) != coro_rouse_callback)
     croak ("Coro::rouse_wait called with illegal callback argument,");
 
@@ -3442,8 +3393,6 @@ BOOT:
         coro_thx = PERL_GET_CONTEXT;
 # endif
 #endif
-        BOOT_PAGESIZE;
-
         /* perl defines these to check for existance first, but why it doesn't */
         /* just create them one at init time is not clear to me, except for */
         /* programs trying to delete them, but... */
@@ -3593,7 +3542,7 @@ list ()
 	PROTOTYPE:
 	PPCODE:
 {
-  	struct coro *coro;
+	struct coro *coro;
         for (coro = coro_first; coro; coro = coro->next)
           if (coro->hv)
             XPUSHs (sv_2mortal (newRV_inc ((SV *)coro->hv)));
@@ -3765,7 +3714,7 @@ void
 times (Coro::State self)
 	PPCODE:
 {
-  	struct coro *current = SvSTATE (coro_current);
+	struct coro *current = SvSTATE (coro_current);
 
         if (ecb_expect_false (current == self))
           {
@@ -3818,7 +3767,7 @@ BOOT:
         sv_Coro            = newSVpv ("Coro", 0); SvREADONLY_on (sv_Coro);
         cv_pool_handler    = get_cv ("Coro::pool_handler", GV_ADD); SvREADONLY_on (cv_pool_handler);
         CvNODEBUG_on (get_cv ("Coro::_pool_handler", 0)); /* work around a debugger bug */
- 
+
 	coro_stash = gv_stashpv ("Coro", TRUE);
 
         newCONSTSUB (coro_stash, "PRIO_MAX",    newSViv (CORO_PRIO_MAX));
@@ -4050,7 +3999,7 @@ on_enter (SV *block)
 	CODE:
 {
 	struct coro *coro = SvSTATE_current;
-  	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
+	AV **avp = ix ? &coro->on_leave : &coro->on_enter;
 
         block = s_get_cv_croak (block);
 
@@ -4080,7 +4029,7 @@ SV *
 new (SV *klass, SV *count = 0)
 	CODE:
 {
-  	int semcnt = 1;
+	int semcnt = 1;
 
         if (count)
           {
@@ -4150,7 +4099,7 @@ try (SV *self)
 
 void
 waiters (SV *self)
-    	PPCODE:
+	PPCODE:
 {
         AV *av = (AV *)SvRV (self);
         int wcount = AvFILLp (av) + 1 - 1;
@@ -4172,7 +4121,7 @@ void
 _may_delete (SV *sem, int count, unsigned int extra_refs)
 	PPCODE:
 {
-  	AV *av = (AV *)SvRV (sem);
+	AV *av = (AV *)SvRV (sem);
 
         if (SvREFCNT ((SV *)av) == 1 + extra_refs
             && AvFILLp (av) == 0 /* no waiters, just count */
@@ -4203,7 +4152,7 @@ void
 broadcast (SV *self)
         CODE:
 {
-  	AV *av = (AV *)SvRV (self);
+	AV *av = (AV *)SvRV (self);
         coro_signal_wake (aTHX_ av, AvFILLp (av));
 }
 
@@ -4221,7 +4170,7 @@ send (SV *self)
 
 IV
 awaited (SV *self)
-    	CODE:
+	CODE:
         RETVAL = AvFILLp ((AV *)SvRV (self)) + 1 - 1;
 	OUTPUT:
         RETVAL
@@ -4236,7 +4185,7 @@ void
 _schedule (...)
 	CODE:
 {
-  	static int incede;
+	static int incede;
 
         api_cede_notself (aTHX);
 
