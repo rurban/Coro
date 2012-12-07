@@ -46,7 +46,7 @@ use AnyEvent::Socket ();
 
 use base 'Exporter';
 
-our $VERSION = "6.10";
+our $VERSION = 6.23;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
