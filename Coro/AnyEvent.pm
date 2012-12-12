@@ -87,7 +87,7 @@ callback. The reason is that most event loops are not reentrant and
 this can cause a deadlock at best and corrupt memory at worst.
 
 Coro will try to catch you when you block in the event loop
-("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
+("FATAL: $Coro::IDLE blocked itself"), but this is just best effort and
 only works when you do not run your own event loop.
 
 To avoid this problem, simply do not block inside an event callback
