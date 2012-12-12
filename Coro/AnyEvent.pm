@@ -90,9 +90,8 @@ Coro will try to catch you when you block in the event loop
 ("FATAL: $Coro::IDLE blocked itself"), but this is just best effort and
 only works when you do not run your own event loop.
 
-To avoid this problem, simply do not block inside an event callback
-- start a new thread (e.g. with C<Coro:async_pool>) or use
-C<Coro::unblock_sub>.
+To avoid this problem, start a new thread (e.g. with C<Coro::async_pool>)
+or use C<Coro::unblock_sub> to run blocking tasks.
 
 =head2 INVERSION OF CONTROL
 
