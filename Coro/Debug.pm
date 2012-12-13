@@ -410,12 +410,14 @@ EOF
       my @res = eval $cmd;
       print $@ ? $@ : (join " ", @res) . "\n";
    }
+
+   local $| = 1;
 }
 
 =item session $fh
 
 Run an interactive debugger session on the given filehandle. Each line entered
-is simply passed to C<command>.
+is simply passed to C<command> (with a few exceptions).
 
 =cut
 
