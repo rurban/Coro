@@ -281,7 +281,7 @@ static struct coro *coro_first;
   /* APPLE doesn't have mmap though */
   #define CORO_JIT_UNIXY (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris || __APPLE__)
   #ifndef CORO_JIT_TYPE
-    #if __x86_64 && CORO_JIT_UNIXY
+    #if ECB_AMD64 && CORO_JIT_UNIXY
       #define CORO_JIT_TYPE "amd64-unix"
     #elif __i386 && CORO_JIT_UNIXY
       #define CORO_JIT_TYPE "x86-unix"

@@ -6,6 +6,10 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
 	- improved Coro::State documentation a bit.
         - Coro::Debug::command now flushes the output.
+        - add hack detection code for x32 abi, because the braindead slugs
+          who designed that made it look exactly like x86_64 without
+          providing proper compile time symbols to test for it. as a result,
+          this detection cannot work reliably.
 
 6.23 Fri Dec  7 23:36:37 CET 2012
         - use experimental fiber implementation on native windows
