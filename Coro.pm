@@ -1132,7 +1132,7 @@ But from within a coro, you often just want to write this:
    my $status = wait_for_child $pid;
 
 Coro offers two functions specifically designed to make this easy,
-C<Coro::rouse_cb> and C<Coro::rouse_wait>.
+C<rouse_cb> and C<rouse_wait>.
 
 The first function, C<rouse_cb>, generates and returns a callback that,
 when invoked, will save its arguments and notify the coro that
@@ -1148,9 +1148,9 @@ function mentioned above:
    sub wait_for_child($) {
       my ($pid) = @_;
 
-      my $watcher = AnyEvent->child (pid => $pid, cb => Coro::rouse_cb);
+      my $watcher = AnyEvent->child (pid => $pid, cb => rouse_cb);
 
-      my ($rpid, $rstatus) = Coro::rouse_wait;
+      my ($rpid, $rstatus) = rouse_wait;
       $rstatus
    }
 
