@@ -61,7 +61,7 @@ which aren't.
 
 A newly created Coro::State that has not been used only allocates a
 relatively small (a hundred bytes) structure. Only on the first
-C<transfer> will perl allocate stacks (a few kb, 64 bit architetcures
+C<transfer> will perl allocate stacks (a few kb, 64 bit architectures
 use twice as much, i.e. a few kb :) and optionally a C stack/thread
 (cctx) for threads that recurse through C functions. All this is very
 system-dependent. On my x86-pc-linux-gnu system this amounts to about 2k

@@ -128,7 +128,8 @@ otherwise return false and leave the semaphore unchanged.
 =item $sem->waiters
 
 In scalar context, returns the number of threads waiting for this
-semaphore.
+semaphore. Might accidentally cause WW3 if called in other contexts, so
+don't use these.
 
 =item $guard = $sem->guard
 

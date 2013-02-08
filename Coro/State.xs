@@ -3473,12 +3473,6 @@ transfer (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_transfer);
 
-void
-_exit (int code)
-        PROTOTYPE: $
-	CODE:
-	_exit (code);
-
 SV *
 clone (Coro::State coro)
 	CODE:
@@ -4238,4 +4232,29 @@ unpatch_pp_sselect ()
             PL_ppaddr [OP_SSELECT] = coro_old_pp_sselect;
             coro_old_pp_sselect = 0;
           }
+
+MODULE = Coro::State                PACKAGE = Coro::Util
+
+void
+_exit (int code)
+	CODE:
+	_exit (code);
+
+NV
+time ()
+	CODE:
+        RETVAL = nvtime (aTHX);
+	OUTPUT:
+        RETVAL
+
+NV
+gettimeofday ()
+	PPCODE:
+{
+        UV tv [2];
+        u2time (aTHX_ tv);
+        EXTEND (SP, 2);
+        PUSHs (sv_2mortal (newSVuv (tv [0])));
+        PUSHs (sv_2mortal (newSVuv (tv [1])));
+}
 
