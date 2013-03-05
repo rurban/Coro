@@ -4,6 +4,9 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
+	- manually copy existing __DIE__ and __WARN__ handlers so
+          they lose their magic and will not cause segfaults later
+          (testcase by Andrey Sagulin).
 	- improved Coro::State documentation a bit.
         - Coro::Debug::command now flushes the output.
         - add hack detection code for x32 abi, because the braindead slugs

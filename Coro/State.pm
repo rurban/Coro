@@ -101,9 +101,14 @@ BEGIN {
 
    XSLoader::load __PACKAGE__, $VERSION;
 
-   # need to do it after overwriting the %SIG magic
-   $SIG{__DIE__}  ||= \&diehook;
-   $SIG{__WARN__} ||= \&warnhook;
+   # major complication:
+   # perl stores a PVMG with sigelem magic in warnhook, and retrieves the
+   # value from the hash, even while PL_warnhook is zero.
+   # Coro can't do that because the value in the hash might be stale.
+   # Therefore, Coro stores a copy, and returns PL_warnhook itself, so we
+   # need to manually copy the existing handlers to remove their magic.
+   $SIG{__DIE__}  = (my $v = $SIG{__DIE__} ) || \&diehook;
+   $SIG{__WARN__} = (my $v = $SIG{__WARN__}) || \&warnhook;
 }
 
 use Exporter;
