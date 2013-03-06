@@ -107,8 +107,10 @@ BEGIN {
    # Coro can't do that because the value in the hash might be stale.
    # Therefore, Coro stores a copy, and returns PL_warnhook itself, so we
    # need to manually copy the existing handlers to remove their magic.
-   $SIG{__DIE__}  = (my $v = $SIG{__DIE__} ) || \&diehook;
-   $SIG{__WARN__} = (my $v = $SIG{__WARN__}) || \&warnhook;
+   # I chose to use "delete", to hopefuly get rid of the remnants,
+   # but (my $v = $SIG{...}) would also work.
+   $SIG{__DIE__}  = (delete $SIG{__DIE__} ) || \&diehook;
+   $SIG{__WARN__} = (delete $SIG{__WARN__}) || \&warnhook;
 }
 
 use Exporter;
