@@ -565,11 +565,10 @@ sub handle_file {
 satisfiable:
       # check for segmented downloads
       if ($l && $::NO_SEGMENTED) {
-         my $timeout = $::NOW + 15;
+         my $timeout = $::NOW + 60;
          while (keys %{$uri{$self->{remote_id}}{$self->{uri}}} > 1) {
             if ($timeout <= $::NOW) {
-               $self->block ($::BLOCKTIME, "segmented downloads are forbidden");
-               #$self->err_segmented_download;
+               $self->err_segmented_download;
             } else {
                $httpevent->wait;
             }
@@ -623,6 +622,9 @@ ignore:
 
          Coro::AIO::aio_read $fh, $l, ($h > $bufsize ? $bufsize : $h), my $buf, 0
             or last;
+
+         # readahead to work around rijk disk issues
+         IO::AIO::aio_readahead $fh, $l + $bufsize, $bufsize;
 
          $tbf->request (length $buf);
          my $w = $self->{fh}->syswrite ($buf)
