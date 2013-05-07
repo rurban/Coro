@@ -41,7 +41,7 @@ use base 'Exporter';
 our @EXPORT = qw(gethostbyname gethostbyaddr);
 our @EXPORT_OK = qw(inet_aton fork_eval);
 
-our $VERSION = 6.23;
+our $VERSION = 6.29;
 
 our $MAXPARALLEL = 16; # max. number of parallel jobs
 
@@ -58,7 +58,7 @@ sub _do_asy(&;@) {
       die "fork: $!";
    } elsif (!$pid) {
       syswrite STDOUT, join "\0", map { unpack "H*", $_ } &$sub;
-      Coro::State::_exit 0;
+      Coro::Util::_exit 0;
    }
 
    my $buf;
@@ -207,7 +207,7 @@ sub fork_eval(&@) {
       };
 
       warn $@ if $@;
-      Coro::State::_exit 0;
+      Coro::Util::_exit 0;
 
    } else {
       die "fork_eval: $!";

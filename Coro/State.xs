@@ -281,7 +281,7 @@ static struct coro *coro_first;
   /* APPLE doesn't have mmap though */
   #define CORO_JIT_UNIXY (__linux || __FreeBSD__ || __OpenBSD__ || __NetBSD__ || __solaris || __APPLE__)
   #ifndef CORO_JIT_TYPE
-    #if __x86_64 && CORO_JIT_UNIXY
+    #if ECB_AMD64 && CORO_JIT_UNIXY
       #define CORO_JIT_TYPE "amd64-unix"
     #elif __i386 && CORO_JIT_UNIXY
       #define CORO_JIT_TYPE "x86-unix"
@@ -2098,6 +2098,9 @@ coro_call_on_destroy (pTHX_ struct coro *coro)
   if (!od)
     return;
 
+  coro->on_destroy = 0;
+  sv_2mortal ((SV *)od);
+
   while (AvFILLp (od) >= 0)
     {
       SV *cb = sv_2mortal (av_pop (od));
@@ -3473,12 +3476,6 @@ transfer (...)
 	CODE:
         CORO_EXECUTE_SLF_XS (slf_init_transfer);
 
-void
-_exit (int code)
-        PROTOTYPE: $
-	CODE:
-	_exit (code);
-
 SV *
 clone (Coro::State coro)
 	CODE:
@@ -4238,4 +4235,29 @@ unpatch_pp_sselect ()
             PL_ppaddr [OP_SSELECT] = coro_old_pp_sselect;
             coro_old_pp_sselect = 0;
           }
+
+MODULE = Coro::State                PACKAGE = Coro::Util
+
+void
+_exit (int code)
+	CODE:
+	_exit (code);
+
+NV
+time ()
+	CODE:
+        RETVAL = nvtime (aTHX);
+	OUTPUT:
+        RETVAL
+
+NV
+gettimeofday ()
+	PPCODE:
+{
+        UV tv [2];
+        u2time (aTHX_ tv);
+        EXTEND (SP, 2);
+        PUSHs (sv_2mortal (newSVuv (tv [0])));
+        PUSHs (sv_2mortal (newSVuv (tv [1])));
+}
 

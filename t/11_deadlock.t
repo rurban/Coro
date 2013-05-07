@@ -32,7 +32,7 @@ print
 
 my $coro = new Coro sub {
    print "ok 5\n";
-   Coro::State::_exit 0;
+   Coro::Util::_exit 0;
 };
 
 $Coro::idle = sub {

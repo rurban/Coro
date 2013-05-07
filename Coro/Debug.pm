@@ -106,7 +106,6 @@ use common::sense;
 use overload ();
 
 use Carp ();
-use Time::HiRes ();
 use Scalar::Util ();
 
 use Guard;
@@ -121,7 +120,7 @@ use Coro::State ();
 use Coro::AnyEvent ();
 use Coro::Timer ();
 
-our $VERSION = 6.23;
+our $VERSION = 6.29;
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
@@ -139,7 +138,7 @@ sub find_coro {
 }
 
 sub format_msg($$) {
-   my ($time, $micro) = Time::HiRes::gettimeofday;
+   my ($time, $micro) = Coro::Util::gettimeofday;
    my ($sec, $min, $hour, $day, $mon, $year) = gmtime $time;
    my $date = sprintf "%04d-%02d-%02dZ%02d:%02d:%02d.%04d",
                       $year + 1900, $mon + 1, $day, $hour, $min, $sec, $micro / 100;
@@ -396,9 +395,9 @@ EOF
       my $fh = select;
       Coro::async_pool {
          $Coro::current->{desc} = $cmd;
-         my $t = Time::HiRes::time;
+         my $t = Coro::Util::time;
          my @res = eval { &$sub };
-         $t = Time::HiRes::time - $t;
+         $t = Coro::Util::time - $t;
          print {$fh}
             "\rcommand: $cmd\n",
             "execution time: $t\n",
@@ -410,12 +409,14 @@ EOF
       my @res = eval $cmd;
       print $@ ? $@ : (join " ", @res) . "\n";
    }
+
+   local $| = 1;
 }
 
 =item session $fh
 
 Run an interactive debugger session on the given filehandle. Each line entered
-is simply passed to C<command>.
+is simply passed to C<command> (with a few exceptions).
 
 =cut
 

@@ -188,7 +188,7 @@ CORO THREAD LIFE CYCLE
               Coro::terminate "return value 1", "return value 2";
            };
 
-        And yet another way is to "->cancel" (or "->safe_cancel") the coro
+        Yet another way is to "->cancel" (or "->safe_cancel") the coro
         thread from another thread:
 
            my $coro = async {
@@ -211,10 +211,10 @@ CORO THREAD LIFE CYCLE
         (cancelling when a thread is in a "tie" method or an "AUTOLOAD" for
         example) is safe.
 
-        Lastly, a coro thread object that isn't referenced is "->cancel"'ed
-        automatically - just like other objects in Perl. This is not such a
-        common case, however - a running thread is referencedy b
-        $Coro::current, a thread ready to run is referenced by the ready
+        Last not least, a coro thread object that isn't referenced is
+        "->cancel"'ed automatically - just like other objects in Perl. This
+        is not such a common case, however - a running thread is referencedy
+        by $Coro::current, a thread ready to run is referenced by the ready
         queue, a thread waiting on a lock or semaphore is referenced by
         being in some wait list and so on. But a thread that isn't in any of
         those queues gets cancelled:
@@ -225,6 +225,29 @@ CORO THREAD LIFE CYCLE
 
            cede;
            # now the async above is destroyed, as it is not referenced by anything.
+
+        A slightly embellished example might make it clearer:
+
+           async {
+              my $guard = Guard::guard { print "destroyed\n" };
+              schedule while 1;
+           };
+
+           cede;
+
+        Superficially one might not expect any output - since the "async"
+        implements an endless loop, the $guard will not be cleaned up.
+        However, since the thread object returned by "async" is not stored
+        anywhere, the thread is initially referenced because it is in the
+        ready queue, when it runs it is referenced by $Coro::current, but
+        when it calls "schedule", it gets "cancel"ed causing the guard
+        object to be destroyed (see the next section), and printing it's
+        message.
+
+        If this seems a bit drastic, remember that this only happens when
+        nothing references the thread anymore, which means there is no way
+        to further execute it, ever. The only options at this point are
+        leaking the thread, or cleaning it up, which brings us to...
 
     5. Cleanup
         Threads will allocate various resources. Most but not all will be
@@ -252,12 +275,12 @@ CORO THREAD LIFE CYCLE
 
            async {
               my $lock_guard = $sem->guard;
-              # if we reutrn, or die or get cancelled, here,
+              # if we return, or die or get cancelled, here,
               # then the semaphore will be "up"ed.
            };
 
         The "Guard::guard" function comes in handy for any custom cleanup
-        you might want to do (but you cannot switch to other coroutines form
+        you might want to do (but you cannot switch to other coroutines from
         those code blocks):
 
            async {
@@ -284,11 +307,12 @@ CORO THREAD LIFE CYCLE
         Coro object still is there and stores the return values of the
         thread.
 
-        The means the Coro object gets freed automatically when the thread
-        has terminated and cleaned up and there arenot other references.
+        When there are no other references, it will simply be cleaned up and
+        freed.
 
-        If there are, the Coro object will stay around, and you can call
-        "->join" as many times as you wish to retrieve the result values:
+        If there areany references, the Coro object will stay around, and
+        you can call "->join" as many times as you wish to retrieve the
+        result values:
 
            async {
               print "hi\n";
@@ -893,7 +917,7 @@ HOW TO WAIT FOR A CALLBACK
        my $status = wait_for_child $pid;
 
     Coro offers two functions specifically designed to make this easy,
-    "Coro::rouse_cb" and "Coro::rouse_wait".
+    "rouse_cb" and "rouse_wait".
 
     The first function, "rouse_cb", generates and returns a callback that,
     when invoked, will save its arguments and notify the coro that created
@@ -909,9 +933,9 @@ HOW TO WAIT FOR A CALLBACK
        sub wait_for_child($) {
           my ($pid) = @_;
 
-          my $watcher = AnyEvent->child (pid => $pid, cb => Coro::rouse_cb);
+          my $watcher = AnyEvent->child (pid => $pid, cb => rouse_cb);
 
-          my ($rpid, $rstatus) = Coro::rouse_wait;
+          my ($rpid, $rstatus) = rouse_wait;
           $rstatus
        }
 

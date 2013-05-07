@@ -23,17 +23,20 @@ Coro::State - first class continuations
 
 =head1 DESCRIPTION
 
-This module implements coro. Coros, similar to threads and continuations,
-allow you to run more than one "thread of execution" in parallel. Unlike
-so-called "kernel" threads, there is no parallelism and only voluntary
-switching is used so locking problems are greatly reduced. The latter is
-called "cooperative" threading as opposed to "preemptive" threading.
+This module implements coro objects. Coros, similar to threads and
+continuations, allow you to run more than one "thread of execution" in
+parallel. Unlike so-called "kernel" threads, there is no parallelism
+and only voluntary switching is used so locking problems are greatly
+reduced. The latter is called "cooperative" threading as opposed to
+"preemptive" threading.
 
 This can be used to implement non-local jumps, exception handling,
 continuation objects and more.
 
-This module provides only low-level functionality. See L<Coro> and related
-modules for a higher level threads abstraction including a scheduler.
+This module provides only low-level functionality useful to build other
+abstractions, such as threads, generators or coroutines. See L<Coro>
+and related modules for a higher level threads abstraction including a
+scheduler.
 
 =head2 MODEL
 
@@ -58,7 +61,7 @@ which aren't.
 
 A newly created Coro::State that has not been used only allocates a
 relatively small (a hundred bytes) structure. Only on the first
-C<transfer> will perl allocate stacks (a few kb, 64 bit architetcures
+C<transfer> will perl allocate stacks (a few kb, 64 bit architectures
 use twice as much, i.e. a few kb :) and optionally a C stack/thread
 (cctx) for threads that recurse through C functions. All this is very
 system-dependent. On my x86-pc-linux-gnu system this amounts to about 2k
@@ -90,7 +93,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 6.23;
+   our $VERSION = 6.29;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -98,9 +101,16 @@ BEGIN {
 
    XSLoader::load __PACKAGE__, $VERSION;
 
-   # need to do it after overwriting the %SIG magic
-   $SIG{__DIE__}  ||= \&diehook;
-   $SIG{__WARN__} ||= \&warnhook;
+   # major complication:
+   # perl stores a PVMG with sigelem magic in warnhook, and retrieves the
+   # value from the hash, even while PL_warnhook is zero.
+   # Coro can't do that because the value in the hash might be stale.
+   # Therefore, Coro stores a copy, and returns PL_warnhook itself, so we
+   # need to manually copy the existing handlers to remove their magic.
+   # I chose to use "delete", to hopefuly get rid of the remnants,
+   # but (my $v = $SIG{...}) would also work.
+   $SIG{__DIE__}  = (delete $SIG{__DIE__} ) || \&diehook;
+   $SIG{__WARN__} = (delete $SIG{__WARN__}) || \&warnhook;
 }
 
 use Exporter;
@@ -139,7 +149,7 @@ Similar to above die hook, but augments C<$SIG{__WARN__}>.
 
 =back
 
-=head2 FUNCTIONS
+=head2 Coro::State METHODS
 
 =over 4
 
@@ -231,7 +241,7 @@ the current execution state (subroutine, stack).
 
 =item $state->is_zombie
 
-See the corresponding method for L<Coro> objects. 
+See the corresponding method(s) for L<Coro> objects.
 
 =item $state->cancel
 
@@ -305,17 +315,42 @@ You can also swap hashes and other values:
    my %private_hash;
    $coro->swap_sv (\%some_hash, \%private_hash);
 
-=item $state->trace ($flags)
-
-Internal function to control tracing. I just mention this so you can stay
-away from abusing it.
-
 =item $bytes = $state->rss
 
 Returns the memory allocated by the coro (which includes static
 structures, various perl stacks but NOT local variables, arguments or any
 C context data). This is a rough indication of how much memory it might
 use.
+
+=item ($real, $cpu) = $state->times
+
+Returns the real time and cpu times spent in the given C<$state>. See
+C<Coro::State::enable_times> for more info.
+
+=item $state->trace ($flags)
+
+Internal function to control tracing. I just mention this so you can stay
+away from abusing it.
+
+=back
+
+=head3 METHODS FOR C CONTEXTS
+
+Most coros only consist of some Perl data structures - transfering to a
+coro just reconfigures the interpreter to continue somewhere else.
+
+However. this is not always possible: For example, when Perl calls a C/XS function
+(such as an event loop), and C then invokes a Perl callback, reconfiguring
+the interpreter is not enough. Coro::State detects these cases automatically, and
+attaches a C-level thread to each such Coro::State object, for as long as necessary.
+
+The C-level thread structure is called "C context" (or cctxt for short),
+and can be quite big, which is why Coro::State only creates them as needed
+and can run many Coro::State's on a single cctxt.
+
+This is mostly transparent, so the following methods are rarely needed.
+
+=over 4
 
 =item $state->has_cctx
 
@@ -325,22 +360,23 @@ use a cctxts when needed.
 
 =item Coro::State::force_cctx
 
-Forces the allocation of a C context for the currently running coro
-(if not already done). Apart from benchmarking there is little point
-in doing so, however.
+Forces the allocation of a private cctxt for the currently executing
+Coro::State even though it would not normally ned one. Apart from
+benchmarking or testing Coro itself, there is little point in doing so,
+however.
 
 =item $ncctx = Coro::State::cctx_count
 
-Returns the number of C-level thread contexts allocated. If this number is
-very high (more than a dozen) it might be beneficial to identify points of
-C-level recursion (perl calls C/XS, which calls perl again which switches
-coros - this forces an allocation of a C-level thread context) in your
-code and moving this into a separate coro.
+Returns the number of C contexts allocated. If this number is very high
+(more than a dozen) it might be beneficial to identify points of C-level
+recursion (Perl calls C/XS, which calls Perl again which switches coros
+- this forces an allocation of a C context) in your code and moving this
+into a separate coro.
 
 =item $nidle = Coro::State::cctx_idle
 
 Returns the number of allocated but idle (currently unused and free for
-reuse) C level thread contexts.
+reuse) C contexts.
 
 =item $old = Coro::State::cctx_max_idle [$new_count]
 
@@ -354,7 +390,7 @@ default being C<4>.
 =item $old = Coro::State::cctx_stacksize [$new_stacksize]
 
 Returns the current C stack size and optionally sets the new I<minimum>
-stack size to C<$new_stacksize> I<long>s. Existing stacks will not
+stack size to C<$new_stacksize> I<pointers>s. Existing stacks will not
 be changed, but Coro will try to replace smaller stacks as soon as
 possible. Any Coro::State that starts to use a stack after this call is
 guaranteed this minimum stack size.
@@ -363,9 +399,16 @@ Please note that coros will only need to use a C-level stack if the
 interpreter recurses or calls a function in a module that calls back into
 the interpreter, so use of this feature is usually never needed.
 
+=back
+
+=head2 FUNCTIONS
+
+=over 4
+
 =item @states = Coro::State::list
 
-Returns a list of all states currently allocated.
+Returns a list of all Coro::State objects currently allocated. This
+includes all derived objects (such as L<Coro> threads).
 
 =item $was_enabled = Coro::State::enable_times [$enable]
 
@@ -383,12 +426,13 @@ Enabling time profiling slows down thread switching by a factor of 2 to
 10, depending on platform on hardware.
 
 The times will be displayed when running C<Coro::Debug::command "ps">, and
-cna be queried by calling C<< $state->times >>.
+can be queried by calling C<< $state->times >>.
 
-=item ($real, $cpu) = $state->times
+=back
 
-Returns the real time and cpu times spent in the given C<$state>. See
-C<Coro::State::enable_times> for more info.
+=head3 CLONING
+
+=over 4
 
 =item $clone = $state->clone
 

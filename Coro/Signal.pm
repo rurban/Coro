@@ -6,7 +6,7 @@ Coro::Signal - thread signals (binary semaphores)
 
  use Coro;
 
- $sig = new Coro::Signal;
+ my $sig = new Coro::Signal;
 
  $sig->wait; # wait for signal
 
@@ -22,11 +22,11 @@ it, in which case it will wake up one waiter, or it can be broadcast,
 waking up all waiters.
 
 It is recommended not to mix C<send> and C<broadcast> calls on the same
-C<Coro::Signal> - it should work as documented, but it can easily confuse
-you :->
+C<Coro::Signal> without some deep thinking: while it should work as
+documented, it can easily confuse you :->
 
-You don't have to load C<Coro::Signal> manually, it will be loaded 
-automatically when you C<use Coro> and call the C<new> constructor. 
+You don't have to load C<Coro::Signal> manually, it will be loaded
+automatically when you C<use Coro> and call the C<new> constructor.
 
 =over 4
 
@@ -38,7 +38,7 @@ use common::sense;
 
 use Coro::Semaphore ();
 
-our $VERSION = 6.23;
+our $VERSION = 6.29;
 
 =item $sig = new Coro::Signal;
 

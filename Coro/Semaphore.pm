@@ -19,16 +19,18 @@ Coro::Semaphore - counting semaphores
 This module implements counting semaphores. You can initialize a mutex
 with any level of parallel users, that is, you can intialize a sempahore
 that can be C<down>ed more than once until it blocks. There is no owner
-associated with semaphores, so one thread can C<down> it while another
-can C<up> it.
+associated with semaphores, so one thread can C<down> it while another can
+C<up> it (or vice versa), C<up> can be called before C<down> and so on:
+the semaphore is really just an integer counter that optionally blocks
+when it is 0.
 
 Counting semaphores are typically used to coordinate access to
 resources, with the semaphore count initialized to the number of free
 resources. Threads then increment the count when resources are added
 and decrement the count when resources are removed.
 
-You don't have to load C<Coro::Semaphore> manually, it will be loaded 
-automatically when you C<use Coro> and call the C<new> constructor. 
+You don't have to load C<Coro::Semaphore> manually, it will be loaded
+automatically when you C<use Coro> and call the C<new> constructor.
 
 =over 4
 
@@ -40,7 +42,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 6.23;
+our $VERSION = 6.29;
 
 =item new [inital count]
 
@@ -126,7 +128,8 @@ otherwise return false and leave the semaphore unchanged.
 =item $sem->waiters
 
 In scalar context, returns the number of threads waiting for this
-semaphore.
+semaphore. Might accidentally cause WW3 if called in other contexts, so
+don't use these.
 
 =item $guard = $sem->guard
 

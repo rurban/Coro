@@ -73,7 +73,6 @@ WriteMakefile(
        Scalar::Util	=> 0.00,
        AnyEvent         => 5.0,
        Storable		=> 2.15,
-       Time::HiRes      => 0,
        Guard            => 0.5,
 
        # for Coro::Event

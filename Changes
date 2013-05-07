@@ -2,8 +2,25 @@ Revision history for Perl extension Coro.
 
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
-TODO: http://www.microsoft.com/msj/archive/s2ce.aspx
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
+
+6.29 Wed May  8 02:55:18 CEST 2013
+	- when an on_destroy handler destructs the coro currently being
+          destructed a perl scalar could be accessed after being freed,
+          likely causing a crash.
+
+6.28 Wed Mar  6 06:58:02 CET 2013
+	- clean remnants of existing __DIE__ and __WARN__ handlers so
+          they lose their magic and will not cause segfaults later
+          (testcase by Andrey Sagulin).
+	- improved Coro::State documentation a bit.
+        - Coro::Debug::command now flushes the output.
+        - add hack detection code for x32 abi, because the braindead slugs
+          who designed that made it look exactly like x86_64 without
+          providing proper compile time symbols to test for it. as a result,
+          this detection cannot work reliably.
+        - valgrind stack registering was broken.
+        - do not rely on Time::HiRes anymore in Coro::Debug.
 
 6.23 Fri Dec  7 23:36:37 CET 2012
         - use experimental fiber implementation on native windows

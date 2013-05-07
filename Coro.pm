@@ -197,8 +197,8 @@ subroutine call nesting level:
       Coro::terminate "return value 1", "return value 2";
    };
 
-And yet another way is to C<< ->cancel >> (or C<< ->safe_cancel >>) the
-coro thread from another thread:
+Yet another way is to C<< ->cancel >> (or C<< ->safe_cancel >>) the coro
+thread from another thread:
 
    my $coro = async {
       exit 1;
@@ -220,12 +220,13 @@ best idea, but any other combination that deals with perl only (cancelling
 when a thread is in a C<tie> method or an C<AUTOLOAD> for example) is
 safe.
 
-Lastly, a coro thread object that isn't referenced is C<< ->cancel >>'ed
-automatically - just like other objects in Perl. This is not such a common
-case, however - a running thread is referencedy b C<$Coro::current>, a
-thread ready to run is referenced by the ready queue, a thread waiting
-on a lock or semaphore is referenced by being in some wait list and so
-on. But a thread that isn't in any of those queues gets cancelled:
+Last not least, a coro thread object that isn't referenced is C<<
+->cancel >>'ed automatically - just like other objects in Perl. This
+is not such a common case, however - a running thread is referencedy by
+C<$Coro::current>, a thread ready to run is referenced by the ready queue,
+a thread waiting on a lock or semaphore is referenced by being in some
+wait list and so on. But a thread that isn't in any of those queues gets
+cancelled:
 
    async {
       schedule; # cede to other coros, don't go into the ready queue
@@ -233,6 +234,28 @@ on. But a thread that isn't in any of those queues gets cancelled:
 
    cede;
    # now the async above is destroyed, as it is not referenced by anything.
+
+A slightly embellished example might make it clearer:
+
+   async {
+      my $guard = Guard::guard { print "destroyed\n" };
+      schedule while 1;
+   };
+
+   cede;
+
+Superficially one might not expect any output - since the C<async>
+implements an endless loop, the C<$guard> will not be cleaned up. However,
+since the thread object returned by C<async> is not stored anywhere, the
+thread is initially referenced because it is in the ready queue, when it
+runs it is referenced by C<$Coro::current>, but when it calls C<schedule>,
+it gets C<cancel>ed causing the guard object to be destroyed (see the next
+section), and printing it's message.
+
+If this seems a bit drastic, remember that this only happens when nothing
+references the thread anymore, which means there is no way to further
+execute it, ever. The only options at this point are leaking the thread,
+or cleaning it up, which brings us to...
 
 =item 5. Cleanup
 
@@ -261,12 +284,12 @@ resources, but that's where the C<guard> methods come in handy:
 
    async {
       my $lock_guard = $sem->guard;
-      # if we reutrn, or die or get cancelled, here,
+      # if we return, or die or get cancelled, here,
       # then the semaphore will be "up"ed.
    };
 
 The C<Guard::guard> function comes in handy for any custom cleanup you
-might want to do (but you cannot switch to other coroutines form those
+might want to do (but you cannot switch to other coroutines from those
 code blocks):
 
    async {
@@ -293,11 +316,12 @@ replacing the coro thread description:
 Even after a thread has terminated and cleaned up its resources, the Coro
 object still is there and stores the return values of the thread.
 
-The means the Coro object gets freed automatically when the thread has
-terminated and cleaned up and there arenot other references.
+When there are no other references, it will simply be cleaned up and
+freed.
 
-If there are, the Coro object will stay around, and you can call C<<
-->join >> as many times as you wish to retrieve the result values:
+If there areany references, the Coro object will stay around, and you
+can call C<< ->join >> as many times as you wish to retrieve the result
+values:
 
    async {
       print "hi\n";
@@ -344,7 +368,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 6.23;
+our $VERSION = 6.29;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -1108,7 +1132,7 @@ But from within a coro, you often just want to write this:
    my $status = wait_for_child $pid;
 
 Coro offers two functions specifically designed to make this easy,
-C<Coro::rouse_cb> and C<Coro::rouse_wait>.
+C<rouse_cb> and C<rouse_wait>.
 
 The first function, C<rouse_cb>, generates and returns a callback that,
 when invoked, will save its arguments and notify the coro that
@@ -1124,9 +1148,9 @@ function mentioned above:
    sub wait_for_child($) {
       my ($pid) = @_;
 
-      my $watcher = AnyEvent->child (pid => $pid, cb => Coro::rouse_cb);
+      my $watcher = AnyEvent->child (pid => $pid, cb => rouse_cb);
 
-      my ($rpid, $rstatus) = Coro::rouse_wait;
+      my ($rpid, $rstatus) = rouse_wait;
       $rstatus
    }
 
