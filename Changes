@@ -4,7 +4,7 @@ TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
-6.29
+6.29 Wed May  8 02:55:18 CEST 2013
 	- when an on_destroy handler destructs the coro currently being
           destructed a perl scalar could be accessed after being freed,
           likely causing a crash.
