@@ -2098,6 +2098,9 @@ coro_call_on_destroy (pTHX_ struct coro *coro)
   if (!od)
     return;
 
+  coro->on_destroy = 0;
+  sv_2mortal ((SV *)od);
+
   while (AvFILLp (od) >= 0)
     {
       SV *cb = sv_2mortal (av_pop (od));
