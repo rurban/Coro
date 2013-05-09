@@ -3153,7 +3153,7 @@ slf_check_aio_req (pTHX_ struct CoroSLF *frame)
     return 0;
 
   /* one element that is an RV? repeat! */
-  if (AvFILLp (state) == 0 && SvROK (AvARRAY (state)[0]))
+  if (AvFILLp (state) == 0 && SvTYPE (AvARRAY (state)[0]) != SVt_PV)
     return 1;
 
   /* restore status */
