@@ -521,6 +521,7 @@ coro_derive_padlist (pTHX_ CV *cv)
     --off;
 
   Perl_pad_push (aTHX_ padlist, off);
+
   newpad = PadlistARRAY (padlist)[off];
   PadlistARRAY (padlist)[off] = 0;
 
