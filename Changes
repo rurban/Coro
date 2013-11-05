@@ -3,6 +3,13 @@ Revision history for Perl extension Coro.
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
+TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
+TODO: swap_sv not undone in pool
+
+6.32 Tue Nov  5 15:35:35 CET 2013
+	- use a new algorithm to derive padlists for perl 5.18. The old
+          one could lead to 0-pointer accesses inside perl (reported
+          by Darin McBride).
 
 6.31 Thu May  9 07:39:48 CEST 2013
 	- Coro::AIO requests would crash if the thread was ready'd
@@ -475,7 +482,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
         - entersub is actually a UNOP, not a LOGOP (not a bugfix).
 
 4.9  Sat Nov  8 17:45:27 CET 2008
- 	- (libcoro) did not preserve rbp with CORO_ASM (we are getting there).
+	- (libcoro) did not preserve rbp with CORO_ASM (we are getting there).
         - (libcoro) no longer leak threads in the experimental pthread backend,
           also speed it up considerably.
         - (libcoro) do not rely on makecontext passing void *'s unscathed.
@@ -547,7 +554,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
           outdated software). Reported by John S.
 
 4.744 Tue Jul  8 22:06:35 CEST 2008
-      	- correctly provide default DIE/WARN handlers as documented.
+	- correctly provide default DIE/WARN handlers as documented.
 	- also overwrite PL_vtbl_sigelem.svt_clear, even though current
           implementations inside perl work fine for us.
 
@@ -579,7 +586,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
         - fix typo in WSAEWOULDBLOCK.
 
 4.72 Sun May 25 05:14:36 CEST 2008
-      	- tweak META.yaml a bit, unfortunately, there is no documented way
+	- tweak META.yaml a bit, unfortunately, there is no documented way
           to have optional dependencies with CPAN. doh :(
 	- avoid running some tests on windows because they would fail due to
           perl bug (broken fork, broken pipes...).
@@ -593,7 +600,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
           tcp sockets on windows. ugh.)
 
 4.71 Sat May 24 20:01:27 CEST 2008
-      	- fix a bug in Coro::AnyEvent ("Usage: Coro::AnyEvent::_schedule()").
+	- fix a bug in Coro::AnyEvent ("Usage: Coro::AnyEvent::_schedule()").
 	- take advantage of async name resolution of AnyEvent::Util.
         - work around brutal inet_aton override in Coro::LWP.
         - take advantage of the readyhook in Coro::EV, for smoother
@@ -601,7 +608,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 
 4.7  Sun May 11 00:32:19 CEST 2008
 	- completely reworked the Coro manpage.
-      	- added Coro::AnyEvent, generic event loop integration.
+	- added Coro::AnyEvent, generic event loop integration.
 	- implement cancel, ready and kill commands in Coro::Debug.
         - document find_coro in Coro::Debug.
         - incompatible change: rename has_stack to has_cctx.
@@ -735,7 +742,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 	- port to threaded perls.
 
 4.1  Thu Oct 11 02:38:16 CEST 2007
-      	- incompatible change: $SIG{__DIE__} and $SIG{__WARN__} will now
+	- incompatible change: $SIG{__DIE__} and $SIG{__WARN__} will now
           be local to each coro (see Coro::State).
         - incompatible change: for very deep reasons, cede and cede_notself
           cannot return anything, so nothing will be returned.
@@ -817,7 +824,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
           Steinbrunner, which applied flawlessly).
 
 3.6  Sat Apr 14 17:13:31 CEST 2007
-   	- added some bugfixes to get eg/myhttpd working again.
+	- added some bugfixes to get eg/myhttpd working again.
         - added Coro::Storable for often-cede'ing freeze/thaw.
         - try to do a clean exit when a coroutine calls exit
           (EXPERIMENTAL).

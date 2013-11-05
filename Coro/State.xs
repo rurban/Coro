@@ -28,7 +28,7 @@
 #endif
 
 #ifdef PadARRAY
-# define NEWPADAPI
+# define NEWPADAPI 1
 # define newPADLIST(var)	(Newz (0, var, 1, PADLIST), Newx (PadlistARRAY (var), 2, PAD *))
 #else
 typedef AV PADNAMELIST;
@@ -513,20 +513,38 @@ coro_derive_padlist (pTHX_ CV *cv)
   PADLIST *padlist = CvPADLIST (cv);
   PADLIST *newpadlist;
   PAD *newpad;
-  PADOFFSET const off = PadlistMAX (padlist) + 1;
+  PADOFFSET off = PadlistMAX (padlist) + 1;
 
-  newPADLIST(newpadlist);
-#if !PERL_VERSION_ATLEAST(5,15,3)
-  /* Padlists are AvREAL as of 5.15.3. See perl bug #98092 and perl commit 7d953ba. */
-  AvREAL_off (newpadlist);
-#endif
+#if NEWPADAPI
+
+  /* if we had the original CvDEPTH, we might be able to steal the CvDEPTH+1 entry instead */
+  /* 20131102194744.GA6705@schmorp.de, 20131102195825.2013.qmail@lists-nntp.develooper.com */
+  while (!PadlistARRAY (padlist)[off - 1])
+    --off;
+
+  Perl_pad_push (aTHX_ padlist, off);
+
+  newpad = PadlistARRAY (padlist)[off];
+  PadlistARRAY (padlist)[off] = 0;
+
+#else
+
 #if PERL_VERSION_ATLEAST (5,10,0)
   Perl_pad_push (aTHX_ padlist, off);
 #else
   Perl_pad_push (aTHX_ padlist, off, 1);
 #endif
+
   newpad = PadlistARRAY (padlist)[off];
   PadlistMAX (padlist) = off - 1;
+
+#endif
+
+  newPADLIST (newpadlist);
+#if !PERL_VERSION_ATLEAST(5,15,3)
+  /* Padlists are AvREAL as of 5.15.3. See perl bug #98092 and perl commit 7d953ba. */
+  AvREAL_off (newpadlist);
+#endif
 
   /* Already extended to 2 elements by newPADLIST. */
   PadlistMAX (newpadlist) = 1;
@@ -559,7 +577,7 @@ free_padlist (pTHX_ PADLIST *padlist)
 
       SvREFCNT_dec (PadlistNAMES (padlist));
 
-#ifdef NEWPADAPI
+#if NEWPADAPI
       Safefree (PadlistARRAY (padlist));
       Safefree (padlist);
 #else
