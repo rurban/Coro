@@ -44,6 +44,12 @@ typedef AV PAD;
 # define newPADLIST(var)	((var) = newAV (), av_extend (var, 1))
 #endif
 
+/* 5.19.something has replaced SVt_BIND by SVt_INVLIST */
+/* we just alias it to SVt_IV, as that is sufficient for swap_sv for now */
+#if PERL_VERSION_ATLEAST(5,19,0)
+# define SVt_BIND SVt_IV
+#endif
+
 #if defined(_WIN32)
 # undef HAS_GETTIMEOFDAY
 # undef setjmp
