@@ -517,6 +517,8 @@ coro_derive_padlist (pTHX_ CV *cv)
 
 #if NEWPADAPI
 
+  /* if we had the original CvDEPTH, we might be able to steal the CvDEPTH+1 entry instead */
+  /* 20131102194744.GA6705@schmorp.de, 20131102195825.2013.qmail@lists-nntp.develooper.com */
   while (!PadlistARRAY (padlist)[off - 1])
     --off;
 
