@@ -614,7 +614,7 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
     if      (!e     ) r = ldexpf (m        ,    -24);
     else if (e != 31) r = ldexpf (m + 0x400, e - 25);
     else if (m      ) r = ECB_NAN;
-    else              r = INFINITY;
+    else              r = ECB_INFINITY;
 
     return x & 0x8000 ? -r : r;
   }
