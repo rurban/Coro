@@ -44,6 +44,12 @@ typedef AV PAD;
 # define newPADLIST(var)	((var) = newAV (), av_extend (var, 1))
 #endif
 
+/* 5.19.something has replaced SVt_BIND by SVt_INVLIST */
+/* we just alias it to SVt_IV, as that is sufficient for swap_sv for now */
+#if PERL_VERSION_ATLEAST(5,19,0)
+# define SVt_BIND SVt_IV
+#endif
+
 #if defined(_WIN32)
 # undef HAS_GETTIMEOFDAY
 # undef setjmp
@@ -566,13 +572,17 @@ free_padlist (pTHX_ PADLIST *padlist)
         {
           /* we try to be extra-careful here */
           PAD *pad = PadlistARRAY (padlist)[i--];
-          I32 j = PadMAX (pad);
 
-          while (j >= 0)
-            SvREFCNT_dec (PadARRAY (pad)[j--]);
+          if (pad)
+            {
+              I32 j = PadMAX (pad);
 
-          PadMAX (pad) = -1;
-          SvREFCNT_dec (pad);
+              while (j >= 0)
+                SvREFCNT_dec (PadARRAY (pad)[j--]);
+
+              PadMAX (pad) = -1;
+              SvREFCNT_dec (pad);
+            }
         }
 
       SvREFCNT_dec (PadlistNAMES (padlist));

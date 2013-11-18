@@ -31,4 +31,4 @@ requires:
   Scalar::Util: 0
   Storable: 2.15
   common::sense: 0
-version: 6.32
+version: 6.33
