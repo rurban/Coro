@@ -572,13 +572,17 @@ free_padlist (pTHX_ PADLIST *padlist)
         {
           /* we try to be extra-careful here */
           PAD *pad = PadlistARRAY (padlist)[i--];
-          I32 j = PadMAX (pad);
 
-          while (j >= 0)
-            SvREFCNT_dec (PadARRAY (pad)[j--]);
+          if (pad)
+            {
+              I32 j = PadMAX (pad);
 
-          PadMAX (pad) = -1;
-          SvREFCNT_dec (pad);
+              while (j >= 0)
+                SvREFCNT_dec (PadARRAY (pad)[j--]);
+
+              PadMAX (pad) = -1;
+              SvREFCNT_dec (pad);
+            }
         }
 
       SvREFCNT_dec (PadlistNAMES (padlist));
