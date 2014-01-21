@@ -49,7 +49,7 @@ Create a new signal.
 Wait for the signal to occur (via either C<send> or C<broadcast>). Returns
 immediately if the signal has been sent before.
 
-=item $sem->wait ($callback)
+=item $sig->wait ($callback)
 
 If you pass a callback argument to C<wait>, it will not wait, but
 immediately return. The callback will be called under the same conditions
