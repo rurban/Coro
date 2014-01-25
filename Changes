@@ -6,6 +6,7 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 
+TODO: warnhook reports from wrong line number now, when arg is Math::GMP number.
 	- FATAL: $Coro::IDLE blocked itself will now use Carp::confess
           to report a full stacktrace, which should help find out
           where the actual call is.
