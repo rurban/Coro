@@ -390,10 +390,11 @@ default being C<4>.
 =item $old = Coro::State::cctx_stacksize [$new_stacksize]
 
 Returns the current C stack size and optionally sets the new I<minimum>
-stack size to C<$new_stacksize> I<pointers>s. Existing stacks will not
-be changed, but Coro will try to replace smaller stacks as soon as
-possible. Any Coro::State that starts to use a stack after this call is
-guaranteed this minimum stack size.
+stack size to C<$new_stacksize> (in units of pointer sizes, i.e. typically
+4 on 32 bit and 8 on 64 bit hosts). Existing stacks will not be changed,
+but Coro will try to replace smaller stacks as soon as possible. Any
+Coro::State that starts to use a stack after this call is guaranteed this
+minimum stack size.
 
 Please note that coros will only need to use a C-level stack if the
 interpreter recurses or calls a function in a module that calls back into

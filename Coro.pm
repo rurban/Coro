@@ -916,7 +916,7 @@ callback gets passed the terminate/cancel arguments, if any, and I<must
 not> die, under any circumstances.
 
 There can be any number of C<on_destroy> callbacks per coro, and there is
-no way currently to remove a callback once added.
+currently no way to remove a callback once added.
 
 =item $oldprio = $coro->prio ($newprio)
 
