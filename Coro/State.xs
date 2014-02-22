@@ -16,6 +16,7 @@
 #include "schmorp.h"
 
 #define ECB_NO_THREADS 1
+#define ECB_NO_LIBM 1
 #include "ecb.h"
 
 #include <stddef.h>

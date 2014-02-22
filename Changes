@@ -10,6 +10,8 @@ TODO: warnhook reports from wrong line number now, when arg is Math::GMP number.
 	- FATAL: $Coro::IDLE blocked itself will now use Carp::confess
           to report a full stacktrace, which should help find out
           where the actual call is.
+        - disable ecb.h libm dependency, to compile on ancient systems
+          or under adverse conditions.
 
 6.33 Mon Nov 18 11:26:27 CET 2013
 	- do not crash when freeing padlists with holes (in 5.18).

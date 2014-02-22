@@ -277,7 +277,7 @@ sub ps_listing {
    for my $coro (reverse Coro::State::list) {
       my @bt;
       Coro::State::call ($coro, sub {
-         # we try to find *the* definite frame that gives msot useful info
+         # we try to find *the* definite frame that gives most useful info
          # by skipping Coro frames and pseudo-frames.
          for my $frame (1..10) {
             my @frame = caller $frame;
