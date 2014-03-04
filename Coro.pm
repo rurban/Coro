@@ -368,7 +368,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 6.33;
+our $VERSION = 6.36;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -654,14 +654,14 @@ interval timers (this could obviously be optimised, but does the job):
          $SIG{VTALRM} = sub { cede };
          # and then start the interval timer
          Time::HiRes::setitimer &Time::HiRes::ITIMER_VIRTUAL, 0.01, 0.01;
-      }; 
+      };
       Coro::on_leave {
          # on leaving the thread, we stop the interval timer again
          Time::HiRes::setitimer &Time::HiRes::ITIMER_VIRTUAL, 0, 0;
-      }; 
+      };
 
       &{+shift};
-   }  
+   }
 
    # use like this:
    timeslice {
@@ -669,7 +669,7 @@ interval timers (this could obviously be optimised, but does the job):
       # monopolise the process. Since it runs in a timesliced
       # environment, it will regularly cede to other threads.
       while () { }
-   }; 
+   };
 
 
 =item killall
@@ -916,7 +916,7 @@ callback gets passed the terminate/cancel arguments, if any, and I<must
 not> die, under any circumstances.
 
 There can be any number of C<on_destroy> callbacks per coro, and there is
-no way currently to remove a callback once added.
+currently no way to remove a callback once added.
 
 =item $oldprio = $coro->prio ($newprio)
 

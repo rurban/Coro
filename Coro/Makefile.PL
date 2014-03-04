@@ -321,8 +321,9 @@ choice.
 
 EOF
 
-my $valgrind = prompt ("Enable valgrind support (y/n)?",
-                       -r "/usr/include/valgrind/valgrind.h" ?  "y" : "n");
+my $valgrind = -r "/usr/include/valgrind/valgrind.h" ?  "y" : "n";
+$valgrind = $ENV{CORO_USE_VALGRIND} if exists $ENV{CORO_USE_VALGRIND};
+$valgrind = prompt ("Enable valgrind support (y/n)?", $valgrind);
 $DEFINE .= " -DCORO_USE_VALGRIND=1" if $valgrind =~ /[yY]/;
 
 

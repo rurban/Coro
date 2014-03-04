@@ -41,12 +41,12 @@ use Coro::Semaphore;
    $as1 = async {
       my $g = $sem->guard;
       print "not ok 2\n";
-   };    
+   };
 
    $as2 = async {
       my $g = $sem->guard;
       print "ok 2\n";
-   };    
+   };
 
    cede;
 
@@ -65,12 +65,12 @@ use Coro::Semaphore;
          $sem->guard;
       };
       print $@ ? "" : "not ", "ok 3\n";
-   };    
+   };
 
    $as2 = async {
       my $g = $sem->guard;
       print "ok 4\n";
-   };    
+   };
 
    cede;
 
@@ -87,12 +87,12 @@ use Coro::Semaphore;
    $as1 = async {
       $sem->wait;
       print "ok 5\n";
-   };    
+   };
 
    $as2 = async {
       my $g = $sem->guard;
       print "ok 6\n";
-   };    
+   };
 
    cede;
 

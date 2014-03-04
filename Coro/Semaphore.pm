@@ -42,7 +42,7 @@ use common::sense;
 
 use Coro ();
 
-our $VERSION = 6.33;
+our $VERSION = 6.36;
 
 =item new [inital count]
 
@@ -53,7 +53,8 @@ by default.
 
 =item $sem->count
 
-Returns the current semaphore count.
+Returns the current semaphore count. The semaphore can be down'ed without
+blocking when the count is strictly higher than C<0>.
 
 =item $sem->adjust ($diff)
 
@@ -64,7 +65,7 @@ becomes negative, however.
 =item $sem->down
 
 Decrement the counter, therefore "locking" the semaphore. This method
-waits until the semaphore is available if the counter is zero.
+waits until the semaphore is available if the counter is zero or less.
 
 =item $sem->wait
 

@@ -163,7 +163,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 6.33;
+our $VERSION = 6.36;
 
 #############################################################################
 # idle handler
@@ -254,7 +254,7 @@ from time to time:
 
    my $long_calc = async {
       for (1..10000) {
-         Coro::AnyEvent::poll:
+         Coro::AnyEvent::poll;
          # do some stuff, make sure it takes at least 0.001s or so
       }
    }

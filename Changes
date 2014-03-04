@@ -6,6 +6,20 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 
+6.36 Tue Mar  4 07:11:59 CET 2014
+	- semaphores would not clear the destroy hook when interrupted
+          by ->throw, causing segfaults or worse.
+        - ->throw on a thread waiting for a semaphore did not acquire
+          the semaphore, but also didn't wake up other waiters,
+          possibly causing a deadlock.
+	- "FATAL: $Coro::IDLE blocked itself" will now use Carp::confess
+          to report a full stacktrace, which should help find out
+          where the actual call is.
+        - "atomically" destroy data in slf_destroy, because it is
+          the right thing to do, just in case.
+        - disable ecb.h libm dependency, to compile on ancient systems
+          or under adverse conditions.
+
 6.33 Mon Nov 18 11:26:27 CET 2013
 	- do not crash when freeing padlists with holes (in 5.18).
 	- tentative SVt_BIND 5.19 port/fix.
