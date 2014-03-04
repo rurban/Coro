@@ -6,6 +6,10 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 
+6.37 Tue Mar  4 13:27:33 CET 2014
+	- *sigh*, removed leftover dbeugging code from debugging a
+          perl bug, of all things.
+
 6.36 Tue Mar  4 07:11:59 CET 2014
 	- semaphores would not clear the destroy hook when interrupted
           by ->throw, causing segfaults or worse.
