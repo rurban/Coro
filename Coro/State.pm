@@ -84,7 +84,7 @@ our $WARNHOOK;
 
 BEGIN {
    $DIEHOOK  = sub { };
-   $WARNHOOK = sub { warn $_[0] };
+   $WARNHOOK = sub { warn "bp1\n"; warn $_[0] };
 }
 
 sub diehook  { &$DIEHOOK  }
@@ -93,7 +93,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 6.33;
+   our $VERSION = 6.36;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.

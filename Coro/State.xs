@@ -2610,7 +2610,6 @@ slf_destroy (pTHX_ struct coro *coro)
    * cleanup functions cannot call SLF functions.
    */
   coro->slf_frame.prepare = 0;
-  coro->slf_frame.destroy = 0;
 
   /* this callback is reserved for slf functions needing to do cleanup */
   if (frame.destroy && frame.prepare && !PL_dirty)
@@ -2964,13 +2963,18 @@ slf_check_semaphore_down_or_wait (pTHX_ struct CoroSLF *frame, int acquire)
   SV *count_sv = AvARRAY (av)[0];
   SV *coro_hv = SvRV (coro_current);
 
+  frame->destroy = 0;
+
   /* if we are about to throw, don't actually acquire the lock, just throw */
-  if (CORO_THROW)
-    return 0;
+  if (ecb_expect_false (CORO_THROW))
+    {
+      /* we still might be responsible for the semaphore, so wake up others */
+      coro_semaphore_adjust (aTHX_ av, 0);
+
+      return 0;
+    }
   else if (SvIVX (count_sv) > 0)
     {
-      frame->destroy = 0;
-
       if (acquire)
         SvIVX (count_sv) = SvIVX (count_sv) - 1;
       else
