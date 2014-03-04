@@ -6,10 +6,38 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 
+Program terminated with signal 11, Segmentation fault.
+#0  coro_semaphore_adjust (av=0x0, adjust=0) at State.xs:2915
+2915    State.xs: No such file or directory.
+(gdb) bt
+#0  coro_semaphore_adjust (av=0x0, adjust=0) at State.xs:2915
+#1  0x00007f638f0c0703 in slf_destroy (coro=0x5957180) at State.xs:2605
+#2  coro_state_destroy (coro=0x5957180) at State.xs:1712
+#3  0x00007f638f0c150c in coro_state_destroy (coro=<optimized out>) at State.xs:1709
+#4  XS_Coro__destroy (cv=<optimized out>) at State.xs:3853
+#5  0x00000000004b572d in Perl_pp_entersub () at pp_hot.c:2881
+#6  0x00000000004adfe3 in Perl_runops_standard () at run.c:42
+#7  0x000000000044335f in S_run_body (oldscope=<optimized out>) at perl.c:2462
+#8  perl_run (my_perl=<optimized out>) at perl.c:2383
+#9  0x00007f638f0ba3a1 in cctx_run (arg=<optimized out>) at State.xs:1478
+#10 0x00007f638f0b74d5 in coro_init () at libcoro/coro.c:96
+(gdb) up
+#1  0x00007f638f0c0703 in slf_destroy (coro=0x5957180) at State.xs:2605
+2605    in State.xs
+(gdb) p coro->slf_frame
+$1 = {
+  prepare = 0x7f638f0baf60 <prepare_schedule>, 
+  check = 0x7f638f0b6e70 <slf_check_repeat>, 
+  data = 0x0, 
+  destroy = 0x7f638f0bb820 <coro_semaphore_destroy>
+
+
 TODO: warnhook reports from wrong line number now, when arg is Math::GMP number.
 	- FATAL: $Coro::IDLE blocked itself will now use Carp::confess
           to report a full stacktrace, which should help find out
           where the actual call is.
+        - "atomically" destroy data in slf_destroy, because it is
+          the right thing to do, just in case.
         - disable ecb.h libm dependency, to compile on ancient systems
           or under adverse conditions.
 

@@ -654,14 +654,14 @@ interval timers (this could obviously be optimised, but does the job):
          $SIG{VTALRM} = sub { cede };
          # and then start the interval timer
          Time::HiRes::setitimer &Time::HiRes::ITIMER_VIRTUAL, 0.01, 0.01;
-      }; 
+      };
       Coro::on_leave {
          # on leaving the thread, we stop the interval timer again
          Time::HiRes::setitimer &Time::HiRes::ITIMER_VIRTUAL, 0, 0;
-      }; 
+      };
 
       &{+shift};
-   }  
+   }
 
    # use like this:
    timeslice {
@@ -669,7 +669,7 @@ interval timers (this could obviously be optimised, but does the job):
       # monopolise the process. Since it runs in a timesliced
       # environment, it will regularly cede to other threads.
       while () { }
-   }; 
+   };
 
 
 =item killall

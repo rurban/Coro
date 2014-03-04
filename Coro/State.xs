@@ -2601,17 +2601,20 @@ slf_init_cede_notself (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 static void
 slf_destroy (pTHX_ struct coro *coro)
 {
-  /* this callback is reserved for slf functions needing to do cleanup */
-  if (coro->slf_frame.destroy && coro->slf_frame.prepare && !PL_dirty)
-    coro->slf_frame.destroy (aTHX_ &coro->slf_frame);
+  struct CoroSLF frame = coro->slf_frame;
 
   /*
-   * The on_destroy above most likely is from an SLF call.
+   * The on_destroy below most likely is from an SLF call.
    * Since by definition the SLF call will not finish when we destroy
    * the coro, we will have to force-finish it here, otherwise
    * cleanup functions cannot call SLF functions.
    */
   coro->slf_frame.prepare = 0;
+  coro->slf_frame.destroy = 0;
+
+  /* this callback is reserved for slf functions needing to do cleanup */
+  if (frame.destroy && frame.prepare && !PL_dirty)
+    frame.destroy (aTHX_ &frame);
 }
 
 /*
