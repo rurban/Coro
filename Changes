@@ -6,6 +6,8 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 
+	- check that perl slots actually have enough space to hold
+          interpreter variables.
 	- untested port to perl 5.19 (64 bit tmps indices) (reported
           by Andreas König).
 	- croak when cancel is called without a thread context.
