@@ -3447,6 +3447,8 @@ PROTOTYPES: DISABLE
 
 BOOT:
 {
+#define VARx(name,expr,type) if (sizeof (type) < sizeof (expr)) croak ("FATAL: Coro thread context slot '" # name "' too small for this version of perl");
+#include "state.h"
 #ifdef USE_ITHREADS
 # if CORO_PTHREAD
         coro_thx = PERL_GET_CONTEXT;
