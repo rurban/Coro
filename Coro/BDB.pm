@@ -47,7 +47,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 6.38;
+our $VERSION = 6.39;
 our $WATCHER;
 
 BDB::set_sync_prepare {

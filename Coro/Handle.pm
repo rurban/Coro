@@ -46,7 +46,7 @@ use AnyEvent::Socket ();
 
 use base 'Exporter';
 
-our $VERSION = 6.38;
+our $VERSION = 6.39;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -304,6 +304,8 @@ sub TIEHANDLE {
    $self->[2] = $arg{timeout};
    $self->[3] = "";
    $self->[4] = "";
+   $self->[5] = undef; # work around changes in 5.20, which requires initialisation
+   $self->[6] = undef; # work around changes in 5.20, which requires initialisation
    $self->[7] = $arg{forward_class};
    $self->[8] = $arg{partial};
 
