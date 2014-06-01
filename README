@@ -663,13 +663,16 @@ CORO OBJECT METHODS
         on running complicated cleanup handlers that rely on its thread
         context, things will not work.
 
-        Any cleanup code being run (e.g. from "guard" blocks) will be run
-        without a thread context, and is not allowed to switch to other
-        threads. On the plus side, "->cancel" will always clean up the
-        thread, no matter what. If your cleanup code is complex or you want
-        to avoid cancelling a C-thread that doesn't know how to clean up
-        itself, it can be better to "->throw" an exception, or use
-        "->safe_cancel".
+        Any cleanup code being run (e.g. from "guard" blocks, destructors
+        and so on) will be run without a thread context, and is not allowed
+        to switch to other threads. A common mistake is to call "->cancel"
+        from a destructor called by die'ing inside the thread to be
+        cancelled for example.
+
+        On the plus side, "->cancel" will always clean up the thread, no
+        matter what. If your cleanup code is complex or you want to avoid
+        cancelling a C-thread that doesn't know how to clean up itself, it
+        can be better to "->throw" an exception, or use "->safe_cancel".
 
         The arguments to "->cancel" are not copied, but instead will be
         referenced directly (e.g. if you pass $var and after the call change
@@ -684,15 +687,16 @@ CORO OBJECT METHODS
     $coro->safe_cancel ($arg...)
         Works mostly like "->cancel", but is inherently "safer", and
         consequently, can fail with an exception in cases the thread is not
-        in a cancellable state.
+        in a cancellable state. Essentially, "->safe_cancel" is a "->cancel"
+        with extra checks before canceling.
 
-        This method works a bit like throwing an exception that cannot be
-        caught - specifically, it will clean up the thread from within
-        itself, so all cleanup handlers (e.g. "guard" blocks) are run with
-        full thread context and can block if they wish. The downside is that
-        there is no guarantee that the thread can be cancelled when you call
-        this method, and therefore, it might fail. It is also considerably
-        slower than "cancel" or "terminate".
+        It works a bit like throwing an exception that cannot be caught -
+        specifically, it will clean up the thread from within itself, so all
+        cleanup handlers (e.g. "guard" blocks) are run with full thread
+        context and can block if they wish. The downside is that there is no
+        guarantee that the thread can be cancelled when you call this
+        method, and therefore, it might fail. It is also considerably slower
+        than "cancel" or "terminate".
 
         A thread is in a safe-cancellable state if it either hasn't been run
         yet, or it has no C context attached and is inside an SLF function.
