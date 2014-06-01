@@ -6,7 +6,9 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool triesd to runc anceled thread?
-TODO: look into the array placeholder now NULL issue.
+
+6.39 Mon Jun  2 00:00:08 CEST 2014
+	- work around more incompatible changes in 5.20.
 
 6.38 Sun Jun  1 21:54:23 CEST 2014
 	- check that perl slots actually have enough space to hold
