@@ -368,7 +368,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 6.37;
+our $VERSION = 6.38;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -795,12 +795,16 @@ bad things can happen, or if the cancelled thread insists on running
 complicated cleanup handlers that rely on its thread context, things will
 not work.
 
-Any cleanup code being run (e.g. from C<guard> blocks) will be run without
-a thread context, and is not allowed to switch to other threads. On the
-plus side, C<< ->cancel >> will always clean up the thread, no matter
-what.  If your cleanup code is complex or you want to avoid cancelling a
-C-thread that doesn't know how to clean up itself, it can be better to C<<
-->throw >> an exception, or use C<< ->safe_cancel >>.
+Any cleanup code being run (e.g. from C<guard> blocks, destructors and so
+on) will be run without a thread context, and is not allowed to switch
+to other threads. A common mistake is to call C<< ->cancel >> from a
+destructor called by die'ing inside the thread to be cancelled for
+example.
+
+On the plus side, C<< ->cancel >> will always clean up the thread, no
+matter what.  If your cleanup code is complex or you want to avoid
+cancelling a C-thread that doesn't know how to clean up itself, it can be
+better to C<< ->throw >> an exception, or use C<< ->safe_cancel >>.
 
 The arguments to C<< ->cancel >> are not copied, but instead will
 be referenced directly (e.g. if you pass C<$var> and after the call
@@ -816,11 +820,12 @@ Coro object.
 
 Works mostly like C<< ->cancel >>, but is inherently "safer", and
 consequently, can fail with an exception in cases the thread is not in a
-cancellable state.
+cancellable state. Essentially, C<< ->safe_cancel >> is a C<< ->cancel >>
+with extra checks before canceling.
 
-This method works a bit like throwing an exception that cannot be caught
-- specifically, it will clean up the thread from within itself, so
-all cleanup handlers (e.g. C<guard> blocks) are run with full thread
+It works a bit like throwing an exception that cannot be caught -
+specifically, it will clean up the thread from within itself, so all
+cleanup handlers (e.g. C<guard> blocks) are run with full thread
 context and can block if they wish. The downside is that there is no
 guarantee that the thread can be cancelled when you call this method, and
 therefore, it might fail. It is also considerably slower than C<cancel> or

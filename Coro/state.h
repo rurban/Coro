@@ -37,9 +37,9 @@ VAR(savestack_ix,  I32)
 VAR(savestack_max, I32)
 
 VAR(tmps_stack,    SV **)          /* mortals we've made */
-VAR(tmps_ix,       I32)
-VAR(tmps_floor,    I32)
-VAR(tmps_max,      I32)
+VAR(tmps_ix,       SSize_t)
+VAR(tmps_floor,    SSize_t)
+VAR(tmps_max,      SSize_t)
 
 VAR(markstack,     I32 *)          /* stack_sp locations we're remembering */
 VAR(markstack_ptr, I32 *)

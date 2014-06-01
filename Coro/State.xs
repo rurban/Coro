@@ -2251,6 +2251,9 @@ slf_init_cancel (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
     {
       struct coro *self = SvSTATE_current;
 
+      if (!self)
+        croak ("Coro::cancel called outside of thread content,");
+
       /* otherwise we cancel directly, purely for speed reasons
        * unfortunately, this requires some magic trickery, as
        * somebody else could cancel us, so we have to fight the cancellation.
@@ -3444,6 +3447,8 @@ PROTOTYPES: DISABLE
 
 BOOT:
 {
+#define VARx(name,expr,type) if (sizeof (type) < sizeof (expr)) croak ("FATAL: Coro thread context slot '" # name "' too small for this version of perl.");
+#include "state.h"
 #ifdef USE_ITHREADS
 # if CORO_PTHREAD
         coro_thx = PERL_GET_CONTEXT;

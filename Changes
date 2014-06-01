@@ -5,9 +5,18 @@ TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
+TODO: croak when async_pool triesd to runc anceled thread?
+TODO: look into the array placeholder now NULL issue.
+
+6.38 Sun Jun  1 21:54:23 CEST 2014
+	- check that perl slots actually have enough space to hold
+          interpreter variables.
+	- untested port to perl 5.19 (64 bit tmps indices) (reported
+          by Andreas König).
+	- croak when cancel is called without a thread context.
 
 6.37 Tue Mar  4 13:27:33 CET 2014
-	- *sigh*, removed leftover dbeugging code from debugging a
+	- *sigh*, removed leftover debugging code from debugging a
           perl bug, of all things.
 
 6.36 Tue Mar  4 07:11:59 CET 2014
@@ -132,7 +141,7 @@ TODO: swap_sv not undone in pool
 
 6.01  Sun Jul  3 12:31:14 CEST 2011
 	- workarounds are good, but the test for whether pthreads are used
-          was not good. thisone should be better.
+          was not good. this one should be better.
         - check differently whether gcc generates cfi instructions itself.
 
 6.0   Wed Jun 29 19:43:35 CEST 2011
@@ -140,7 +149,7 @@ TODO: swap_sv not undone in pool
           destroyed and cleaned up automatically (e.g. async { schedule }).
         - implement a JIT compiler for part of the thread switch code,
           which gives a 50% speed improvement on threaded perls, and
-          about 4% on non-thraeded perls (so threaded perls now finally
+          about 4% on non-threaded perls (so threaded perls now finally
           reach about half the speed of non-threaded perls).
         - slightly modernise Coro::Intro, add section about rouse functions.
         - avoid DEFSV and ERRSV, giving another 10% improvement

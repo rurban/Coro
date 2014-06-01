@@ -1,7 +1,7 @@
 /*
  * libecb - http://software.schmorp.de/pkg/libecb
  *
- * Copyright (©) 2009-2013 Marc Alexander Lehmann <libecb@schmorp.de>
+ * Copyright (©) 2009-2014 Marc Alexander Lehmann <libecb@schmorp.de>
  * Copyright (©) 2011 Emanuele Giaquinta
  * All rights reserved.
  *
@@ -25,6 +25,17 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTH-
  * ERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License ("GPL") version 2 or any later version,
+ * in which case the provisions of the GPL are applicable instead of
+ * the above. If you wish to allow the use of your version of this file
+ * only under the terms of the GPL and not to allow others to use your
+ * version of this file under the BSD license, indicate your decision
+ * by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL. If you do not delete the
+ * provisions above, a recipient may use your version of this file under
+ * either the BSD or the GPL.
  */
 
 #ifndef ECB_H
@@ -144,6 +155,8 @@
     #elif defined __ARM_ARCH_7__  || defined __ARM_ARCH_7A__  \
        || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb"      : : : "memory")
+    #elif __aarch64__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb ish"  : : : "memory")
     #elif (__sparc || __sparc__) && !__sparcv8
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad" : : : "memory")
       #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                            : : : "memory")
@@ -594,7 +607,6 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
     || __i386 || __i386__ \
     || __amd64 || __amd64__ || __x86_64 || __x86_64__ \
     || __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__ \
-    || defined __arm__ && defined __ARM_EABI__ \
     || defined __s390__ || defined __s390x__ \
     || defined __mips__ \
     || defined __alpha__ \
@@ -603,7 +615,9 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
     || defined __m68k__ \
     || defined __m88k__ \
     || defined __sh__ \
-    || defined _M_IX86 || defined _M_AMD64 || defined _M_IA64
+    || defined _M_IX86 || defined _M_AMD64 || defined _M_IA64 \
+    || (defined __arm__ && (defined __ARM_EABI__ || defined __EABI__ || defined __VFP_FP__ || defined _WIN32_WCE || defined __ANDROID__)) \
+    || defined __aarch64__
   #define ECB_STDFP 1
   #include <string.h> /* for memcpy */
 #else
