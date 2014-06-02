@@ -65,7 +65,7 @@ VAR(sortstash,     HV *)           /* which is in some package or other */
 VAR(sortcxix,      I32)            /* from pp_ctl.c */
 #endif
 
-VAR(localizing,    U8)             /* are we processing a local() list? */
+VAR(localizing,    int)            /* are we processing a local() list? (U8 in later perls) */
 VAR(in_eval,       U8)             /* trap "fatal" errors? */
 VAR(tainted,       bool)           /* using variables controlled by $< */
 

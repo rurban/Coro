@@ -7,6 +7,8 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool triesd to runc anceled thread?
 
+	- restore portability to perl 5.8.x.
+
 6.39 Mon Jun  2 00:00:08 CEST 2014
 	- work around more incompatible changes in 5.20.
 
