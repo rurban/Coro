@@ -1140,7 +1140,10 @@ init_perl (pTHX_ struct coro *coro)
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
   GvSV (PL_errgv)    = newSV (0);
   GvSV (irsgv)       = newSVpvn ("\n", 1); sv_magic (GvSV (irsgv), (SV *)irsgv, PERL_MAGIC_sv, "/", 0);
-  GvHV (PL_hintgv)   = 0;
+  GvHV (PL_hintgv)   = newHV ();
+#if PERL_VERSION_ATLEAST (5,10,0)
+  hv_magic (GvHV (PL_hintgv), 0, PERL_MAGIC_hints);
+#endif
   PL_rs              = newSVsv (GvSV (irsgv));
   PL_defoutgv        = (GV *)SvREFCNT_inc_NN (stdoutgv);
 
