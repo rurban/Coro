@@ -5,7 +5,17 @@ TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
-TODO: croak when async_pool triesd to runc anceled thread?
+TODO: croak when async_pool triesd to run canceled thread?
+
+6.41 Sat Sep  6 22:08:46 CEST 2014
+	- restore portability to perl 5.8.x.
+        - give new Coro's a valid GvHV(PL_hintgv) - this is slow and takes
+          up some memory, but fixes "use feature" and similar modules
+          when used inside a Coro.
+        - allow zero as argument to Coro::Channel to mean the same thing
+          as no argument. this works with older versions as well,
+          but wasn't legal until now.
+        - slightly better c header file detection.
 
 6.39 Mon Jun  2 00:00:08 CEST 2014
 	- work around more incompatible changes in 5.20.

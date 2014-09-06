@@ -35,7 +35,7 @@ use common::sense;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = 6.39;
+our $VERSION = 6.41;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }
@@ -44,10 +44,10 @@ sub SPUT (){ 2 }
 =item $q = new Coro:Channel $maxsize
 
 Create a new channel with the given maximum size (practically unlimited
-if C<maxsize> is omitted). Giving a size of one gives you a traditional
-channel, i.e. a queue that can store only a single element (which means
-there will be no buffering, and C<put> will wait until there is a
-corresponding C<get> call). To buffer one element you have to specify
+if C<maxsize> is omitted or zero). Giving a size of one gives you a
+traditional channel, i.e. a queue that can store only a single element
+(which means there will be no buffering, and C<put> will wait until there
+is a corresponding C<get> call). To buffer one element you have to specify
 C<2>, and so on.
 
 =cut

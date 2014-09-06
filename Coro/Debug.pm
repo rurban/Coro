@@ -19,7 +19,7 @@ This module provides some debugging facilities. Most will, if not handled
 carefully, severely compromise the security of your program, so use it
 only for debugging (or take other precautions).
 
-It mainly implements a very primitive debugger that is evry easy to
+It mainly implements a very primitive debugger that is very easy to
 integrate in your program:
 
    our $server = new_unix_server Coro::Debug "/tmp/somepath";
@@ -120,7 +120,7 @@ use Coro::State ();
 use Coro::AnyEvent ();
 use Coro::Timer ();
 
-our $VERSION = 6.39;
+our $VERSION = 6.41;
 
 our %log;
 our $SESLOGLEVEL = exists $ENV{PERL_CORO_DEFAULT_LOGLEVEL} ? $ENV{PERL_CORO_DEFAULT_LOGLEVEL} : -1;
