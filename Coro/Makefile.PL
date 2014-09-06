@@ -9,6 +9,10 @@ my @LIBS = [];
 
 my $threads = $Config{usethreads};
 
+sub have_inc($) {
+   scalar grep -r "$_/$_[0]", $Config{usrinc}, split / /, $Config{incpth}
+}
+
 use Config;
 
 print <<EOF;
@@ -128,7 +132,7 @@ EOF
    # Fatal error 'siglongjmp()ing between thread contexts is undefined by POSIX 1003.1
    $iface = "s";
 
-} elsif (-e "/usr/include/ucontext.h") { # shame on this heuristic
+} elsif (have_inc "ucontext.h") { # shame on this heuristic
    $iface = "u";
 
 } else {
@@ -321,7 +325,7 @@ choice.
 
 EOF
 
-my $valgrind = -r "/usr/include/valgrind/valgrind.h" ?  "y" : "n";
+my $valgrind = have_inc "valgrind/valgrind.h" ?  "y" : "n";
 $valgrind = $ENV{CORO_USE_VALGRIND} if exists $ENV{CORO_USE_VALGRIND};
 $valgrind = prompt ("Enable valgrind support (y/n)?", $valgrind);
 $DEFINE .= " -DCORO_USE_VALGRIND=1" if $valgrind =~ /[yY]/;
