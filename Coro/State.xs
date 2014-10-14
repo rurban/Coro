@@ -1932,7 +1932,7 @@ prepare_schedule (pTHX_ struct coro_transfer_args *ta)
                     SAVETMPS;
 
                     PUSHMARK (SP);
-                    XPUSHs (sv_2mortal (newSVpv ("FATAL: $Coro::IDLE blocked itself - did you try to block inside an event loop callback? Caught", 0)));
+                    XPUSHs (sv_2mortal (newSVpv ("FATAL: $Coro::idle blocked itself - did you try to block inside an event loop callback? Caught", 0)));
                     PUTBACK;
                     call_pv ("Carp::confess", G_VOID | G_DISCARD);
 
