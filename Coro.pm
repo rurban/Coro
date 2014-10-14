@@ -1023,7 +1023,7 @@ currently known that is safe to use without C<unblock_sub> is L<EV> (but
 you might still run into deadlocks if all event loops are blocked).
 
 Coro will try to catch you when you block in the event loop
-("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
+("FATAL:$Coro::idle blocked itself"), but this is just best effort and
 only works when you do not run your own event loop.
 
 This function allows your callbacks to block by executing them in another
