@@ -1,3 +1,6 @@
+TODO: ecb_noreturn must precede function name
+http://clang.debian.net/status.php?version=3.6.0rc1&key=KEYWORD_PRECEDE
+
 /*
  * libecb - http://software.schmorp.de/pkg/libecb
  *
@@ -42,7 +45,7 @@
 #define ECB_H
 
 /* 16 bits major, 16 bits minor */
-#define ECB_VERSION 0x00010003
+#define ECB_VERSION 0x00010004
 
 #ifdef _WIN32
   typedef   signed char   int8_t;
@@ -92,12 +95,24 @@
  * we try to detect these and simply assume they are not gcc - if they have
  * an issue with that they should have done it right in the first place.
  */
-#ifndef ECB_GCC_VERSION
-  #if !defined __GNUC_MINOR__ || defined __INTEL_COMPILER || defined __SUNPRO_C || defined __SUNPRO_CC || defined __llvm__ || defined __clang__
-    #define ECB_GCC_VERSION(major,minor) 0
-  #else
-    #define ECB_GCC_VERSION(major,minor) (__GNUC__ > (major) || (__GNUC__ == (major) && __GNUC_MINOR__ >= (minor)))
-  #endif
+#if !defined __GNUC_MINOR__ || defined __INTEL_COMPILER || defined __SUNPRO_C || defined __SUNPRO_CC || defined __llvm__ || defined __clang__
+  #define ECB_GCC_VERSION(major,minor) 0
+#else
+  #define ECB_GCC_VERSION(major,minor) (__GNUC__ > (major) || (__GNUC__ == (major) && __GNUC_MINOR__ >= (minor)))
+#endif
+
+#define ECB_CLANG_VERSION(major,minor) (__clang_major__ > (major) || (__clang_major__ == (major) && __clang_minor__ >= (minor)))
+
+#if __clang__ && defined __has_builtin
+  #define ECB_CLANG_BUILTIN(x) __has_builtin (x)
+#else
+  #define ECB_CLANG_BUILTIN(x) 0
+#endif
+
+#if __clang__ && defined __has_extension
+  #define ECB_CLANG_EXTENSION(x) __has_extension (x)
+#else
+  #define ECB_CLANG_EXTENSION(x) 0
 #endif
 
 #define ECB_CPP   (__cplusplus+0)
@@ -191,16 +206,11 @@
     #define ECB_MEMORY_FENCE_ACQUIRE __atomic_thread_fence (__ATOMIC_ACQUIRE)
     #define ECB_MEMORY_FENCE_RELEASE __atomic_thread_fence (__ATOMIC_RELEASE)
 
-  /* The __has_feature syntax from clang is so misdesigned that we cannot use it
-   * without risking compile time errors with other compilers. We *could*
-   * define our own ecb_clang_has_feature, but I just can't be bothered to work
-   * around this shit time and again.
-   * #elif defined __clang && __has_feature (cxx_atomic)
-   *   // see comment below (stdatomic.h) about the C11 memory model.
-   *   #define ECB_MEMORY_FENCE         __c11_atomic_thread_fence (__ATOMIC_SEQ_CST)
-   *   #define ECB_MEMORY_FENCE_ACQUIRE __c11_atomic_thread_fence (__ATOMIC_ACQUIRE)
-   *   #define ECB_MEMORY_FENCE_RELEASE __c11_atomic_thread_fence (__ATOMIC_RELEASE)
-   */
+  #elif ECB_CLANG_EXTENSION(c_atomic)
+    /* see comment below (stdatomic.h) about the C11 memory model. */
+    #define ECB_MEMORY_FENCE         __c11_atomic_thread_fence (__ATOMIC_SEQ_CST)
+    #define ECB_MEMORY_FENCE_ACQUIRE __c11_atomic_thread_fence (__ATOMIC_ACQUIRE)
+    #define ECB_MEMORY_FENCE_RELEASE __c11_atomic_thread_fence (__ATOMIC_RELEASE)
 
   #elif ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
     #define ECB_MEMORY_FENCE         __sync_synchronize ()
@@ -273,7 +283,7 @@
 
 /*****************************************************************************/
 
-#if __cplusplus
+#if ECB_CPP
   #define ecb_inline static inline
 #elif ECB_GCC_VERSION(2,5)
   #define ecb_inline static __inline__
@@ -300,32 +310,45 @@ typedef int ecb_bool;
 
 #define ecb_function_ ecb_inline
 
-#if ECB_GCC_VERSION(3,1)
-  #define ecb_attribute(attrlist)        __attribute__(attrlist)
-  #define ecb_is_constant(expr)          __builtin_constant_p (expr)
-  #define ecb_expect(expr,value)         __builtin_expect ((expr),(value))
-  #define ecb_prefetch(addr,rw,locality) __builtin_prefetch (addr, rw, locality)
+#if ECB_GCC_VERSION(3,1) || ECB_CLANG_VERSION(2,8)
+  #define ecb_attribute(attrlist)        __attribute__ (attrlist)
 #else
   #define ecb_attribute(attrlist)
+#endif
 
+#if ECB_GCC_VERSION(3,1) || ECB_CLANG_BUILTIN(__builtin_constant_p)
+  #define ecb_is_constant(expr)          __builtin_constant_p (expr)
+#else
   /* possible C11 impl for integral types
   typedef struct ecb_is_constant_struct ecb_is_constant_struct;
   #define ecb_is_constant(expr)          _Generic ((1 ? (struct ecb_is_constant_struct *)0 : (void *)((expr) - (expr)), ecb_is_constant_struct *: 0, default: 1)) */
 
   #define ecb_is_constant(expr)          0
+#endif
+
+#if ECB_GCC_VERSION(3,1) || ECB_CLANG_BUILTIN(__builtin_expect)
+  #define ecb_expect(expr,value)         __builtin_expect ((expr),(value))
+#else
   #define ecb_expect(expr,value)         (expr)
+#endif
+
+#if ECB_GCC_VERSION(3,1) || ECB_CLANG_BUILTIN(__builtin_prefetch)
+  #define ecb_prefetch(addr,rw,locality) __builtin_prefetch (addr, rw, locality)
+#else
   #define ecb_prefetch(addr,rw,locality)
 #endif
 
 /* no emulation for ecb_decltype */
-#if ECB_GCC_VERSION(4,5)
-  #define ecb_decltype(x) __decltype(x)
-#elif ECB_GCC_VERSION(3,0)
-  #define ecb_decltype(x) __typeof(x)
+#if ECB_CPP11
+  // older implementations might have problems with decltype(x)::type, work around it
+  template<class T> struct ecb_decltype_t { typedef T type; };
+  #define ecb_decltype(x) ecb_decltype_t<decltype (x)>::type
+#elif ECB_GCC_VERSION(3,0) || ECB_CLANG_VERSION(2,8)
+  #define ecb_decltype(x) __typeof__ (x)
 #endif
 
 #if _MSC_VER >= 1300
-  #define ecb_deprecated __declspec(deprecated)
+  #define ecb_deprecated __declspec (deprecated)
 #else
   #define ecb_deprecated ecb_attribute ((__deprecated__))
 #endif
@@ -335,8 +358,9 @@ typedef int ecb_bool;
 #define ecb_const      ecb_attribute ((__const__))
 #define ecb_pure       ecb_attribute ((__pure__))
 
-/* http://msdn.microsoft.com/en-us/library/k6ktzx3s.aspx __declspec(noreturn) */
-#if ECB_C11
+/* TODO http://msdn.microsoft.com/en-us/library/k6ktzx3s.aspx __declspec(noreturn) */
+#if ECB_C11 || __IBMC_NORETURN
+  /* http://pic.dhe.ibm.com/infocenter/compbg/v121v141/topic/com.ibm.xlcpp121.bg.doc/language_ref/noreturn.html */
   #define ecb_noreturn   _Noreturn
 #else
   #define ecb_noreturn   ecb_attribute ((__noreturn__))
@@ -362,7 +386,10 @@ typedef int ecb_bool;
 #define ecb_unlikely(expr) ecb_expect_false (expr)
 
 /* count trailing zero bits and count # of one bits */
-#if ECB_GCC_VERSION(3,4)
+#if ECB_GCC_VERSION(3,4) \
+    || (ECB_CLANG_BUILTIN(__builtin_clz) && ECB_CLANG_BUILTIN(__builtin_clzll) \
+        && ECB_CLANG_BUILTIN(__builtin_ctz) && ECB_CLANG_BUILTIN(__builtin_ctzll) \
+        && ECB_CLANG_BUILTIN(__builtin_popcount))
   /* we assume int == 32 bit, long == 32 or 64 bit and long long == 64 bit */
   #define ecb_ld32(x)      (__builtin_clz      (x) ^ 31)
   #define ecb_ld64(x)      (__builtin_clzll    (x) ^ 63)
@@ -450,7 +477,7 @@ ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x) ecb_const;
 ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x)
 {
   return (  (x * 0x0802U & 0x22110U)
-          | (x * 0x8020U & 0x88440U)) * 0x10101U >> 16; 
+          | (x * 0x8020U & 0x88440U)) * 0x10101U >> 16;
 }
 
 ecb_function_ uint16_t ecb_bitrev16 (uint16_t x) ecb_const;
@@ -503,7 +530,7 @@ ecb_inline uint32_t ecb_rotr32 (uint32_t x, unsigned int count) { return (x << (
 ecb_inline uint64_t ecb_rotl64 (uint64_t x, unsigned int count) { return (x >> (64 - count)) | (x << count); }
 ecb_inline uint64_t ecb_rotr64 (uint64_t x, unsigned int count) { return (x << (64 - count)) | (x >> count); }
 
-#if ECB_GCC_VERSION(4,3)
+#if ECB_GCC_VERSION(4,3) || (ECB_CLANG_BUILTIN(__builtin_bswap32) && ECB_CLANG_BUILTIN(__builtin_bswap64))
   #define ecb_bswap16(x) (__builtin_bswap32 (x) >> 16)
   #define ecb_bswap32(x)  __builtin_bswap32 (x)
   #define ecb_bswap64(x)  __builtin_bswap64 (x)
@@ -530,7 +557,7 @@ ecb_inline uint64_t ecb_rotr64 (uint64_t x, unsigned int count) { return (x << (
   }
 #endif
 
-#if ECB_GCC_VERSION(4,5)
+#if ECB_GCC_VERSION(4,5) || ECB_CLANG_BUILTIN(__builtin_unreachable)
   #define ecb_unreachable() __builtin_unreachable ()
 #else
   /* this seems to work fine, but gcc always emits a warning for it :/ */
@@ -578,7 +605,7 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
   #define ecb_mod(m,n) ((m) < 0 ? ((n) - 1 - ((-1 - (m)) % (n))) : ((m) % (n)))
 #endif
 
-#if __cplusplus
+#if ECB_CPP
   template<typename T>
   static inline T ecb_div_rd (T val, T div)
   {
@@ -648,6 +675,12 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
     #define ECB_NAN ECB_INFINITY
   #endif
 
+  #if ECB_C99 || _XOPEN_VERSION >= 600 || _POSIX_VERSION >= 200112L
+    #define ecb_ldexpf(x,e) ldexpf ((x), (e))
+  #else
+    #define ecb_ldexpf(x,e) (float) ldexp ((x), (e))
+  #endif
+
   /* converts an ieee half/binary16 to a float */
   ecb_function_ float ecb_binary16_to_float (uint16_t x) ecb_const;
   ecb_function_ float
@@ -657,8 +690,8 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
     int m = x & 0x3ff;
     float r;
 
-    if      (!e     ) r = ldexpf (m        ,    -24);
-    else if (e != 31) r = ldexpf (m + 0x400, e - 25);
+    if      (!e     ) r = ecb_ldexpf (m        ,    -24);
+    else if (e != 31) r = ecb_ldexpf (m + 0x400, e - 25);
     else if (m      ) r = ECB_NAN;
     else              r = ECB_INFINITY;
 
@@ -727,7 +760,7 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
         e = 1;
 
       /* we distrust ldexpf a bit and do the 2**-24 scaling by an extra multiply */
-      r = ldexpf (x * (0.5f / 0x800000U), e - 126);
+      r = ecb_ldexpf (x * (0.5f / 0x800000U), e - 126);
 
       r = neg ? -r : r;
     #endif
