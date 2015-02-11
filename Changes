@@ -7,6 +7,11 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool triesd to run canceled thread?
 
+6.42 Wed Feb 11 20:29:52 CET 2015
+	- Coro::SemaphoreSet->try did not actually work (analyzed by
+          SATO Kentaro).
+        - upgrade libecb to be C11 compliant.
+
 6.41 Sat Sep  6 22:08:46 CEST 2014
 	- restore portability to perl 5.8.x.
         - give new Coro's a valid GvHV(PL_hintgv) - this is slow and takes

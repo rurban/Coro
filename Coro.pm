@@ -368,7 +368,7 @@ our $idle;    # idle handler
 our $main;    # main coro
 our $current; # current coro
 
-our $VERSION = 6.41;
+our $VERSION = 6.42;
 
 our @EXPORT = qw(async async_pool cede schedule terminate current unblock_sub rouse_cb rouse_wait);
 our %EXPORT_TAGS = (
@@ -1023,7 +1023,7 @@ currently known that is safe to use without C<unblock_sub> is L<EV> (but
 you might still run into deadlocks if all event loops are blocked).
 
 Coro will try to catch you when you block in the event loop
-("FATAL:$Coro::IDLE blocked itself"), but this is just best effort and
+("FATAL:$Coro::idle blocked itself"), but this is just best effort and
 only works when you do not run your own event loop.
 
 This function allows your callbacks to block by executing them in another

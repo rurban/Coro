@@ -35,7 +35,7 @@ package Coro::SemaphoreSet;
 
 use common::sense;
 
-our $VERSION = 6.41;
+our $VERSION = 6.42;
 
 use Coro::Semaphore ();
 
@@ -116,7 +116,11 @@ otherwise return false and leave the semaphore unchanged.
 =cut
 
 sub try {
-   Coro::Semaphore::try ($_[0][1]{$_[1]} || return $_[0][0] > 0)
+   Coro::Semaphore::try (
+      $_[0][1]{$_[1]} ||= $_[0][0] > 0
+         ? Coro::Semaphore::_alloc $_[0][0]
+         : return 0
+   )
 }
 
 =item $semset->count ($id)
