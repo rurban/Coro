@@ -38,7 +38,7 @@ use common::sense;
 
 use Coro::Semaphore ();
 
-our $VERSION = 6.41;
+our $VERSION = 6.42;
 
 =item $sig = new Coro::Signal;
 
