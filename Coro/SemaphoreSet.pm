@@ -35,7 +35,7 @@ package Coro::SemaphoreSet;
 
 use common::sense;
 
-our $VERSION = 6.42;
+our $VERSION = 6.43;
 
 use Coro::Semaphore ();
 

@@ -2,6 +2,8 @@ use ExtUtils::MakeMaker;
 
 use 5.008002;
 
+use Canary::Stability Coro => 1;
+
 unless (-e "Coro/libcoro/coro.c") {
    print <<EOF;
 
@@ -89,6 +91,7 @@ WriteMakefile(
        #BDB              => 1.5,
        #AnyEvent::BDB    => 1.0,
     },
+    CONFIGURE_REQUIRES => { ExtUtils::MakeMaker => 6.52, Canary::Stability => 0 },
     # neither configure_requires nor recommends can be used
     # for optional dependencies. whoever decided that a module needs
     # to build properly without its dependencies installed
