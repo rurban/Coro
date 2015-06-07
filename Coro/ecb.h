@@ -304,6 +304,7 @@ typedef int ecb_bool;
 #define ECB_CONCAT(a, b) ECB_CONCAT_(a, b)
 #define ECB_STRINGIFY_(a) # a
 #define ECB_STRINGIFY(a) ECB_STRINGIFY_(a)
+#define ECB_STRINGIFY_EXPR(expr) ((expr), ECB_STRINGIFY_ (expr))
 
 #define ecb_function_ ecb_inline
 
@@ -350,7 +351,20 @@ typedef int ecb_bool;
   #define ecb_deprecated ecb_attribute ((__deprecated__))
 #endif
 
-#define ecb_noinline   ecb_attribute ((__noinline__))
+#if __MSC_VER >= 1500
+  #define ecb_deprecated_message(msg) __declspec (deprecated (msg))
+#elif ECB_GCC_VERSION(4,5)
+  #define ecb_deprecated_message(msg) ecb_attribute ((__deprecated__ (msg))
+#else
+  #define ecb_deprecated_message(msg) ecb_deprecated
+#endif
+
+#if _MSC_VER >= 1400
+  #define ecb_noinline __declspec (noinline)
+#else
+  #define ecb_noinline ecb_attribute ((__noinline__))
+#endif
+
 #define ecb_unused     ecb_attribute ((__unused__))
 #define ecb_const      ecb_attribute ((__const__))
 #define ecb_pure       ecb_attribute ((__pure__))
@@ -359,6 +373,10 @@ typedef int ecb_bool;
 #if ECB_C11 || __IBMC_NORETURN
   /* http://pic.dhe.ibm.com/infocenter/compbg/v121v141/topic/com.ibm.xlcpp121.bg.doc/language_ref/noreturn.html */
   #define ecb_noreturn   _Noreturn
+#elif ECB_CPP11
+  #define ecb_noreturn   [[noreturn]]
+#elif _MSC_VER >= 1200
+  #define ecb_noreturn   __declspec (noreturn)
 #else
   #define ecb_noreturn   ecb_attribute ((__noreturn__))
 #endif

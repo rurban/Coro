@@ -5,9 +5,10 @@ author:
 build_requires:
   ExtUtils::MakeMaker: '0'
 configure_requires:
-  ExtUtils::MakeMaker: '0'
+  Canary::Stability: '0'
+  ExtUtils::MakeMaker: '6.52'
 dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 6.98, CPAN::Meta::Converter version 2.142060'
+generated_by: 'ExtUtils::MakeMaker version 7.0401, CPAN::Meta::Converter version 2.150001'
 license: unknown
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -31,4 +32,4 @@ requires:
   Scalar::Util: '0'
   Storable: '2.15'
   common::sense: '0'
-version: 6.42
+version: 6.43

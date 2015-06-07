@@ -859,9 +859,9 @@ GLOBAL FUNCTIONS
         EV (but you might still run into deadlocks if all event loops are
         blocked).
 
-        Coro will try to catch you when you block in the event loop
-        ("FATAL:$Coro::idle blocked itself"), but this is just best effort
-        and only works when you do not run your own event loop.
+        Coro will try to catch you when you block in the event loop ("FATAL:
+        $Coro::idle blocked itself"), but this is just best effort and only
+        works when you do not run your own event loop.
 
         This function allows your callbacks to block by executing them in
         another coro where it is safe to block. One example where blocking

@@ -44,6 +44,12 @@ typedef AV PAD;
 # define PadMAX			AvFILLp
 # define newPADLIST(var)	((var) = newAV (), av_extend (var, 1))
 #endif
+#ifndef PadnamelistREFCNT
+# define PadnamelistREFCNT(pnl) SvREFCNT (pnl)
+#endif
+#ifndef PadnamelistREFCNT_dec
+# define PadnamelistREFCNT_dec(pnl) SvREFCNT_dec (pnl)
+#endif
 
 /* 5.19.something has replaced SVt_BIND by SVt_INVLIST */
 /* we just alias it to SVt_IV, as that is sufficient for swap_sv for now */
@@ -519,6 +525,7 @@ coro_derive_padlist (pTHX_ CV *cv)
 {
   PADLIST *padlist = CvPADLIST (cv);
   PADLIST *newpadlist;
+  PADNAMELIST *padnames;
   PAD *newpad;
   PADOFFSET off = PadlistMAX (padlist) + 1;
 
@@ -555,7 +562,11 @@ coro_derive_padlist (pTHX_ CV *cv)
 
   /* Already extended to 2 elements by newPADLIST. */
   PadlistMAX (newpadlist) = 1;
-  PadlistNAMES (newpadlist) = (PADNAMELIST *)SvREFCNT_inc_NN (PadlistNAMES (padlist));
+
+  padnames = PadlistNAMES (padlist);
+  ++PadnamelistREFCNT (padnames);
+  PadlistNAMES (newpadlist) = padnames;
+
   PadlistARRAY (newpadlist)[1] = newpad;
 
   return newpadlist;
@@ -586,7 +597,7 @@ free_padlist (pTHX_ PADLIST *padlist)
             }
         }
 
-      SvREFCNT_dec (PadlistNAMES (padlist));
+      PadnamelistREFCNT_dec (PadlistNAMES (padlist));
 
 #if NEWPADAPI
       Safefree (PadlistARRAY (padlist));

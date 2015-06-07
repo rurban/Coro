@@ -5,7 +5,12 @@ TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
-TODO: croak when async_pool triesd to run canceled thread?
+TODO: croak when async_pool tries to run canceled thread?
+
+6.43 Thu Jun  4 15:38:14 CEST 2015
+	- use stability canary.
+	- port to stableperl-5.22.0-1.001.
+        - update libecb.
 
 6.42 Wed Feb 11 20:29:52 CET 2015
 	- Coro::SemaphoreSet->try did not actually work (analyzed by
