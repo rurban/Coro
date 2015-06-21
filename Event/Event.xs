@@ -53,7 +53,7 @@ asynccheck_hook (void *data)
     ;
 }
 
-static double
+static NV
 prepare_hook (void *data)
 {
   /* this yields once to another coro with any priority */

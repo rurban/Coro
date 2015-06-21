@@ -1346,7 +1346,7 @@ runops_trace (pTHX)
                 {
                   SV **cb;
 
-                  if (oldcxix != cxstack_ix && cctx_current->flags & CC_TRACE_SUB)
+                  if (oldcxix != cxstack_ix && cctx_current->flags & CC_TRACE_SUB && cxstack_ix >= 0)
                     {
                       PERL_CONTEXT *cx = &cxstack[cxstack_ix];
 
