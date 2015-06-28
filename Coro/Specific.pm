@@ -80,10 +80,10 @@ sub STORE {
 The actual coroutine specific values do not automatically get destroyed
 when the Coro::Specific object gets destroyed.
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

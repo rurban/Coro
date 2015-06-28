@@ -79,10 +79,10 @@ use overload 'bool' => \&bool, '0+' => \&bool;
 
 =back
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

@@ -561,10 +561,10 @@ the same thread (this requirement might be removed in the future).
 
 L<Coro>.
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

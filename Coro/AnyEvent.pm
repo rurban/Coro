@@ -444,10 +444,10 @@ L<AnyEvent>, to see which event loops are supported, L<Coro::EV> and
 L<Coro::Event> for more efficient and more correct solutions (they will be
 used automatically if applicable).
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

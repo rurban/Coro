@@ -12,6 +12,7 @@ TODO: croak when async_pool tries to run canceled thread?
           failures on perls compiled with -Duselongdouble. Requiring
           the latest version of Event because I don't know which release
           changed this (it's not mentioned in the ChangeLog).
+        - allow xs level enterleave hooks via CoroAPI.
 
 6.43 Thu Jun  4 15:38:14 CEST 2015
 	- use stability canary.
