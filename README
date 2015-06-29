@@ -1076,7 +1076,7 @@ SEE ALSO
 
     Low level Configuration, Thread Environment, Continuations: Coro::State.
 
-AUTHOR
-     Marc Lehmann <schmorp@schmorp.de>
-     http://home.schmorp.de/
+AUTHOR/SUPPORT/CONTACT
+       Marc A. Lehmann <schmorp@schmorp.de>
+       http://software.schmorp.de/pkg/Coro.html
 
