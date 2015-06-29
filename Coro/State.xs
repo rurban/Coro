@@ -24,6 +24,14 @@
 #include <errno.h>
 #include <assert.h>
 
+#ifndef SvREFCNT_dec_NN
+  #define SvREFCNT_dec_NN(sv) SvREFCNT_dec (sv)
+#endif
+
+#ifndef SvREFCNT_inc_NN
+  #define SvREFCNT_inc_NN(sv) SvREFCNT_inc (sv)
+#endif
+
 #ifndef SVs_PADSTALE
 # define SVs_PADSTALE 0
 #endif
