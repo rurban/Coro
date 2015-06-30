@@ -67,7 +67,7 @@ use Coro::AnyEvent ();
 
 use base Exporter::;
 
-our $VERSION = 6.43;
+our $VERSION = 6.46;
 our @EXPORT_OK = "select";
 
 sub import {
@@ -141,10 +141,10 @@ non-portable).
 
 L<Coro::LWP>.
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

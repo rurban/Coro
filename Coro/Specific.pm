@@ -36,7 +36,7 @@ package Coro::Specific;
 
 use common::sense;
 
-our $VERSION = 6.43;
+our $VERSION = 6.46;
 
 =item new
 
@@ -80,10 +80,10 @@ sub STORE {
 The actual coroutine specific values do not automatically get destroyed
 when the Coro::Specific object gets destroyed.
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

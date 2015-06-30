@@ -7,6 +7,21 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool tries to run canceled thread?
 
+6.46 Tue Jun 30 14:36:30 CEST 2015
+	- restore portability to perls with windows fork emulation
+          (reported by Petr Písař).
+
+6.45 Tue Jun 30 01:40:08 CEST 2015
+	- restore portability to perl 5.16 and below.
+
+6.44 Tue Jun 30 00:41:54 CEST 2015
+	- avoid segfaulting (or worse) when tracing a canceled thread.
+	- the Event module silently broke it's public hook API, causing
+          failures on perls compiled with -Duselongdouble. Requiring
+          the latest version of Event because I don't know which release
+          changed this (it's not mentioned in the ChangeLog).
+        - allow xs level enterleave hooks via CoroAPI.
+
 6.43 Thu Jun  4 15:38:14 CEST 2015
 	- use stability canary.
 	- port to stableperl-5.22.0-1.001.

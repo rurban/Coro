@@ -46,7 +46,7 @@ use AnyEvent::Socket ();
 
 use base 'Exporter';
 
-our $VERSION = 6.43;
+our $VERSION = 6.46;
 our @EXPORT = qw(unblock);
 
 =item $fh = new_from_fh Coro::Handle $fhandle [, arg => value...]
@@ -563,10 +563,10 @@ sub READLINE {
 
  - Perl's IO-Handle model is THE bug.
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

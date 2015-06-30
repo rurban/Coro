@@ -35,6 +35,9 @@ struct CoroSLF
 /* needs to fill in the *frame */
 typedef void (*coro_slf_cb) (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items);
 
+/* called on enter/leave */
+typedef void (*coro_enterleave_hook) (pTHX_ void *arg);
+
 /* private structure, always use the provided macros below */
 struct CoroAPI
 {
@@ -42,7 +45,7 @@ struct CoroAPI
   I32 ver;
   I32 rev;
 #define CORO_API_VERSION 7 /* reorder CoroSLF on change */
-#define CORO_API_REVISION 1
+#define CORO_API_REVISION 2
 
   /* Coro */
   int nready;
@@ -61,7 +64,7 @@ struct CoroAPI
   void (*transfer) (pTHX_ SV *prev_sv, SV *next_sv); /* Coro::State */
 
   /* SLF */
-  struct coro *(*sv_state) (pTHX_ SV *coro);
+  struct coro *(*sv_state) (pTHX_ SV *coro_sv);
   void (*execute_slf) (pTHX_ CV *cv, coro_slf_cb init_cb, I32 ax);
 
   /* public */
@@ -70,6 +73,11 @@ struct CoroAPI
   void (*prepare_schedule)     (pTHX_ struct coro_transfer_args *ta);
   void (*prepare_cede)         (pTHX_ struct coro_transfer_args *ta);
   void (*prepare_cede_notself) (pTHX_ struct coro_transfer_args *ta);
+
+  /* private */
+  void (*enterleave_hook)(pTHX_ SV *coro_sv, coro_enterleave_hook enter, void *enter_arg, coro_enterleave_hook leave, void *leave_arg);
+  void (*enterleave_unhook)(pTHX_ SV *coro_sv, coro_enterleave_hook enter, coro_enterleave_hook leave);
+  void (*enterleave_scope_hook)(pTHX_ coro_enterleave_hook enter, void *enter_arg, coro_enterleave_hook leave, void *leave_arg); /* XS caller must LEAVE/ENTER */
 };
 
 static struct CoroAPI *GCoroAPI;
@@ -90,6 +98,10 @@ static struct CoroAPI *GCoroAPI;
 #define CORO_THROW               (GCoroAPI->except)
 #define CORO_CURRENT             SvRV (GCoroAPI->current)
 #define CORO_READYHOOK           (GCoroAPI->readyhook)
+
+#define CORO_ENTERLEAVE_HOOK(coro,enter,enter_arg,leave,leave_arg)   GCoroAPI->enterleave_hook (aTHX_ coro, enter, enter_arg, leave, leave_arg)
+#define CORO_ENTERLEAVE_UNHOOK(coro,enter,leave)                     GCoroAPI->enterleave_hook (aTHX_ coro, enter           , leave           )
+#define CORO_ENTERLEAVE_SCOPE_HOOK(enter,enter_arg,leave,leave_arg)  GCoroAPI->enterleave_scope_hook (aTHX_ enter, enter_arg, leave, leave_arg)
 
 #define I_CORO_API(YourName)                                                                       \
 STMT_START {                                                                                       \

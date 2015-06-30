@@ -84,7 +84,7 @@ BEGIN {
 use Storable;
 use base "Exporter";
 
-our $VERSION = 6.43;
+our $VERSION = 6.46;
 our @EXPORT = qw(thaw freeze nfreeze blocking_thaw blocking_freeze blocking_nfreeze);
 
 our $GRANULARITY = 0.01;
@@ -155,10 +155,10 @@ sub blocking_nfreeze($) {
 
 1;
 
-=head1 AUTHOR
+=head1 AUTHOR/SUPPORT/CONTACT
 
- Marc Lehmann <schmorp@schmorp.de>
- http://home.schmorp.de/
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut
 

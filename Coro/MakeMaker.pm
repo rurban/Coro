@@ -7,7 +7,7 @@ use base 'Exporter';
 
 our $installsitearch;
 
-our $VERSION = 6.43;
+our $VERSION = 6.46;
 our @EXPORT_OK = qw(&coro_args $installsitearch);
 
 my %opt;
@@ -83,6 +83,8 @@ the distribution, and check the examples in F<EV/> and F<Event/*>, or
 as a more real-world example, the Deliantra game server (which uses
 Coro::MakeMaker).
 
+You can also drop me a mail if you run into any trouble.
+
  #define CORO_TRANSFER(prev,next) /* transfer from prev to next */
  #define CORO_SCHEDULE            /* like Coro::schedule */
  #define CORO_CEDE                /* like Coro::cede */
@@ -94,8 +96,41 @@ Coro::MakeMaker).
  #define CORO_THROW               /* exception pending? */
  #define CORO_READYHOOK           /* hook for event libs, see Coro::EV */
 
+ /* C-level coroutine struct, opaque, not used much */
+ struct coro;
+
+ /* used for schedule-like-function prepares */
+ struct coro_transfer_args
+ {
+   struct coro *prev, *next;
+ };
+
+ /* this is the per-perl-coro slf frame info */
+ struct CoroSLF
+ {
+   void (*prepare) (pTHX_ struct coro_transfer_args *ta); /* 0 means not yet initialised */
+   int (*check) (pTHX_ struct CoroSLF *frame);
+   void *data; /* for use by prepare/check/destroy */
+   void (*destroy) (pTHX_ struct CoroSLF *frame);
+ };
+
+ /* needs to fill in the *frame */
+ typedef void (*coro_slf_cb) (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items);
+
  #define CORO_SV_STATE(coro)      /* returns the internal struct coro * */
  #define CORO_EXECUTE_SLF(cv,init,ax) /* execute a schedule-like function */
  #define CORO_EXECUTE_SLF_XS(init) /* SLF in XS, see e.g. Coro::EV */
+
+ /* called on enter/leave */
+ typedef void (*coro_enterleave_hook) (pTHX_ void *arg);
+
+ #define CORO_ENTERLEAVE_HOOK(coro,enter,enter_arg,leave,leave_arg)   /* install an XS-level enter/leave hook */
+ #define CORO_ENTERLEAVE_UNHOOK(coro,enter,leave)                     /* remove an XS-level enter/leave hook */
+ #define CORO_ENTERLEAVE_SCOPE_HOOK(enter,enter_arg,leave,leave_arg)  /* install an XS-level enter/leave hook for the corrent scope */
+
+=head1 AUTHOR/SUPPORT/CONTACT
+
+   Marc A. Lehmann <schmorp@schmorp.de>
+   http://software.schmorp.de/pkg/Coro.html
 
 =cut

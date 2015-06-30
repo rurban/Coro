@@ -24,6 +24,14 @@
 #include <errno.h>
 #include <assert.h>
 
+#ifndef SvREFCNT_dec_NN
+  #define SvREFCNT_dec_NN(sv) SvREFCNT_dec (sv)
+#endif
+
+#ifndef SvREFCNT_inc_NN
+  #define SvREFCNT_inc_NN(sv) SvREFCNT_inc (sv)
+#endif
+
 #ifndef SVs_PADSTALE
 # define SVs_PADSTALE 0
 #endif
@@ -250,8 +258,8 @@ struct coro
   AV *invoke_av;
 
   /* on_enter/on_leave */
-  AV *on_enter;
-  AV *on_leave;
+  AV *on_enter; AV *on_enter_xs;
+  AV *on_leave; AV *on_leave_xs;
 
   /* swap_sv */
   AV *swap_sv;
@@ -497,14 +505,14 @@ SvSTATEhv_p (pTHX_ SV *coro)
 }
 
 ecb_inline struct coro *
-SvSTATE_ (pTHX_ SV *coro)
+SvSTATE_ (pTHX_ SV *coro_sv)
 {
   MAGIC *mg;
 
-  if (SvROK (coro))
-    coro = SvRV (coro);
+  if (SvROK (coro_sv))
+    coro_sv = SvRV (coro_sv);
 
-  mg = SvSTATEhv_p (aTHX_ coro);
+  mg = SvSTATEhv_p (aTHX_ coro_sv);
   if (!mg)
     croak ("Coro::State object required");
 
@@ -782,6 +790,14 @@ load_perl (pTHX_ Coro__State c)
         on_enterleave_call (aTHX_ AvARRAY (c->on_enter)[i]);
     }
 
+  if (ecb_expect_false (c->on_enter_xs))
+    {
+      int i;
+
+      for (i = 0; i <= AvFILLp (c->on_enter_xs); i += 2)
+        ((coro_enterleave_hook)AvARRAY (c->on_enter_xs)[i]) (aTHX_ AvARRAY (c->on_enter_xs)[i + 1]);
+    }
+
   SWAP_SVS (c);
 }
 
@@ -789,6 +805,14 @@ static void
 save_perl (pTHX_ Coro__State c)
 {
   SWAP_SVS (c);
+
+  if (ecb_expect_false (c->on_leave_xs))
+    {
+      int i;
+
+      for (i = AvFILLp (c->on_leave_xs) - 1; i >= 0; i -= 2)
+        ((coro_enterleave_hook)AvARRAY (c->on_leave_xs)[i]) (aTHX_ AvARRAY (c->on_leave_xs)[i + 1]);
+    }
 
   if (ecb_expect_false (c->on_leave))
     {
@@ -1274,6 +1298,8 @@ destroy_perl (pTHX_ struct coro *coro)
     SvREFCNT_dec (coro->rouse_cb);
     SvREFCNT_dec (coro->invoke_cb);
     SvREFCNT_dec (coro->invoke_av);
+    SvREFCNT_dec (coro->on_enter_xs);
+    SvREFCNT_dec (coro->on_leave_xs);
   }
 }
 
@@ -1346,7 +1372,7 @@ runops_trace (pTHX)
                 {
                   SV **cb;
 
-                  if (oldcxix != cxstack_ix && cctx_current->flags & CC_TRACE_SUB)
+                  if (oldcxix != cxstack_ix && cctx_current->flags & CC_TRACE_SUB && cxstack_ix >= 0)
                     {
                       PERL_CONTEXT *cx = &cxstack[cxstack_ix];
 
@@ -2825,6 +2851,98 @@ coro_pop_on_leave (pTHX_ void *coro)
   on_enterleave_call (aTHX_ sv_2mortal (cb));
 }
 
+static void
+enterleave_hook_xs (pTHX_ struct coro *coro, AV **avp, coro_enterleave_hook hook, void *arg)
+{
+  if (!hook)
+    return;
+
+  if (!*avp)
+    {
+      *avp = newAV ();
+      AvREAL_off (*avp);
+    }
+
+  av_push (*avp, (SV *)hook);
+  av_push (*avp, (SV *)arg);
+}
+
+static void
+enterleave_unhook_xs (pTHX_ struct coro *coro, AV **avp, coro_enterleave_hook hook, int execute)
+{
+  AV *av = *avp;
+  int i;
+
+  if (!av)
+    return;
+
+  for (i = AvFILLp (av) - 1; i >= 0; i -= 2)
+    if (AvARRAY (av)[i] == (SV *)hook)
+      {
+        if (execute)
+          hook (aTHX_ (void *)AvARRAY (av)[i + 1]);
+
+        memmove (AvARRAY (av) + i, AvARRAY (av) + i + 2, AvFILLp (av) - i - 1);
+        av_pop (av);
+        av_pop (av);
+        break;
+      }
+
+  if (AvFILLp (av) >= 0)
+    {
+      *avp = 0;
+      SvREFCNT_dec_NN (av);
+    }
+}
+
+static void
+api_enterleave_hook (pTHX_ SV *coro_sv, coro_enterleave_hook enter, void *enter_arg, coro_enterleave_hook leave, void *leave_arg)
+{
+  struct coro *coro = SvSTATE (coro_sv);
+
+  if (SvSTATE_current == coro)
+    if (enter)
+      enter (aTHX_ enter_arg);
+
+  enterleave_hook_xs (aTHX_ coro, &coro->on_enter_xs, enter, enter_arg);
+  enterleave_hook_xs (aTHX_ coro, &coro->on_leave_xs, leave, leave_arg);
+}
+
+static void
+api_enterleave_unhook (pTHX_ SV *coro_sv, coro_enterleave_hook enter, coro_enterleave_hook leave)
+{
+  struct coro *coro = SvSTATE (coro_sv);
+
+  enterleave_unhook_xs (aTHX_ coro, &coro->on_enter_xs, enter, 0);
+  enterleave_unhook_xs (aTHX_ coro, &coro->on_leave_xs, leave, SvSTATE_current == coro);
+}
+
+static void
+savedestructor_unhook_enter (pTHX_ coro_enterleave_hook enter)
+{
+  struct coro *coro = SvSTATE_current;
+
+  enterleave_unhook_xs (aTHX_ coro, &coro->on_enter_xs, enter, 0);
+}
+
+static void
+savedestructor_unhook_leave (pTHX_ coro_enterleave_hook leave)
+{
+  struct coro *coro = SvSTATE_current;
+
+  enterleave_unhook_xs (aTHX_ coro, &coro->on_leave_xs, leave, 1);
+}
+
+static void
+api_enterleave_scope_hook (pTHX_ coro_enterleave_hook enter, void *enter_arg, coro_enterleave_hook leave, void *leave_arg)
+{
+  api_enterleave_hook (aTHX_ coro_current, enter, enter_arg, leave, leave_arg);
+
+  /* this ought to be much cheaper than malloc + a single destructor call */
+  if (enter) SAVEDESTRUCTOR_X (savedestructor_unhook_enter, enter);
+  if (leave) SAVEDESTRUCTOR_X (savedestructor_unhook_leave, leave);
+}
+
 /*****************************************************************************/
 /* PerlIO::cede */
 
@@ -2962,7 +3080,7 @@ coro_semaphore_adjust (pTHX_ AV *av, IV adjust)
           call_sv (cb, G_VOID | G_DISCARD | G_EVAL | G_KEEPERR);
         }
 
-      SvREFCNT_dec (cb);
+      SvREFCNT_dec_NN (cb);
     }
 }
 
@@ -3112,7 +3230,7 @@ coro_signal_wake (pTHX_ AV *av, int count)
           sv_setiv (cb, 0); /* signal waiter */
         }
 
-      SvREFCNT_dec (cb);
+      SvREFCNT_dec_NN (cb);
 
       --count;
     }
@@ -3207,8 +3325,8 @@ coro_aio_callback (pTHX_ CV *cv)
   av_push (state, data_sv);
 
   api_ready (aTHX_ coro);
-  SvREFCNT_dec (coro);
-  SvREFCNT_dec ((AV *)state);
+  SvREFCNT_dec_NN (coro);
+  SvREFCNT_dec_NN ((AV *)state);
 }
 
 static int
@@ -3236,7 +3354,7 @@ slf_check_aio_req (pTHX_ struct CoroSLF *frame)
     PL_laststatval = data->laststatval;
     PL_statcache   = data->statcache;
 
-    SvREFCNT_dec (data_sv);
+    SvREFCNT_dec_NN (data_sv);
   }
 
   /* push result values */
@@ -3858,6 +3976,10 @@ BOOT:
           coroapi.nready       = coro_nready;
           coroapi.current      = coro_current;
 
+          coroapi.enterleave_hook       = api_enterleave_hook;
+          coroapi.enterleave_unhook     = api_enterleave_unhook;
+          coroapi.enterleave_scope_hook = api_enterleave_scope_hook;
+
           /*GCoroAPI = &coroapi;*/
           sv_setiv (sv, (IV)&coroapi);
           SvREADONLY_on (sv);
@@ -3932,7 +4054,7 @@ void
 _set_current (SV *current)
         PROTOTYPE: $
 	CODE:
-        SvREFCNT_dec (SvRV (coro_current));
+        SvREFCNT_dec_NN (SvRV (coro_current));
         SvRV_set (coro_current, SvREFCNT_inc_NN (SvRV (current)));
 
 void
@@ -4026,7 +4148,7 @@ async_pool (SV *cv, ...)
           {
             SV *sv = coro_new (aTHX_ coro_stash, (SV **)&cv_pool_handler, 1, 1);
             hv = (HV *)SvREFCNT_inc_NN (SvRV (sv));
-            SvREFCNT_dec (sv);
+            SvREFCNT_dec_NN (sv);
           }
 
         {
@@ -4043,7 +4165,7 @@ async_pool (SV *cv, ...)
         if (GIMME_V != G_VOID)
           XPUSHs (sv_2mortal (newRV_noinc ((SV *)hv)));
         else
-          SvREFCNT_dec (hv);
+          SvREFCNT_dec_NN (hv);
 }
 
 SV *
