@@ -2880,7 +2880,7 @@ enterleave_unhook_xs (pTHX_ struct coro *coro, AV **avp, coro_enterleave_hook ho
     if (AvARRAY (av)[i] == (SV *)hook)
       {
         if (execute)
-          hook ((void *)AvARRAY (av)[i + 1]);
+          hook (aTHX_ (void *)AvARRAY (av)[i + 1]);
 
         memmove (AvARRAY (av) + i, AvARRAY (av) + i + 2, AvFILLp (av) - i - 1);
         av_pop (av);
@@ -2902,7 +2902,7 @@ api_enterleave_hook (pTHX_ SV *coro_sv, coro_enterleave_hook enter, void *enter_
 
   if (SvSTATE_current == coro)
     if (enter)
-      enter (aTHX enter_arg);
+      enter (aTHX_ enter_arg);
 
   enterleave_hook_xs (aTHX_ coro, &coro->on_enter_xs, enter, enter_arg);
   enterleave_hook_xs (aTHX_ coro, &coro->on_leave_xs, leave, leave_arg);
