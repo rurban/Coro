@@ -712,7 +712,7 @@ swap_sv (SV *a, SV *b)
      * as the pointer for a still points to b, and maybe vice versa.
      */
     U32 svany_in_head_set = (1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV);
-    #if NVSIZE <= IVSIZE && PERL_VERSION_ATLEAST(5,20,0)
+    #if NVSIZE <= IVSIZE && PERL_VERSION_ATLEAST(5,22,0)
       svany_in_head_set |= 1 << SVt_NV;
     #endif
 
