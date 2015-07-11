@@ -7,9 +7,12 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool tries to run canceled thread?
 
+6.47 Sat Jul 11 03:58:20 CEST 2015
+	- swap_svs - NVs can be in the SV head beginning with 5.20.
+
 6.46 Tue Jun 30 14:36:30 CEST 2015
 	- restore portability to perls with windows fork emulation
-          (reported by Petr Písař).
+          (patch by Petr Písař).
 
 6.45 Tue Jun 30 01:40:08 CEST 2015
 	- restore portability to perl 5.16 and below.

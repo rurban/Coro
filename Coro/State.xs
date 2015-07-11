@@ -711,8 +711,12 @@ swap_sv (SV *a, SV *b)
     /* if SvANY points to the head, we need to adjust the pointers,
      * as the pointer for a still points to b, and maybe vice versa.
      */
-    #define svany_in_head(type) \
-       (((1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV)) & (1 << (type)))
+    U32 svany_in_head_set = (1 << SVt_NULL) | (1 << SVt_BIND) | (1 << SVt_IV) | (1 << SVt_RV);
+    #if NVSIZE <= IVSIZE && PERL_VERSION_ATLEAST(5,22,0)
+      svany_in_head_set |= 1 << SVt_NV;
+    #endif
+
+    #define svany_in_head(type) (svany_in_head_set & (1 << (type)))
 
     if (svany_in_head (SvTYPE (a)))
       SvANY (a) = (void *)((PTRV)SvANY (a) - (PTRV)b + (PTRV)a);
@@ -3941,6 +3945,9 @@ MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
 {
+	if (SVt_LAST > 32)
+          croak ("Coro internal error: SVt_LAST > 32, swap_sv might need adjustment");
+
         sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
         cv_coro_run        =      get_cv (      "Coro::_coro_run" , GV_ADD);
