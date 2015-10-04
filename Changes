@@ -7,6 +7,13 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool tries to run canceled thread?
 
+6.48 Sun Oct  4 19:03:51 CEST 2015
+	- fix memory leak when Coro::Handle uses Coro::EV internally
+          (testcase by Sten Sten).
+        - update code to libev 4 API (internally, Coro still used the
+          version 3 API calls).
+        - remove unused hv_sig.
+
 6.47 Sat Jul 11 03:58:20 CEST 2015
 	- swap_svs - NVs can be in the SV head beginning with 5.20.
 

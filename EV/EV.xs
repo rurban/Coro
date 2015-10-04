@@ -231,6 +231,7 @@ slf_init_rw (pTHX_ struct CoroSLF *frame, SV *arg, int wr)
   if (!SvOK (data_sv))
     {
       int fno = sv_fileno (AvARRAY (handle)[0]);
+      SvREFCNT_dec (data_sv);
       data_sv = AvARRAY (handle)[5] = NEWSV (0, sizeof (coro_handle));
       SvPOK_only (data_sv);
       SvREADONLY_on (data_sv);
