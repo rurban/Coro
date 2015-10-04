@@ -10,7 +10,7 @@ Coro::EV - do events the coro-way, with EV
  EV::READ & Coro::EV::timed_io_once $fh, EV::READ, 60
     or die "timeout\n";
 
- EV::loop;
+ EV::run;
 
 =head1 DESCRIPTION
 
@@ -19,7 +19,7 @@ might be useful for threads (although L<Coro::AnyEvent> offers more and
 more portable functions), and secondly, it integrates Coro into the EV
 main loop:
 
-Before the process blocks (in EV::loop) to wait for events, this module
+Before the process blocks (in EV::run) to wait for events, this module
 will schedule and run all ready (= runnable) threads of the same or
 higher priority. After that, it will cede once to a threads of lower
 priority, then continue in the event loop.
@@ -32,7 +32,7 @@ event loop in some thread.
 
 =head1 RUNNING WITH OR WITHOUT A MAINLOOP
 
-In general, you should always run EV::loop, either in your main program,
+In general, you should always run EV::run, either in your main program,
 or in a separate coroutine. If you don't do that and all coroutines
 start waiting for some events, this module will run the event loop once,
 but this is very inefficient and will also not make it possible to run
@@ -40,7 +40,7 @@ background threads.
 
 To run the EV event loop in a separate thread, you can simply do this:
 
-  async { EV::loop };
+  async { EV::run };
 
 =head1 FUNCTIONS
 
@@ -60,7 +60,7 @@ use EV ();
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 6.47;
+   our $VERSION = 6.48;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
    XSLoader::load __PACKAGE__, $VERSION;

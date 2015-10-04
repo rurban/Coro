@@ -142,7 +142,6 @@ static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
 static SV *rv_diehook;
 static SV *rv_warnhook;
-static HV *hv_sig;   /* %SIG */
 
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
@@ -3606,7 +3605,6 @@ BOOT:
         orig_sigelem_set = PL_vtbl_sigelem.svt_set;   PL_vtbl_sigelem.svt_set   = coro_sigelem_set;
         orig_sigelem_clr = PL_vtbl_sigelem.svt_clear; PL_vtbl_sigelem.svt_clear = coro_sigelem_clr;
 
-        hv_sig      = coro_get_hv (aTHX_ "SIG", TRUE);
         rv_diehook  = newRV_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
         rv_warnhook = newRV_inc ((SV *)gv_fetchpv ("Coro::State::warnhook", 0, SVt_PVCV));
 

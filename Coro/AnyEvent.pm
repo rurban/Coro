@@ -163,7 +163,7 @@ use common::sense;
 use Coro;
 use AnyEvent ();
 
-our $VERSION = 6.47;
+our $VERSION = 6.48;
 
 #############################################################################
 # idle handler
