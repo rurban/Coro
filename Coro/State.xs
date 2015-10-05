@@ -52,6 +52,12 @@ typedef AV PAD;
 # define PadMAX			AvFILLp
 # define newPADLIST(var)	((var) = newAV (), av_extend (var, 1))
 #endif
+/* PadlistNAMES broken as lvalue with v5.21.6-197-g0f94cb1,
+   fixed with 5.22.1 and 5.23.0 */
+#if (PERL_VERSION == 22) || ( PERL_VERSION == 21 && PERL_SUBVERSION > 5)
+# undef PadlistNAMES
+# define PadlistNAMES(pl)       *((PADNAMELIST **)PadlistARRAY(pl))
+#endif
 #ifndef PadnamelistREFCNT
 # define PadnamelistREFCNT(pnl) SvREFCNT (pnl)
 #endif
@@ -142,6 +148,7 @@ static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
 static SV *rv_diehook;
 static SV *rv_warnhook;
+static HV *hv_sig;   /* %SIG */
 
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
@@ -1813,12 +1820,30 @@ coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
   return 0;
 }
 
+/* get set len clear free copy dup local */
+static MGVTBL coro_sigelem_vtbl = {
+  coro_sigelem_get,
+  coro_sigelem_set,
+  0,
+  coro_sigelem_clr,
+  0, 0,
+#ifdef MGf_DUP
+  0
+#endif
+#ifdef MGf_LOCAL
+  ,0
+#endif
+};
+
 static MGVTBL coro_state_vtbl = {
   0, 0, 0, 0,
   coro_state_free,
   0,
 #ifdef MGf_DUP
   coro_state_dup,
+# ifdef MGf_LOCAL
+  0
+# endif
 #else
 # define MGf_DUP 0
 #endif
@@ -3601,9 +3626,18 @@ BOOT:
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
 
-        orig_sigelem_get = PL_vtbl_sigelem.svt_get;   PL_vtbl_sigelem.svt_get   = coro_sigelem_get;
-        orig_sigelem_set = PL_vtbl_sigelem.svt_set;   PL_vtbl_sigelem.svt_set   = coro_sigelem_set;
-        orig_sigelem_clr = PL_vtbl_sigelem.svt_clear; PL_vtbl_sigelem.svt_clear = coro_sigelem_clr;
+        orig_sigelem_get = PL_vtbl_sigelem.svt_get;
+        orig_sigelem_set = PL_vtbl_sigelem.svt_set;
+        orig_sigelem_clr = PL_vtbl_sigelem.svt_clear;
+        hv_sig      = coro_get_hv (aTHX_ "SIG", TRUE);
+#if (PERL_VERSION < 22)
+        PL_vtbl_sigelem.svt_get   = coro_sigelem_get;
+        PL_vtbl_sigelem.svt_set   = coro_sigelem_set;
+        PL_vtbl_sigelem.svt_clear = coro_sigelem_clr;
+#else
+        /* not allowed to override the default anymore, attach it to %SIG */
+        sv_magicext ((SV *)hv_sig, 0, PERL_MAGIC_sigelem, &coro_sigelem_vtbl, NULL, 0);
+#endif
 
         rv_diehook  = newRV_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
         rv_warnhook = newRV_inc ((SV *)gv_fetchpv ("Coro::State::warnhook", 0, SVt_PVCV));
