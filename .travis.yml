@@ -1,0 +1,41 @@
+language: perl
+sudo: false
+perl:
+    - "5.8"
+    - "5.10"
+    - "5.12"
+    - "5.14"
+    - "5.16"
+    - "5.18"
+    - "5.20"
+    - "5.22"
+    - blead
+env: COVERAGE=1
+before_install:
+  - eval $(curl https://travis-perl.github.io/init) --auto
+before_script:
+  - perl -S cpan -n Guard EV Event AnyEvent
+  - coverage-setup
+
+install:
+  - cpan-install --deps
+  - cpan-install --coverage
+
+script:
+  - perl Makefile.PL && make && make test
+
+after_success:
+  - coverage-report
+
+notifications:
+  recipients:
+    - rurban@cpan.org
+  email:
+    on_success: change
+    on_failure: always
+
+# fast_finish: http://blog.travis-ci.com/2013-11-27-fast-finishing-builds/
+matrix:
+  fast_finish: true
+  allow_failures:
+    - perl: blead

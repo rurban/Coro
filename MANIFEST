@@ -5,6 +5,7 @@ MANIFEST
 COPYING
 INSTALL
 Makefile.PL
+.travis.yml
 
 Coro.pm
 Coro/Makefile.PL
