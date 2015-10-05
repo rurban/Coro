@@ -52,6 +52,12 @@ typedef AV PAD;
 # define PadMAX			AvFILLp
 # define newPADLIST(var)	((var) = newAV (), av_extend (var, 1))
 #endif
+/* PadlistNAMES broken as lvalue with v5.21.6-197-g0f94cb1,
+   fixed with 5.22.1 and 5.23.0 */
+#if (PERL_VERSION == 22) || ( PERL_VERSION == 21 && PERL_SUBVERSION > 5)
+# undef PadlistNAMES
+# define PadlistNAMES(pl)       *((PADNAMELIST **)PadlistARRAY(pl))
+#endif
 #ifndef PadnamelistREFCNT
 # define PadnamelistREFCNT(pnl) SvREFCNT (pnl)
 #endif
@@ -160,6 +166,7 @@ static GV *irsgv;    /* $/ */
 static GV *stdoutgv; /* *STDOUT */
 static SV *rv_diehook;
 static SV *rv_warnhook;
+static HV *hv_sig;   /* %SIG */
 
 /* async_pool helper stuff */
 static SV *sv_pool_rss;
@@ -1200,8 +1207,10 @@ init_perl (pTHX_ struct coro *coro)
   PL_hints      = 0;
 
   /* recreate the die/warn hooks */
+#if PERL_VERSION < 22
   PL_diehook  = SvREFCNT_inc (rv_diehook);
   PL_warnhook = SvREFCNT_inc (rv_warnhook);
+#endif
 
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
@@ -1281,7 +1290,12 @@ coro_unwind_stacks (pTHX)
 static void
 destroy_perl (pTHX_ struct coro *coro)
 {
-  SV *svf [9];
+#if PERL_VERSION < 22
+#define SVF_SIZE 9
+#else
+#define SVF_SIZE 7
+#endif
+  SV *svf [SVF_SIZE];
 
   {
     SV *old_current = SvRV (coro_current);
@@ -1311,9 +1325,11 @@ destroy_perl (pTHX_ struct coro *coro)
     svf    [4] =       PL_rs;
     svf    [5] =       GvSV (irsgv);
     svf    [6] = (SV *)GvHV (PL_hintgv);
+#if PERL_VERSION < 22
     svf    [7] =       PL_diehook;
     svf    [8] =       PL_warnhook;
-    assert (9 == sizeof (svf) / sizeof (*svf));
+#endif
+    assert (SVF_SIZE == sizeof (svf) / sizeof (*svf));
 
     SvRV_set (coro_current, old_current);
 
@@ -1848,12 +1864,30 @@ coro_state_dup (pTHX_ MAGIC *mg, CLONE_PARAMS *params)
   return 0;
 }
 
+/* get set len clear free copy dup local */
+static MGVTBL coro_sigelem_vtbl = {
+  coro_sigelem_get,
+  coro_sigelem_set,
+  0,
+  coro_sigelem_clr,
+  0, 0,
+#ifdef MGf_DUP
+  0
+#endif
+#ifdef MGf_LOCAL
+  ,0
+#endif
+};
+
 static MGVTBL coro_state_vtbl = {
   0, 0, 0, 0,
   coro_state_free,
   0,
 #ifdef MGf_DUP
   coro_state_dup,
+# ifdef MGf_LOCAL
+  0
+# endif
 #else
 # define MGf_DUP 0
 #endif

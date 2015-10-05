@@ -9,6 +9,9 @@ TODO: how to debug safe_cancle failure (vebrose mode? show how to make backtrace
 
 	- minor code cleanups.
 
+6.514_01 2018-05-31 11:24:58 rurban
+	- merge my 5.22 fixes with upstream 6.514
+
 6.514 Thu Aug 31 18:25:31 CEST 2017
 	- safe_cancel no longer croaks when called on already-destroyed
           thread, but instead "just works".
@@ -63,6 +66,10 @@ TODO: how to debug safe_cancle failure (vebrose mode? show how to make backtrace
           Coro::Handle using Coro::EV did not stop the watchers,
           causing the next call to fail (testcase by Martin Pritchard).
 	- bump minimum perl version to 5.10.
+
+6.48_01 Tue Oct  6 13:42:12 CEST 2015 rurban
+	- add 5.22 support: patch PadlistNAMES,
+        - no support for %SIG handlers for warn and die
 
 6.48 Sun Oct  4 19:03:51 CEST 2015
 	- fix memory leak when Coro::Handle uses Coro::EV internally

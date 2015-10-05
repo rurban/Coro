@@ -93,13 +93,14 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 6.514;
+   our $VERSION = 6.514_01;
+   our $XS_VERSION = $VERSION; $VERSION = eval $VERSION;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
    $Coro::current ||= { };
 
-   XSLoader::load __PACKAGE__, $VERSION;
+   XSLoader::load __PACKAGE__;
 
    # major complication:
    # perl stores a PVMG with sigelem magic in warnhook, and retrieves the
@@ -109,8 +110,13 @@ BEGIN {
    # need to manually copy the existing handlers to remove their magic.
    # I chose to use "delete", to hopefuly get rid of the remnants,
    # but (my $v = $SIG{...}) would also work.
-   $SIG{__DIE__}  = (delete $SIG{__DIE__} ) || \&diehook;
-   $SIG{__WARN__} = (delete $SIG{__WARN__}) || \&warnhook;
+   if ($] < 5.022) {
+     $SIG{__DIE__}  = (delete $SIG{__DIE__} ) || \&diehook;
+     $SIG{__WARN__} = (delete $SIG{__WARN__}) || \&warnhook;
+   } else {
+     # $SIG{__DIE__}  = sub {};
+     # $SIG{__WARN__} = 'DEFAULT';
+   }
 }
 
 use Exporter;

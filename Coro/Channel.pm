@@ -35,7 +35,8 @@ use common::sense;
 use Coro ();
 use Coro::Semaphore ();
 
-our $VERSION = 6.514;
+
+our $VERSION = 6.514_01;
 
 sub DATA (){ 0 }
 sub SGET (){ 1 }

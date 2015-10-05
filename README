@@ -339,6 +339,13 @@ CORO THREAD LIFE CYCLE
               # now $coro goes out of scope, and presumably gets freed
            };
 
+    7. 5.22 support
+        The official Coro ceded support for 5.22. This branch works with
+        5.22 with the following caveat's:
+
+        Local WARN and DIE handlers via $SIG{__WARN__} or $SIG{__DIE__} are
+        for now not supported.
+
 GLOBAL VARIABLES
     $Coro::main
         This variable stores the Coro object that represents the main

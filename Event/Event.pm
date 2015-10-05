@@ -92,10 +92,11 @@ use base Exporter::;
 our @EXPORT = qw(loop unloop sweep);
 
 BEGIN {
-   our $VERSION = 6.514;
+   our $VERSION = 6.514_01;
+   our $XS_VERSION = $VERSION; $VERSION = eval $VERSION;
 
    local $^W = 0; # avoid redefine warning for Coro::ready;
-   XSLoader::load __PACKAGE__, $VERSION;
+   XSLoader::load __PACKAGE__;
 }
 
 =item $w = Coro::Event->flavour (args...)
