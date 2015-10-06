@@ -147,6 +147,9 @@ WriteMakefile(
 sub MY::postamble {
    <<EOF;
 
+README: Coro.pm
+	pod2text Coro.pm >README
+
 # set \$VERSION in all modules
 setver:
 	\$(PERL) -pi -e 's/^(\\s*(our\\s*)?\\\$\$VERSION\\s*=\\s*).*\$\$/\$\${1}\$(VERSION);/' *.pm Coro/*.pm EV/*.pm Event/*.pm

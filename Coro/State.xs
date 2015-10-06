@@ -1178,8 +1178,10 @@ init_perl (pTHX_ struct coro *coro)
   PL_hints      = 0;
 
   /* recreate the die/warn hooks */
+#if PERL_VERSION < 22
   PL_diehook  = SvREFCNT_inc (rv_diehook);
   PL_warnhook = SvREFCNT_inc (rv_warnhook);
+#endif
 
   GvSV (PL_defgv)    = newSV (0);
   GvAV (PL_defgv)    = coro->args; coro->args = 0;
@@ -1259,7 +1261,12 @@ coro_unwind_stacks (pTHX)
 static void
 destroy_perl (pTHX_ struct coro *coro)
 {
-  SV *svf [9];
+#if PERL_VERSION < 22
+#define SVF_SIZE 9
+#else
+#define SVF_SIZE 7
+#endif
+  SV *svf [SVF_SIZE];
 
   {
     SV *old_current = SvRV (coro_current);
@@ -1289,9 +1296,11 @@ destroy_perl (pTHX_ struct coro *coro)
     svf    [4] =       PL_rs;
     svf    [5] =       GvSV (irsgv);
     svf    [6] = (SV *)GvHV (PL_hintgv);
+#if PERL_VERSION < 22
     svf    [7] =       PL_diehook;
     svf    [8] =       PL_warnhook;
-    assert (9 == sizeof (svf) / sizeof (*svf));
+#endif
+    assert (SVF_SIZE == sizeof (svf) / sizeof (*svf));
 
     SvRV_set (coro_current, old_current);
 
@@ -3636,12 +3645,12 @@ BOOT:
         PL_vtbl_sigelem.svt_clear = coro_sigelem_clr;
 #else
         /* not allowed to override the default anymore, attach it to %SIG */
-        sv_magicext ((SV *)hv_sig, 0, PERL_MAGIC_sigelem, &coro_sigelem_vtbl, NULL, 0);
+        /*sv_magicext ((SV *)hv_sig, 0, PERL_MAGIC_sigelem, &coro_sigelem_vtbl, NULL, 0);*/
 #endif
-
+#if PERL_VERSION < 22
         rv_diehook  = newRV_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
         rv_warnhook = newRV_inc ((SV *)gv_fetchpv ("Coro::State::warnhook", 0, SVt_PVCV));
-
+#endif
 	coro_state_stash = gv_stashpv ("Coro::State", TRUE);
 
         newCONSTSUB (coro_state_stash, "CC_TRACE"     , newSViv (CC_TRACE));

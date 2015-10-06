@@ -1,4 +1,11 @@
-BEGIN { $| = 1; print "1..7\n"; }
+BEGIN { 
+  $| = 1;
+  if ($] > 5.021) {
+    print "1..0 SKIP with 5.22\n";
+    exit;
+  }
+  print "1..7\n";
+}
 
 use Coro;
 use Coro::State;

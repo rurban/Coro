@@ -348,6 +348,14 @@ values:
       # now $coro goes out of scope, and presumably gets freed
    };
 
+=item 7. 5.22 support
+
+The official Coro ceded support for 5.22. This branch works with 5.22 with the following
+caveat's:
+
+Local WARN and DIE handlers via B<$SIG{__WARN__}> or B<$SIG{__DIE__}>
+are for now not supported.
+
 =back
 
 =cut
