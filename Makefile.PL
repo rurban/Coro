@@ -67,7 +67,7 @@ WriteMakefile(
        COMPRESS	=> 'gzip -9v',
        SUFFIX	=> '.gz',
 	            },
-    NAME         => "Coro",
+    NAME         => "Alt::Coro::With522",
     VERSION_FROM => "Coro.pm",
     DIR          => ['Coro', ($EVENT ? 'Event' : ()), ($EV ? "EV" : ())],
     PREREQ_PM    => {
@@ -145,14 +145,21 @@ WriteMakefile(
 );
 
 sub MY::postamble {
-   <<EOF;
+   <<'EOF';
 
 README: Coro.pm
 	pod2text Coro.pm >README
 
-# set \$VERSION in all modules
+# set $VERSION in all modules
 setver:
-	\$(PERL) -pi -e 's/^(\\s*(our\\s*)?\\\$\$VERSION\\s*=\\s*).*\$\$/\$\${1}\$(VERSION);/' *.pm Coro/*.pm EV/*.pm Event/*.pm
+	$(PERL) -pi -e 's/^(\s*(our\s*)?$$VERSION\s*=\s*).*\$$/$${1}$(VERSION);/' *.pm Coro/*.pm EV/*.pm Event/*.pm
+
+# create Alt::Coro::With522 modules (not working)
+alt:
+	$(PERL) -pi -e 's/(package|use|new) Coro([:\w]+)?/$$1 Alt::Coro$$2::With522/g' *.pm Coro/*.pm EV/*.pm Event/*.pm t/*
+	$(PERL) -pi -e 's/Coro::(API|State|EV|Event)/Alt::Coro::$$1::With522/g' Coro/*.xs EV/*.xs Event/*.xs Coro/Coro*.h Coro/typemap
+	$(PERL) -pi -e 's/Coro__State/Alt__Coro__State__With522/g' Coro/*.xs EV/*.xs Event/*.xs Coro/Coro*.h
+	$(PERL) -pi -e "s|require (.)Coro/jit-|require \$$1Alt/Coro/With522/jit-|" Coro/State.xs
 
 EOF
 }
