@@ -7,6 +7,10 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool tries to run canceled thread?
 
+6.48_01 Tue Oct  6 13:42:12 CEST 2015 rurban
+	- add 5.22 support: patch PadlistNAMES,
+        - no support for %SIG handlers for warn and die
+
 6.48 Sun Oct  4 19:03:51 CEST 2015
 	- fix memory leak when Coro::Handle uses Coro::EV internally
           (testcase by Sten Sten).
