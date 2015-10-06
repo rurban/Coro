@@ -1,5 +1,5 @@
 NAME
-    Coro - the only real threads in perl
+    Alt::Coro::With522 - Coro for 5.22
 
 SYNOPSIS
       use Coro;

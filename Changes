@@ -1,4 +1,4 @@
-Revision history for Perl extension Coro.
+Revision history for Perl extensions Alt::Coro::With522 and Coro.
 
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
@@ -6,6 +6,9 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool tries to run canceled thread?
+
+6.48_02 Tue Oct  6 17:05:32 CEST 2015 rurban
+	- use Alt::Coro::With522 namespace
 
 6.48_01 Tue Oct  6 13:42:12 CEST 2015 rurban
 	- add 5.22 support: patch PadlistNAMES,

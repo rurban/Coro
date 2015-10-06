@@ -1,6 +1,6 @@
 =head1 NAME
 
-Coro - the only real threads in perl
+Alt::Coro::With522 - Coro for 5.22
 
 =head1 SYNOPSIS
 
@@ -359,6 +359,10 @@ are for now not supported.
 =back
 
 =cut
+
+package Alt::Coro::With522;
+
+our $VERSION = 6.48_01;
 
 package Coro;
 
