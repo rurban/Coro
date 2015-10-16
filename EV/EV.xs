@@ -200,19 +200,24 @@ handle_timer_cb (EV_P_ ev_timer *w, int revents)
 static int
 slf_check_rw (pTHX_ struct CoroSLF *frame)
 {
-  SV *data = (SV *)frame->data;
+  coro_dir *dir = (coro_dir *)frame->data;
 
   /* return early when an exception is pending */
   if (CORO_THROW)
-    return 0;
+    {
+      ev_io_stop (EV_DEFAULT_UC, &dir->io);
+      ev_timer_stop (EV_DEFAULT_UC, &dir->tw);
 
-  if (SvROK (data))
+      return 0;
+    }
+
+  if (SvROK (dir->data))
     return 1;
   else
     {
       dSP;
 
-      XPUSHs (data);
+      XPUSHs (dir->data);
 
       PUTBACK;
       return 0;
@@ -267,7 +272,7 @@ slf_init_rw (pTHX_ struct CoroSLF *frame, SV *arg, int wr)
 
   ev_io_start (EV_DEFAULT_UC, &dir->io);
 
-  frame->data    = (void *)dir->data;
+  frame->data    = (void *)dir;
   frame->prepare = GCoroAPI->prepare_schedule;
   frame->check   = slf_check_rw;
 }

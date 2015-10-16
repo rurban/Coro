@@ -93,7 +93,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 6.48_01;
+   our $VERSION = 6.49;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -109,13 +109,8 @@ BEGIN {
    # need to manually copy the existing handlers to remove their magic.
    # I chose to use "delete", to hopefuly get rid of the remnants,
    # but (my $v = $SIG{...}) would also work.
-   if ($] < 5.022) {
-     $SIG{__DIE__}  = (delete $SIG{__DIE__} ) || \&diehook;
-     $SIG{__WARN__} = (delete $SIG{__WARN__}) || \&warnhook;
-   } else {
-     # $SIG{__DIE__}  = sub {};
-     # $SIG{__WARN__} = 'DEFAULT';
-   }
+   $SIG{__DIE__}  = (delete $SIG{__DIE__} ) || \&diehook;
+   $SIG{__WARN__} = (delete $SIG{__WARN__}) || \&warnhook;
 }
 
 use Exporter;
