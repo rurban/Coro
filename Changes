@@ -7,6 +7,8 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool tries to run canceled thread?
 
+TODO: exceptions do not reset EV readable watchers
+TODO: http://pastebin.com/UauGDx7D
 	- bump minimum perl version to 5.10.
 
 6.48 Sun Oct  4 19:03:51 CEST 2015
