@@ -11,7 +11,9 @@
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
+#if PERL_VERSION > 7
 #include "perliol.h"
+#endif
 
 #include "schmorp.h"
 
@@ -3666,11 +3668,17 @@ BOOT:
 
         {
           SV *slf = sv_2mortal (newSViv (PTR2IV (pp_slf)));
-
-          if (!PL_custom_op_names) PL_custom_op_names = newHV ();
+#if PERL_VERSION > 7
+          if (!PL_custom_op_names)
+#else
+          HV *PL_custom_op_names, *PL_custom_op_descs;
+#endif
+            PL_custom_op_names = newHV ();
           hv_store_ent (PL_custom_op_names, slf, newSVpv ("coro_slf", 0), 0);
-
-          if (!PL_custom_op_descs) PL_custom_op_descs = newHV ();
+#if PERL_VERSION > 7
+          if (!PL_custom_op_descs)
+#endif
+            PL_custom_op_descs = newHV ();
           hv_store_ent (PL_custom_op_descs, slf, newSVpv ("coro schedule like function", 0), 0);
         }
 
@@ -3986,9 +3994,10 @@ MODULE = Coro::State                PACKAGE = Coro
 
 BOOT:
 {
+#if PERL_VERSION >6  
 	if (SVt_LAST > 32)
           croak ("Coro internal error: SVt_LAST > 32, swap_sv might need adjustment");
-
+#endif
         sv_pool_rss        = coro_get_sv (aTHX_ "Coro::POOL_RSS"  , TRUE);
         sv_pool_size       = coro_get_sv (aTHX_ "Coro::POOL_SIZE" , TRUE);
         cv_coro_run        =      get_cv (      "Coro::_coro_run" , GV_ADD);

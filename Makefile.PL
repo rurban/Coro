@@ -1,6 +1,6 @@
 use ExtUtils::MakeMaker;
 
-use 5.008002;
+use 5.006002;
 
 #use Canary::Stability Coro => 1;
 
