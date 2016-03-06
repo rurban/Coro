@@ -4259,11 +4259,14 @@ count (SV *self)
         RETVAL
 
 void
-up (SV *self, int adjust = 1)
-	ALIAS:
-        adjust = 1
+up (SV *self)
         CODE:
-        coro_semaphore_adjust (aTHX_ (AV *)SvRV (self), ix ? adjust : 1);
+        coro_semaphore_adjust (aTHX_ (AV *)SvRV (self), 1);
+
+void
+adjust (SV *self, int adjust)
+        CODE:
+        coro_semaphore_adjust (aTHX_ (AV *)SvRV (self), adjust);
 
 void
 down (...)

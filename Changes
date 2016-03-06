@@ -7,6 +7,9 @@ TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
 TODO: swap_sv not undone in pool
 TODO: croak when async_pool tries to run canceled thread?
 
+	- split Coro::Semaphore::up/adjust into separate xs functions
+          for better error reporting, at slight codesize increase.
+
 6.49 Sat Oct 17 01:40:12 CEST 2015
 	- throwing an exception to a thread waiting in
           Coro::Handle using Coro::EV did not stop the watchers,
