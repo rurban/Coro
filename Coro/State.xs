@@ -728,7 +728,16 @@ swap_sv (SV *a, SV *b)
 
 /* swap sv heads, at least logically */
 static void
-swap_svs (pTHX_ Coro__State c)
+swap_svs_enter (pTHX_ Coro__State c)
+{
+  int i;
+
+  for (i = AvFILLp (c->swap_sv) - 1; i >= 0; i -= 2)
+    swap_sv (AvARRAY (c->swap_sv)[i], AvARRAY (c->swap_sv)[i + 1]);
+}
+
+static void
+swap_svs_leave (pTHX_ Coro__State c)
 {
   int i;
 
@@ -736,9 +745,13 @@ swap_svs (pTHX_ Coro__State c)
     swap_sv (AvARRAY (c->swap_sv)[i], AvARRAY (c->swap_sv)[i + 1]);
 }
 
-#define SWAP_SVS(coro)				\
+#define SWAP_SVS_ENTER(coro)			\
   if (ecb_expect_false ((coro)->swap_sv))	\
-    swap_svs (aTHX_ (coro))
+    swap_svs_enter (aTHX_ (coro))
+
+#define SWAP_SVS_LEAVE(coro)			\
+  if (ecb_expect_false ((coro)->swap_sv))	\
+    swap_svs_leave (aTHX_ (coro))
 
 static void
 on_enterleave_call (pTHX_ SV *cb);
@@ -801,13 +814,13 @@ load_perl (pTHX_ Coro__State c)
         ((coro_enterleave_hook)AvARRAY (c->on_enter_xs)[i]) (aTHX_ AvARRAY (c->on_enter_xs)[i + 1]);
     }
 
-  SWAP_SVS (c);
+  SWAP_SVS_ENTER (c);
 }
 
 static void
 save_perl (pTHX_ Coro__State c)
 {
-  SWAP_SVS (c);
+  SWAP_SVS_LEAVE (c);
 
   if (ecb_expect_false (c->on_leave_xs))
     {
@@ -1219,7 +1232,7 @@ init_perl (pTHX_ struct coro *coro)
   /* copy throw, in case it was set before init_perl */
   CORO_THROW = coro->except;
 
-  SWAP_SVS (coro);
+  SWAP_SVS_ENTER (coro);
 
   if (ecb_expect_false (enable_times))
     {
@@ -1267,10 +1280,10 @@ destroy_perl (pTHX_ struct coro *coro)
 
     load_perl (aTHX_ coro);
 
-    coro_unwind_stacks (aTHX);
-
     /* restore swapped sv's */
-    SWAP_SVS (coro);
+    SWAP_SVS_LEAVE (coro);
+
+    coro_unwind_stacks (aTHX);
 
     coro_destruct_stacks (aTHX);
 
@@ -3920,22 +3933,50 @@ times (Coro::State self)
 }
 
 void
-swap_sv (Coro::State coro, SV *sv, SV *swapsv)
+swap_sv (Coro::State coro, SV *sva, SV *svb)
 	CODE:
 {
         struct coro *current = SvSTATE_current;
+        AV *swap_sv;
+        int i;
+
+        sva = SvRV (sva);
+        svb = SvRV (svb);
 
         if (current == coro)
-          SWAP_SVS (current);
+          SWAP_SVS_LEAVE (current);
 
         if (!coro->swap_sv)
           coro->swap_sv = newAV ();
 
-        av_push (coro->swap_sv, SvREFCNT_inc_NN (SvRV (sv    )));
-        av_push (coro->swap_sv, SvREFCNT_inc_NN (SvRV (swapsv)));
+        swap_sv = coro->swap_sv;
+
+        for (i = AvFILLp (swap_sv) - 1; i >= 0; i -= 2)
+          {
+            SV *a = AvARRAY (swap_sv)[i    ];
+            SV *b = AvARRAY (swap_sv)[i + 1];
+
+            if (a == sva && b == svb)
+              {
+                SvREFCNT_dec_NN (a);
+                SvREFCNT_dec_NN (b);
+
+                for (; i <= AvFILLp (swap_sv) - 2; i++)
+                  AvARRAY (swap_sv)[i] = AvARRAY (swap_sv)[i + 2];
+
+                AvFILLp (swap_sv) -= 2;
+
+                goto removed;
+              }
+          }
+
+        av_push (swap_sv, SvREFCNT_inc_NN (sva));
+        av_push (swap_sv, SvREFCNT_inc_NN (svb));
+
+	removed:
 
         if (current == coro)
-          SWAP_SVS (current);
+          SWAP_SVS_ENTER (current);
 }
 
 

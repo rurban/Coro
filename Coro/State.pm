@@ -315,6 +315,16 @@ You can also swap hashes and other values:
    my %private_hash;
    $coro->swap_sv (\%some_hash, \%private_hash);
 
+To undo an earlier C<swap_sv> call you must call C<swap_sv> with exactly
+the same two variables in the same order (the references can be different,
+it's the variables that they point to that count). For example, the
+following sequence will remove the swap of C<$x> and C<$y>, while keeping
+the swap of C<$x> and C<$z>:
+
+   $coro->swap-sv (\$x, \$y);
+   $coro->swap-sv (\$x, \$z);
+   $coro->swap-sv (\$x, \$y);
+
 =item $bytes = $state->rss
 
 Returns the memory allocated by the coro (which includes static
