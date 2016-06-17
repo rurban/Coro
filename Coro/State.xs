@@ -2437,7 +2437,7 @@ slf_init_pool_handler (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
           coro->prio = 0;
 
-          if (coro->cctx && ecb_expect_false (coro->cctx->flags & CC_TRACE))
+          if (ecb_expect_false (coro->cctx) && ecb_expect_false (coro->cctx->flags & CC_TRACE))
             api_trace (aTHX_ coro_current, 0);
 
           frame->prepare = prepare_schedule;
