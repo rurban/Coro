@@ -2428,9 +2428,15 @@ slf_init_pool_handler (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
           av_clear (GvAV (PL_defgv));
           hv_store (hv, "desc", sizeof ("desc") - 1, SvREFCNT_inc_NN (sv_async_pool_idle), 0);
 
+          if (ecb_expect_false (coro->swap_sv))
+            {
+              SvREFCNT_dec_NN (coro->swap_sv);
+              coro->swap_sv = 0;
+            }
+
           coro->prio = 0;
 
-          if (coro->cctx && (coro->cctx->flags & CC_TRACE))
+          if (coro->cctx && ecb_expect_false (coro->cctx->flags & CC_TRACE))
             api_trace (aTHX_ coro_current, 0);
 
           frame->prepare = prepare_schedule;
