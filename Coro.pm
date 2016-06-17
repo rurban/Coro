@@ -500,12 +500,13 @@ will not work in the expected way, unless you call terminate or cancel,
 which somehow defeats the purpose of pooling (but is fine in the
 exceptional case).
 
-The priority will be reset to C<0> after each run, tracing will be
-disabled, the description will be reset and the default output filehandle
-gets restored, so you can change all these. Otherwise the coro will
-be re-used "as-is": most notably if you change other per-coro global
-stuff such as C<$/> you I<must needs> revert that change, which is most
-simply done by using local as in: C<< local $/ >>.
+The priority will be reset to C<0> after each run, all C<swap_sv> calls
+will be undone, tracing will be disabled, the description will be reset
+and the default output filehandle gets restored, so you can change all
+these. Otherwise the coro will be re-used "as-is": most notably if you
+change other per-coro global stuff such as C<$/> you I<must needs> revert
+that change, which is most simply done by using local as in: C<< local $/
+>>.
 
 The idle pool size is limited to C<8> idle coros (this can be
 adjusted by changing $Coro::POOL_SIZE), but there can be as many non-idle

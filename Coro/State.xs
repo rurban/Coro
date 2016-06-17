@@ -732,7 +732,7 @@ swap_svs_enter (pTHX_ Coro__State c)
 {
   int i;
 
-  for (i = AvFILLp (c->swap_sv) - 1; i >= 0; i -= 2)
+  for (i = 0; i <= AvFILLp (c->swap_sv); i += 2)
     swap_sv (AvARRAY (c->swap_sv)[i], AvARRAY (c->swap_sv)[i + 1]);
 }
 
@@ -741,7 +741,7 @@ swap_svs_leave (pTHX_ Coro__State c)
 {
   int i;
 
-  for (i = 0; i <= AvFILLp (c->swap_sv); i += 2)
+  for (i = AvFILLp (c->swap_sv) - 1; i >= 0; i -= 2)
     swap_sv (AvARRAY (c->swap_sv)[i], AvARRAY (c->swap_sv)[i + 1]);
 }
 

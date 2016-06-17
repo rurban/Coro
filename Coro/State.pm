@@ -491,14 +491,14 @@ small differences).
 Which could be used to implement a loop like this:
 
    async {
-      my $n; 
+      my $n;
       my $l = callcc sub { $_[0] };
      
-      $n++; 
+      $n++;
       print "iteration $n\n";
 
       $l->($l) unless $n == 10;
-   };  
+   };
 
 If you find this confusing, then you already understand the coolness of
 call/cc: It can turn anything into spaghetti code real fast.
