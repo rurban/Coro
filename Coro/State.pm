@@ -93,7 +93,7 @@ sub warnhook { &$WARNHOOK }
 use XSLoader;
 
 BEGIN {
-   our $VERSION = 6.49;
+   our $VERSION = 6.5;
 
    # must be done here because the xs part expects it to exist
    # it might exist already because Coro::Specific created it.
@@ -315,6 +315,16 @@ You can also swap hashes and other values:
    my %private_hash;
    $coro->swap_sv (\%some_hash, \%private_hash);
 
+To undo an earlier C<swap_sv> call you must call C<swap_sv> with exactly
+the same two variables in the same order (the references can be different,
+it's the variables that they point to that count). For example, the
+following sequence will remove the swap of C<$x> and C<$y>, while keeping
+the swap of C<$x> and C<$z>:
+
+   $coro->swap-sv (\$x, \$y);
+   $coro->swap-sv (\$x, \$z);
+   $coro->swap-sv (\$x, \$y);
+
 =item $bytes = $state->rss
 
 Returns the memory allocated by the coro (which includes static
@@ -481,14 +491,14 @@ small differences).
 Which could be used to implement a loop like this:
 
    async {
-      my $n; 
+      my $n;
       my $l = callcc sub { $_[0] };
      
-      $n++; 
+      $n++;
       print "iteration $n\n";
 
       $l->($l) unless $n == 10;
-   };  
+   };
 
 If you find this confusing, then you already understand the coolness of
 call/cc: It can turn anything into spaghetti code real fast.

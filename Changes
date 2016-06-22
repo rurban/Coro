@@ -3,9 +3,21 @@ Revision history for Perl extension Coro.
 TODO: should explore PerlIO::coroaio (perl leaks like hell).
 TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
-TODO: swap_sv, maybe add scope_swap_sv, andallow to unswap by repeat?
-TODO: swap_sv not undone in pool
+TODO: swap_sv, maybe add scope_swap_sv?
 TODO: croak when async_pool tries to run canceled thread?
+
+6.5  Wed Jun 22 22:23:50 CEST 2016
+	- swap_sv swapping order was not symmetrical, causing
+          wrong swaps when swap_sv was used multiple times on the
+          same sv in the same thread.
+        - swap_sv calls can now be undone by calling it again
+          with the same variables.
+        - swap_sv calls will now be undone in async_pool threads.
+	- split Coro::Semaphore::up/adjust into separate xs functions
+          for better error reporting, at slight codesize increase.
+        - (libcoro) arm assembly support, please test and report.
+        - adjust to PL_savestack changes in perl 5.24 (adapted from
+          the debian patch, which unfortunately gets it wrong).
 
 6.49 Sat Oct 17 01:40:12 CEST 2015
 	- throwing an exception to a thread waiting in
