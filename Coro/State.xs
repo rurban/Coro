@@ -1545,6 +1545,13 @@ cctx_run (void *arg)
      */
 
     /*
+     * pp_entersub in 5.24 no longer ENTERs, but perl_destruct
+     * requires PL_scopestack_ix, so do it here if required.
+     */
+    if (!PL_scopestack_ix)
+      ENTER;
+
+    /*
      * If perl-run returns we assume exit() was being called or the coro
      * fell off the end, which seems to be the only valid (non-bug)
      * reason for perl_run to return. We try to mimic whatever perl is normally
