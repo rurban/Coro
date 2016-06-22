@@ -965,6 +965,11 @@ coro_init_stacks (pTHX)
     New(54,PL_savestack,24,ANY);
     PL_savestack_ix = 0;
     PL_savestack_max = 24;
+#if !PERL_VERSION_ATLEAST (5,24,0)
+    /* perl 5.24 moves SS_MAXPUSH optimisation from */
+    /* the header macros to PL_savestack_max */
+    PL_savestack_max -= SS_MAXPUSH;
+#endif
 
 #if !PERL_VERSION_ATLEAST (5,10,0)
     New(54,PL_retstack,4,OP*);
