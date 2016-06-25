@@ -32,4 +32,4 @@ requires:
   Scalar::Util: '0'
   Storable: '2.15'
   common::sense: '0'
-version: 6.5
+version: 6.51

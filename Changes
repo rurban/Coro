@@ -6,6 +6,16 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv?
 TODO: croak when async_pool tries to run canceled thread?
 
+6.51 Sat Jun 25 20:57:20 CEST 2016
+	- 6.5 release didn't compile on most older perls due to
+          a logic error enabling experimental 5.24 code for all versions.
+        - since various broken or deficient patches float around
+          to work around the vtbl API breakage in perl, let's provide
+          our own workaround, which seems to be much less invasive
+          and more compatible than the approaches seen so far. YMMV.
+	- work around assertion failure in perl_destruct on 5.24
+          (analyzed by Dave Mitchell).
+
 6.5  Wed Jun 22 22:23:50 CEST 2016
 	- swap_sv swapping order was not symmetrical, causing
           wrong swaps when swap_sv was used multiple times on the

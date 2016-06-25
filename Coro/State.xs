@@ -118,6 +118,12 @@ static void *coro_thx;
 # endif
 #endif
 
+/* perl usually suppressed asserts. for debugging, we sometimes force it to be on */
+#if 0
+# undef NDEBUG
+# include <assert.h>
+#endif
+
 static double (*nvtime)(); /* so why doesn't it take void? */
 static void   (*u2time)(pTHX_ UV ret[2]);
 
@@ -965,7 +971,7 @@ coro_init_stacks (pTHX)
     New(54,PL_savestack,24,ANY);
     PL_savestack_ix = 0;
     PL_savestack_max = 24;
-#if !PERL_VERSION_ATLEAST (5,24,0)
+#if PERL_VERSION_ATLEAST (5,24,0)
     /* perl 5.24 moves SS_MAXPUSH optimisation from */
     /* the header macros to PL_savestack_max */
     PL_savestack_max -= SS_MAXPUSH;
@@ -1045,11 +1051,7 @@ coro_rss (pTHX_ struct coro *coro)
   return rss;
 }
 
-/** coroutine stack handling ************************************************/
-
-static int (*orig_sigelem_get) (pTHX_ SV *sv, MAGIC *mg);
-static int (*orig_sigelem_set) (pTHX_ SV *sv, MAGIC *mg);
-static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
+/** provide custom get/set/clear methods for %SIG elements ******************/
 
 /* apparently < 5.8.8 */
 #ifndef MgPV_nolen_const
@@ -1057,6 +1059,25 @@ static int (*orig_sigelem_clr) (pTHX_ SV *sv, MAGIC *mg);
                                  SvPV_nolen((SV*)((mg)->mg_ptr)) :  \
                                  (const char*)(mg)->mg_ptr)
 #endif
+
+/* this will be a patched copy of PL_vtbl_sigelem */
+static MGVTBL coro_sigelem_vtbl;
+
+static int ecb_cold
+coro_sig_copy (pTHX_ SV *sv, MAGIC *mg, SV *nsv, const char *name, I32 namlen)
+{
+  sv_magic (nsv, mg->mg_obj, PERL_MAGIC_sigelem, name, namlen);
+  assert (mg_find (nsv, PERL_MAGIC_sigelem)->mg_virtual == &PL_vtbl_sigelem);
+  mg_find (nsv, PERL_MAGIC_sigelem)->mg_virtual = &coro_sigelem_vtbl;
+  return 1;
+}
+
+/* perl does not have a %SIG vtbl, we provide one so we can override */
+/* the cwvtblagic for %SIG members */
+static const MGVTBL coro_sig_vtbl = {
+  0, 0, 0, 0, 0,
+  coro_sig_copy
+};
 
 /*
  * This overrides the default magic get method of %SIG elements.
@@ -1092,7 +1113,7 @@ coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
         }
     }
 
-  return orig_sigelem_get ? orig_sigelem_get (aTHX_ sv, mg) : 0;
+  return PL_vtbl_sigelem.svt_get ? PL_vtbl_sigelem.svt_get (aTHX_ sv, mg) : 0;
 }
 
 static int ecb_cold
@@ -1116,7 +1137,7 @@ coro_sigelem_clr (pTHX_ SV *sv, MAGIC *mg)
         }
     }
 
-  return orig_sigelem_clr ? orig_sigelem_clr (aTHX_ sv, mg) : 0;
+  return PL_vtbl_sigelem.svt_clear ? PL_vtbl_sigelem.svt_clear (aTHX_ sv, mg) : 0;
 }
 
 static int ecb_cold
@@ -1140,7 +1161,7 @@ coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
         }
     }
 
-  return orig_sigelem_set ? orig_sigelem_set (aTHX_ sv, mg) : 0;
+  return PL_vtbl_sigelem.svt_set ? PL_vtbl_sigelem.svt_set (aTHX_ sv, mg) : 0;
 }
 
 static void
@@ -1161,6 +1182,8 @@ slf_check_repeat (pTHX_ struct CoroSLF *frame)
 {
   return 1;
 }
+
+/** coroutine stack handling ************************************************/
 
 static UNOP init_perl_op;
 
@@ -1543,6 +1566,13 @@ cctx_run (void *arg)
      * coro body here, as perl_run destroys these. Likewise, we cannot catch
      * runtime errors here, as this is just a random interpreter, not a thread.
      */
+
+    /*
+     * pp_entersub in 5.24 no longer ENTERs, but perl_destruct
+     * requires PL_scopestack_ix, so do it here if required.
+     */
+    if (!PL_scopestack_ix)
+      ENTER;
 
     /*
      * If perl-run returns we assume exit() was being called or the coro
@@ -3626,9 +3656,30 @@ BOOT:
         irsgv    = gv_fetchpv ("/"     , GV_ADD|GV_NOTQUAL, SVt_PV);
         stdoutgv = gv_fetchpv ("STDOUT", GV_ADD|GV_NOTQUAL, SVt_PVIO);
 
-        orig_sigelem_get = PL_vtbl_sigelem.svt_get;   PL_vtbl_sigelem.svt_get   = coro_sigelem_get;
-        orig_sigelem_set = PL_vtbl_sigelem.svt_set;   PL_vtbl_sigelem.svt_set   = coro_sigelem_set;
-        orig_sigelem_clr = PL_vtbl_sigelem.svt_clear; PL_vtbl_sigelem.svt_clear = coro_sigelem_clr;
+	{
+	  /*
+	   * we provide a vtbvl for %SIG magic that replaces PL_vtbl_sig
+	   * by coro_sig_vtbl in hash values.
+	   */
+	  MAGIC *mg = mg_find ((SV *)GvHV (gv_fetchpv ("SIG", GV_ADD | GV_NOTQUAL, SVt_PVHV)), PERL_MAGIC_sig);
+	
+	  /* this only works if perl doesn't have a vtbl for %SIG */
+	  assert (!mg->mg_virtual);
+	
+	  /*
+	   * The irony is that the perl API itself asserts that mg_virtual
+	   * must be non-const, yet perl5porters insisted on marking their
+	   * vtbls as read-only, just to thwart perl modules from patching
+	   * them.
+	   */
+	  mg->mg_virtual = (MGVTBL *)&coro_sig_vtbl;
+	  mg->mg_flags |= MGf_COPY;
+	
+	  coro_sigelem_vtbl = PL_vtbl_sigelem;
+	  coro_sigelem_vtbl.svt_get   = coro_sigelem_get;
+	  coro_sigelem_vtbl.svt_set   = coro_sigelem_set;
+	  coro_sigelem_vtbl.svt_clear = coro_sigelem_clr;
+	}
 
         rv_diehook  = newRV_inc ((SV *)gv_fetchpv ("Coro::State::diehook" , 0, SVt_PVCV));
         rv_warnhook = newRV_inc ((SV *)gv_fetchpv ("Coro::State::warnhook", 0, SVt_PVCV));
