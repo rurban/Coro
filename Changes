@@ -6,6 +6,10 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv?
 TODO: croak when async_pool tries to run canceled thread?
 
+6.511 Sun Jun 26 23:44:50 CEST 2016
+	- make it compile with threaded perls again.
+	- simplify and speed up __DIE__ and __WARN__ handling.
+
 6.51 Sat Jun 25 20:57:20 CEST 2016
 	- 6.5 release didn't compile on most older perls due to
           a logic error enabling experimental 5.24 code for all versions.

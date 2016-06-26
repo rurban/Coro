@@ -1066,14 +1066,23 @@ static MGVTBL coro_sigelem_vtbl;
 static int ecb_cold
 coro_sig_copy (pTHX_ SV *sv, MAGIC *mg, SV *nsv, const char *name, I32 namlen)
 {
+  char *key = SvPV_nolen ((SV *)name);
+
+  /* do what mg_copy normally does */
   sv_magic (nsv, mg->mg_obj, PERL_MAGIC_sigelem, name, namlen);
   assert (mg_find (nsv, PERL_MAGIC_sigelem)->mg_virtual == &PL_vtbl_sigelem);
-  mg_find (nsv, PERL_MAGIC_sigelem)->mg_virtual = &coro_sigelem_vtbl;
+
+  /* patch sigelem vtbl, but only for __WARN__ and __DIE__ */
+  if (*key == '_'
+      && (strEQ (key, "__DIE__")
+          || strEQ (key, "__WARN__")))
+    mg_find (nsv, PERL_MAGIC_sigelem)->mg_virtual = &coro_sigelem_vtbl;
+
   return 1;
 }
 
 /* perl does not have a %SIG vtbl, we provide one so we can override */
-/* the cwvtblagic for %SIG members */
+/* the magic vtbl for the __DIE__ and __WARN__ members */
 static const MGVTBL coro_sig_vtbl = {
   0, 0, 0, 0, 0,
   coro_sig_copy
@@ -1089,79 +1098,46 @@ static int ecb_cold
 coro_sigelem_get (pTHX_ SV *sv, MAGIC *mg)
 {
   const char *s = MgPV_nolen_const (mg);
+  /* the key must be either __DIE__ or __WARN__ here */
+  SV **svp = s[2] == 'D' ? &PL_diehook : &PL_warnhook;
 
-  if (*s == '_')
-    {
-      SV **svp = 0;
+  SV *ssv;
 
-      if (strEQ (s, "__DIE__" )) svp = &PL_diehook;
-      if (strEQ (s, "__WARN__")) svp = &PL_warnhook;
+  if (!*svp)
+    ssv = &PL_sv_undef;
+  else if (SvTYPE (*svp) == SVt_PVCV) /* perlio directly stores a CV in warnhook. ugh. */
+    ssv = sv_2mortal (newRV_inc (*svp));
+  else
+    ssv = *svp;
 
-      if (svp)
-        {
-          SV *ssv;
-
-          if (!*svp)
-            ssv = &PL_sv_undef;
-          else if (SvTYPE (*svp) == SVt_PVCV) /* perlio directly stores a CV in warnhook. ugh. */
-            ssv = sv_2mortal (newRV_inc (*svp));
-          else
-            ssv = *svp;
-
-          sv_setsv (sv, ssv);
-          return 0;
-        }
-    }
-
-  return PL_vtbl_sigelem.svt_get ? PL_vtbl_sigelem.svt_get (aTHX_ sv, mg) : 0;
+  sv_setsv (sv, ssv);
+  return 0;
 }
 
 static int ecb_cold
 coro_sigelem_clr (pTHX_ SV *sv, MAGIC *mg)
 {
   const char *s = MgPV_nolen_const (mg);
+  /* the key must be either __DIE__ or __WARN__ here */
+  SV **svp = s[2] == 'D' ? &PL_diehook : &PL_warnhook;
 
-  if (*s == '_')
-    {
-      SV **svp = 0;
-
-      if (strEQ (s, "__DIE__" )) svp = &PL_diehook;
-      if (strEQ (s, "__WARN__")) svp = &PL_warnhook;
-
-      if (svp)
-        {
-          SV *old = *svp;
-          *svp = 0;
-          SvREFCNT_dec (old);
-          return 0;
-        }
-    }
-
-  return PL_vtbl_sigelem.svt_clear ? PL_vtbl_sigelem.svt_clear (aTHX_ sv, mg) : 0;
+  SV *old = *svp;
+  *svp = 0;
+  SvREFCNT_dec (old);
+  return 0;
 }
 
 static int ecb_cold
 coro_sigelem_set (pTHX_ SV *sv, MAGIC *mg)
 {
   const char *s = MgPV_nolen_const (mg);
+  /* the key must be either __DIE__ or __WARN__ here */
+  SV **svp = s[2] == 'D' ? &PL_diehook : &PL_warnhook;
 
-  if (*s == '_')
-    {
-      SV **svp = 0;
-
-      if (strEQ (s, "__DIE__" )) svp = &PL_diehook;
-      if (strEQ (s, "__WARN__")) svp = &PL_warnhook;
-
-      if (svp)
-        {
-          SV *old = *svp;
-          *svp = SvOK (sv) ? newSVsv (sv) : 0;
-          SvREFCNT_dec (old);
-          return 0;
-        }
-    }
-
-  return PL_vtbl_sigelem.svt_set ? PL_vtbl_sigelem.svt_set (aTHX_ sv, mg) : 0;
+  SV *old = *svp;
+  *svp = SvOK (sv) ? newSVsv (sv) : 0;
+  SvREFCNT_dec (old);
+  return 0;
 }
 
 static void
@@ -2465,7 +2441,7 @@ slf_init_pool_handler (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
           if (ecb_expect_false (coro->swap_sv))
             {
-              swap_svs_leave (coro);
+              SWAP_SVS_LEAVE (coro);
               SvREFCNT_dec_NN (coro->swap_sv);
               coro->swap_sv = 0;
             }
