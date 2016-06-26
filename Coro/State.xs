@@ -2441,7 +2441,7 @@ slf_init_pool_handler (pTHX_ struct CoroSLF *frame, CV *cv, SV **arg, int items)
 
           if (ecb_expect_false (coro->swap_sv))
             {
-              swap_svs_leave (coro);
+              SWAP_SVS_LEAVE (coro);
               SvREFCNT_dec_NN (coro->swap_sv);
               coro->swap_sv = 0;
             }
