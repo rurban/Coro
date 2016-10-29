@@ -6,6 +6,9 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv?
 TODO: croak when async_pool tries to run canceled thread?
 
+	- re-try JIT allocation without PROT_EXEC, to hopefully improve
+          portability.
+
 6.511 Sun Jun 26 23:44:50 CEST 2016
 	- make it compile with threaded perls again.
 	- simplify and speed up __DIE__ and __WARN__ handling.

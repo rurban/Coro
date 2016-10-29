@@ -3587,6 +3587,9 @@ jit_init (pTHX)
 
   map_base = mmap (0, map_len, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
+  if (map_base == (char *)MAP_FAILED)
+    map_base = mmap (0, map_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
   assert (("Coro: unable to mmap jit code page, cannot continue.", map_base != (char *)MAP_FAILED));
 
   load_perl_slots = (load_save_perl_slots_type)map_base;
