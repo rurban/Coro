@@ -321,9 +321,9 @@ it's the variables that they point to that count). For example, the
 following sequence will remove the swap of C<$x> and C<$y>, while keeping
 the swap of C<$x> and C<$z>:
 
-   $coro->swap-sv (\$x, \$y);
-   $coro->swap-sv (\$x, \$z);
-   $coro->swap-sv (\$x, \$y);
+   $coro->swap_sv (\$x, \$y);
+   $coro->swap_sv (\$x, \$z);
+   $coro->swap_sv (\$x, \$y);
 
 =item $bytes = $state->rss
 
