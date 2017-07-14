@@ -82,7 +82,7 @@ VAR(warnhook,      SV *)
 VAR(compcv,        CV *)           /* currently compiling subroutine */
 
 VAR(comppad,       AV *)           /* storage for lexically scoped temporaries */
-VAR(comppad_name,  AV *)           /* variable names for "my" variables */
+VAR(comppad_name,  PADNAMELIST *)        /* variable names for "my" variables */
 VAR(comppad_name_fill,     PADOFFSET)    /* last "introduced" variable offset */
 VAR(comppad_name_floor,    PADOFFSET)    /* start of vars in innermost block */
 

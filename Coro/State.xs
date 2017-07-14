@@ -118,6 +118,12 @@ static void *coro_thx;
 # endif
 #endif
 
+/* one off bugfix for perl 5.22 */
+#if PERL_VERSION_ATLEAST(5,22,0) && !PERL_VERSION_ATLEAST(5,24,0)
+# undef PadlistNAMES
+# define PadlistNAMES(pl) *((PADNAMELIST **)PadlistARRAY (pl))
+#endif
+
 #if PERL_VERSION_ATLEAST(5,24,0)
 # define SUB_ARGARRAY PL_curpad[0]
 #else
@@ -4075,7 +4081,7 @@ BOOT:
           coroapi.enterleave_scope_hook = api_enterleave_scope_hook;
 
           /*GCoroAPI = &coroapi;*/
-          sv_setiv (sv, (IV)&coroapi);
+          sv_setiv (sv, PTR2IV (&coroapi));
           SvREADONLY_on (sv);
         }
 }
