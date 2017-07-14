@@ -292,7 +292,7 @@ becomes readable (or writable), or the given timeout has elapsed,
 whichever happens first. No timeout counts as infinite timeout.
 
 Returns true when the file handle became ready, false when a timeout
-occured.
+occurred.
 
 Note that these functions are quite inefficient as compared to using a
 single watcher (they recreate watchers on every invocation) or compared to

@@ -15,6 +15,7 @@ TODO: croak when async_pool tries to run canceled thread?
 	- re-try JIT allocation without PROT_EXEC, to hopefully improve
           portability (still doesn't seem to work around broken selinux
           mmap everywhere).
+        - speling fixes (Xavier Guimard).
 
 6.511 Sun Jun 26 23:44:50 CEST 2016
 	- make it compile with threaded perls again.

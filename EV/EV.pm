@@ -78,7 +78,7 @@ $Coro::idle = $IDLE;
 
 =item $revents = Coro::EV::timed_io_once $fileno_or_fh, $events[, $timeout]
 
-Blocks the coroutine until either the given event set has occured on the
+Blocks the coroutine until either the given event set has occurred on the
 fd, or the timeout has been reached (if timeout is missing or C<undef>
 then there will be no timeout). Returns the received flags.
 

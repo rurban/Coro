@@ -41,7 +41,7 @@ our $VERSION = 6.511;
 =item new
 
 Create a new coroutine-specific scalar and return a reference to it. The
-scalar is guarenteed to be "undef". Once such a scalar has been allocated
+scalar is guaranteed to be "undef". Once such a scalar has been allocated
 you cannot deallocate it (yet), so allocate only when you must.
 
 =cut

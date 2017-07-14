@@ -39,7 +39,7 @@ our $VERSION = 6.511;
 
 use Coro::Semaphore ();
 
-=item new [inital count]
+=item new [initial count]
 
 Creates a new semaphore set with the given initial lock count for each
 individual semaphore. See L<Coro::Semaphore>.
