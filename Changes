@@ -6,6 +6,12 @@ TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv?
 TODO: croak when async_pool tries to run canceled thread?
 
+6.513 Sat Jul 15 01:18:51 CEST 2017
+	- experimental 5.22 comaptibility changes (PadlistNAMES).
+	- removed attributes example and made sure the other examples
+          still work.
+        - fix some statevar types for newer perls, should be of no consequence.
+
 6.512 Fri Jul 14 05:03:17 CEST 2017
         - seems to pass test suite down till 5.8.9, so make this the
           minimum requirement in Makefile.PL.
