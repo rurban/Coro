@@ -124,7 +124,7 @@ static void *coro_thx;
 # define SUB_ARGARRAY (SV *)cx->blk_sub.argarray
 #endif
 
-/* perl usually suppressed asserts. for debugging, we sometimes force it to be on */
+/* perl usually suppresses asserts. for debugging, we sometimes force it to be on */
 #if 0
 # undef NDEBUG
 # include <assert.h>
