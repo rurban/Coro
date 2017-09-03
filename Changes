@@ -5,6 +5,9 @@ TODO: channel->maxsize(newsize)?
 TODO: __GCC_HAVE_DWARF2_CFI_ASM
 TODO: swap_sv, maybe add scope_swap_sv?
 TODO: croak when async_pool tries to run canceled thread?
+TODO: how to debug safe_cancle failure (vebrose mode? show how to make backtrace?)
+
+	- minor code cleanups.
 
 6.514 Thu Aug 31 18:25:31 CEST 2017
 	- safe_cancel no longer croaks when called on already-destroyed

@@ -1224,7 +1224,7 @@ init_perl (pTHX_ struct coro *coro)
     myop.op_flags = OPf_WANT_VOID;
 
     PUSHMARK (SP);
-    PUSHs ((SV *)coro->startcv);
+    XPUSHs ((SV *)coro->startcv);
     PUTBACK;
     PL_op = (OP *)&myop;
     PL_op = PL_ppaddr[OP_ENTERSUB](aTHX);
@@ -1382,8 +1382,8 @@ runops_trace (pTHX)
               PL_runops = RUNOPS_DEFAULT;
               ENTER;
               SAVETMPS;
-              EXTEND (SP, 3);
               PUSHMARK (SP);
+              EXTEND (SP, 3);
               PUSHs (&PL_sv_no);
               PUSHs (fullname);
               PUSHs (sv_2mortal (newRV_noinc ((SV *)av)));
@@ -1420,8 +1420,8 @@ runops_trace (pTHX)
                           PL_runops = RUNOPS_DEFAULT;
                           ENTER;
                           SAVETMPS;
-                          EXTEND (SP, 3);
                           PUSHMARK (SP);
+                          EXTEND (SP, 3);
                           PUSHs (&PL_sv_yes);
                           PUSHs (fullname);
                           PUSHs (CxHASARGS (cx) ? sv_2mortal (newRV_inc (SUB_ARGARRAY)) : &PL_sv_undef);
@@ -1444,9 +1444,8 @@ runops_trace (pTHX)
                       PL_runops = RUNOPS_DEFAULT;
                       ENTER;
                       SAVETMPS;
-                      EXTEND (SP, 3);
-                      PL_runops = RUNOPS_DEFAULT;
                       PUSHMARK (SP);
+                      EXTEND (SP, 2);
                       PUSHs (sv_2mortal (newSVpv (OutCopFILE (oldcop), 0)));
                       PUSHs (sv_2mortal (newSViv (CopLINE (oldcop))));
                       PUTBACK;
