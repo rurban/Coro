@@ -14,7 +14,7 @@ env: COVERAGE=1
 before_install:
   - eval $(curl https://travis-perl.github.io/init) --auto
 before_script:
-  - perl -S cpan -n Guard EV Event AnyEvent
+  - perl -S cpanm -n Guard EV Event AnyEvent
   - coverage-setup
 
 install:

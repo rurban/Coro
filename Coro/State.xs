@@ -3839,11 +3839,18 @@ is_ready (Coro::State coro)
         is_ready     = CF_READY
         is_running   = CF_RUNNING
         is_new       = CF_NEW
-        is_destroyed = CF_ZOMBIE
         is_zombie    = CF_ZOMBIE
         is_suspended = CF_SUSPENDED
 	CODE:
         RETVAL = boolSV (coro->flags & ix);
+	OUTPUT:
+        RETVAL
+
+SV *
+is_destroyed (Coro::State coro)
+        PROTOTYPE: $
+	CODE:
+        RETVAL = boolSV (coro->flags & CF_ZOMBIE);
 	OUTPUT:
         RETVAL
 
