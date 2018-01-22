@@ -353,7 +353,11 @@ coro_pp_sselect (pTHX)
   /* entersub is an UNOP, select a LISTOP... keep your fingers crossed */
   PL_op->op_flags |= OPf_STACKED;
   PL_op->op_private = 0;
+#ifdef USE_CPERL
+  return PL_ppaddr [OP_ENTERXSSUB](aTHX);
+#else
   return PL_ppaddr [OP_ENTERSUB](aTHX);
+#endif
 }
 
 /** time stuff **************************************************************/
